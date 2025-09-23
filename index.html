@@ -1157,31 +1157,113 @@ function nluExtract(text){
   else whenReady();
 })();
 </script><!-- UI SEND HELPER START -->
-<script>
+<style id="send-helper-style">
+  /* keep button clickable above overlays */
+  .send-helper-force { position: relative !important; z-index: 99999 !important; pointer-events: auto !important; }
+</style>
+<script id="send-helper-script">
 (()=>{try{
-  const selIn = "main textarea, main input[type=\"text\"]";
-  const selBtn = "main button[type=\"submit\"], main [data-role=\"send-btn\"], button[aria-label*=\"Send\"]";
-  const input = document.querySelector(selIn);
-  const sendBtn = document.querySelector(selBtn);
-  if(!input||!sendBtn){ console.warn("Send helper: missing nodes", {input:!!input, sendBtn:!!sendBtn}); return; }
-  function sync(){
-    const has = !!input.value?.trim();
-    sendBtn.disabled = !has;
-    sendBtn.setAttribute("aria-disabled", String(!has));
-    sendBtn.style.pointerEvents = has ? "auto" : "none";
-    sendBtn.classList?.remove?.("cursor-not-allowed","opacity-50");
+  const LOG = (...a)=>console.log("[send-helper]", ...a);
+
+  function pickInput(){
+    return (
+      document.querySelector("main textarea, textarea") ||
+      document.querySelector("main input[type=\"text\"] , input[type=\"text\"]") ||
+      document.querySelector("[contenteditable=true]")
+    );
   }
-  ["input","change","keyup"].forEach(e=>input.addEventListener(e, sync));
-  input.addEventListener("keydown", e=>{
-    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(!sendBtn.disabled) sendBtn.click(); }
+
+  function pickButton(){
+    // try common cases
+    return (
+      document.querySelector("main button[type=\"submit\"]") ||
+      document.querySelector("button[type=\"submit\"]") ||
+      document.querySelector("[data-role=\"send-btn\"]") ||
+      // aria labels often used on icon buttons
+      Array.from(document.querySelectorAll("button,[role=\"button\"]")).find(b=>{
+        const a = (b.getAttribute("aria-label")||"").toLowerCase();
+        return a.includes("send") || a.includes("submit");
+      }) ||
+      // fallback: last button in the main area
+      (document.querySelector("main") && Array.from(document.querySelectorAll("main button")).pop())
+    );
+  }
+
+  function valueOf(input){
+    if(!input) return "";
+    if(input.matches("[contenteditable=true]")) return (input.textContent||"").trim();
+    return (input.value||"").trim();
+  }
+
+  function enableBtn(btn){
+    // remove common blockers
+    btn.classList.remove("cursor-not-allowed","opacity-50","disabled");
+    btn.removeAttribute("disabled");
+    btn.setAttribute("aria-disabled","false");
+    btn.style.pointerEvents = "auto";
+    btn.classList.add("send-helper-force");
+  }
+
+  function sync(input, btn){
+    const has = valueOf(input).length>0;
+    enableBtn(btn);
+    btn.disabled = false;
+    // if app insists, also toggle aria
+    btn.setAttribute("aria-disabled", String(!has && false)); // always false to keep clickable
+  }
+
+  function bind(){
+    const input = pickInput();
+    const btn   = pickButton();
+    if(!input || !btn){ LOG("nodes missing", {input:!!input, btn:!!btn}); return null; }
+
+    // input listeners (works for contenteditable too)
+    const onInput = ()=>sync(input, btn);
+    ["input","change","keyup"].forEach(e=>input.addEventListener(e, onInput));
+    if (input.matches("[contenteditable=true]")) {
+      ["input","keyup","keydown","blur","paste"].forEach(e=>input.addEventListener(e, onInput));
+    }
+
+    // Enter to send (Shift+Enter = newline for textarea/contenteditable)
+    input.addEventListener("keydown", ev=>{
+      const isEnter = ev.key==="Enter";
+      if(!isEnter) return;
+      const isShift = ev.shiftKey;
+      if(!isShift){ ev.preventDefault(); if(!btn.disabled){ btn.click(); } }
+    });
+
+    // click hijack to be sure
+    btn.addEventListener("click", ()=>enableBtn(btn), {capture:true});
+
+    // initial
+    sync(input, btn);
+
+    // overlay killer (if something covers the button)
+    setTimeout(()=>{
+      const r = btn.getBoundingClientRect();
+      const e = document.elementFromPoint(r.left + r.width/2, r.top + r.height/2);
+      if(e && e!==btn && !btn.contains(e)){
+        LOG("overlay detected, forcing btn on top over", e);
+        btn.style.position = "relative";
+        btn.style.zIndex = "2147483647";
+      }
+    }, 200);
+
+    LOG("bound to", {input, btn});
+    return {input, btn, onInput};
+  }
+
+  // Bind now, then keep alive across re-renders
+  let state = bind();
+  const mo = new MutationObserver(()=>{
+    const ok = state && document.contains(state.input) && document.contains(state.btn);
+    if(!ok){ state = bind(); }
+    else { state.onInput && state.onInput(); }
   });
-  // one-time force
-  sendBtn.removeAttribute("disabled");
-  sendBtn.setAttribute("aria-disabled","false");
-  sendBtn.style.pointerEvents = "auto";
-  sync();
-  console.log("Send helper ready");
-}catch(e){console.error("Send helper error", e);}})();
+  mo.observe(document.documentElement, {subtree:true, childList:true, attributes:true});
+
+  LOG("ready");
+}catch(e){console.error("[send-helper] error", e);}})();
 </script>
 <!-- UI SEND HELPER END -->
 </body>
