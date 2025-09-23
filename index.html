@@ -1156,6 +1156,34 @@ function nluExtract(text){
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", whenReady);
   else whenReady();
 })();
-</script></body>
+</script><!-- UI SEND HELPER START -->
+<script>
+(()=>{try{
+  const selIn = "main textarea, main input[type=\"text\"]";
+  const selBtn = "main button[type=\"submit\"], main [data-role=\"send-btn\"], button[aria-label*=\"Send\"]";
+  const input = document.querySelector(selIn);
+  const sendBtn = document.querySelector(selBtn);
+  if(!input||!sendBtn){ console.warn("Send helper: missing nodes", {input:!!input, sendBtn:!!sendBtn}); return; }
+  function sync(){
+    const has = !!input.value?.trim();
+    sendBtn.disabled = !has;
+    sendBtn.setAttribute("aria-disabled", String(!has));
+    sendBtn.style.pointerEvents = has ? "auto" : "none";
+    sendBtn.classList?.remove?.("cursor-not-allowed","opacity-50");
+  }
+  ["input","change","keyup"].forEach(e=>input.addEventListener(e, sync));
+  input.addEventListener("keydown", e=>{
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); if(!sendBtn.disabled) sendBtn.click(); }
+  });
+  // one-time force
+  sendBtn.removeAttribute("disabled");
+  sendBtn.setAttribute("aria-disabled","false");
+  sendBtn.style.pointerEvents = "auto";
+  sync();
+  console.log("Send helper ready");
+}catch(e){console.error("Send helper error", e);}})();
+</script>
+<!-- UI SEND HELPER END -->
+</body>
 <script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
 </html>
