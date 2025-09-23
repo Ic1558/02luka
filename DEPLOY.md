@@ -112,3 +112,16 @@ Then you can command Codex:
 4. Test file upload functionality over HTTPS
 
 **Repository Ready for Codex!** 🎯
+---
+
+## 🌐 GitHub Pages Deployment (PR #2)
+
+After merging PR #2, GitHub Pages is auto-enabled.
+
+Endpoints:
+- Health check → https://ic1558.github.io/02luka/_health.html
+- Manifest → https://ic1558.github.io/02luka/manifest.json
+
+Every push to `main` will:
+- Auto-generate `_health.html` and `manifest.json`
+- Deploy latest code to GitHub Pages
