@@ -1,14 +1,9 @@
-# 02luka — Luka Local Agent UI
-Single-file app for local/WAN gateways (MCP Docker 5012, FS 8765, Ollama 11434).
+# 02luka
 
-## Run locally
-Open `luka_minimal.html` in a browser.
+Local AI app “Luka” — single-file HTML, deploy via GitHub Pages.
 
-## Gateways (WAN)
-Expose your gateways via domain/tunnel and enable CORS:
-- `Access-Control-Allow-Origin: https://<your-app-domain>`
-- `Access-Control-Allow-Headers: Content-Type, Authorization`
-- `Access-Control-Allow-Methods: GET,POST,OPTIONS`
+[![pages](https://github.com/Ic1558/02luka/actions/workflows/pages.yml/badge.svg)](https://github.com/Ic1558/02luka/actions/workflows/pages.yml)
 
-## Codex
-Connect this repo in ChatGPT Codex (Environments) and use the instructions in `CODEx_INSTRUCTIONS.md`.
+- Live: https://ic1558.github.io/02luka/
+- Health: https://ic1558.github.io/02luka/_health.html
+- Manifest: https://ic1558.github.io/02luka/manifest.json
