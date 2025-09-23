@@ -1266,6 +1266,85 @@ function nluExtract(text){
   sendBtn.addEventListener("click", e => { if (sendBtn.disabled) e.preventDefault(); });
   sync();
 })();
+</script><script>
+(function(){
+  try{
+    const 60 (sel,root=document)=>root.querySelector(sel);
+    const 91731 = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
+
+    // หา input/textarea สำหรับพิมพ์ และปุ่มส่ง
+    const input = 20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400"textarea, input[type=text], input[role=textbox]") || document.createElement("input");
+    const sendBtn = 20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400"button[type=submit], button[aria-label*=Send i], button#send, button[data-send]");
+
+    if(sendBtn){
+      // ปลดล็อกทุกเงื่อนไขที่กันการคลิก
+      sendBtn.disabled = false;
+      sendBtn.removeAttribute("disabled");
+      sendBtn.setAttribute("aria-disabled","false");
+      ["pointer-events-none","opacity-50","cursor-not-allowed"].forEach(c=>sendBtn.classList && sendBtn.classList.remove(c));
+
+      // กัน form submit reload ถ้ามี <form>
+      const form = sendBtn.closest("form");
+      if(form){
+        form.addEventListener("submit", (e)=>{
+          e.preventDefault();
+          triggerSend();
+        }, {capture:true});
+      }
+
+      // ผูกคลิก
+      sendBtn.addEventListener("click", (e)=>{
+        e.preventDefault();
+        triggerSend();
+      }, {passive:false});
+    }
+
+    // เปิด/ปิดปุ่มตามข้อความ
+    function syncDisabled(){
+      const hasText = !!(input && String(input.value||"").trim().length);
+      if(sendBtn){
+        sendBtn.disabled = !hasText;
+        sendBtn.setAttribute("aria-disabled", String(!hasText));
+      }
+    }
+
+    // ผูก Enter-to-send (Shift+Enter = ขึ้นบรรทัดใหม่)
+    if(input){
+      ["input","change","keyup"].forEach(ev=>input.addEventListener(ev, syncDisabled));
+      input.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter" && !e.shiftKey){
+          e.preventDefault();
+          triggerSend();
+        }
+      });
+      // เรียกครั้งแรก
+      syncDisabled();
+    }
+
+    // ฟังก์ชันส่ง: พยายามเรียก window.send หรือปุ่มเดิม, ถ้าไม่มี ให้กระตุ้นคลิก
+    function triggerSend(){
+      const text = input ? String(input.value||"").trim() : "";
+      if(!text) return;
+
+      // ถ้ามีฟังก์ชัน send() ในสCOPE เดิม ให้เรียกใช้
+      if(typeof window.send === "function"){
+        try { window.send(text); } catch(_){ /* เงียบ */ }
+      } else if (sendBtn) {
+        // ไม่มี send() ก็คลิกปุ่มเดิม
+        try { sendBtn.click(); } catch(_){ /* เงียบ */ }
+      }
+      // เคลียร์กล่อง + อัพเดตปุ่ม
+      if(input){ input.value = ""; syncDisabled(); }
+    }
+
+    // กันเคสมี style ปิด pointer-events ทั้ง container
+    const blockers = 91731("[style*="pointer-events: none" i]");
+    blockers.forEach(el=>{
+      el.style.pointerEvents = "auto";
+    });
+
+  }catch(e){ console && console.warn && console.warn("[ui-send-enable] error:", e); }
+})();
 </script></body>
 <script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
 </html>
