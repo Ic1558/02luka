@@ -1249,6 +1249,23 @@ function nluExtract(text){
 }catch(e){console.error("[send-helper] error",e);}})();
 </script>
 <!-- UI SEND HELPER END -->
-</body>
+<script>
+(() => {
+  const input = document.querySelector("main textarea, main input[type=text], textarea, input[type=text]");
+  const sendBtn = document.querySelector("main button[type=submit], main button[data-role=send-btn], button[type=submit]");
+  if (!input || !sendBtn) return;
+  const sync = () => {
+    const has = (input.value||"").trim().length > 0;
+    sendBtn.disabled = !has;
+    sendBtn.setAttribute("aria-disabled", String(!has));
+  };
+  ["input","change"].forEach(ev => input.addEventListener(ev, sync));
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); }
+  });
+  sendBtn.addEventListener("click", e => { if (sendBtn.disabled) e.preventDefault(); });
+  sync();
+})();
+</script></body>
 <script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
 </html>
