@@ -942,6 +942,31 @@
 
     // Focus input on load
     input.focus();
-  </script>
+  
+/* --- NLU (browser-only) --- */
+function nluExtract(text){
+  const doc = (window.nlp||{people:()=>({out:()=>[]}),places:()=>({out:()=>[]}),organizations:()=>({out:()=>[]}),numbers:()=>({out:()=>[]}),dates:()=>({out:()=>[]}),dates:()=>({out:()=>[],json:()=>[]})}).call? window.nlp(text) : {people:()=>({out:()=>[]}),places:()=>({out:()=>[]}),organizations:()=>({out:()=>[]}),numbers:()=>({out:()=>[]}),dates:()=>({out:()=>[],json:()=>[]})};
+  const ents=[]; 
+  try{
+    (doc.people?.().out("array")||[]).forEach(x=>ents.push({type:"person",value:x}));
+    (doc.places?.().out("array")||[]).forEach(x=>ents.push({type:"place",value:x}));
+    (doc.organizations?.().out("array")||[]).forEach(x=>ents.push({type:"org",value:x}));
+    (doc.numbers?.().out("array")||[]).forEach(x=>ents.push({type:"number",value:x}));
+    (doc.dates?.().out("array")||[]).forEach(x=>ents.push({type:"date",value:x}));
+  }catch(_){}
+  const lower = (text||"").toLowerCase();
+  const intents=[];
+  if (/(open|เปิด).*(http|www.|.com|.io|.dev)/.test(lower)) intents.push({name:"open_url"});
+  if (/(search|ค้นหา|หา)/.test(lower)) intents.push({name:"search"});
+  if (/(schedule|นัด|เตือน|remind|calendar)/.test(lower)) intents.push({name:"schedule"});
+  if (/(status|health|tools|mcp)/.test(lower)) intents.push({name:"check_status"});
+  if (/(file|ไฟล์|copy|move|เขียน|ลบ)/.test(lower)) intents.push({name:"file_op"});
+  const urls=(text.match(/https?://S+/g)||[]).map(u=>({type:"url",value:u}));
+  let dates=[];
+  try{dates = (doc.dates?.().json()||[]).map(d=>({type:"date_norm",value:d.text,iso:(d.date&&d.date.start)||null}))}catch(_){}
+  const slots=[...urls,...dates];
+  return {intents,entities:ents,slots,text};
+}
+</script>
 </body>
 </html>
