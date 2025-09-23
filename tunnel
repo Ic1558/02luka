@@ -1,0 +1,4 @@
+#!/bin/zsh
+# Quick launcher for 02luka tunnels
+cd "$(dirname "$0")"
+./auto_tunnel.zsh "$@"
