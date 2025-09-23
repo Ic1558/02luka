@@ -1156,6 +1156,99 @@ function nluExtract(text){
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", whenReady);
   else whenReady();
 })();
-</script></body>
+</script><!-- UI SEND HELPER START -->
+<style id="send-helper-style">
+  .send-helper-force { position: relative !important; z-index: 99999 !important; pointer-events: auto !important; }
+</style>
+<script id="send-helper-script">
+(()=>{try{
+  const LOG=(...a)=>console.log("[send-helper]",...a);
+
+  function pickInput(){
+    return (
+      document.querySelector("main textarea, textarea") ||
+      document.querySelector("main input[type=\"text\"] , input[type=\"text\"]") ||
+      document.querySelector("[contenteditable=true]")
+    );
+  }
+
+  function pickButton(){
+    return (
+      document.querySelector("main button[type=\"submit\"]") ||
+      document.querySelector("button[type=\"submit\"]") ||
+      document.querySelector("[data-role=\"send-btn\"]") ||
+      Array.from(document.querySelectorAll("button,[role=\"button\"]")).find(b=>{
+        const a=(b.getAttribute("aria-label")||"").toLowerCase();
+        return a.includes("send")||a.includes("submit");
+      }) ||
+      (document.querySelector("main")&&Array.from(document.querySelectorAll("main button")).pop())
+    );
+  }
+
+  function valueOf(input){
+    if(!input) return "";
+    if(input.matches("[contenteditable=true]")) return (input.textContent||"").trim();
+    return (input.value||"").trim();
+  }
+
+  function enableBtn(btn){
+    btn.classList.remove("cursor-not-allowed","opacity-50","disabled");
+    btn.removeAttribute("disabled");
+    btn.setAttribute("aria-disabled","false");
+    btn.style.pointerEvents="auto";
+    btn.classList.add("send-helper-force");
+  }
+
+  function sync(input,btn){
+    const has=valueOf(input).length>0;
+    enableBtn(btn);
+    btn.disabled=false;
+    btn.setAttribute("aria-disabled","false");
+  }
+
+  function bind(){
+    const input=pickInput();
+    const btn=pickButton();
+    if(!input||!btn){ LOG("nodes missing",{input:!!input,btn:!!btn}); return null; }
+
+    const onInput=()=>sync(input,btn);
+    ["input","change","keyup"].forEach(e=>input.addEventListener(e,onInput));
+    if(input.matches("[contenteditable=true]")){
+      ["keydown","blur","paste"].forEach(e=>input.addEventListener(e,onInput));
+    }
+
+    input.addEventListener("keydown",ev=>{
+      if(ev.key==="Enter" && !ev.shiftKey){ ev.preventDefault(); if(!btn.disabled){ btn.click(); } }
+    });
+
+    btn.addEventListener("click",()=>enableBtn(btn),{capture:true});
+    sync(input,btn);
+
+    setTimeout(()=>{
+      const r=btn.getBoundingClientRect();
+      const e=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+      if(e&&e!==btn&&!btn.contains(e)){
+        LOG("overlay detected, forcing btn on top over",e);
+        btn.style.position="relative";
+        btn.style.zIndex="2147483647";
+      }
+    },200);
+
+    LOG("bound to",{input,btn});
+    return {input,btn,onInput};
+  }
+
+  let state=bind();
+  const mo=new MutationObserver(()=>{
+    const ok=state && document.contains(state.input) && document.contains(state.btn);
+    if(!ok){ state=bind(); } else { state.onInput && state.onInput(); }
+  });
+  mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true});
+
+  LOG("ready");
+}catch(e){console.error("[send-helper] error",e);}})();
+</script>
+<!-- UI SEND HELPER END -->
+</body>
 <script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
 </html>
