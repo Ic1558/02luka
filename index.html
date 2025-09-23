@@ -1005,6 +1005,157 @@ function nluExtract(text){
   syncState();
 })();
   </script>
-</body>
+  <script id="luka-ui-send-helper2">
+(function(){
+  const TAG = "[Luka-UI]";
+  function log(){ try{ console.log(TAG, ...arguments); }catch(_){} }
+
+  const selectors = {
+    input: [
+      "main textarea",
+      "textarea",
+      "main input[type=text]",
+      "input[type=text]",
+      "input[role=textbox]",
+      "[contenteditable=true]"
+    ],
+    send: [
+      "main button[type=submit]",
+      "button[type=submit]",
+      "main button[data-role=send-btn]",
+      "button[data-role=send-btn]",
+      "button[aria-label=Send]",
+      "button[title=Send]",
+      "form button:not([disabled])"
+    ]
+  };
+
+  function qSel(list){
+    for (const sel of list){
+      const el = document.querySelector(sel);
+      if (el) return el;
+    }
+    return null;
+  }
+
+  function setup(){
+    const input  = qSel(selectors.input);
+    const sendBtn= qSel(selectors.send);
+
+    if (!input || !sendBtn){
+      log("waiting… input:", !!input, "send:", !!sendBtn);
+      return false;
+    }
+
+    log("hooked input:", input.tagName, "send:", sendBtn.tagName);
+
+    function hasText(){
+      if ("value" in input) return (input.value||"").trim().length>0;
+      if (input.isContentEditable) return (input.textContent||"").trim().length>0;
+      return false;
+    }
+
+    function syncState(){
+      const enable = hasText();
+      sendBtn.disabled = !enable;
+      sendBtn.setAttribute("aria-disabled", String(!enable));
+    }
+
+    // Keep state in sync
+    (["input","change","keyup"]).forEach(ev => input.addEventListener(ev, syncState));
+    // Enter to send (newline with Shift+Enter)
+    input.addEventListener("keydown", e=>{
+      if (e.key === "Enter" && !e.shiftKey){
+        if (hasText()){
+          // do NOT stop propagation unless we are sending
+          e.preventDefault();
+          sendBtn.click();
+        }
+      }
+    });
+
+    // Guard blank clicks (don’t block your existing click handler)
+    sendBtn.addEventListener("click", e=>{
+      if (!hasText()){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        log("blocked blank send");
+      }
+    }, true); // capture so we gate prior to app handler
+
+    // Also guard form submit if any
+    const form = sendBtn.closest("form");
+    if (form){
+      form.addEventListener("submit", e=>{
+        if (!hasText()){
+          e.preventDefault();
+          log("blocked blank form submit");
+        }
+      }, true);
+    }
+
+    // Initial state
+    syncState();
+    return true;
+  }
+
+  function startWhenReady(){
+    if (setup()) return;
+    const obs = new MutationObserver(()=>{
+      if (setup()){ obs.disconnect(); }
+    });
+    obs.observe(document.documentElement, {childList:true, subtree:true});
+  }
+
+  if (document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", startWhenReady);
+  } else {
+    startWhenReady();
+  }
+})();
+  </script>
+<script id="luka-ui-send-helper3">
+(function(){
+  const TAG="[Luka-UI]";
+  const inputSels=["main textarea","textarea","main input[type=text]","input[type=text]","[contenteditable=true]"];
+  const btnSels=["main button[type=submit]","button[type=submit]","button[data-role=send-btn]","button[aria-label=\"Send\"]","button[title=\"Send\"]"];
+
+  const pick=(list)=>{for(const s of list){const el=document.querySelector(s);if(el) return el;}return null;};
+
+  function hasText(inp){
+    if(!inp) return false;
+    if("value" in inp) return (inp.value||"").trim().length>0;
+    if(inp.isContentEditable) return (inp.textContent||"").trim().length>0;
+    return false;
+  }
+
+  function setup(){
+    const input=pick(inputSels);
+    const btn=pick(btnSels);
+    if(!input||!btn){ console.log(TAG,"waiting… input:",!!input,"send:",!!btn); return false; }
+
+    console.log(TAG,"hooked", input.tagName, "→", btn.tagName);
+
+    const sync=()=>{ const ok=hasText(input); btn.disabled=!ok; btn.setAttribute("aria-disabled", String(!ok)); };
+    ["input","change","keyup"].forEach(ev=>input.addEventListener(ev, sync));
+    input.addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey&&hasText(input)){ e.preventDefault(); btn.click(); }});
+    btn.addEventListener("click",e=>{ if(!hasText(input)){ e.preventDefault(); e.stopImmediatePropagation(); console.log(TAG,"blocked blank send"); }}, true);
+
+    const form=btn.closest("form");
+    if(form){ form.addEventListener("submit", e=>{ if(!hasText(input)){ e.preventDefault(); }}, true); }
+
+    sync();
+    return true;
+  }
+
+  function whenReady(){ if(setup()) return;
+    const o=new MutationObserver(()=>{ if(setup()) o.disconnect(); });
+    o.observe(document.documentElement,{childList:true,subtree:true});
+  }
+
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", whenReady);
+  else whenReady();
+})();
+</script></body>
 <script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
 </html>
