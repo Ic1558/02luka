@@ -942,8 +942,9 @@
 
     // Focus input on load
     input.focus();
-  
-/* --- NLU (browser-only) --- */
+  }
+
+  /* --- NLU (browser-only) --- */
 function nluExtract(text){
   const doc = (window.nlp||{people:()=>({out:()=>[]}),places:()=>({out:()=>[]}),organizations:()=>({out:()=>[]}),numbers:()=>({out:()=>[]}),dates:()=>({out:()=>[]}),dates:()=>({out:()=>[],json:()=>[]})}).call? window.nlp(text) : {people:()=>({out:()=>[]}),places:()=>({out:()=>[]}),organizations:()=>({out:()=>[]}),numbers:()=>({out:()=>[]}),dates:()=>({out:()=>[],json:()=>[]})};
   const ents=[]; 
@@ -1266,6 +1267,6 @@ function nluExtract(text){
   sendBtn.addEventListener("click", e => { if (sendBtn.disabled) e.preventDefault(); });
   sync();
 })();
-</script></body>
-<script>(()=>{const i=document.getElementById("q"),b=document.getElementById("send"),f=b&&b.closest("form");if(!i||!b)return;const s=()=>{b.disabled=!i.value.trim()};i.addEventListener("input",s);s();if(f)f.addEventListener("submit",e=>e.preventDefault())})();</script>
+</script>
+</body>
 </html>
