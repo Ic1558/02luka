@@ -1268,5 +1268,48 @@ function nluExtract(text){
   sync();
 })();
 </script>
+
+<!-- Final Send Button Fix -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+
+  if (!input || !sendBtn) {
+    console.error('[Send Fix] Elements not found:', {input: !!input, sendBtn: !!sendBtn});
+    return;
+  }
+
+  // Remove any disabled state
+  sendBtn.disabled = false;
+  sendBtn.removeAttribute('disabled');
+  sendBtn.style.pointerEvents = 'auto';
+  sendBtn.style.opacity = '1';
+
+  // Simple enable/disable based on input
+  const updateButton = () => {
+    const hasText = input.value.trim().length > 0;
+    sendBtn.disabled = !hasText;
+    sendBtn.style.opacity = hasText ? '1' : '0.5';
+  };
+
+  // Listen for input changes
+  input.addEventListener('input', updateButton);
+  input.addEventListener('change', updateButton);
+
+  // Enter key to send
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && input.value.trim()) {
+      e.preventDefault();
+      sendBtn.click();
+    }
+  });
+
+  // Initial state
+  updateButton();
+
+  console.log('[Send Fix] Initialized successfully');
+});
+</script>
 </body>
 </html>
