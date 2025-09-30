@@ -1,0 +1,30 @@
+{
+  "default": "central-context",
+  "gateways": [
+    {
+      "id": "central-context",
+      "name": "Central Context Backend",
+      "description": "File-mapped backend for boss inbox/sent/deliverables",
+      "url": "http://127.0.0.1:4123/api",
+      "type": "central-context"
+    },
+    {
+      "id": "mcp-docker",
+      "name": "MCP Docker (5012)",
+      "url": "http://127.0.0.1:5012",
+      "type": "mcp"
+    },
+    {
+      "id": "mcp-fs",
+      "name": "MCP FS (8765)",
+      "url": "http://127.0.0.1:8765",
+      "type": "mcp"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama (11434)",
+      "url": "http://localhost:11434",
+      "type": "ollama"
+    }
+  ]
+}
