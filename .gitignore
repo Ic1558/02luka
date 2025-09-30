@@ -1,1 +1,4 @@
 cleanup_home_backups.sh
+boss-api/node_modules
+boss-api/package-lock.json
+boss-api/.env

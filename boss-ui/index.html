@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>02luka Boss UI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>02luka Gateway Console</h1>
+      <div class="status" id="status-indicator" aria-live="polite">Loading config…</div>
+    </header>
+
+    <main class="app-main">
+      <section class="panel panel--left">
+        <h2>Gateway</h2>
+        <label class="field">
+          <span>Select target</span>
+          <select id="gateway-select"></select>
+        </label>
+        <label class="field">
+          <span>Path</span>
+          <input id="path-input" type="text" value="/v1/chat/completions" />
+        </label>
+        <label class="field">
+          <span>Method</span>
+          <select id="method-select">
+            <option value="POST" selected>POST</option>
+            <option value="GET">GET</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Timeout (ms)</span>
+          <input id="timeout-input" type="number" min="1000" step="500" value="90000" />
+        </label>
+        <details class="accordion">
+          <summary>Headers</summary>
+          <textarea id="headers-input" placeholder="{\n  &quot;content-type&quot;: &quot;application/json&quot;\n}"></textarea>
+        </details>
+      </section>
+
+      <section class="panel panel--right">
+        <form id="chat-form" class="chat-form">
+          <label class="field">
+            <span>Payload</span>
+            <textarea id="payload-input" rows="8" placeholder='{"messages":[{"role":"user","content":"Hello"}]}'></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary">Send</button>
+            <button type="button" id="clear-button" class="btn">Clear</button>
+          </div>
+        </form>
+
+        <section class="response" aria-live="polite">
+          <header class="response__header">
+            <h2>Response</h2>
+            <button type="button" id="copy-response" class="btn btn--ghost">Copy</button>
+          </header>
+          <pre id="response-output" class="response__body">No response yet.</pre>
+        </section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <small>Connected to boss-api • <span id="config-timestamp">--</span></small>
+    </footer>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
