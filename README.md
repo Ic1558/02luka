@@ -27,6 +27,18 @@ python3 -m http.server 8080
 open http://localhost:8080
 ```
 
+### Smoke Test: Boss Workspace
+```bash
+# Terminal 1 - start the API
+cd boss-api
+node server.js
+
+# Terminal 2 - serve the static UI
+cd boss-ui
+python3 -m http.server 8081
+open http://localhost:8081
+```
+
 ## 🔧 Available Scripts
 
 | Script | Purpose |

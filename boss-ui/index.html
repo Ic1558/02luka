@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Boss Workspace</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        color: #1f1f1f;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 220px 260px 1fr;
+        height: 100vh;
+      }
+
+      .sidebar {
+        background: #f4f6fb;
+        border-right: 1px solid #dbe1f1;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .sidebar h1 {
+        font-size: 1.2rem;
+        margin: 0 0 12px;
+      }
+
+      .folder {
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .folder.active,
+      .folder:hover {
+        background: #dbe1f1;
+      }
+
+      .file-list {
+        border-right: 1px solid #dbe1f1;
+        overflow-y: auto;
+        padding: 16px;
+        background: #fff;
+      }
+
+      .file-item {
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .file-item:hover,
+      .file-item.active {
+        background: #eef2ff;
+      }
+
+      .preview {
+        padding: 20px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        background: #fafbff;
+      }
+
+      .empty-state {
+        color: #6b7280;
+        font-style: italic;
+      }
+
+      @media (max-width: 960px) {
+        .app {
+          grid-template-columns: 180px 1fr;
+          grid-template-rows: 220px 1fr;
+        }
+
+        .file-list {
+          grid-column: 1 / span 2;
+          grid-row: 2;
+        }
+
+        .preview {
+          grid-column: 1 / span 2;
+          grid-row: 3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h1>Boss Workspace</h1>
+        <div id="folders"></div>
+      </aside>
+      <section class="file-list" id="file-list">
+        <p class="empty-state">Select a folder to load files.</p>
+      </section>
+      <section class="preview" id="preview">
+        <p class="empty-state">Choose a file to preview its contents.</p>
+      </section>
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>
