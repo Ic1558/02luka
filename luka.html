@@ -20,6 +20,8 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      position: relative;
+      z-index: 2;
     }
     .logo {
       width: 32px; height: 32px;
@@ -33,6 +35,11 @@
       flex: 1;
       color: #a3a3a3;
       font-size: 14px;
+    }
+    .tool-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .messages {
       flex: 1;
@@ -111,7 +118,7 @@
       opacity: 0.3;
       cursor: not-allowed;
     }
-    select {
+    select, .tool-button {
       background: #141414;
       border: 1px solid #262626;
       color: #fafafa;
@@ -121,18 +128,159 @@
       cursor: pointer;
       font-size: 12px;
     }
+    .tool-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.12);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .tool-button svg {
+      width: 14px;
+      height: 14px;
+    }
+    .tool-button:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: #60a5fa;
+    }
+    .tool-button:focus-visible {
+      outline: 2px solid #60a5fa;
+      outline-offset: 2px;
+    }
+    .prompt-library-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 16px;
+      width: min(420px, calc(100vw - 32px));
+      max-height: min(400px, calc(100vh - 160px));
+      display: none;
+      flex-direction: column;
+      background: #090909;
+      border: 1px solid #262626;
+      border-radius: 12px;
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+    }
+    .prompt-library-panel.open {
+      display: flex;
+    }
+    .prompt-library-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1f1f1f;
+      background: #0f0f0f;
+    }
+    .prompt-library-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fafafa;
+    }
+    .prompt-library-close {
+      background: transparent;
+      border: none;
+      color: #a3a3a3;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.2s, color 0.2s;
+    }
+    .prompt-library-close:hover {
+      background: rgba(250, 250, 250, 0.08);
+      color: #fafafa;
+    }
+    .prompt-library-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow: auto;
+    }
+    .prompt-library-status {
+      font-size: 12px;
+      color: #d4d4d8;
+      line-height: 1.4;
+    }
+    .prompt-library-content {
+      background: #111;
+      border: 1px solid #262626;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #e4e4e7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow: auto;
+    }
+    .prompt-library-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .prompt-library-actions button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #3b82f6;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .prompt-library-actions button.secondary {
+      background: rgba(59, 130, 246, 0.12);
+      color: #93c5fd;
+    }
+    .prompt-library-actions button:hover {
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">L</div>
     <div class="status">Connected to 02luka</div>
-    <select id="gateway">
-      <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
-      <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
-      <option value="http://localhost:11434">Ollama (11434)</option>
-    </select>
+    <div class="tool-actions">
+      <select id="gateway">
+        <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
+        <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
+        <option value="http://localhost:11434">Ollama (11434)</option>
+      </select>
+      <button class="tool-button" id="promptLibraryButton" type="button" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5V4.5C4 4.22386 4.22386 4 4.5 4H15.5L20 8.5V19.5C20 19.7761 19.7761 20 19.5 20H4.5C4.22386 20 4 19.7761 4 19.5Z" />
+          <path d="M15 4V8H19" />
+          <path d="M8 13H16" />
+          <path d="M8 16H12" />
+          <path d="M8 10H16" />
+        </svg>
+        Prompt Library
+      </button>
+    </div>
   </header>
+
+  <div class="prompt-library-panel" id="promptLibraryPanel" role="dialog" aria-modal="false" aria-labelledby="promptLibraryTitle">
+    <div class="prompt-library-header">
+      <div class="prompt-library-title" id="promptLibraryTitle">Prompt Library</div>
+      <button class="prompt-library-close" id="promptLibraryClose" type="button" aria-label="Close prompt library">&times;</button>
+    </div>
+    <div class="prompt-library-body">
+      <div class="prompt-library-status" id="promptLibraryStatus">Load the master prompt template to quickly start a session.</div>
+      <pre class="prompt-library-content" id="promptLibraryContent"></pre>
+      <div class="prompt-library-actions">
+        <button class="secondary" id="refreshPromptLibrary" type="button">Refresh</button>
+        <button id="applyPromptLibrary" type="button">Insert into message</button>
+      </div>
+    </div>
+  </div>
 
   <div class="messages" id="messages">
     <div class="message">
@@ -158,6 +306,15 @@
     const sendButton = document.getElementById('sendButton');
     const messagesContainer = document.getElementById('messages');
     const gatewaySelect = document.getElementById('gateway');
+    const promptLibraryButton = document.getElementById('promptLibraryButton');
+    const promptLibraryPanel = document.getElementById('promptLibraryPanel');
+    const promptLibraryContent = document.getElementById('promptLibraryContent');
+    const promptLibraryStatus = document.getElementById('promptLibraryStatus');
+    const promptLibraryClose = document.getElementById('promptLibraryClose');
+    const refreshPromptLibrary = document.getElementById('refreshPromptLibrary');
+    const applyPromptLibrary = document.getElementById('applyPromptLibrary');
+    let promptLibraryLoaded = false;
+    let promptLibraryLoading = false;
 
     const GATEWAY_PROFILES = [
       {
@@ -194,6 +351,42 @@
     function updateSendButton() {
       const hasText = messageInput.value.trim().length > 0;
       sendButton.disabled = !hasText;
+    }
+
+    function togglePromptLibrary(forceOpen) {
+      if (!promptLibraryPanel) return;
+      const shouldOpen = forceOpen !== undefined ? forceOpen : !promptLibraryPanel.classList.contains('open');
+      promptLibraryPanel.classList.toggle('open', shouldOpen);
+      promptLibraryButton?.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      if (shouldOpen) {
+        loadPromptLibrary();
+      }
+    }
+
+    async function loadPromptLibrary(forceReload = false) {
+      if (promptLibraryLoading) return;
+      if (promptLibraryLoaded && !forceReload) return;
+      if (!promptLibraryContent) return;
+
+      promptLibraryLoading = true;
+      promptLibraryStatus.textContent = 'Loading master prompt template...';
+      promptLibraryContent.textContent = '';
+
+      try {
+        const response = await fetch('.codex/templates/master_prompt.md', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Unable to load prompt library (${response.status})`);
+        }
+        const text = await response.text();
+        promptLibraryContent.textContent = text.trim();
+        promptLibraryStatus.textContent = 'Template loaded. Insert into the message box to begin using it.';
+        promptLibraryLoaded = true;
+      } catch (error) {
+        promptLibraryStatus.textContent = error.message || 'Failed to load prompt library.';
+        promptLibraryLoaded = false;
+      } finally {
+        promptLibraryLoading = false;
+      }
     }
 
     // Send message
@@ -250,6 +443,29 @@
 
     // Handle button click
     sendButton.addEventListener('click', sendMessage);
+
+    promptLibraryButton?.addEventListener('click', () => togglePromptLibrary());
+    promptLibraryClose?.addEventListener('click', () => togglePromptLibrary(false));
+    refreshPromptLibrary?.addEventListener('click', () => loadPromptLibrary(true));
+    applyPromptLibrary?.addEventListener('click', () => {
+      if (!promptLibraryContent) return;
+      const template = promptLibraryContent.textContent.trim();
+      if (!template) return;
+      messageInput.value = template;
+      messageInput.dispatchEvent(new Event('input'));
+      messageInput.focus();
+      togglePromptLibrary(false);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!promptLibraryPanel || !promptLibraryButton) return;
+      const target = event.target;
+      if (!promptLibraryPanel.contains(target) && target !== promptLibraryButton && !promptLibraryButton.contains(target)) {
+        if (promptLibraryPanel.classList.contains('open')) {
+          togglePromptLibrary(false);
+        }
+      }
+    });
 
     // Initial state
     updateSendButton();
