@@ -1,1 +1,4 @@
 cleanup_home_backups.sh
+node_modules/
+boss-ui/dist/
+.env
