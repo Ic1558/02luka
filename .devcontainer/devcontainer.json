@@ -1,0 +1,5 @@
+{
+  "name": "02luka-dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "postCreateCommand": "bash .codex/preflight.sh"
+}
