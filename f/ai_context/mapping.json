@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "generated_at": "manual",
+  "namespaces": {
+    "human": {
+      "dropbox": "boss/dropbox/",
+      "inbox": "boss/inbox/",
+      "sent": "boss/sent/",
+      "deliverables": "boss/deliverables/"
+    },
+    "bridge": {
+      "inbox": "f/bridge/inbox/",
+      "outbox": "f/bridge/outbox/",
+      "processed": "f/bridge/processed/"
+    },
+    "reports": {
+      "system": "g/reports/",
+      "runtime": "output/reports/"
+    },
+    "status": {
+      "system": "run/system_status.v2.json",
+      "tickets": "run/tickets/"
+    }
+  }
+}
