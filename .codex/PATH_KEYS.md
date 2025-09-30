@@ -1,16 +1,30 @@
-# Path Keys (must use via resolver)
+# PATH KEYS (auto)
 
-human.dropbox → boss/dropbox/
-human.inbox → boss/inbox/
-human.sent → boss/sent/
-human.deliverables → boss/deliverables/
-reports.system → g/reports/
-reports.runtime → output/reports/
-bridge.inbox → f/bridge/inbox/
-bridge.outbox → f/bridge/outbox/
-status.system → run/system_status.v2.json
-status.tickets → run/tickets/
+Use: `bash g/tools/path_resolver.sh human:<key>`
 
-Example (bash):
-  TARGET="$(bash g/tools/path_resolver.sh human:inbox)"
-  echo "hello" > "$TARGET/example.txt"
+## Allowed keys (from mapping.json)
+- version
+- generated_at
+- namespaces
+- namespaces:human
+- namespaces:human:dropbox
+- namespaces:human:inbox
+- namespaces:human:sent
+- namespaces:human:deliverables
+- namespaces:bridge
+- namespaces:bridge:inbox
+- namespaces:bridge:outbox
+- namespaces:bridge:processed
+- namespaces:reports
+- namespaces:reports:system
+- namespaces:reports:runtime
+- namespaces:status
+- namespaces:status:system
+- namespaces:status:tickets
+
+## Examples
+```bash
+bash g/tools/path_resolver.sh human:inbox
+bash g/tools/path_resolver.sh human:sent
+bash g/tools/path_resolver.sh human:deliverables
+```
