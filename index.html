@@ -68,6 +68,17 @@
       line-height: 1.5;
     }
     .message.user .content { background: #3b82f6; }
+    .message .meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #737373;
+    }
+    .message.pending .content {
+      opacity: 0.6;
+    }
+    .message.pending .avatar {
+      background: #1f2937;
+    }
     .input-area {
       padding: 16px;
       border-top: 1px solid #262626;
@@ -124,20 +135,13 @@
 <body>
   <header>
     <div class="logo">L</div>
-    <div class="status">Connected to 02luka</div>
-    <select id="gateway">
-      <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
-      <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
-      <option value="http://localhost:11434">Ollama (11434)</option>
+    <div class="status" id="connectionStatus">Loading gateways…</div>
+    <select id="gateway" disabled>
+      <option>Loading…</option>
     </select>
   </header>
 
-  <div class="messages" id="messages">
-    <div class="message">
-      <div class="avatar">L</div>
-      <div class="content">Ready. Type a message and click Send or press Enter.</div>
-    </div>
-  </div>
+  <div class="messages" id="messages"></div>
 
   <div class="input-area">
     <div class="input-wrapper">
@@ -156,6 +160,295 @@
     const sendButton = document.getElementById('sendButton');
     const messagesContainer = document.getElementById('messages');
     const gatewaySelect = document.getElementById('gateway');
+    const statusElement = document.getElementById('connectionStatus');
+
+    const state = {
+      gateways: {},
+      gatewayOrder: [],
+      currentGateway: null,
+      messages: [],
+      pendingMessages: [],
+      transientMessages: [
+        {
+          id: 'intro',
+          role: 'assistant',
+          content: 'Ready. Choose a gateway, send a message, and Luka will route it into the central context.',
+          folder: 'system',
+          createdAt: new Date().toISOString(),
+          metadata: { system: true }
+        }
+      ],
+      historyLoading: false,
+      pollTimer: null
+    };
+
+    function setStatus(text) {
+      statusElement.textContent = text;
+    }
+
+    function updateSendButton() {
+      const hasText = messageInput.value.trim().length > 0;
+      const hasGateway = !!state.currentGateway;
+      sendButton.disabled = !(hasText && hasGateway);
+    }
+
+    function renderMessages() {
+      messagesContainer.innerHTML = '';
+      const combined = [
+        ...state.messages.map((msg) => ({ ...msg, pending: false })),
+        ...state.pendingMessages,
+        ...state.transientMessages
+      ];
+      combined.sort((a, b) => {
+        const aTime = Number(new Date(a.createdAt || 0));
+        const bTime = Number(new Date(b.createdAt || 0));
+        if (aTime === bTime) {
+          return (a.id || '').localeCompare(b.id || '');
+        }
+        return aTime - bTime;
+      });
+
+      combined.forEach((msg) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message';
+        if (msg.role === 'user') wrapper.classList.add('user');
+        if (msg.pending) wrapper.classList.add('pending');
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = msg.role === 'user' ? 'U' : 'L';
+
+        const contentWrapper = document.createElement('div');
+
+        const body = document.createElement('div');
+        body.className = 'content';
+        body.textContent = msg.content || '';
+        contentWrapper.appendChild(body);
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = formatMeta(msg);
+        contentWrapper.appendChild(meta);
+
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(contentWrapper);
+        messagesContainer.appendChild(wrapper);
+      });
+
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    function formatMeta(msg) {
+      const parts = [];
+      if (msg.folder && msg.folder !== 'system') {
+        parts.push(msg.folder);
+      }
+      const timestamp = msg.createdAt ? new Date(msg.createdAt) : null;
+      if (timestamp && !Number.isNaN(timestamp.valueOf())) {
+        parts.push(timestamp.toLocaleString());
+      }
+      if (msg.metadata) {
+        if (msg.metadata.subject) {
+          parts.push(`Subject: ${msg.metadata.subject}`);
+        }
+        if (msg.metadata.status) {
+          parts.push(String(msg.metadata.status));
+        }
+      }
+      if (!parts.length) {
+        return ' ';
+      }
+      return parts.join(' • ');
+    }
+
+    function addTransientMessage(content, role = 'assistant') {
+      state.transientMessages.push({
+        id: `system-${Date.now()}-${Math.random()}`,
+        role,
+        content,
+        folder: 'system',
+        createdAt: new Date().toISOString(),
+        metadata: { system: true }
+      });
+      if (state.transientMessages.length > 10) {
+        const intro = state.transientMessages.find((msg) => msg.id === 'intro');
+        state.transientMessages = intro
+          ? [intro, ...state.transientMessages.filter((msg) => msg.id !== 'intro').slice(-9)]
+          : state.transientMessages.slice(-10);
+      }
+      renderMessages();
+    }
+
+    function normalizeUrl(url) {
+      return url.endsWith('/') ? url.slice(0, -1) : url;
+    }
+
+    async function fetchHistory(silent = false) {
+      if (!state.currentGateway || state.currentGateway.type !== 'central-context') {
+        return;
+      }
+      if (state.historyLoading) {
+        return;
+      }
+      state.historyLoading = true;
+      try {
+        const url = normalizeUrl(state.currentGateway.url) + '/chat/history';
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`History error (${response.status})`);
+        }
+        const data = await response.json();
+        const messages = Array.isArray(data.messages) ? data.messages : [];
+        state.messages = messages;
+        const knownIds = new Set(messages.map((msg) => msg.clientId || msg.metadata?.clientId));
+        state.pendingMessages = state.pendingMessages.filter((msg) => !knownIds.has(msg.clientId));
+        if (!silent) {
+          setStatus(`Connected to ${state.currentGateway.name}`);
+        }
+        renderMessages();
+      } catch (err) {
+        if (!silent) {
+          addTransientMessage(`Failed to sync history: ${err.message}`);
+          setStatus('Disconnected');
+        }
+      } finally {
+        state.historyLoading = false;
+      }
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+      if (!state.currentGateway) {
+        addTransientMessage('Select a gateway before sending.');
+        return;
+      }
+
+      const clientId = (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function')
+        ? globalThis.crypto.randomUUID()
+        : `local-${Date.now()}-${Math.random()}`;
+      const pending = {
+        id: clientId,
+        clientId,
+        role: 'user',
+        content: text,
+        folder: 'sent',
+        createdAt: new Date().toISOString(),
+        metadata: { status: 'Pending' },
+        pending: true
+      };
+      state.pendingMessages.push(pending);
+      renderMessages();
+
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      updateSendButton();
+
+      try {
+        const gateway = state.currentGateway;
+        if (gateway.type === 'central-context') {
+          const url = normalizeUrl(gateway.url) + '/chat/send';
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: text, clientId })
+          });
+          if (!response.ok) {
+            throw new Error(`Backend error (${response.status})`);
+          }
+          const data = await response.json();
+          setStatus(`Message queued (${gateway.name})`);
+          if (data.metadata?.clientId) {
+            pending.clientId = data.metadata.clientId;
+          }
+          await fetchHistory(true);
+        } else {
+          const url = normalizeUrl(gateway.url) + '/health';
+          const response = await fetch(url).catch(() => null);
+          if (response && response.ok) {
+            addTransientMessage(`Connected to ${gateway.name}. Gateway is healthy.`);
+            setStatus(`Connected to ${gateway.name}`);
+            state.pendingMessages = state.pendingMessages.filter((msg) => msg.id !== pending.id);
+            renderMessages();
+          } else {
+            throw new Error(`Cannot reach ${gateway.name}`);
+          }
+        }
+      } catch (err) {
+        pending.metadata.status = 'Failed';
+        pending.pending = false;
+        addTransientMessage(`Send failed: ${err.message}`);
+        setStatus('Disconnected');
+        renderMessages();
+      }
+
+      messageInput.focus();
+    }
+
+    async function loadGateways() {
+      try {
+        const response = await fetch('profiles/gateways.json', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Gateway profile error (${response.status})`);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data.gateways)) {
+          throw new Error('Invalid gateway profile format');
+        }
+        state.gatewayOrder = data.gateways.map((gateway) => gateway.id);
+        state.gateways = Object.fromEntries(data.gateways.map((gateway) => [gateway.id, gateway]));
+        populateGatewaySelect(data.default);
+        setStatus('Gateways loaded. Select one to connect.');
+      } catch (err) {
+        const fallback = {
+          id: 'central-context',
+          name: 'Central Context Backend',
+          url: 'http://127.0.0.1:4123/api',
+          type: 'central-context'
+        };
+        state.gatewayOrder = [fallback.id];
+        state.gateways = { [fallback.id]: fallback };
+        populateGatewaySelect(fallback.id);
+        addTransientMessage(`Failed to load gateway profile: ${err.message}. Using fallback configuration.`);
+      }
+    }
+
+    function populateGatewaySelect(defaultId) {
+      gatewaySelect.innerHTML = '';
+      state.gatewayOrder.forEach((id) => {
+        const gateway = state.gateways[id];
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = gateway.name;
+        gatewaySelect.appendChild(option);
+      });
+      gatewaySelect.disabled = state.gatewayOrder.length === 0;
+      if (state.gatewayOrder.length > 0) {
+        const initial = defaultId && state.gateways[defaultId] ? defaultId : state.gatewayOrder[0];
+        gatewaySelect.value = initial;
+        setGateway(initial);
+      }
+    }
+
+    function setGateway(id) {
+      const gateway = state.gateways[id] || null;
+      state.currentGateway = gateway;
+      updateSendButton();
+      if (state.pollTimer) {
+        clearInterval(state.pollTimer);
+        state.pollTimer = null;
+      }
+      if (gateway) {
+        setStatus(`Connecting to ${gateway.name}…`);
+        if (gateway.type === 'central-context') {
+          fetchHistory().then(() => {
+            if (!state.pollTimer) {
+              state.pollTimer = setInterval(() => fetchHistory(true), 4000);
+            }
+          });
+        }
+      }
+    }
 
     // Auto-resize textarea
     messageInput.addEventListener('input', () => {
@@ -163,54 +456,6 @@
       messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
       updateSendButton();
     });
-
-    // Update send button state
-    function updateSendButton() {
-      const hasText = messageInput.value.trim().length > 0;
-      sendButton.disabled = !hasText;
-    }
-
-    // Send message
-    async function sendMessage() {
-      const text = messageInput.value.trim();
-      if (!text) return;
-
-      // Add user message
-      addMessage('user', text);
-
-      // Clear input
-      messageInput.value = '';
-      messageInput.style.height = 'auto';
-      updateSendButton();
-
-      // Add bot response
-      try {
-        const gateway = gatewaySelect.value;
-        const response = await fetch(gateway + '/health').catch(() => null);
-
-        if (response && response.ok) {
-          addMessage('bot', `Connected to ${gateway}. Gateway is healthy.`);
-        } else {
-          addMessage('bot', `Cannot connect to ${gateway}. Please check if the service is running.`);
-        }
-      } catch (err) {
-        addMessage('bot', 'Error: ' + err.message);
-      }
-    }
-
-    // Add message to UI
-    function addMessage(type, text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message ' + (type === 'user' ? 'user' : '');
-
-      messageDiv.innerHTML = `
-        <div class="avatar">${type === 'user' ? 'U' : 'L'}</div>
-        <div class="content">${text}</div>
-      `;
-
-      messagesContainer.appendChild(messageDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
 
     // Handle Enter key
     messageInput.addEventListener('keydown', (e) => {
@@ -223,16 +468,17 @@
     // Handle button click
     sendButton.addEventListener('click', sendMessage);
 
-    // Initial state
+    gatewaySelect.addEventListener('change', (event) => {
+      const id = event.target.value;
+      setGateway(id);
+    });
+
     updateSendButton();
     messageInput.focus();
+    renderMessages();
+    loadGateways();
 
-    // Log for debugging
-    console.log('Luka UI initialized. Elements found:', {
-      input: !!messageInput,
-      button: !!sendButton,
-      messages: !!messagesContainer
-    });
+    console.log('Luka UI initialized with central context backend support.');
   </script>
 </body>
 </html>
