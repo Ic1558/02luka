@@ -27,6 +27,16 @@ python3 -m http.server 8080
 open http://localhost:8080
 ```
 
+### Option 4: boss-api + boss-ui scaffold
+```bash
+cd boss-api
+npm install
+npm run start
+# → http://localhost:7010 serves the API and static boss-ui client
+```
+
+The API automatically proxies chat requests to configured gateways. Edit environment variables such as `MCP_DOCKER_URL`, `MCP_FS_URL`, and `OLLAMA_URL` to point at your runtime services. The paired UI lives in `boss-ui/` and is published via the Express static middleware.
+
 ## 🔧 Available Scripts
 
 | Script | Purpose |
