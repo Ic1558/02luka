@@ -121,18 +121,230 @@
       cursor: pointer;
       font-size: 12px;
     }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .button {
+      background: #1f2937;
+      border: 1px solid #262626;
+      color: #fafafa;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s ease, opacity 0.2s ease;
+    }
+
+    .button:hover:not(:disabled) {
+      background: #1e40af;
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .button.active {
+      background: #3b82f6;
+      color: #0a0a0a;
+    }
+
+    .optimizer-panel {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      background: #141414;
+      border: 1px solid #262626;
+      margin: 16px;
+      margin-top: 12px;
+      padding: 16px;
+      border-radius: 16px;
+    }
+
+    .optimizer-panel.active {
+      display: flex;
+    }
+
+    .optimizer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .optimizer-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .optimizer-description {
+      font-size: 12px;
+      color: #a3a3a3;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .optimizer-close {
+      background: transparent;
+      border: none;
+      color: #a3a3a3;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .optimizer-close:hover {
+      color: #fafafa;
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .optimizer-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .optimizer-textarea {
+      background: #0a0a0a;
+      border: 1px solid #262626;
+      border-radius: 12px;
+      color: #fafafa;
+      padding: 12px;
+      font-size: 13px;
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.6;
+      font-family: inherit;
+    }
+
+    .optimizer-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .optimizer-select {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 220px;
+      flex: 1;
+    }
+
+    .optimizer-select label {
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+
+    .optimizer-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .optimizer-output {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: #0a0a0a;
+      border: 1px dashed rgba(59, 130, 246, 0.6);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .optimizer-output.active {
+      display: flex;
+    }
+
+    .optimizer-output-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #60a5fa;
+    }
+
+    .optimizer-output pre {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .optimizer-status {
+      font-size: 12px;
+      color: #a3a3a3;
+      min-height: 16px;
+    }
+
+    .optimizer-status.success {
+      color: #4ade80;
+    }
+
+    .optimizer-status.error {
+      color: #f87171;
+    }
+
+    .optimizer-status.warning {
+      color: #facc15;
+    }
+
+    .optimizer-status.info {
+      color: #38bdf8;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">L</div>
     <div class="status">Connected to 02luka</div>
-    <select id="gateway">
-      <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
-      <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
-      <option value="http://localhost:11434">Ollama (11434)</option>
-    </select>
+    <div class="toolbar">
+      <select id="gateway">
+        <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
+        <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
+        <option value="http://localhost:11434">Ollama (11434)</option>
+      </select>
+      <button id="promptOptimizerToggle" type="button" class="button">Prompt Optimizer</button>
+    </div>
   </header>
+
+  <section id="promptOptimizerPanel" class="optimizer-panel" aria-hidden="true">
+    <div class="optimizer-header">
+      <div>
+        <div class="optimizer-title">Prompt Optimizer</div>
+        <div class="optimizer-description">
+          Enter a prompt and let Luka reshape it using your selected local AI gateway. Use the master template for best results.
+        </div>
+      </div>
+      <button id="promptOptimizerClose" type="button" class="optimizer-close" aria-label="Close prompt optimizer">
+        ✕
+      </button>
+    </div>
+    <div class="optimizer-body">
+      <textarea id="optimizerInput" class="optimizer-textarea" placeholder="Describe what you want the AI to accomplish..."></textarea>
+      <div class="optimizer-controls">
+        <div class="optimizer-select">
+          <label for="optimizerGateway">Target gateway</label>
+          <select id="optimizerGateway"></select>
+        </div>
+        <div class="optimizer-actions">
+          <button id="optimizerTemplateButton" type="button" class="button">Insert master template</button>
+          <button id="optimizerRunButton" type="button" class="button">Optimize prompt</button>
+        </div>
+      </div>
+      <div id="optimizerOutput" class="optimizer-output">
+        <div class="optimizer-output-label">Optimized prompt</div>
+        <pre id="optimizerResult"></pre>
+      </div>
+    </div>
+    <div id="optimizerStatus" class="optimizer-status"></div>
+  </section>
 
   <div class="messages" id="messages">
     <div class="message">
@@ -158,6 +370,18 @@
     const sendButton = document.getElementById('sendButton');
     const messagesContainer = document.getElementById('messages');
     const gatewaySelect = document.getElementById('gateway');
+    const optimizerPanel = document.getElementById('promptOptimizerPanel');
+    const optimizerToggle = document.getElementById('promptOptimizerToggle');
+    const optimizerClose = document.getElementById('promptOptimizerClose');
+    const optimizerInput = document.getElementById('optimizerInput');
+    const optimizerGatewaySelect = document.getElementById('optimizerGateway');
+    const optimizerTemplateButton = document.getElementById('optimizerTemplateButton');
+    const optimizerRunButton = document.getElementById('optimizerRunButton');
+    const optimizerStatus = document.getElementById('optimizerStatus');
+    const optimizerOutput = document.getElementById('optimizerOutput');
+    const optimizerResult = document.getElementById('optimizerResult');
+
+    let masterPromptTemplateCache = null;
 
     const GATEWAY_PROFILES = [
       {
@@ -190,10 +414,201 @@
       updateSendButton();
     });
 
+    if (optimizerInput) {
+      optimizerInput.addEventListener('input', () => {
+        if (optimizerStatus) {
+          optimizerStatus.textContent = '';
+          optimizerStatus.className = 'optimizer-status';
+        }
+      });
+    }
+
+    if (optimizerToggle) {
+      optimizerToggle.addEventListener('click', () => {
+        const isActive = optimizerPanel.classList.toggle('active');
+        optimizerPanel.setAttribute('aria-hidden', String(!isActive));
+        optimizerToggle.classList.toggle('active', isActive);
+        if (isActive) {
+          syncOptimizerGateway();
+          setTimeout(() => optimizerInput && optimizerInput.focus(), 20);
+        }
+      });
+    }
+
+    if (optimizerClose) {
+      optimizerClose.addEventListener('click', () => closeOptimizerPanel());
+    }
+
+    if (optimizerTemplateButton) {
+      optimizerTemplateButton.addEventListener('click', insertMasterPromptTemplate);
+    }
+
+    if (optimizerRunButton) {
+      optimizerRunButton.addEventListener('click', optimizePrompt);
+    }
+
+    if (gatewaySelect) {
+      gatewaySelect.addEventListener('change', () => {
+        syncOptimizerGateway();
+      });
+    }
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && optimizerPanel.classList.contains('active')) {
+        closeOptimizerPanel();
+      }
+    });
+
     // Update send button state
     function updateSendButton() {
       const hasText = messageInput.value.trim().length > 0;
       sendButton.disabled = !hasText;
+    }
+
+    function syncOptimizerGateway() {
+      if (!optimizerGatewaySelect || !gatewaySelect) return;
+      const selected = gatewaySelect.value;
+      if (selected && optimizerGatewaySelect.value !== selected) {
+        const matchingOption = Array.from(optimizerGatewaySelect.options).find((option) => option.value === selected);
+        if (matchingOption) {
+          optimizerGatewaySelect.value = selected;
+        }
+      }
+    }
+
+    function closeOptimizerPanel() {
+      optimizerPanel.classList.remove('active');
+      optimizerPanel.setAttribute('aria-hidden', 'true');
+      optimizerToggle && optimizerToggle.classList.remove('active');
+    }
+
+    async function insertMasterPromptTemplate() {
+      try {
+        setOptimizerStatus('Loading master template…', 'info');
+        const template = await getMasterPromptTemplate();
+        const current = optimizerInput.value.trim();
+        optimizerInput.value = current ? `${current}\n\n${template}` : template;
+        setOptimizerStatus('Master template inserted into the prompt.', 'success');
+      } catch (error) {
+        setOptimizerStatus(`Unable to load master template: ${error.message}`, 'error');
+      }
+    }
+
+    async function getMasterPromptTemplate() {
+      if (masterPromptTemplateCache !== null) {
+        return masterPromptTemplateCache;
+      }
+
+      const response = await fetch('.codex/templates/master_prompt.md', { cache: 'no-cache' });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const text = await response.text();
+      masterPromptTemplateCache = text.trim();
+      return masterPromptTemplateCache;
+    }
+
+    async function optimizePrompt() {
+      if (!optimizerInput) return;
+
+      const prompt = optimizerInput.value.trim();
+      if (!prompt) {
+        setOptimizerStatus('Enter a prompt to optimize first.', 'warning');
+        return;
+      }
+
+      const gateway = optimizerGatewaySelect ? optimizerGatewaySelect.value : '';
+      if (!gateway) {
+        setOptimizerStatus('Select a target gateway before optimizing.', 'warning');
+        return;
+      }
+
+      setOptimizerLoading(true);
+      setOptimizerStatus(`Sending prompt to ${gateway}…`, 'info');
+
+      let template = '';
+      try {
+        template = await getMasterPromptTemplate();
+      } catch (error) {
+        console.warn('Unable to load master template:', error);
+        setOptimizerStatus(`Continuing without template (load failed: ${error.message}).`, 'warning');
+      }
+
+      const requestBody = { prompt, template };
+      const candidateEndpoints = ['/optimize-prompt', '/optimize', '/prompt/optimize'];
+      let optimizedText = null;
+      let lastError = null;
+
+      for (const endpoint of candidateEndpoints) {
+        try {
+          const url = joinGatewayPath(gateway, endpoint);
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+
+          const payload = await parseResponsePayload(response);
+          if (!response.ok) {
+            lastError = new Error(typeof payload === 'string' ? payload : `HTTP ${response.status}`);
+            continue;
+          }
+
+          optimizedText = extractOptimizedPrompt(payload);
+          if (optimizedText) {
+            break;
+          }
+
+          if (typeof payload === 'string') {
+            optimizedText = payload;
+            break;
+          }
+
+          optimizedText = JSON.stringify(payload, null, 2);
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (optimizedText) {
+        optimizerResult.textContent = optimizedText;
+        optimizerOutput.classList.add('active');
+        setOptimizerStatus('Prompt optimized successfully.', 'success');
+      } else {
+        optimizerOutput.classList.remove('active');
+        const reason = lastError ? lastError.message : 'Unknown error';
+        setOptimizerStatus(`Failed to optimize prompt: ${reason}`, 'error');
+      }
+
+      setOptimizerLoading(false);
+    }
+
+    function extractOptimizedPrompt(payload) {
+      if (!payload) return '';
+      if (typeof payload === 'string') return payload.trim();
+      if (payload.optimizedPrompt) return String(payload.optimizedPrompt).trim();
+      if (payload.data && payload.data.optimizedPrompt) return String(payload.data.optimizedPrompt).trim();
+      if (payload.result && payload.result.prompt) return String(payload.result.prompt).trim();
+      if (Array.isArray(payload.choices)) {
+        const first = payload.choices[0];
+        if (first && first.message && first.message.content) {
+          return String(first.message.content).trim();
+        }
+      }
+      return '';
+    }
+
+    function setOptimizerStatus(message, tone) {
+      if (!optimizerStatus) return;
+      optimizerStatus.textContent = message;
+      optimizerStatus.className = 'optimizer-status' + (tone ? ` ${tone}` : '');
+    }
+
+    function setOptimizerLoading(isLoading) {
+      if (!optimizerRunButton) return;
+      optimizerRunButton.disabled = isLoading;
+      optimizerRunButton.textContent = isLoading ? 'Optimizing…' : 'Optimize prompt';
     }
 
     // Send message
@@ -254,6 +669,30 @@
     // Initial state
     updateSendButton();
     messageInput.focus();
+
+    if (optimizerGatewaySelect) {
+      if (gatewaySelect && gatewaySelect.options.length) {
+        Array.from(gatewaySelect.options).forEach((option) => {
+          optimizerGatewaySelect.appendChild(option.cloneNode(true));
+        });
+      } else {
+        GATEWAY_PROFILES.forEach((profile) => {
+          const option = document.createElement('option');
+          if (profile.id === 'ollama') {
+            option.value = 'http://localhost:11434';
+          } else if (profile.id === 'mcp') {
+            option.value = 'http://127.0.0.1:5012';
+          } else if (profile.id === 'fastvlm') {
+            option.value = 'http://127.0.0.1:8765';
+          } else {
+            option.value = typeof profile.match === 'string' ? profile.match : '';
+          }
+          option.textContent = profile.name;
+          optimizerGatewaySelect.appendChild(option);
+        });
+      }
+      syncOptimizerGateway();
+    }
 
     // Log for debugging
     console.log('Luka UI initialized. Elements found:', {
