@@ -76,17 +76,17 @@ echo ""
 echo "🌐 4. NETWORK DIAGNOSTICS"
 echo "------------------------"
 echo "Local endpoints accessible from browser:"
-if [ -f "index.html" ]; then
-    echo -e "${GREEN}✅ index.html exists ($(wc -l < index.html) lines)${NC}"
+if [ -f "luka.html" ]; then
+    echo -e "${GREEN}✅ luka.html exists ($(wc -l < luka.html) lines)${NC}"
 
     # Check for common issues
-    if grep -q "getElementById.*input" index.html && grep -q "getElementById.*send" index.html; then
+    if grep -q "getElementById.*input" luka.html && grep -q "getElementById.*send" luka.html; then
         echo -e "${GREEN}✅ UI elements properly defined${NC}"
     else
         echo -e "${YELLOW}⚠️  UI elements may have issues${NC}"
     fi
 else
-    echo -e "${RED}❌ index.html not found${NC}"
+    echo -e "${RED}❌ luka.html not found${NC}"
 fi
 echo ""
 
@@ -108,8 +108,8 @@ if ! lsof -iTCP:8765 -sTCP:LISTEN > /dev/null 2>&1; then
 fi
 
 # Check file size
-if [ -f "index.html" ]; then
-    HTML_SIZE=$(wc -c < index.html)
+if [ -f "luka.html" ]; then
+    HTML_SIZE=$(wc -c < luka.html)
     if [ $HTML_SIZE -gt 50000 ]; then
         echo "• HTML file large (${HTML_SIZE} bytes) - consider minification"
         ((ISSUES++))
@@ -142,7 +142,7 @@ PASSED=0
 curl -s http://127.0.0.1:5012/health > /dev/null 2>&1 && ((PASSED++))
 lsof -iTCP:8765 -sTCP:LISTEN > /dev/null 2>&1 && ((PASSED++))
 curl -s http://localhost:11434/api/tags > /dev/null 2>&1 && ((PASSED++))
-[ -f "index.html" ] && ((PASSED++))
+[ -f "luka.html" ] && ((PASSED++))
 
 PERCENT=$((PASSED * 100 / TOTAL_CHECKS))
 

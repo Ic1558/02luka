@@ -86,8 +86,8 @@ update_ui_config() {
     echo ""
     echo "📝 Updating UI configuration..."
 
-    # Backup current index.html
-    cp index.html index.html.backup.$(date +%s)
+    # Backup current luka.html
+    cp luka.html luka.html.backup.$(date +%s)
 
     # Create updated gateway config
     cat > /tmp/gateway_config.js << EOF
@@ -115,14 +115,14 @@ document.addEventListener('DOMContentLoaded', () => {
 EOF
 
     # Inject config into HTML
-    if grep -q "GATEWAY_CONFIG" index.html; then
+    if grep -q "GATEWAY_CONFIG" luka.html; then
         echo "   Config already exists, updating..."
         # Update existing config
-        perl -i -pe 's|const GATEWAY_CONFIG = \{[^}]+\}|'"$(cat /tmp/gateway_config.js | grep 'const GATEWAY_CONFIG')"'|' index.html
+        perl -i -pe 's|const GATEWAY_CONFIG = \{[^}]+\}|'"$(cat /tmp/gateway_config.js | grep 'const GATEWAY_CONFIG')"'|' luka.html
     else
         echo "   Injecting new config..."
         # Add config before closing </head>
-        perl -i -pe 's|</head>|<script>\n'"$(cat /tmp/gateway_config.js)"'\n</script>\n</head>|' index.html
+        perl -i -pe 's|</head>|<script>\n'"$(cat /tmp/gateway_config.js)"'\n</script>\n</head>|' luka.html
     fi
 
     echo "   ✅ UI configuration updated"
@@ -211,7 +211,7 @@ main() {
     # Commit changes
     echo ""
     echo "💾 Saving configuration..."
-    git add index.html
+    git add luka.html
     git commit -m "auto: update gateway URLs to tunnels $(date +%Y%m%d_%H%M%S)" 2>/dev/null
     git push origin main 2>/dev/null
 
