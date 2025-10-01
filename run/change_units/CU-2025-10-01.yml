@@ -3,7 +3,7 @@
   summary: "Switch boss-api to resolver-only; add /api/file; wire UI click-to-open"
   files_touched:
     - boss-api/server.js
-    - boss-ui/index.html
+    - boss-ui/luka.html
   tags: ["boss-api","boss-ui","resolver","preflight"]
   tests_ran:
     - preflight: OK
@@ -17,7 +17,7 @@
   summary: "Resolve merge fallout, restore /api/file handler and add inline preview"
   files_touched:
     - boss-api/server.js
-    - boss-ui/index.html
+    - boss-ui/luka.html
     - run/change_units/CU-2025-10-01.yml
   tags: ["boss-api","boss-ui","resolver"]
   tests_ran:

@@ -1,4 +1,10 @@
 cleanup_home_backups.sh
 *.backup-*
-boss-api/node_modules/
 .vscode/
+# Ignore node_modules at root and within boss-api (explicit for clarity)
+node_modules/
+boss-api/node_modules/
+
+# Build outputs and environment files
+boss-ui/dist/
+.env
