@@ -9,45 +9,82 @@
   <main style="flex:1;display:flex;flex-direction:column">
     <div id="status" style="padding:12px;border-bottom:1px solid #ddd;font-weight:600"></div>
     <div style="display:flex;flex:1;min-height:0">
-      <ul id="messages" style="width:280px;border-right:1px solid #ddd;overflow:auto;list-style:none;padding:0;margin:0"></ul>
-      <pre id="viewer" style="flex:1;overflow:auto;margin:0;padding:16px;white-space:pre-wrap;color:#111"></pre>
+      <div id="messages" style="width:280px;border-right:1px solid #ddd;overflow:auto;padding:0;margin:0"></div>
+      <div id="preview" style="flex:1;overflow:auto;margin:0;padding:16px;white-space:pre-wrap;color:#111">Select a file to preview.</div>
     </div>
   </main>
 </div>
 <script>
   const API_BASE = 'http://127.0.0.1:4000';
 
+  const state = { mailbox: 'inbox' };
+  const foldersEl = document.getElementById('folders');
+  const statusEl = document.getElementById('status');
+  const listEl = document.getElementById('messages');
+  const previewEl = document.getElementById('preview');
+
+  function renderFolders() {
+    const mailboxes = ['inbox', 'sent', 'deliverables', 'dropbox'];
+    foldersEl.innerHTML = '';
+    mailboxes.forEach((mailbox) => {
+      const btn = document.createElement('button');
+      btn.textContent = mailbox;
+      btn.dataset.mailbox = mailbox;
+      btn.style.display = 'block';
+      btn.style.width = '100%';
+      btn.style.marginBottom = '6px';
+      btn.disabled = mailbox === state.mailbox;
+      btn.onclick = () => loadMailbox(mailbox);
+      foldersEl.appendChild(btn);
+    });
+  }
+
   async function loadMailbox(mailbox) {
-    const status = document.getElementById('status');
-    const list = document.getElementById('messages');
-    status.textContent = 'Loading…';
-    list.innerHTML = '';
+    state.mailbox = mailbox;
+    renderFolders();
+    statusEl.textContent = 'Loading…';
+    listEl.innerHTML = '';
+    previewEl.textContent = 'Select a file to preview.';
+
     try {
-      const resp = await fetch(`${API_BASE}/api/list/${mailbox}`);
-      if (!resp.ok) throw new Error(`API error: ${resp.status}`);
-      const payload = await resp.json();
-      status.textContent = `${payload.items.length} items in ${payload.mailbox}`;
-      payload.items.forEach((item) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>${item.name}</strong>
-                        <div class="meta">${item.updatedAt} · ${item.size} bytes</div>`;
-        li.style.cursor = 'pointer';
-        li.onclick = async () => {
-          try {
-            const r = await fetch(`${API_BASE}/api/file/${mailbox}/${encodeURIComponent(item.name)}`);
-            const t = await r.text();
-            alert(t.length > 1000 ? t.slice(0, 1000) + '…' : t); // viewer ง่าย ๆ ชั่วคราว
-          } catch (e) {
-            alert('Failed to open file');
-          }
-        };
-        list.appendChild(li);
-      });
-    } catch (error) {
-      console.error('Failed to load mailbox', error);
-      status.textContent = 'Failed to load mailbox.';
-      status.classList.add('error');
+      const res = await fetch(`${API_BASE}/api/list/${mailbox}`);
+      if (!res.ok) throw new Error(res.statusText);
+      const payload = await res.json();
+      statusEl.textContent = `${payload.items.length} items in ${payload.mailbox}`;
+      renderList(payload);
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Failed to load mailbox.';
     }
   }
+
+  function renderList(payload) {
+    listEl.innerHTML = '';
+    payload.items.forEach((item) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.textContent = `${item.name}  ·  ${item.updatedAt}  ·  ${item.size} bytes`;
+      row.style.padding = '8px 12px';
+      row.style.borderBottom = '1px solid #eee';
+      row.style.cursor = 'pointer';
+      row.onclick = () => previewFile(payload.mailbox, item.name);
+      listEl.appendChild(row);
+    });
+  }
+
+  async function previewFile(mailbox, name) {
+    previewEl.textContent = 'Loading preview…';
+    try {
+      const res = await fetch(`${API_BASE}/api/file/${mailbox}/${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error(res.statusText);
+      const text = await res.text();
+      previewEl.textContent = text;
+    } catch (err) {
+      console.error(err);
+      previewEl.textContent = 'Failed to load file.';
+    }
+  }
+
+  renderFolders();
   loadMailbox('inbox');
 </script>

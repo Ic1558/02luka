@@ -12,6 +12,9 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Path configuration
+SOT_PATH="${SOT_PATH:-$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka}"
+
 # 1. DEPLOYMENT CHECK
 echo "📦 1. DEPLOYMENT STATUS"
 echo "-----------------------"
@@ -72,8 +75,76 @@ else
 fi
 echo ""
 
-# 4. NETWORK DIAGNOSTICS
-echo "🌐 4. NETWORK DIAGNOSTICS"
+# 4. MCP SERVERS
+echo "🔌 4. MCP SERVERS"
+echo "----------------"
+if [ -f "$SOT_PATH/g/tools/mcp_health.sh" ]; then
+    MCP_HEALTH=$(bash "$SOT_PATH/g/tools/mcp_health.sh" json 2>/dev/null || echo '{"servers":[],"summary":{"total":0,"running":0,"failed":0}}')
+
+    MCP_TOTAL=$(echo "$MCP_HEALTH" | jq -r '.summary.total')
+    MCP_RUNNING=$(echo "$MCP_HEALTH" | jq -r '.summary.running')
+    MCP_FAILED=$(echo "$MCP_HEALTH" | jq -r '.summary.failed')
+
+    echo "$MCP_HEALTH" | jq -r '.servers[] |
+        if .status == "running" then
+            "✅ \(.name): RUNNING (\(.server_info))"
+        else
+            "❌ \(.name): \(.status | ascii_upcase) - \(.error // "unknown error")"
+        end' | while IFS= read -r line; do
+            if [[ "$line" == ✅* ]]; then
+                echo -e "${GREEN}$line${NC}"
+            else
+                echo -e "${RED}$line${NC}"
+            fi
+        done
+
+    echo ""
+    if [ "$MCP_RUNNING" -eq "$MCP_TOTAL" ]; then
+        echo -e "${GREEN}Summary: $MCP_RUNNING/$MCP_TOTAL servers running${NC}"
+    else
+        echo -e "${YELLOW}Summary: $MCP_RUNNING/$MCP_TOTAL servers running ($MCP_FAILED failed)${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠️  MCP health checker not found${NC}"
+    echo "   Install: $SOT_PATH/g/tools/mcp_health.sh"
+    MCP_RUNNING=0
+    MCP_TOTAL=4
+fi
+echo ""
+
+# 5. SYSTEM MAP VALIDATION
+echo "🗺️  5. SYSTEM MAP VALIDATION"
+echo "--------------------------"
+SOT_PATH="${SOT_PATH:-$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka}"
+if [ -f "$SOT_PATH/g/tools/check_map_links.sh" ]; then
+    MAP_OUTPUT=$(bash "$SOT_PATH/g/tools/check_map_links.sh" 2>&1 | grep -v "lsof: WARNING")
+    if echo "$MAP_OUTPUT" | grep -q "All checks passed"; then
+        echo -e "${GREEN}✅ System map: All paths and services validated${NC}"
+    else
+        ERROR_COUNT=$(echo "$MAP_OUTPUT" | grep -c "❌ ERROR")
+        WARNING_COUNT=$(echo "$MAP_OUTPUT" | grep -c "⚠️  WARNING")
+        # Ensure counts are valid integers
+        [[ "$ERROR_COUNT" =~ ^[0-9]+$ ]] || ERROR_COUNT=0
+        [[ "$WARNING_COUNT" =~ ^[0-9]+$ ]] || WARNING_COUNT=0
+        if [ "$ERROR_COUNT" -gt 0 ]; then
+            echo -e "${RED}❌ System map: $ERROR_COUNT errors found${NC}"
+        elif [ "$WARNING_COUNT" -gt 0 ]; then
+            echo -e "${YELLOW}⚠️  System map: $WARNING_COUNT warnings${NC}"
+        fi
+    fi
+
+    # Auto-regenerate documentation
+    if [ -f "$SOT_PATH/g/tools/render_system_map.py" ]; then
+        python3 "$SOT_PATH/g/tools/render_system_map.py" >/dev/null 2>&1 && \
+            echo "   Documentation auto-updated: docs/system_map.md"
+    fi
+else
+    echo -e "${YELLOW}⚠️  System map tools not found${NC}"
+fi
+echo ""
+
+# 6. NETWORK DIAGNOSTICS
+echo "🌐 6. NETWORK DIAGNOSTICS"
 echo "------------------------"
 echo "Local endpoints accessible from browser:"
 if [ -f "index.html" ]; then
@@ -90,8 +161,8 @@ else
 fi
 echo ""
 
-# 5. OPTIMIZATION REPORT
-echo "⚡ 5. OPTIMIZATION SUGGESTIONS"
+# 7. OPTIMIZATION REPORT
+echo "⚡ 7. OPTIMIZATION SUGGESTIONS"
 echo "-----------------------------"
 
 ISSUES=0
@@ -123,8 +194,34 @@ else
 fi
 echo ""
 
-# 6. QUICK ACTIONS
-echo "🚀 6. QUICK ACTIONS"
+# 8. CODEX TEMPLATE INTEGRITY CHECK
+echo "📋 8. CODEX TEMPLATE INTEGRITY"
+echo "------------------------------"
+
+TPL="$SOT_PATH/.codex/templates/master_prompt.md"
+EXPECTED_SHA="d177684c8ce1bb2f4cf49df3107dd884babdf731c4a5d639ffcd44aa5ee64532"
+
+if [ -f "$TPL" ]; then
+  ACTUAL_SHA="$(shasum -a 256 "$TPL" | awk '{print $1}')"
+  if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+    echo -e "${RED}❌ master_prompt.md hash mismatch - template may have been modified${NC}"
+    echo "       Expected: $EXPECTED_SHA"
+    echo "       Actual:   $ACTUAL_SHA"
+    echo "       Location: $TPL"
+    echo "       → Run 'g/tools/install_master_prompt.sh' to restore or update EXPECTED_SHA if intentional"
+    ((ISSUES++))
+  else
+    echo -e "${GREEN}✅ master_prompt.md hash verified - template integrity confirmed${NC}"
+  fi
+else
+  echo -e "${YELLOW}⚠️  master_prompt.md not found at $TPL${NC}"
+  echo "       → Run 'g/tools/install_master_prompt.sh' to install"
+  ((ISSUES++))
+fi
+echo ""
+
+# 9. QUICK ACTIONS
+echo "🚀 9. QUICK ACTIONS"
 echo "------------------"
 echo "• Run locally:     ./run_local.sh"
 echo "• Expose to web:   ./expose_gateways.sh"
@@ -132,10 +229,10 @@ echo "• View on GitHub:  open https://ic1558.github.io/02luka/"
 echo "• Check logs:      tail -f /tmp/docker-autohealing.log"
 echo ""
 
-# 7. SYSTEM SUMMARY
-echo "📊 SUMMARY"
+# 10. SYSTEM SUMMARY
+echo "📊 10. SUMMARY"
 echo "----------"
-TOTAL_CHECKS=5
+TOTAL_CHECKS=9
 PASSED=0
 
 [ "$DEPLOY_STATUS" = "200" ] && ((PASSED++))
@@ -143,6 +240,7 @@ curl -s http://127.0.0.1:5012/health > /dev/null 2>&1 && ((PASSED++))
 lsof -iTCP:8765 -sTCP:LISTEN > /dev/null 2>&1 && ((PASSED++))
 curl -s http://localhost:11434/api/tags > /dev/null 2>&1 && ((PASSED++))
 [ -f "index.html" ] && ((PASSED++))
+[[ "${MCP_RUNNING:-0}" -gt 0 ]] && ((PASSED+=${MCP_RUNNING:-0}))
 
 PERCENT=$((PASSED * 100 / TOTAL_CHECKS))
 
