@@ -10,6 +10,6 @@ bash .codex/preflight.sh
 bash g/tools/mapping_drift_guard.sh --validate
 bash g/tools/clc_gate.sh
 # optional smoke (if port free)
-HOST=127.0.0.1 PORT=4000 node boss-api/server.js
+HOST=127.0.0.1 PORT=4000 node boss-api/server.cjs
 curl -s http://127.0.0.1:4000/api/list/inbox | jq .
 ```

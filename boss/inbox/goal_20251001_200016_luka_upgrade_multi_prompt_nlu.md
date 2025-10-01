@@ -18,7 +18,7 @@
      - Button: **Run** → calls `/api/chat` with chosen variant; show response in detail pane (stream later).
      - Button: **Save as Goal** → writes `boss/inbox/goal_*.md`.
 
-2) **Backend (boss-api/server.js)**  
+2) **Backend (boss-api/server.cjs)**  
    - Keep `POST /api/goal` (done).
    - Add `POST /api/optimize_prompt` → returns `{ variants: [ {id, score, title, prompt, rationale} ] }`
      - Phase-1 heuristic (no external key required): rule-based rewrites using known patterns.

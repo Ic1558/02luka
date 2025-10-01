@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node src/index.js",
-    "start": "node src/index.js"
+    "dev": "HOST=127.0.0.1 PORT=4000 node server.cjs",
+    "start": "HOST=127.0.0.1 PORT=4000 node server.cjs"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
