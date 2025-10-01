@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Luka Workspace</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-surface: #f5f6f8;
+        --panel-bg: #ffffff;
+        --border: #e5e7eb;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --accent: #2563eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg-surface);
+        color: var(--text-primary);
+      }
+
+      body {
+        display: flex;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      textarea:focus-visible,
+      .message-row:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .app {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel-bg);
+        flex-wrap: wrap;
+      }
+
+      .brand {
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .status {
+        flex: 1;
+        min-width: 160px;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .topbar-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .search-field,
+      .engine-select {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 14px;
+        background: var(--panel-bg);
+        color: var(--text-primary);
+      }
+
+      .search-field::placeholder {
+        color: var(--text-secondary);
+      }
+
+      .ghost-button {
+        border: 1px solid var(--border);
+        background: var(--panel-bg);
+        color: var(--text-primary);
+        padding: 6px 12px;
+        border-radius: 8px;
+      }
+
+      .ghost-button:hover:not(:disabled) {
+        background: #eef2ff;
+      }
+
+      .ghost-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .primary-button {
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #ffffff;
+        padding: 6px 16px;
+        border-radius: 8px;
+      }
+
+      .primary-button:hover:not(:disabled) {
+        border-color: #1d4ed8;
+        background: #1d4ed8;
+      }
+
+      .primary-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .layout {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .sidebar {
+        width: 220px;
+        background: var(--panel-bg);
+        border-right: 1px solid var(--border);
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .sidebar-header {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+
+      .sidebar-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0;
+        margin: 0;
+      }
+
+      .sidebar-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 12px 8px;
+      }
+
+      .sidebar-button {
+        border: none;
+        background: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        text-align: left;
+        color: var(--text-secondary);
+      }
+
+      .sidebar-button:hover:not(.is-disabled) {
+        background: #eef2ff;
+        color: var(--text-primary);
+      }
+
+      .sidebar-button.is-active {
+        background: #e0e7ff;
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .sidebar-button.is-disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .workspace {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .workspace-content {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .messages-pane {
+        width: 320px;
+        max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border);
+        background: var(--panel-bg);
+      }
+
+      .detail-pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel-bg);
+      }
+
+      .pane-title {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .message-list {
+        flex: 1;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .message-row {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .message-row:hover {
+        background: #f3f4ff;
+      }
+
+      .message-name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .message-meta {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .message-empty {
+        padding: 16px;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      .preview-body {
+        flex: 1;
+        overflow: auto;
+        padding: 16px;
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        line-height: 1.5;
+      }
+
+      .composer {
+        border-top: 1px solid var(--border);
+        background: var(--panel-bg);
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .composer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 600;
+      }
+
+      .composer-note {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+
+      .composer-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .composer-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      .field textarea {
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        min-height: 90px;
+        resize: vertical;
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+      }
+
+      .composer-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .dialog {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 24px;
+        max-width: 440px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+      }
+
+      .dialog h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .dialog label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .dialog input,
+      .dialog textarea {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #ffffff;
+        color: var(--text-primary);
+      }
+
+      .dialog textarea {
+        resize: vertical;
+        min-height: 96px;
+      }
+
+      .optional-label {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text-secondary);
+      }
+
+      .dialog-error {
+        display: none;
+        color: #b91c1c;
+        font-size: 13px;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      @media (max-width: 1024px) {
+        .messages-pane {
+          width: 280px;
+        }
+      }
+
+      @media (max-width: 880px) {
+        .layout {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: auto;
+          flex-direction: row;
+          overflow-x: auto;
+        }
+
+        .sidebar-list {
+          flex-direction: row;
+          gap: 8px;
+        }
+
+        .sidebar-divider {
+          width: 1px;
+          min-height: 32px;
+          margin: 0 12px;
+        }
+
+        .workspace-content {
+          flex: 1;
+          flex-direction: column;
+        }
+
+        .messages-pane {
+          width: auto;
+          max-width: none;
+          border-right: none;
+          border-bottom: 1px solid var(--border);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">Luka Workspace</div>
+        <div id="status" class="status">Loading...</div>
+        <div class="topbar-controls">
+          <input type="search" class="search-field" placeholder="Search mailboxes" aria-label="Search" />
+          <select class="engine-select" aria-label="Model engine">
+            <option>Local</option>
+            <option>Anthropic</option>
+            <option>OpenAI</option>
+          </select>
+          <button type="button" class="ghost-button">Link to Cursor</button>
+          <button type="button" id="newGoalBtn" class="primary-button">New Goal</button>
+        </div>
+      </header>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="sidebar-header">Navigation</div>
+          <nav id="folders" class="sidebar-list" aria-label="Mailboxes"></nav>
+        </aside>
+        <section class="workspace">
+          <div class="workspace-content">
+            <div class="messages-pane">
+              <div class="pane-title">Threads</div>
+              <div id="messages" class="message-list" role="listbox" aria-label="Mailbox items"></div>
+            </div>
+            <div class="detail-pane">
+              <div class="pane-title">Preview</div>
+              <div id="preview" class="preview-body">Select a file to preview.</div>
+            </div>
+          </div>
+          <div class="composer" role="region" aria-label="Prompt Composer placeholder">
+            <div class="composer-header">
+              <span>Prompt Composer</span>
+              <span class="composer-note">Placeholder wiring in progress</span>
+            </div>
+            <div class="composer-body">
+              <div class="composer-grid">
+                <label class="field">
+                  <span>System</span>
+                  <textarea placeholder="System instructions (coming soon)" disabled></textarea>
+                </label>
+                <label class="field">
+                  <span>User Prompt</span>
+                  <textarea placeholder="User prompt builder (coming soon)" disabled></textarea>
+                </label>
+              </div>
+              <div class="composer-actions">
+                <button type="button" class="ghost-button" disabled>Optimize</button>
+                <button type="button" class="ghost-button" disabled>Run</button>
+                <button type="button" class="ghost-button" disabled>Save as Goal</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="goalDialog" class="dialog-backdrop" tabindex="-1" style="display:none" aria-hidden="true">
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="goalDialogTitle">
+        <h3 id="goalDialogTitle">New Goal</h3>
+        <label>
+          <span>Title</span>
+          <input id="goalTitle" type="text" maxlength="120" />
+        </label>
+        <label>
+          <span>Details <small class="optional-label">(optional)</small></span>
+          <textarea id="goalDetails" rows="4" maxlength="5000"></textarea>
+        </label>
+        <div id="goalError" class="dialog-error"></div>
+        <div class="dialog-actions">
+          <button type="button" id="goalCancel" class="ghost-button">Cancel</button>
+          <button type="button" id="goalSubmit" class="primary-button">Create Goal</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = 'http://127.0.0.1:4000';
+
+      const SIDEBAR_ITEMS = [
+        { type: 'mailbox', id: 'inbox', label: 'Inbox' },
+        { type: 'mailbox', id: 'sent', label: 'Sent' },
+        { type: 'mailbox', id: 'deliverables', label: 'Deliverables' },
+        { type: 'mailbox', id: 'dropbox', label: 'Dropbox' },
+        { type: 'divider' },
+        { type: 'placeholder', id: 'anthropic', label: 'Anthropic' },
+        { type: 'placeholder', id: 'settings', label: 'Settings' }
+      ];
+
+      const state = { mailbox: 'inbox' };
+      const foldersEl = document.getElementById('folders');
+      const statusEl = document.getElementById('status');
+      const listEl = document.getElementById('messages');
+      const previewEl = document.getElementById('preview');
+      const newGoalBtn = document.getElementById('newGoalBtn');
+      const goalDialog = document.getElementById('goalDialog');
+      const goalTitleInput = document.getElementById('goalTitle');
+      const goalDetailsInput = document.getElementById('goalDetails');
+      const goalErrorEl = document.getElementById('goalError');
+      const goalSubmitBtn = document.getElementById('goalSubmit');
+      const goalCancelBtn = document.getElementById('goalCancel');
+
+      function renderFolders() {
+        foldersEl.innerHTML = '';
+        SIDEBAR_ITEMS.forEach((item) => {
+          if (item.type === 'divider') {
+            const divider = document.createElement('div');
+            divider.className = 'sidebar-divider';
+            foldersEl.appendChild(divider);
+            return;
+          }
+
+          const button = document.createElement('button');
+          button.className = 'sidebar-button';
+          button.textContent = item.label;
+          button.type = 'button';
+
+          if (item.type === 'mailbox') {
+            button.dataset.mailbox = item.id;
+            if (item.id === state.mailbox) {
+              button.classList.add('is-active');
+            }
+            button.addEventListener('click', () => loadMailbox(item.id));
+          } else {
+            button.disabled = true;
+            button.classList.add('is-disabled');
+            button.setAttribute('aria-disabled', 'true');
+          }
+
+          foldersEl.appendChild(button);
+        });
+      }
+
+      async function loadMailbox(mailbox) {
+        state.mailbox = mailbox;
+        renderFolders();
+        statusEl.textContent = 'Loading...';
+        listEl.innerHTML = '';
+        previewEl.textContent = 'Select a file to preview.';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/list/${mailbox}`);
+          if (!res.ok) throw new Error(res.statusText);
+          const payload = await res.json();
+          statusEl.textContent = `${payload.items.length} items in ${payload.mailbox}`;
+          renderList(payload);
+        } catch (err) {
+          console.error(err);
+          statusEl.textContent = 'Failed to load mailbox.';
+        }
+      }
+
+      function renderList(payload) {
+        listEl.innerHTML = '';
+        if (!payload.items.length) {
+          const emptyState = document.createElement('div');
+          emptyState.className = 'message-empty';
+          emptyState.textContent = 'No items yet.';
+          listEl.appendChild(emptyState);
+          return;
+        }
+
+        payload.items.forEach((item) => {
+          const row = document.createElement('div');
+          row.className = 'message-row';
+          row.setAttribute('role', 'option');
+          row.tabIndex = 0;
+
+          const nameEl = document.createElement('div');
+          nameEl.className = 'message-name';
+          nameEl.textContent = item.name;
+
+          const metaEl = document.createElement('div');
+          metaEl.className = 'message-meta';
+          metaEl.textContent = `${item.updatedAt} - ${item.size} bytes`;
+
+          row.addEventListener('click', () => previewFile(payload.mailbox, item.name));
+          row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              previewFile(payload.mailbox, item.name);
+            }
+          });
+
+          row.appendChild(nameEl);
+          row.appendChild(metaEl);
+          listEl.appendChild(row);
+        });
+      }
+
+      async function previewFile(mailbox, name) {
+        previewEl.textContent = 'Loading preview...';
+        try {
+          const res = await fetch(`${API_BASE}/api/file/${mailbox}/${encodeURIComponent(name)}`);
+          if (!res.ok) throw new Error(res.statusText);
+          const text = await res.text();
+          previewEl.textContent = text;
+        } catch (err) {
+          console.error(err);
+          previewEl.textContent = 'Failed to load file.';
+        }
+      }
+
+      function resetGoalDialog() {
+        goalTitleInput.value = '';
+        goalDetailsInput.value = '';
+        setGoalError('');
+      }
+
+      function setGoalError(message) {
+        if (message) {
+          goalErrorEl.textContent = message;
+          goalErrorEl.style.display = 'block';
+        } else {
+          goalErrorEl.textContent = '';
+          goalErrorEl.style.display = 'none';
+        }
+      }
+
+      function openGoalDialog() {
+        resetGoalDialog();
+        goalDialog.style.display = 'flex';
+        goalDialog.setAttribute('aria-hidden', 'false');
+        goalDialog.focus();
+        requestAnimationFrame(() => goalTitleInput.focus());
+      }
+
+      function closeGoalDialog() {
+        goalDialog.style.display = 'none';
+        goalDialog.setAttribute('aria-hidden', 'true');
+      }
+
+      async function submitGoal() {
+        const title = goalTitleInput.value.trim();
+        const details = goalDetailsInput.value.trim();
+
+        if (!title) {
+          setGoalError('Title is required.');
+          goalTitleInput.focus();
+          return;
+        }
+
+        const payload = { title };
+        if (details) {
+          payload.details = details;
+        }
+
+        setGoalError('');
+        goalSubmitBtn.disabled = true;
+        goalSubmitBtn.textContent = 'Creating...';
+
+        try {
+          const res = await fetch(`${API_BASE}/api/goal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            const message = data && data.error ? data.error : 'Failed to create goal.';
+            throw new Error(message);
+          }
+
+          closeGoalDialog();
+          const nextMailbox = (data && data.mailbox) || 'dropbox';
+          loadMailbox(nextMailbox);
+        } catch (err) {
+          console.error(err);
+          setGoalError(err.message || 'Failed to create goal.');
+        } finally {
+          goalSubmitBtn.disabled = false;
+          goalSubmitBtn.textContent = 'Create Goal';
+        }
+      }
+
+      newGoalBtn.addEventListener('click', openGoalDialog);
+      goalCancelBtn.addEventListener('click', () => {
+        closeGoalDialog();
+      });
+      goalSubmitBtn.addEventListener('click', submitGoal);
+      goalDetailsInput.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+          submitGoal();
+        }
+      });
+      goalDialog.addEventListener('click', (event) => {
+        if (event.target === goalDialog) {
+          closeGoalDialog();
+        }
+      });
+      goalDialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeGoalDialog();
+        }
+      });
+
+      renderFolders();
+      loadMailbox('inbox');
+    </script>
+  </body>
+</html>
