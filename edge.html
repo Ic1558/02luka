@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edge Docs — Luka</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0b0b0f;
+      --panel: rgba(20, 20, 26, 0.85);
+      --panel-border: rgba(255, 255, 255, 0.06);
+      --panel-highlight: rgba(59, 130, 246, 0.2);
+      --text: #f8fafc;
+      --muted: #cbd5f5;
+      --accent: #60a5fa;
+      --accent-strong: #1d4ed8;
+      --success: #22c55e;
+      --warning: #facc15;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.22), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.18), transparent 50%),
+                  var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px clamp(16px, 4vw, 40px);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 18px;
+      backdrop-filter: blur(18px);
+      background: rgba(9, 12, 19, 0.6);
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    header h1 {
+      font-size: clamp(20px, 4vw, 32px);
+      letter-spacing: -0.01em;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 540px;
+      font-size: 14px;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(320px, 480px) minmax(400px, 1fr);
+      gap: clamp(16px, 2.8vw, 32px);
+      padding: clamp(16px, 4vw, 48px);
+      align-items: start;
+    }
+
+    @media (max-width: 1120px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: clamp(18px, 2.5vw, 28px);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 24px 60px rgba(2, 6, 23, 0.5);
+    }
+
+    section h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .fieldset {
+      display: grid;
+      gap: 14px;
+    }
+
+    .fieldset.three {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px clamp(14px, 2vw, 22px);
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    input, select, textarea {
+      font: inherit;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      padding: 10px 12px;
+      transition: border 0.2s, box-shadow 0.2s;
+      resize: vertical;
+      min-height: 38px;
+    }
+
+    textarea { min-height: 88px; }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(96, 165, 250, 0.7);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+    }
+
+    .table-wrapper {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      background: rgba(15, 23, 42, 0.55);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: rgba(30, 64, 175, 0.35);
+      color: var(--text);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    td input {
+      width: 100%;
+      min-height: 32px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    button {
+      font: inherit;
+      border-radius: 999px;
+      border: none;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      color: #0f172a;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(14, 165, 233, 0.9));
+      box-shadow: 0 12px 25px rgba(37, 99, 235, 0.35);
+    }
+
+    .btn-ghost {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.9);
+      color: white;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    .document-preview {
+      display: grid;
+      gap: 18px;
+    }
+
+    .doc-surface {
+      background: #f8fafc;
+      color: #0f172a;
+      border-radius: 18px;
+      padding: clamp(24px, 3vw, 40px);
+      box-shadow: 0 18px 50px rgba(15, 23, 42, 0.35);
+    }
+
+    .doc-surface.dark {
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+      padding-bottom: 18px;
+    }
+
+    .doc-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .doc-title span {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: rgba(15, 23, 42, 0.55);
+    }
+
+    .doc-title strong {
+      font-size: 28px;
+      letter-spacing: -0.01em;
+      font-weight: 700;
+      color: var(--accent, #1d4ed8);
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 12px;
+      color: rgba(15, 23, 42, 0.65);
+    }
+
+    .doc-section {
+      margin-bottom: 28px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .doc-section h3 {
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(15, 23, 42, 0.6);
+    }
+
+    .doc-section p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .doc-section table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    .doc-section thead th {
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      color: rgba(15, 23, 42, 0.55);
+      border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+      padding: 10px 0;
+    }
+
+    .doc-section tbody td {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .doc-section tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .totals {
+      margin-top: 12px;
+      width: min(320px, 100%);
+      margin-left: auto;
+      font-size: 14px;
+    }
+
+    .totals div {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+
+    .totals div:last-child {
+      font-weight: 600;
+      font-size: 16px;
+      border-top: 1px solid rgba(15, 23, 42, 0.2);
+      margin-top: 6px;
+      padding-top: 10px;
+    }
+
+    .preview-footer {
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+      color: rgba(148, 163, 184, 0.9);
+    }
+
+    .json-area {
+      background: rgba(15, 23, 42, 0.55);
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .json-area textarea {
+      font-family: "JetBrains Mono", "Fira Code", monospace;
+      min-height: 140px;
+    }
+
+    .template-preview-note {
+      font-size: 12px;
+      color: rgba(148, 163, 184, 0.8);
+      border-left: 3px solid rgba(96, 165, 250, 0.5);
+      padding-left: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Edge Document Generator</h1>
+      <p>Create consistent quotations, invoices, and tax receipts in seconds. Save presets, export JSON, and preview the final layout before sharing with clients or filing.</p>
+    </div>
+  </header>
+  <main>
+    <section aria-label="Document configuration" id="config">
+      <h2>Document setup</h2>
+      <div class="fieldset">
+        <label>
+          Document type
+          <select id="docType">
+            <option value="quotation">Quotation</option>
+            <option value="invoice">Invoice</option>
+            <option value="tax_receipt">Tax Receipt</option>
+          </select>
+        </label>
+        <div class="fieldset three">
+          <label>
+            Document number
+            <input id="docNumber" placeholder="e.g. Q-2024-017" autocomplete="off">
+          </label>
+          <label>
+            Issue date
+            <input id="issueDate" type="date">
+          </label>
+          <label>
+            Due date
+            <input id="dueDate" type="date">
+          </label>
+        </div>
+      </div>
+      <div class="fieldset">
+        <h3>Company details</h3>
+        <div class="fieldset three">
+          <label>Company name
+            <input id="companyName" placeholder="Luka Labs">
+          </label>
+          <label>Registration / Tax ID
+            <input id="companyReg" placeholder="123456789">
+          </label>
+          <label>Contact email
+            <input id="companyEmail" type="email" placeholder="team@luka.ai">
+          </label>
+        </div>
+        <textarea id="companyAddress" placeholder="Address, phone, website"></textarea>
+      </div>
+      <div class="fieldset">
+        <h3>Client details</h3>
+        <div class="fieldset three">
+          <label>Client name
+            <input id="clientName" placeholder="Client Co.">
+          </label>
+          <label>Contact email
+            <input id="clientEmail" type="email" placeholder="finance@client.com">
+          </label>
+          <label>Reference / Project code
+            <input id="clientRef" placeholder="PROJECT-X">
+          </label>
+        </div>
+        <textarea id="clientAddress" placeholder="Address, phone, extras"></textarea>
+      </div>
+      <div class="fieldset">
+        <h3>Line items</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 20%">Item</th>
+                <th style="width: 32%">Description</th>
+                <th style="width: 12%">Qty</th>
+                <th style="width: 16%">Unit price</th>
+                <th style="width: 12%">Tax %</th>
+                <th style="width: 8%"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-ghost" id="addItem">+ Add line</button>
+          <button type="button" class="btn-ghost" id="clearItems">Clear items</button>
+        </div>
+      </div>
+      <div class="fieldset three">
+        <label>Currency code
+          <input id="currency" value="USD" maxlength="3">
+        </label>
+        <label>Default tax %
+          <input id="defaultTax" type="number" step="0.01" value="0">
+        </label>
+        <label>Accent color
+          <input id="accentColor" type="color" value="#3b82f6">
+        </label>
+      </div>
+      <div class="fieldset">
+        <label>Notes / summary
+          <textarea id="notes" placeholder="Payment terms, summary, reminders"></textarea>
+        </label>
+        <label>Footer / compliance text
+          <textarea id="footer" placeholder="Bank info, compliance, gratitude message"></textarea>
+        </label>
+      </div>
+      <div class="fieldset">
+        <h3>Template slot</h3>
+        <p class="template-preview-note">Paste optional HTML snippets or tokens from <code>.codex/templates/master_prompt.md</code> (when available) to align this generator with your company-branded template. These values will render inside the preview panel for quick iteration.</p>
+        <textarea id="templateSnippet" placeholder="Optional: custom header, tagline, or AI-generated block"></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-primary" id="refreshPreview">Refresh preview</button>
+        <button type="button" class="btn-ghost" id="printDoc">Print / Save PDF</button>
+      </div>
+      <div class="json-area">
+        <strong>Data exchange</strong>
+        <textarea id="jsonData" placeholder="Document JSON will appear here for API / AI hand-off"></textarea>
+        <div class="actions">
+          <button type="button" class="btn-ghost" id="copyJson">Copy JSON</button>
+          <button type="button" class="btn-ghost" id="loadJson">Load JSON</button>
+          <button type="button" class="btn-danger" id="resetAll">Reset form</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Document preview" id="preview">
+      <h2>Live preview</h2>
+      <div class="document-preview">
+        <div class="doc-surface" id="docSurface">
+          <div class="doc-header">
+            <div class="doc-title">
+              <span id="docTypeLabel">Quotation</span>
+              <strong id="docTitle">Quotation</strong>
+            </div>
+            <div class="doc-meta" id="docMeta"></div>
+          </div>
+          <div class="doc-section">
+            <h3>Company</h3>
+            <p id="companyBlock">Add company details to populate this block.</p>
+          </div>
+          <div class="doc-section">
+            <h3>Client</h3>
+            <p id="clientBlock">Add client details to populate this block.</p>
+          </div>
+          <div class="doc-section" id="itemsSection">
+            <h3>Summary</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Description</th>
+                  <th style="text-align:right">Qty</th>
+                  <th style="text-align:right">Unit</th>
+                  <th style="text-align:right">Line total</th>
+                </tr>
+              </thead>
+              <tbody id="itemsPreview"></tbody>
+            </table>
+            <div class="totals" id="totals"></div>
+          </div>
+          <div class="doc-section" id="notesSection" hidden>
+            <h3>Notes</h3>
+            <p id="notesContent"></p>
+          </div>
+          <div class="doc-section" id="footerSection" hidden>
+            <h3>Footer</h3>
+            <p id="footerContent"></p>
+          </div>
+          <div class="doc-section" id="templateSection" hidden>
+            <h3>Template snippet</h3>
+            <div id="templateContent"></div>
+          </div>
+        </div>
+        <div class="preview-footer">
+          <span>Tip: Print to PDF to generate shareable docs instantly.</span>
+          <span>JSON payload enables AI or integrations to replicate this document.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    const currencyFormatter = (currency) => new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'symbol',
+      minimumFractionDigits: 2,
+    });
+
+    const state = {
+      items: [],
+    };
+
+    const docTypeMap = {
+      quotation: { label: 'Quotation', prefix: 'QTN' },
+      invoice: { label: 'Invoice', prefix: 'INV' },
+      tax_receipt: { label: 'Tax Receipt', prefix: 'TRC' },
+    };
+
+    const formIds = [
+      'docType', 'docNumber', 'issueDate', 'dueDate', 'companyName', 'companyReg',
+      'companyEmail', 'companyAddress', 'clientName', 'clientEmail', 'clientRef',
+      'clientAddress', 'currency', 'defaultTax', 'notes', 'footer', 'templateSnippet',
+      'accentColor'
+    ];
+
+    const getInput = (id) => document.getElementById(id);
+
+    const itemsBody = document.getElementById('itemsBody');
+    const itemsPreview = document.getElementById('itemsPreview');
+    const totalsEl = document.getElementById('totals');
+    const notesSection = document.getElementById('notesSection');
+    const notesContent = document.getElementById('notesContent');
+    const footerSection = document.getElementById('footerSection');
+    const footerContent = document.getElementById('footerContent');
+    const templateSection = document.getElementById('templateSection');
+    const templateContent = document.getElementById('templateContent');
+    const docSurface = document.getElementById('docSurface');
+
+    function createItemRow(item = {}) {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input placeholder="Service" value="${item.name ?? ''}" data-field="name"></td>
+        <td><input placeholder="Description" value="${item.description ?? ''}" data-field="description"></td>
+        <td><input type="number" step="0.01" min="0" placeholder="1" value="${item.quantity ?? ''}" data-field="quantity"></td>
+        <td><input type="number" step="0.01" min="0" placeholder="0.00" value="${item.unitPrice ?? ''}" data-field="unitPrice"></td>
+        <td><input type="number" step="0.01" min="0" placeholder="${getInput('defaultTax').value}" value="${item.taxRate ?? ''}" data-field="taxRate"></td>
+        <td><button type="button" class="btn-ghost" aria-label="Remove line">✕</button></td>
+      `;
+
+      row.querySelectorAll('input').forEach((input) => {
+        input.addEventListener('input', () => {
+          persistItems();
+          updatePreview();
+        });
+      });
+
+      row.querySelector('button').addEventListener('click', () => {
+        row.remove();
+        persistItems();
+        updatePreview();
+      });
+
+      itemsBody.appendChild(row);
+    }
+
+    function persistItems() {
+      state.items = Array.from(itemsBody.querySelectorAll('tr')).map((row) => {
+        const item = {};
+        row.querySelectorAll('input').forEach((input) => {
+          const field = input.dataset.field;
+          item[field] = input.value;
+        });
+        return item;
+      });
+    }
+
+    function parseNumber(value) {
+      const num = parseFloat(value);
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function composeBlock(label, lines) {
+      return lines.filter(Boolean).join('\n') || `Add ${label} details to populate this block.`;
+    }
+
+    function updatePreview() {
+      persistItems();
+      const data = collectData();
+      const type = docTypeMap[data.docType];
+      const formatter = currencyFormatter(data.currency);
+
+      document.getElementById('docTypeLabel').textContent = type.label;
+      document.getElementById('docTitle').textContent = data.docNumber || `${type.prefix}-${new Date().getFullYear()}`;
+      document.getElementById('docMeta').innerHTML = [`Issued: ${data.issueDate || '—'}`, `Due: ${data.dueDate || '—'}`].join('<br>');
+
+      document.getElementById('companyBlock').textContent = composeBlock('company', [
+        data.companyName,
+        data.companyReg ? `Reg / Tax ID: ${data.companyReg}` : '',
+        data.companyEmail,
+        data.companyAddress
+      ]);
+
+      document.getElementById('clientBlock').textContent = composeBlock('client', [
+        data.clientName,
+        data.clientEmail,
+        data.clientRef ? `Reference: ${data.clientRef}` : '',
+        data.clientAddress
+      ]);
+
+      itemsPreview.innerHTML = '';
+      let subtotal = 0;
+      let taxTotal = 0;
+
+      if (data.items.length) {
+        data.items.forEach((item) => {
+          const quantity = parseNumber(item.quantity || 1);
+          const unitPrice = parseNumber(item.unitPrice || 0);
+          const taxRate = parseNumber(item.taxRate !== '' ? item.taxRate : data.defaultTax);
+          const lineSubtotal = quantity * unitPrice;
+          const lineTax = lineSubtotal * (taxRate / 100);
+          subtotal += lineSubtotal;
+          taxTotal += lineTax;
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.name || '—'}</td>
+            <td>${item.description || '—'}</td>
+            <td style="text-align:right">${quantity.toFixed(2)}</td>
+            <td style="text-align:right">${formatter.format(unitPrice)}</td>
+            <td style="text-align:right">${formatter.format(lineSubtotal + lineTax)}</td>
+          `;
+          itemsPreview.appendChild(row);
+        });
+      } else {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="5" style="padding:16px 0; text-align:center; color: rgba(15,23,42,0.6);">Add line items to build totals.</td>';
+        itemsPreview.appendChild(row);
+      }
+
+      const total = subtotal + taxTotal;
+      totalsEl.innerHTML = `
+        <div><span>Subtotal</span><span>${formatter.format(subtotal)}</span></div>
+        <div><span>Tax</span><span>${formatter.format(taxTotal)}</span></div>
+        <div><span>Total due</span><span>${formatter.format(total)}</span></div>
+      `;
+
+      notesSection.hidden = !data.notes;
+      notesContent.textContent = data.notes || '';
+
+      footerSection.hidden = !data.footer;
+      footerContent.textContent = data.footer || '';
+
+      templateSection.hidden = !data.templateSnippet;
+      templateContent.innerHTML = data.templateSnippet || '';
+
+      docSurface.style.setProperty('--accent', data.accentColor);
+      docSurface.style.borderTop = `6px solid ${data.accentColor}`;
+
+      getInput('jsonData').value = JSON.stringify(data, null, 2);
+    }
+
+    function collectData() {
+      const data = Object.fromEntries(formIds.map((id) => [id === 'defaultTax' ? 'defaultTax' : id, getInput(id).value.trim ? getInput(id).value.trim() : getInput(id).value]));
+      data.defaultTax = parseNumber(getInput('defaultTax').value);
+      data.items = state.items;
+      return data;
+    }
+
+    function loadFromJson() {
+      try {
+        const json = JSON.parse(getInput('jsonData').value);
+        formIds.forEach((id) => {
+          if (json[id] !== undefined) {
+            const el = getInput(id);
+            if (el.type === 'color' || el.type === 'date' || typeof json[id] === 'string') {
+              el.value = json[id];
+            } else {
+              el.value = json[id];
+            }
+          }
+        });
+
+        itemsBody.innerHTML = '';
+        (json.items || []).forEach((item) => createItemRow(item));
+        if (!itemsBody.children.length) createItemRow();
+        updatePreview();
+      } catch (error) {
+        alert('Invalid JSON: ' + error.message);
+      }
+    }
+
+    function resetForm() {
+      formIds.forEach((id) => {
+        const el = getInput(id);
+        el.value = el.type === 'color' ? '#3b82f6' : '';
+      });
+      getInput('docType').value = 'quotation';
+      getInput('currency').value = 'USD';
+      getInput('defaultTax').value = 0;
+      getInput('accentColor').value = '#3b82f6';
+      itemsBody.innerHTML = '';
+      createItemRow();
+      updatePreview();
+    }
+
+    document.getElementById('addItem').addEventListener('click', () => {
+      createItemRow();
+    });
+
+    document.getElementById('clearItems').addEventListener('click', () => {
+      if (confirm('Remove all line items?')) {
+        itemsBody.innerHTML = '';
+        createItemRow();
+        persistItems();
+        updatePreview();
+      }
+    });
+
+    document.getElementById('refreshPreview').addEventListener('click', updatePreview);
+    document.getElementById('printDoc').addEventListener('click', () => window.print());
+    document.getElementById('copyJson').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(getInput('jsonData').value);
+        alert('Document JSON copied to clipboard.');
+      } catch (error) {
+        alert('Copy failed: ' + error.message);
+      }
+    });
+
+    document.getElementById('loadJson').addEventListener('click', loadFromJson);
+    document.getElementById('resetAll').addEventListener('click', () => {
+      if (confirm('Reset the entire form?')) {
+        resetForm();
+      }
+    });
+
+    formIds.forEach((id) => {
+      const el = getInput(id);
+      el.addEventListener('input', () => {
+        if (id === 'docType') {
+          const { label, prefix } = docTypeMap[el.value];
+          if (!getInput('docNumber').value) {
+            getInput('docNumber').value = `${prefix}-${new Date().getFullYear()}`;
+          }
+        }
+        updatePreview();
+      });
+    });
+
+    window.addEventListener('load', () => {
+      createItemRow();
+      updatePreview();
+    });
+  </script>
+</body>
+</html>
