@@ -80,6 +80,9 @@
     .input-area {
       padding: 16px;
       border-top: 1px solid #262626;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
     .input-wrapper {
       background: #141414;
@@ -185,6 +188,147 @@
       border: none;
       color: white;
     }
+
+    .optimizer-results {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .optimizer-results.open {
+      display: flex;
+    }
+
+    .optimizer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .optimizer-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .optimizer-subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+      max-width: 520px;
+      line-height: 1.5;
+    }
+
+    .optimizer-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .optimizer-body {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .optimizer-empty,
+    .optimizer-status-line {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .optimizer-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .optimizer-card {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .optimizer-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .optimizer-card-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .optimizer-card-metrics {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .optimizer-card-score {
+      font-size: 12px;
+      font-weight: 600;
+      color: #22c55e;
+      background: rgba(34, 197, 94, 0.12);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .optimizer-card-delta {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .optimizer-card-delta.positive {
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.12);
+    }
+
+    .optimizer-card-delta.negative {
+      color: #f97316;
+      background: rgba(249, 115, 22, 0.12);
+    }
+
+    .optimizer-card-summary {
+      font-size: 12px;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    .optimizer-card-list {
+      padding-left: 16px;
+      font-size: 12px;
+      color: #cbd5f5;
+      line-height: 1.6;
+    }
+
+    .optimizer-card-prompt {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', 'SFMono-Regular', 'Menlo', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: #e0f2fe;
+    }
+
+    .optimizer-card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -202,6 +346,7 @@
         <option value="ollama">Ollama (11434)</option>
       </select>
       <button class="tool-button" id="promptLibraryButton" type="button">Prompt Library</button>
+      <button class="tool-button" id="optimizePromptButton" type="button">Optimize Current</button>
     </div>
   </header>
 
@@ -235,6 +380,20 @@
         </svg>
       </button>
     </div>
+    <div class="optimizer-results" id="optimizerResults">
+      <div class="optimizer-header">
+        <div>
+          <div class="optimizer-title">Prompt Optimizer</div>
+          <div class="optimizer-subtitle" id="optimizerSummary">Generate ranked variants before dispatching.</div>
+        </div>
+        <div class="optimizer-header-actions">
+          <button class="tool-button secondary" id="optimizerClear" type="button">Clear</button>
+        </div>
+      </div>
+      <div class="optimizer-body" id="optimizerBody">
+        <div class="optimizer-empty">No variants yet. Run the optimizer to see suggestions.</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -248,8 +407,14 @@
     const closePromptLibrary = document.getElementById('closePromptLibrary');
     const copyPromptTemplate = document.getElementById('copyPromptTemplate');
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
+    const optimizePromptButton = document.getElementById('optimizePromptButton');
+    const optimizerResults = document.getElementById('optimizerResults');
+    const optimizerSummary = document.getElementById('optimizerSummary');
+    const optimizerBody = document.getElementById('optimizerBody');
+    const optimizerClear = document.getElementById('optimizerClear');
 
     const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const BACKEND_OPTIMIZE_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.optimizeEndpoint) || 'http://127.0.0.1:4000/api/optimize_prompt';
     const TARGET_PROFILES = {
       auto: {
         id: 'auto',
@@ -274,12 +439,185 @@
     };
 
     let masterPromptCache = '';
+    const optimizeButtonDefaultText = optimizePromptButton ? optimizePromptButton.textContent : 'Optimize Current';
+    const optimizerState = {
+      loading: false,
+      lastResult: null
+    };
 
     function togglePromptLibrary(forceOpen) {
       const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
       promptLibraryPanel.classList.toggle('open', shouldOpen);
     }
 
+    function resetOptimizerPanel() {
+      optimizerState.lastResult = null;
+      optimizerSummary.textContent = 'Generate ranked variants before dispatching.';
+      optimizerBody.innerHTML = '<div class="optimizer-empty">No variants yet. Run the optimizer to see suggestions.</div>';
+      optimizerResults.classList.remove('open');
+    }
+
+    function showOptimizerPanel() {
+      optimizerResults.classList.add('open');
+    }
+
+    function setOptimizeButtonLoading(isLoading) {
+      optimizerState.loading = isLoading;
+      if (!optimizePromptButton) return;
+      optimizePromptButton.disabled = isLoading;
+      optimizePromptButton.textContent = isLoading ? 'Optimizing…' : optimizeButtonDefaultText;
+    }
+
+    function showOptimizerLoading(message) {
+      showOptimizerPanel();
+      optimizerSummary.textContent = message;
+      optimizerBody.innerHTML = `<div class="optimizer-status-line">${message}</div>`;
+    }
+
+    function formatScore(value) {
+      if (!Number.isFinite(value)) return '—';
+      return `${Math.round(value * 100)}`;
+    }
+
+    function formatDelta(value) {
+      if (!Number.isFinite(value) || value === 0) return '0';
+      const magnitude = Math.round(Math.abs(value) * 100);
+      return `${value > 0 ? '+' : '-'}${magnitude}`;
+    }
+
+    function createVariantCard(variant, index) {
+      const card = document.createElement('div');
+      card.className = 'optimizer-card';
+
+      const header = document.createElement('div');
+      header.className = 'optimizer-card-header';
+
+      const title = document.createElement('div');
+      title.className = 'optimizer-card-title';
+      title.textContent = `#${index + 1} ${variant.title}`;
+      header.appendChild(title);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'optimizer-card-metrics';
+
+      const score = document.createElement('span');
+      score.className = 'optimizer-card-score';
+      score.textContent = `Score ${formatScore(variant.score)}`;
+      metrics.appendChild(score);
+
+      if (variant.delta && typeof variant.delta.score === 'number' && variant.delta.score !== 0) {
+        const delta = document.createElement('span');
+        delta.className = 'optimizer-card-delta ' + (variant.delta.score > 0 ? 'positive' : 'negative');
+        delta.textContent = formatDelta(variant.delta.score);
+        metrics.appendChild(delta);
+      }
+
+      header.appendChild(metrics);
+      card.appendChild(header);
+
+      if (variant.summary) {
+        const summary = document.createElement('div');
+        summary.className = 'optimizer-card-summary';
+        summary.textContent = variant.summary;
+        card.appendChild(summary);
+      }
+
+      if (Array.isArray(variant.improvements) && variant.improvements.length) {
+        const list = document.createElement('ul');
+        list.className = 'optimizer-card-list';
+        variant.improvements.forEach((item) => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          list.appendChild(li);
+        });
+        card.appendChild(list);
+      }
+
+      const promptBlock = document.createElement('pre');
+      promptBlock.className = 'optimizer-card-prompt';
+      promptBlock.textContent = variant.prompt;
+      card.appendChild(promptBlock);
+
+      const actions = document.createElement('div');
+      actions.className = 'optimizer-card-actions';
+
+      const useButton = document.createElement('button');
+      useButton.className = 'tool-button primary';
+      useButton.type = 'button';
+      useButton.textContent = 'Use this';
+      useButton.addEventListener('click', () => {
+        messageInput.value = variant.prompt;
+        messageInput.dispatchEvent(new Event('input'));
+        messageInput.focus();
+      });
+      actions.appendChild(useButton);
+
+      const copyButton = document.createElement('button');
+      copyButton.className = 'tool-button secondary';
+      copyButton.type = 'button';
+      copyButton.textContent = 'Copy';
+      copyButton.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(variant.prompt);
+          copyButton.textContent = 'Copied!';
+          setTimeout(() => { copyButton.textContent = 'Copy'; }, 1500);
+        } catch (err) {
+          copyButton.textContent = 'Copy failed';
+          setTimeout(() => { copyButton.textContent = 'Copy'; }, 1500);
+        }
+      });
+      actions.appendChild(copyButton);
+
+      card.appendChild(actions);
+      return card;
+    }
+
+    function renderOptimizerResult(payload) {
+      optimizerState.lastResult = payload;
+      showOptimizerPanel();
+
+      const baselineScore = payload?.baseline?.score
+        ?? payload?.baseline?.features?.score
+        ?? 0;
+      const bestVariant = Array.isArray(payload?.variants) && payload.variants.length
+        ? payload.variants[0]
+        : null;
+
+      if (bestVariant) {
+        const delta = typeof bestVariant.delta?.score === 'number'
+          ? bestVariant.delta.score
+          : bestVariant.score - baselineScore;
+        const deltaLabel = formatDelta(delta);
+        const deltaSegment = deltaLabel === '0' ? '' : ` (${deltaLabel})`;
+        const modelSegment = payload?.meta?.usingModel && payload.meta.model
+          ? ` • Model ${payload.meta.model}`
+          : '';
+        optimizerSummary.textContent = `Baseline ${formatScore(baselineScore)} • Top ${bestVariant.title} ${formatScore(bestVariant.score)}${deltaSegment}${modelSegment}`;
+      } else {
+        optimizerSummary.textContent = 'No improved variants were generated. Try expanding the prompt.';
+      }
+
+      optimizerBody.innerHTML = '';
+
+      if (!bestVariant) {
+        optimizerBody.innerHTML = '<div class="optimizer-empty">Optimizer did not produce any alternatives.</div>';
+        return;
+      }
+
+      const cards = document.createElement('div');
+      cards.className = 'optimizer-cards';
+      payload.variants.forEach((variant, index) => {
+        cards.appendChild(createVariantCard(variant, index));
+      });
+      optimizerBody.appendChild(cards);
+    }
+
+    function renderOptimizerError(error) {
+      showOptimizerPanel();
+      const message = error && error.message ? error.message : 'Unknown error';
+      optimizerSummary.textContent = `Optimizer error: ${message}`;
+      optimizerBody.innerHTML = '<div class="optimizer-empty">Unable to produce variants. Verify the backend is running and try again.</div>';
+    }
     async function loadMasterPrompt() {
       if (masterPromptCache) {
         promptLibraryBody.textContent = masterPromptCache;
@@ -357,6 +695,55 @@
 
     sendButton.addEventListener('click', sendMessage);
 
+    if (optimizerClear) {
+      optimizerClear.addEventListener('click', () => {
+        resetOptimizerPanel();
+        if (optimizePromptButton) {
+          optimizePromptButton.focus();
+        }
+      });
+    }
+
+    if (optimizePromptButton) {
+      optimizePromptButton.addEventListener('click', async () => {
+        const text = messageInput.value.trim();
+        if (!text) {
+          showOptimizerPanel();
+          optimizerSummary.textContent = 'Enter a prompt to optimize.';
+          optimizerBody.innerHTML = '<div class="optimizer-empty">Write or paste a prompt above before running the optimizer.</div>';
+          return;
+        }
+
+        setOptimizeButtonLoading(true);
+        showOptimizerLoading('Analyzing prompt…');
+
+        try {
+          const response = await fetch(BACKEND_OPTIMIZE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text })
+          });
+
+          if (!response.ok) {
+            const errorPayload = await safeParseJson(response);
+            const detail = errorPayload && (errorPayload.detail || errorPayload.error);
+            throw new Error(detail || `Optimizer responded with HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (!data || !Array.isArray(data.variants)) {
+            throw new Error('Optimizer returned an empty payload');
+          }
+
+          renderOptimizerResult(data);
+        } catch (error) {
+          renderOptimizerError(error);
+        } finally {
+          setOptimizeButtonLoading(false);
+        }
+      });
+    }
+
     promptLibraryButton.addEventListener('click', async () => {
       await loadMasterPrompt();
       togglePromptLibrary(true);
@@ -394,6 +781,7 @@
       }
     });
 
+    resetOptimizerPanel();
     updateSendButton();
     messageInput.focus();
 
