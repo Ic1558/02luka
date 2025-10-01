@@ -133,3 +133,23 @@ chmod +x .git/hooks/pre-push
 - Gate missing: hook จะพิมพ์ skipping (no fail) → ติดตั้ง gate ตามขั้นตอนบน
 - Port busy ใน smoke: `lsof -ti:5173 | xargs kill -9` หรือชั่วคราวถอดสิทธิ์รันจาก `run/smoke_api_ui.sh`
 - ถูกบล็อกด้วย FAIL แต่จำเป็นต้อง push: `git push --no-verify` (ใส่เหตุผลใน PR)
+
+## Recipe: Use Master Prompt (Cursor/Codex)
+
+Purpose: Bootstrap Codex with 02luka guardrails and workflow.
+
+### Steps
+1) Open Cursor → Codex chat.
+2) Paste the file contents of .codex/templates/master_prompt.md.
+3) State your GOAL and wait for echo-back plan.
+4) Approve → Apply diffs → run validations → push (CLC gate).
+
+### Quick Runbook
+bash
+bash .codex/preflight.sh
+bash g/tools/mapping_drift_guard.sh --validate
+bash run/smoke_api_ui.sh
+git add -A
+git commit -m "feat: <summary> (CHANGE_ID: CU-2025-10-01-boss-ui-api-v1) #boss-api #boss-ui #resolver #preflight"
+git push
+

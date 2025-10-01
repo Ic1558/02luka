@@ -19,3 +19,10 @@ if [ -f "$ROOT/f/ai_context/mapping.json" ]; then
 fi
 
 echo "[02luka] preflight ready."
+
+# Check master prompt presence
+if [ ! -s ".codex/templates/master_prompt.md" ]; then
+  echo "[preflight] WARN: .codex/templates/master_prompt.md missing or empty"
+else
+  echo "[preflight] master_prompt: OK"
+fi

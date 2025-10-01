@@ -11,3 +11,7 @@ You are working in the 02luka monorepo. Follow these rules strictly:
 
 Output policy:
 - Provide minimal diffs, include README snippets, and add a short test plan in the PR description.
+
+## Master Prompt
+- Use this when starting a new Cursor session:
+  `.codex/templates/master_prompt.md`
