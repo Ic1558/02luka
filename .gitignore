@@ -1,2 +1,3 @@
 cleanup_home_backups.sh
 *.backup-*
+.codex/templates/master_prompt.md.backup-*
