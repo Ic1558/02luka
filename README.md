@@ -116,3 +116,7 @@ launchctl list | grep fastvlm              # Check service status
 curl http://127.0.0.1:8765/health          # Verify endpoint
 tail -f ~/Library/Logs/02luka/com.02luka.fastvlm.err.log  # Check errors
 ```
+
+## 🗂️ Persistent Change Tracking
+
+The repository now ships with a Codex-friendly workflow for carrying context between sessions. See [docs/persistent_change_workflow.md](docs/persistent_change_workflow.md) for details on change units, session logs, and daily reports that live inside the repo.
