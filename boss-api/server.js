@@ -13,7 +13,7 @@ function writeJson(res, code, payload) {
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(body);
@@ -47,6 +47,281 @@ const CHAT_TARGETS = {
     baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434'
   }
 };
+
+const FALLBACK_PROVIDER_HINTS = ['openai', 'anthropic'];
+
+function normalizeInput(text) {
+  return (text || '').trim();
+}
+
+function normalizeForMatch(text) {
+  return normalizeInput(text).toLowerCase();
+}
+
+function stripTrailingPunctuation(text) {
+  return normalizeInput(text).replace(/[\s]+$/, '').replace(/[.!?]+$/, '').trim();
+}
+
+function cleanCaptured(value) {
+  return stripTrailingPunctuation(String(value || '').replace(/^["'`]+|["'`]+$/g, ''));
+}
+
+function detectCreateGoal(original, lower) {
+  const goalDirective = original.match(/^(?:please\s+)?(?:create|set|define|make)\s+(?:a\s+)?goal(?:\s+(?:to|for))?\s*(.+)$/i);
+  if (goalDirective && goalDirective[1]) {
+    const goal = cleanCaptured(goalDirective[1]);
+    return goal
+      ? { intent: 'create_goal', confidence: 0.92, data: { goal } }
+      : { intent: 'create_goal', confidence: 0.7, data: { goal: stripTrailingPunctuation(original) } };
+  }
+
+  const goalPrefix = original.match(/^goal(?:s)?\s*[:\-]\s*(.+)$/i);
+  if (goalPrefix && goalPrefix[1]) {
+    const goal = cleanCaptured(goalPrefix[1]);
+    if (goal) {
+      return { intent: 'create_goal', confidence: 0.88, data: { goal } };
+    }
+  }
+
+  if (lower.includes('create goal') || lower.startsWith('goal to ') || lower.includes('goal is to')) {
+    return {
+      intent: 'create_goal',
+      confidence: 0.65,
+      data: { goal: stripTrailingPunctuation(original.replace(/^(?:goal\s*(?:is\s*to|to)\s*)/i, '')) || stripTrailingPunctuation(original) }
+    };
+  }
+
+  return null;
+}
+
+function detectOpen(original) {
+  const match = original.match(/^(?:please\s+)?(?:open|show|view|launch|load|display)\s+(?:the\s+)?(.+)$/i);
+  if (match && match[1]) {
+    const target = cleanCaptured(match[1]);
+    if (target) {
+      return { intent: 'open', confidence: 0.85, data: { target } };
+    }
+  }
+
+  const goTo = original.match(/^(?:go\s+to|navigate\s+to|switch\s+to)\s+(.+)$/i);
+  if (goTo && goTo[1]) {
+    const target = cleanCaptured(goTo[1]);
+    if (target) {
+      return { intent: 'open', confidence: 0.8, data: { target } };
+    }
+  }
+
+  return null;
+}
+
+function detectLinkToCursor(original, lower) {
+  if (!lower.includes('cursor') || !/(link|attach|connect)/.test(lower)) {
+    return null;
+  }
+
+  const direct = original.match(/(?:link|attach|connect)\s+(?:this|the)?\s*(.+?)\s+(?:to|with)\s+cursor/i);
+  if (direct && direct[1]) {
+    const target = cleanCaptured(direct[1]);
+    if (target) {
+      return { intent: 'link_to_cursor', confidence: 0.86, data: { target } };
+    }
+  }
+
+  const afterCursor = original.match(/cursor\s+(?:link|attach|connect)\s+(?:to\s+)?(.+)/i);
+  if (afterCursor && afterCursor[1]) {
+    const target = cleanCaptured(afterCursor[1]);
+    if (target) {
+      return { intent: 'link_to_cursor', confidence: 0.72, data: { target } };
+    }
+  }
+
+  return { intent: 'link_to_cursor', confidence: 0.55, data: { target: stripTrailingPunctuation(original) } };
+}
+
+function detectSearch(original, lower) {
+  const searchMatch = original.match(/(?:search|find|lookup|look\s*up|google|duckduckgo|bing)(?:\s+for)?\s+(.+)/i);
+  if (searchMatch && searchMatch[1]) {
+    const query = cleanCaptured(searchMatch[1]);
+    if (query) {
+      return { intent: 'search', confidence: 0.84, data: { query } };
+    }
+  }
+
+  if (/^where|^who|^what|^when|^why|^how/.test(lower) && original.trim().endsWith('?')) {
+    const query = stripTrailingPunctuation(original);
+    return { intent: 'search', confidence: 0.6, data: { query } };
+  }
+
+  return null;
+}
+
+function detectIntent(message) {
+  const original = normalizeInput(message);
+  if (!original) return null;
+
+  const lower = normalizeForMatch(original);
+  const detectors = [detectCreateGoal, detectOpen, detectLinkToCursor, detectSearch];
+
+  for (const detector of detectors) {
+    const result = detector(original, lower);
+    if (result && result.intent) {
+      return result;
+    }
+  }
+
+  return null;
+}
+
+function formatIntentMessage(result) {
+  if (!result || !result.intent) return '';
+  const { intent, data = {} } = result;
+
+  switch (intent) {
+    case 'create_goal': {
+      const goal = data.goal ? `“${data.goal}”` : 'the requested objective';
+      return `Create goal ${goal}.`;
+    }
+    case 'open': {
+      const target = data.target ? `“${data.target}”` : 'the requested target';
+      return `Open ${target}.`;
+    }
+    case 'link_to_cursor': {
+      const target = data.target ? `Link ${data.target} to Cursor.` : 'Link the requested resource to Cursor.';
+      return target;
+    }
+    case 'search': {
+      const query = data.query ? `Search for “${data.query}”.` : 'Run a search for the requested query.';
+      return query;
+    }
+    default:
+      return '';
+  }
+}
+
+function normalizeConfidence(value) {
+  if (!Number.isFinite(value)) return undefined;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return Math.round(value * 100) / 100;
+}
+
+function safeJsonParse(value) {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function callFallbackProvider(message, hint) {
+  const preferred = typeof hint === 'string' && hint.trim() ? hint.trim().toLowerCase() : null;
+  const candidates = preferred ? [preferred, ...FALLBACK_PROVIDER_HINTS.filter((item) => item !== preferred)] : FALLBACK_PROVIDER_HINTS;
+
+  for (const provider of candidates) {
+    if (provider === 'openai' && process.env.OPENAI_API_KEY) {
+      return callOpenAi(message);
+    }
+    if (provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+      return callAnthropic(message);
+    }
+  }
+
+  return null;
+}
+
+async function callOpenAi(message) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const payload = JSON.stringify({
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are the Luka backend fallback assistant. Respond concisely with actionable insight when routing is unavailable.'
+      },
+      { role: 'user', content: message }
+    ]
+  });
+
+  const response = await httpRequestJson('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: payload,
+    timeout: 20000
+  });
+
+  const parsed = safeJsonParse(response.body);
+  if (response.status >= 200 && response.status < 300) {
+    const text = extractTextFromPayload(parsed) || 'Provider did not return any content.';
+    return { provider: 'openai', message: text, raw: parsed, status: response.status };
+  }
+
+  const detail = (parsed && (parsed.error?.message || parsed.message)) || response.body;
+  const error = new Error(detail || `OpenAI request failed with status ${response.status}`);
+  error.status = response.status;
+  error.provider = 'openai';
+  error.payload = parsed;
+  throw error;
+}
+
+function extractAnthropicText(parsed) {
+  if (!parsed || typeof parsed !== 'object') return '';
+  if (Array.isArray(parsed.content)) {
+    const texts = parsed.content
+      .map((item) => (item && typeof item === 'object' && typeof item.text === 'string') ? item.text : '')
+      .filter(Boolean);
+    if (texts.length) return texts.join('\n');
+  }
+  if (parsed.output) {
+    return extractAnthropicText(parsed.output);
+  }
+  return '';
+}
+
+async function callAnthropic(message) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
+  const payload = JSON.stringify({
+    model,
+    max_tokens: 512,
+    messages: [
+      { role: 'user', content: message }
+    ]
+  });
+
+  const response = await httpRequestJson('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: payload,
+    timeout: 20000
+  });
+
+  const parsed = safeJsonParse(response.body);
+  if (response.status >= 200 && response.status < 300) {
+    const direct = extractAnthropicText(parsed);
+    const fallback = extractTextFromPayload(parsed);
+    const text = direct || fallback || 'Provider did not return any content.';
+    return { provider: 'anthropic', message: text, raw: parsed, status: response.status };
+  }
+
+  const detail = (parsed && (parsed.error?.message || parsed.message)) || response.body;
+  const error = new Error(detail || `Anthropic request failed with status ${response.status}`);
+  error.status = response.status;
+  error.provider = 'anthropic';
+  error.payload = parsed;
+  throw error;
+}
 
 function httpRequestJson(targetUrl, options = {}) {
   const url = new URL(targetUrl);
@@ -110,6 +385,7 @@ function extractTextFromPayload(payload) {
   }
 
   if (typeof payload.content === 'string') return payload.content;
+  if (typeof payload.text === 'string') return payload.text;
 
   try {
     return JSON.stringify(payload);
@@ -357,7 +633,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     });
     return res.end();
@@ -376,24 +652,72 @@ const server = http.createServer(async (req, res) => {
       req.on('end', async () => {
         try {
           const payload = raw ? JSON.parse(raw) : {};
-          const message = (payload.message || payload.prompt || payload.input || '').trim();
+          const message = normalizeInput(payload.message || payload.prompt || payload.input || '');
           if (!message) {
-            return writeJson(res, 400, { error: 'message is required' });
+            return writeJson(res, 400, { ok: false, error: 'message is required' });
           }
 
-          const targetId = typeof payload.target === 'string' && payload.target.trim()
-            ? payload.target.trim()
-            : 'auto';
+          const intentResult = detectIntent(message);
+          if (intentResult) {
+            const responsePayload = {
+              ok: true,
+              intent: intentResult.intent,
+              message: formatIntentMessage(intentResult) || null,
+              data: intentResult.data || {}
+            };
+
+            const confidence = normalizeConfidence(intentResult.confidence);
+            if (confidence !== undefined) {
+              responsePayload.confidence = confidence;
+            }
+
+            return writeJson(res, 200, responsePayload);
+          }
+
+          const providerHint = typeof payload.provider === 'string' && payload.provider.trim()
+            ? payload.provider.trim()
+            : (typeof payload.target === 'string' && payload.target.trim() ? payload.target.trim() : null);
 
           try {
-            const result = await orchestrateChat(message, targetId);
-            return writeJson(res, 200, result);
+            const providerResult = await callFallbackProvider(message, providerHint);
+            if (providerResult) {
+              const responsePayload = {
+                ok: true,
+                intent: null,
+                provider: providerResult.provider || 'unknown',
+                message: providerResult.message || 'Provider returned no content.',
+                meta: {}
+              };
+
+              if (providerResult.status) {
+                responsePayload.meta.status = providerResult.status;
+              }
+              if (Object.keys(responsePayload.meta).length === 0) {
+                delete responsePayload.meta;
+              }
+              if (providerResult.raw !== undefined) {
+                responsePayload.raw = providerResult.raw;
+              }
+
+              return writeJson(res, 200, responsePayload);
+            }
+
+            return writeJson(res, 501, { ok: false, error: 'No AI provider configured on server' });
           } catch (err) {
-            console.error('[boss-api] chat orchestration failed', err);
-            return writeJson(res, 502, { error: 'Chat orchestration failed', detail: err.message });
+            console.error('[boss-api] provider fallback failed', err);
+            const status = err && Number.isInteger(err.status) && err.status >= 400 && err.status < 600
+              ? err.status
+              : 502;
+
+            return writeJson(res, status, {
+              ok: false,
+              error: err && err.message ? err.message : 'Provider request failed',
+              provider: err && err.provider ? err.provider : null,
+              detail: err && err.payload ? err.payload : undefined
+            });
           }
         } catch (err) {
-          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+          return writeJson(res, 400, { ok: false, error: 'Invalid JSON payload' });
         }
       });
       return;
