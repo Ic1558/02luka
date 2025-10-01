@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>02luka Web Control Plane</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>02luka Web Control Plane</h1>
+      <nav>
+        <button data-page="dashboard">Dashboard</button>
+        <button data-page="chatops">ChatOps</button>
+        <button data-page="workspace">Workspace</button>
+        <button data-page="workflows">Workflows</button>
+        <button data-page="reports">Reports</button>
+        <button data-page="admin">Admin</button>
+      </nav>
+    </header>
+    <main>
+      <section id="page-dashboard" class="page active">
+        <h2>Dashboard</h2>
+        <p>Welcome to the 02luka Web Control Plane.</p>
+      </section>
+      <section id="page-chatops" class="page">
+        <h2>ChatOps</h2>
+        <div class="validation-controls">
+          <button id="btn-preflight">Run Preflight</button>
+          <button id="btn-drift">Run Drift Guard</button>
+          <select id="gate-scope">
+            <option value="precommit">precommit</option>
+            <option value="security">security</option>
+            <option value="all">all</option>
+          </select>
+          <button id="btn-gate">Run CLC Gate</button>
+        </div>
+        <pre id="chatops-output" class="output"></pre>
+      </section>
+      <section id="page-workspace" class="page">
+        <h2>Workspace</h2>
+        <p>Workspace file explorer will appear here.</p>
+      </section>
+      <section id="page-workflows" class="page">
+        <h2>Workflows</h2>
+        <p>Automations and workflows overview.</p>
+      </section>
+      <section id="page-reports" class="page">
+        <h2>Reports</h2>
+        <p>Reporting dashboards and summaries.</p>
+      </section>
+      <section id="page-admin" class="page">
+        <h2>Admin</h2>
+        <p>Administrative controls.</p>
+      </section>
+    </main>
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

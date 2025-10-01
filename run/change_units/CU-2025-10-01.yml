@@ -1,0 +1,10 @@
+- phase: Phase 0
+  change_id: CU-2025-10-01-webcp-v1
+  timestamp: "2025-10-01T08:29:33Z"
+  summary: "Scaffolded boss-api and boss-ui foundations with validation endpoints and UI hooks."
+  tags:
+    - boss-api
+    - boss-ui
+    - resolver
+    - preflight
+  status: in-progress
