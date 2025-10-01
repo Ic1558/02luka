@@ -51,6 +51,21 @@ open http://localhost:8080
 - ✅ Connection status indicator
 - ✅ Responsive design
 - ✅ No external dependencies
+- ✅ Universal bridge directories checked into the repo so real files can flow between sandbox and
+      the outside world
+
+## 🌉 Bridge & Tunnel Workflow
+
+To break out of the "purely theoretical" sandbox, the repository now ships with a persistent bridge
+workspace under `f/bridge/`:
+
+- `f/bridge/inbox/` — drop real-world inputs here for the agent to read.
+- `f/bridge/outbox/` — the agent writes outputs here for humans to collect.
+- `f/bridge/processed/` — move handled assets here to keep the bridge clean.
+
+On a host machine you can sync these folders to a shared drive, tunnel, or any filesystem that is
+visible to external operators. Pair them with `./tunnel` or your own networking setup to make the
+bridge live in the real world, not just in documentation.
 
 ## 🤖 FastVLM Vision API
 
