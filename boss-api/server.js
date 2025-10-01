@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const fs = require('fs/promises');
+const { execFile } = require('child_process');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
@@ -13,13 +14,33 @@ function writeJson(res, code, payload) {
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(body);
 }
 
 const allowed = new Set(['inbox','sent','deliverables','dropbox','drafts','documents']);
+const uploadTargets = new Set(['inbox','dropbox']);
+const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB safeguard
+
+function resolveHumanPath(mailbox) {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'bash',
+      ['g/tools/path_resolver.sh', `human:${mailbox}`],
+      { cwd: repoRoot },
+      (err, stdout, stderr) => {
+        if (err) {
+          err.stderr = stderr;
+          return reject(err);
+        }
+        resolve(stdout.trim());
+      }
+    );
+
+  });
+}
 
 const CHAT_TARGETS = {
   auto: {
@@ -357,7 +378,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     });
     return res.end();
@@ -396,6 +417,145 @@ const server = http.createServer(async (req, res) => {
           return writeJson(res, 400, { error: 'Invalid JSON payload' });
         }
       });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/upload') {
+      const mailbox = (url.searchParams.get('mailbox') || '').trim();
+      if (!uploadTargets.has(mailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox' });
+      }
+
+      const contentType = req.headers['content-type'] || '';
+      const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      const boundaryToken = boundaryMatch ? boundaryMatch[1] || boundaryMatch[2] : '';
+      if (!boundaryToken) {
+        return writeJson(res, 400, { error: 'Missing multipart boundary' });
+      }
+
+      const boundaryBuffer = Buffer.from(`--${boundaryToken}`);
+      const endBoundaryBuffer = Buffer.from(`\r\n--${boundaryToken}`);
+      const chunks = [];
+      let totalSize = 0;
+      let responded = false;
+      const safeWrite = (code, payload) => {
+        if (responded) return;
+        responded = true;
+        writeJson(res, code, payload);
+      };
+
+      req.on('data', (chunk) => {
+        if (responded) return;
+        totalSize += chunk.length;
+        if (totalSize > MAX_UPLOAD_SIZE) {
+          safeWrite(413, { error: 'File too large' });
+          req.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      req.on('error', (err) => {
+        if (responded) return;
+        console.error('[boss-api] upload stream error', err);
+        safeWrite(500, { error: 'Upload failed' });
+      });
+
+      req.on('end', async () => {
+        if (responded) return;
+        try {
+          const buffer = Buffer.concat(chunks);
+          if (buffer.indexOf(boundaryBuffer) !== 0) {
+            return safeWrite(400, { error: 'Malformed multipart payload' });
+          }
+
+          let offset = boundaryBuffer.length;
+          if (buffer[offset] === 13 && buffer[offset + 1] === 10) {
+            offset += 2; // skip CRLF
+          }
+
+          const headerEndToken = Buffer.from('\r\n\r\n');
+          const headerEnd = buffer.indexOf(headerEndToken, offset);
+          if (headerEnd === -1) {
+            return safeWrite(400, { error: 'Malformed multipart headers' });
+          }
+
+          const headerText = buffer.slice(offset, headerEnd).toString('utf8');
+          const dispositionLine = headerText
+            .split(/\r?\n/)
+            .find((line) => line.toLowerCase().startsWith('content-disposition'));
+          if (!dispositionLine) {
+            return safeWrite(400, { error: 'Missing content disposition' });
+          }
+
+          const fieldNameMatch = dispositionLine.match(/name="([^"]*)"/i) || dispositionLine.match(/name=([^;]+)/i);
+          const fieldName = fieldNameMatch ? fieldNameMatch[1].trim().replace(/[\r\n\u0000]/g, '') : '';
+          if (fieldName !== 'file') {
+            return safeWrite(400, { error: 'Invalid field name' });
+          }
+
+          let filename = '';
+          const quotedMatch = dispositionLine.match(/filename="([^"]*)"/i);
+          if (quotedMatch) {
+            filename = quotedMatch[1];
+          } else {
+            const bareMatch = dispositionLine.match(/filename=([^;]+)/i);
+            if (bareMatch) {
+              filename = bareMatch[1];
+            }
+          }
+
+          filename = filename.trim().replace(/[\r\n\u0000]/g, '');
+          if (!filename) {
+            return safeWrite(400, { error: 'Filename is required' });
+          }
+
+          if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          if (path.isAbsolute(filename)) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          const dataStart = headerEnd + headerEndToken.length;
+          const dataEnd = buffer.indexOf(endBoundaryBuffer, dataStart);
+          if (dataEnd === -1) {
+            return safeWrite(400, { error: 'Malformed multipart payload' });
+          }
+
+          const fileBuffer = buffer.slice(dataStart, dataEnd);
+
+          let targetDir = await resolveHumanPath(mailbox);
+          if (!targetDir) {
+            return safeWrite(500, { error: 'Failed to resolve mailbox' });
+          }
+
+          const dirStat = await fs.lstat(targetDir);
+          if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
+            return safeWrite(500, { error: 'Upload directory unavailable' });
+          }
+
+          const realDir = await fs.realpath(targetDir);
+          const finalPath = path.join(realDir, filename);
+          const finalReal = path.resolve(realDir, filename);
+          if (finalReal !== finalPath) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          if (!finalReal.startsWith(realDir + path.sep) && finalReal !== realDir) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          await fs.writeFile(finalReal, fileBuffer);
+
+          safeWrite(200, { ok: true, name: filename });
+        } catch (err) {
+          console.error('[boss-api] upload failed', err);
+          safeWrite(500, { error: 'Upload failed' });
+        }
+      });
+
       return;
     }
 

@@ -1,0 +1,232 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Boss Workspace UI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin: 0;
+  }
+
+  #app {
+    display: flex;
+    height: 100vh;
+  }
+
+  #mailboxPanel {
+    width: 220px;
+    background: #f4f4f5;
+    padding: 12px;
+    border-right: 1px solid #e4e4e7;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  #mailboxPanel.is-drop {
+    background: #dbeafe;
+    border-color: #60a5fa;
+  }
+
+  #mailboxPanel h3 {
+    margin: 0;
+  }
+
+  #folders button {
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #status {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    font-weight: 600;
+  }
+
+  #content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  #messages {
+    width: 280px;
+    border-right: 1px solid #ddd;
+    overflow: auto;
+    padding: 0;
+    margin: 0;
+  }
+
+  #preview {
+    flex: 1;
+    overflow: auto;
+    margin: 0;
+    padding: 16px;
+    white-space: pre-wrap;
+    color: #111;
+  }
+</style>
+<div id="app">
+  <aside id="mailboxPanel">
+    <div>
+      <h3>Folders</h3>
+      <div id="dropHint" style="font-size:12px;color:#71717a;">Drop files here to upload</div>
+    </div>
+    <div id="folders"></div>
+  </aside>
+  <main>
+    <div id="status"></div>
+    <div id="content">
+      <div id="messages"></div>
+      <div id="preview">Select a file to preview.</div>
+    </div>
+  </main>
+</div>
+<script>
+  const API_BASE = 'http://127.0.0.1:4000';
+
+  const state = { mailbox: 'inbox' };
+  const foldersEl = document.getElementById('folders');
+  const statusEl = document.getElementById('status');
+  const listEl = document.getElementById('messages');
+  const previewEl = document.getElementById('preview');
+  const mailboxPanel = document.getElementById('mailboxPanel');
+
+  function renderFolders() {
+    const mailboxes = ['inbox', 'sent', 'deliverables', 'dropbox'];
+    foldersEl.innerHTML = '';
+    mailboxes.forEach((mailbox) => {
+      const btn = document.createElement('button');
+      btn.textContent = mailbox;
+      btn.dataset.mailbox = mailbox;
+      btn.disabled = mailbox === state.mailbox;
+      btn.onclick = () => loadMailbox(mailbox);
+      foldersEl.appendChild(btn);
+    });
+  }
+
+  async function loadMailbox(mailbox) {
+    state.mailbox = mailbox;
+    renderFolders();
+    statusEl.textContent = 'Loading…';
+    listEl.innerHTML = '';
+    previewEl.textContent = 'Select a file to preview.';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/list/${mailbox}`);
+      if (!res.ok) throw new Error(res.statusText);
+      const payload = await res.json();
+      statusEl.textContent = `${payload.items.length} items in ${payload.mailbox}`;
+      renderList(payload);
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Failed to load mailbox.';
+    }
+  }
+
+  function renderList(payload) {
+    listEl.innerHTML = '';
+    payload.items.forEach((item) => {
+      const row = document.createElement('div');
+      row.textContent = `${item.name}  ·  ${item.updatedAt}  ·  ${item.size} bytes`;
+      row.style.padding = '8px 12px';
+      row.style.borderBottom = '1px solid #eee';
+      row.style.cursor = 'pointer';
+      row.onclick = () => previewFile(payload.mailbox, item.name);
+      listEl.appendChild(row);
+    });
+  }
+
+  async function previewFile(mailbox, name) {
+    previewEl.textContent = 'Loading preview…';
+    try {
+      const res = await fetch(`${API_BASE}/api/file/${mailbox}/${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error(res.statusText);
+      const text = await res.text();
+      previewEl.textContent = text;
+    } catch (err) {
+      console.error(err);
+      previewEl.textContent = 'Failed to load file.';
+    }
+  }
+
+  function setupDropTarget() {
+    let dragCounter = 0;
+    const hasFiles = (event) => event.dataTransfer && Array.from(event.dataTransfer.types || []).includes('Files');
+
+    mailboxPanel.addEventListener('dragenter', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      dragCounter += 1;
+      event.dataTransfer.dropEffect = 'copy';
+      mailboxPanel.classList.add('is-drop');
+    });
+
+    mailboxPanel.addEventListener('dragover', (event) => {
+      if (!hasFiles(event)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    });
+
+    mailboxPanel.addEventListener('dragleave', (event) => {
+      if (!hasFiles(event)) return;
+      if (event.relatedTarget && mailboxPanel.contains(event.relatedTarget)) {
+        return;
+      }
+      event.preventDefault();
+      dragCounter = Math.max(0, dragCounter - 1);
+      if (dragCounter === 0) {
+        mailboxPanel.classList.remove('is-drop');
+      }
+    });
+
+    mailboxPanel.addEventListener('dragend', () => {
+      dragCounter = 0;
+      mailboxPanel.classList.remove('is-drop');
+    });
+
+    mailboxPanel.addEventListener('drop', async (event) => {
+      if (!event.dataTransfer) return;
+      event.preventDefault();
+      dragCounter = 0;
+      mailboxPanel.classList.remove('is-drop');
+      const file = event.dataTransfer.files && event.dataTransfer.files[0];
+      if (!file) {
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${API_BASE}/api/upload?mailbox=${encodeURIComponent(state.mailbox)}`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          throw new Error(res.statusText);
+        }
+
+        const payload = await res.json();
+        await loadMailbox(state.mailbox);
+        statusEl.textContent = `Uploaded: ${payload.name || file.name}`;
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Upload failed.';
+      }
+    });
+  }
+
+  renderFolders();
+  loadMailbox('inbox');
+  setupDropTarget();
+</script>
+
