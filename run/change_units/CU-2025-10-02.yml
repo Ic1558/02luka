@@ -1,0 +1,17 @@
+- time: "2025-10-02T00:00:00Z"
+  change_id: CU-2025-10-02-launchagent-cleanup
+  summary: "removed obsolete plists, improved health ratio"
+  files_touched:
+    - f/ai_context/mapping.json
+    - 02luka.md
+    - CONTEXT_ENGINEERING.md
+    - run/system_status.v2.json
+    - run/change_units/CU-2025-10-02.yml
+    - run/daily_reports/REPORT_2025-10-02.md
+  tags: ["launchagent","cleanup","system-health"]
+  tests_ran:
+    - .codex/preflight.sh: WARN (mapping namespace warning, continue)
+    - g/tools/mapping_drift_guard.sh --validate: WARN (expected optional directories absent)
+    - g/tools/clc_gate.sh prepush: WARN (propagated drift guard warnings)
+  guardrail_status: WARN
+  followups: []

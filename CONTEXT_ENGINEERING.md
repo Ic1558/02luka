@@ -44,3 +44,7 @@
 - [x] Backend orchestration forwards prompt metadata through `/api/chat`.
 - [ ] Automate template freshness checks inside `verify_system.sh` (planned).
 
+## LaunchAgent Health
+- **Health Ratio:** 100% (all LaunchAgents validated after cleanup).
+- **Notes:** MCP stack reporting healthy, zero configuration errors remaining.
+

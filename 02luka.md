@@ -20,6 +20,7 @@ This document keeps the lightweight mirror of the broader 02luka system status f
 1. **Codex Template Ecosystem Online** – Master template published to `.codex/templates/master_prompt.md` with automation script support.
 2. **Prompt Library Hooked into Luka UI** – `luka.html` now fetches the master template, enabling quick insertion or clipboard copy.
 3. **Mapping & Discovery Updated** – `f/ai_context/mapping.json` versioned to 2.1 with Codex namespace coverage and hidden-tier alignment.
+4. **LaunchAgent Cleanup Complete** – LaunchAgent cleanup complete, obsolete agents removed.
 
 ## 🔄 Next Up
 - Expand `.codex/templates/` with role-specific prompts (golden prompt, review prompt).
