@@ -5,14 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Luka Prompt Orchestrator</title>
   <style>
+    :root {
+      color-scheme: dark;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+    }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #0a0a0a;
       color: #fafafa;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom)) env(safe-area-inset-left);
     }
     header {
       border-bottom: 1px solid #262626;
@@ -20,6 +27,10 @@
       display: flex;
       align-items: center;
       gap: 16px;
+      background: rgba(10, 10, 10, 0.95);
+      position: sticky;
+      top: env(safe-area-inset-top);
+      z-index: 20;
     }
     .logo {
       width: 32px;
@@ -47,11 +58,14 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
     .message {
       display: flex;
       gap: 12px;
-      max-width: 600px;
+      max-width: min(600px, 100%);
+      width: 100%;
     }
     .message.user {
       align-self: flex-end;
@@ -80,6 +94,11 @@
     .input-area {
       padding: 16px;
       border-top: 1px solid #262626;
+      background: rgba(10, 10, 10, 0.95);
+      position: sticky;
+      bottom: 0;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      backdrop-filter: blur(12px);
     }
     .input-wrapper {
       background: #141414;
@@ -89,6 +108,7 @@
       display: flex;
       gap: 12px;
       align-items: flex-end;
+      width: 100%;
     }
     #messageInput {
       flex: 1;
@@ -99,12 +119,14 @@
       font-size: 14px;
       resize: none;
       min-height: 20px;
-      max-height: 120px;
+      max-height: 160px;
       font-family: inherit;
+      line-height: 1.5;
+      padding-right: 8px;
     }
     #sendButton {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       background: #3b82f6;
       border: none;
       border-radius: 8px;
@@ -184,6 +206,68 @@
       background: #3b82f6;
       border: none;
       color: white;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 12px;
+        gap: 12px;
+      }
+      .status {
+        font-size: 12px;
+      }
+      .tools {
+        gap: 8px;
+      }
+      select,
+      button.tool-button {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+      .messages {
+        padding: 16px 12px 80px;
+      }
+      .message {
+        gap: 10px;
+      }
+      .content {
+        font-size: 15px;
+      }
+      .input-area {
+        padding: 12px;
+      }
+      .input-wrapper {
+        padding: 10px;
+        gap: 10px;
+      }
+      #messageInput {
+        font-size: 15px;
+      }
+      #sendButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
+      .prompt-library-panel {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        border-radius: 0;
+        border: none;
+      }
+      .prompt-library-header {
+        padding: 16px;
+      }
+      .prompt-library-body {
+        padding: 20px 16px 120px;
+        font-size: 14px;
+      }
+      .prompt-library-actions {
+        padding: 16px;
+      }
     }
   </style>
 </head>
