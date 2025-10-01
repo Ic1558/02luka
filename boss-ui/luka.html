@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luka Control Surface</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0b0b0f;
+      color: #f3f4f6;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #0b0b0f;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #1f2937;
+      background: rgba(12, 12, 18, 0.92);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .title-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #2563eb;
+      font-weight: 700;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px;
+    }
+    section {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    label {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 12px;
+      background: #0f172a;
+      color: inherit;
+      resize: vertical;
+      font: inherit;
+      line-height: 1.5;
+    }
+    textarea:focus {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+    select,
+    button {
+      appearance: none;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      background: #0f172a;
+      color: inherit;
+      font: inherit;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+    }
+    button.primary {
+      background: #2563eb;
+      border-color: #2563eb;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: transparent;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .composer-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .composer-controls select {
+      min-width: 140px;
+    }
+    .output-area {
+      flex: 1;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      padding: 16px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      min-height: 200px;
+    }
+    .status-line {
+      font-size: 13px;
+      color: #9ca3af;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal {
+      width: min(420px, calc(100% - 48px));
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+    }
+    .modal h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .connector-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #0f172a;
+      border: 1px solid #1f2937;
+    }
+    .connector-row[data-ready="true"] {
+      border-color: rgba(34, 197, 94, 0.5);
+    }
+    .connector-row[data-ready="false"] {
+      border-color: rgba(248, 113, 113, 0.4);
+    }
+    .connector-row strong {
+      font-size: 14px;
+    }
+    .hint {
+      color: #f87171;
+      font-size: 12px;
+    }
+    @media (max-width: 960px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div class="title-badge">L</div>
+      Luka Prompt Console
+    </div>
+    <div class="toolbar">
+      <button id="connectorsButton" class="secondary" type="button">Connectors</button>
+    </div>
+  </header>
+  <main>
+    <section>
+      <div>
+        <h2>Prompt Composer</h2>
+        <p class="status-line">Craft and optimize prompts before dispatching to delegates.</p>
+      </div>
+      <div class="composer-controls">
+        <label for="engineSelect">Engine</label>
+        <select id="engineSelect">
+          <option value="local">Local</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="openai">OpenAI</option>
+        </select>
+        <button id="optimizeButton" class="primary" type="button">Optimize Prompt</button>
+      </div>
+      <div>
+        <label for="systemInput">System Directive</label>
+        <textarea id="systemInput" placeholder="e.g. You are a specialist operations planner"></textarea>
+      </div>
+      <div>
+        <label for="contextInput">Context</label>
+        <textarea id="contextInput" placeholder="Relevant background, constraints, or notes"></textarea>
+      </div>
+      <div>
+        <label for="promptInput">Prompt</label>
+        <textarea id="promptInput" placeholder="What should the assistants accomplish?"></textarea>
+      </div>
+    </section>
+    <section>
+      <div>
+        <h2>Optimized Output</h2>
+        <p class="status-line" id="optimizeStatus">Waiting for input…</p>
+      </div>
+      <div class="output-area" id="optimizedPreview"></div>
+      <div class="composer-controls">
+        <button id="copyButton" type="button" class="secondary">Copy</button>
+        <button id="sendChatButton" type="button" class="primary">Send to Chat</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="connectorsModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>Connectors</h3>
+        <button id="closeModalButton" class="secondary" type="button">Close</button>
+      </div>
+      <div id="connectorsList"></div>
+      <p class="status-line">Connector readiness reflects server environment configuration.</p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://127.0.0.1:4000';
+
+    const engineSelect = document.getElementById('engineSelect');
+    const optimizeButton = document.getElementById('optimizeButton');
+    const copyButton = document.getElementById('copyButton');
+    const sendChatButton = document.getElementById('sendChatButton');
+    const optimizedPreview = document.getElementById('optimizedPreview');
+    const optimizeStatus = document.getElementById('optimizeStatus');
+    const connectorsButton = document.getElementById('connectorsButton');
+    const connectorsModal = document.getElementById('connectorsModal');
+    const closeModalButton = document.getElementById('closeModalButton');
+    const connectorsList = document.getElementById('connectorsList');
+
+    function getComposerPayload() {
+      return {
+        system: document.getElementById('systemInput').value.trim(),
+        context: document.getElementById('contextInput').value.trim(),
+        prompt: document.getElementById('promptInput').value.trim(),
+        engine: engineSelect.value
+      };
+    }
+
+    async function optimizePrompt() {
+      const payload = getComposerPayload();
+      if (!payload.prompt) {
+        optimizeStatus.textContent = 'Provide a prompt to optimize.';
+        return;
+      }
+
+      optimizeButton.disabled = true;
+      optimizeStatus.textContent = 'Optimizing…';
+      try {
+        const res = await fetch(`${API_BASE}/api/optimize_prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          throw new Error(`Request failed (${res.status})`);
+        }
+        const data = await res.json();
+        optimizedPreview.textContent = data.prompt || '';
+        if (data.engine && data.engine !== payload.engine) {
+          optimizeStatus.textContent = `Fallback to ${data.engine} engine.`;
+        } else {
+          optimizeStatus.textContent = data.ok ? `Optimized via ${data.engine || 'local'} engine.` : 'No optimization generated.';
+        }
+      } catch (err) {
+        console.error(err);
+        optimizeStatus.textContent = 'Optimization failed. Check server logs.';
+      } finally {
+        optimizeButton.disabled = false;
+      }
+    }
+
+    async function sendChat() {
+      const payload = getComposerPayload();
+      const message = payload.prompt;
+      if (!message) {
+        optimizeStatus.textContent = 'Provide a prompt to send.';
+        return;
+      }
+
+      sendChatButton.disabled = true;
+      optimizeStatus.textContent = 'Dispatching chat…';
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            system: payload.system,
+            engine: payload.engine
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Chat failed (${res.status})`);
+        }
+        const data = await res.json();
+        if (data.response) {
+          optimizedPreview.textContent = data.response;
+          optimizeStatus.textContent = `Chat response via ${data.engine || 'local'} engine.`;
+        } else if (data.best && data.best.text) {
+          optimizedPreview.textContent = data.best.text;
+          optimizeStatus.textContent = data.summary || 'NLU router response received.';
+        } else {
+          optimizedPreview.textContent = '';
+          optimizeStatus.textContent = 'No response received.';
+        }
+      } catch (err) {
+        console.error(err);
+        optimizeStatus.textContent = 'Chat dispatch failed. Check server logs.';
+      } finally {
+        sendChatButton.disabled = false;
+      }
+    }
+
+    async function refreshConnectors() {
+      connectorsList.textContent = 'Loading…';
+      try {
+        const res = await fetch(`${API_BASE}/api/connectors/status`);
+        if (!res.ok) throw new Error('Failed to load connectors');
+        const data = await res.json();
+        connectorsList.innerHTML = '';
+        const entries = [
+          ['Anthropic', data.anthropic?.ready],
+          ['OpenAI', data.openai?.ready],
+          ['Local Ensemble', data.local?.ready]
+        ];
+        entries.forEach(([label, ready]) => {
+          const row = document.createElement('div');
+          row.className = 'connector-row';
+          row.dataset.ready = ready ? 'true' : 'false';
+          const title = document.createElement('strong');
+          title.textContent = label;
+          const status = document.createElement('span');
+          status.textContent = ready ? 'Ready' : 'Not ready';
+          row.appendChild(title);
+          row.appendChild(status);
+          connectorsList.appendChild(row);
+          if (!ready) {
+            const hint = document.createElement('div');
+            hint.className = 'hint';
+            hint.textContent = 'Set env on server';
+            connectorsList.appendChild(hint);
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        connectorsList.textContent = 'Unable to load connectors status.';
+      }
+    }
+
+    function openConnectorsModal() {
+      connectorsModal.classList.add('open');
+      connectorsModal.setAttribute('aria-hidden', 'false');
+      refreshConnectors();
+    }
+
+    function closeConnectorsModal() {
+      connectorsModal.classList.remove('open');
+      connectorsModal.setAttribute('aria-hidden', 'true');
+    }
+
+    connectorsButton.addEventListener('click', openConnectorsModal);
+    closeModalButton.addEventListener('click', closeConnectorsModal);
+    connectorsModal.addEventListener('click', (event) => {
+      if (event.target === connectorsModal) {
+        closeConnectorsModal();
+      }
+    });
+
+    optimizeButton.addEventListener('click', optimizePrompt);
+    sendChatButton.addEventListener('click', sendChat);
+    copyButton.addEventListener('click', () => {
+      const text = optimizedPreview.textContent;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        optimizeStatus.textContent = 'Copied optimized output to clipboard.';
+      }).catch(() => {
+        optimizeStatus.textContent = 'Copy failed. Use manual copy.';
+      });
+    });
+  </script>
+</body>
+</html>
