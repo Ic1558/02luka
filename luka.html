@@ -480,7 +480,7 @@
       const profile = getTargetProfile(targetId);
       const lines = [
         `Backend error: ${err && err.message ? err.message : err}`,
-        'Ensure the 02luka backend is running (node boss-api/server.js).'
+        'Ensure the 02luka backend is running (node boss-api/server.cjs).'
       ];
       if (profile.tips) {
         lines.push(`Target tip: ${profile.tips}`);

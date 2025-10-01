@@ -80,7 +80,7 @@ fi
   echo 'bash g/tools/mapping_drift_guard.sh --validate'
   echo 'bash g/tools/clc_gate.sh'
   echo '# optional smoke (if port free)'
-  echo 'HOST=127.0.0.1 PORT=4000 node boss-api/server.js'
+  echo 'HOST=127.0.0.1 PORT=4000 node boss-api/server.cjs'
   echo 'curl -s http://127.0.0.1:4000/api/list/inbox | jq .'
   echo '```'
 } > .codex/GUARDRAILS.md
@@ -89,7 +89,7 @@ fi
 if [ ! -f ".codex/TASK_RECIPES.md" ]; then
   {
     echo "# TASK RECIPES (auto)"
-    echo "## Patch server.js to resolver-only + WHATWG URL"
+    echo "## Patch server.cjs to resolver-only + WHATWG URL"
     echo "- Replace server code to call g/tools/path_resolver.sh from repo root"
     echo "## Set boss-ui API base"
     echo "- Point to http://127.0.0.1:4000"

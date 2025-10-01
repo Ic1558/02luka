@@ -37,7 +37,7 @@
     │   └── sent
     ├── boss-api
     │   ├── .env.sample
-    │   └── server.js
+    │   └── server.cjs
     ├── boss-ui
     │   └── index.html
     ├── cleanup_home_backups.sh
@@ -75,7 +75,7 @@
 
 ## Known Services
 - boss-api:     boss-api/.env.sample:2:PORT=4000
-    boss-api/server.js:7:PORT = Number(process.env.PORT || 4000
+    boss-api/server.cjs:7:PORT = Number(process.env.PORT || 4000
 
 ## Data Flow
 dropbox → (router) → inbox/sent (query/answer) → deliverables
