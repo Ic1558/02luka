@@ -17,6 +17,16 @@ test -f "$INBOX/hello.md" || echo "# hello boss" > "$INBOX/hello.md"
 echo "==> Check API file"
 curl -fsS "$API/api/file/inbox/hello.md" | head -n1
 
+echo "==> Check API optimize_prompt"
+curl -fsS -X POST "$API/api/optimize_prompt" \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"Summarize hello"}' | jq -r '.optimized // .prompt // .error'
+
+echo "==> Check API chat"
+curl -fsS -X POST "$API/api/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"ping"}' | jq -r '.summary // .error'
+
 echo "==> Check UI port availability"
 if lsof -ti :$UI_PORT >/dev/null 2>&1; then
   echo " - Port $UI_PORT is busy. Kill? (y/N)"

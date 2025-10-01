@@ -25,3 +25,16 @@
     - curl_api_file: pending
   guardrail_status: pending
   followups: ["Re-run validations before commit"]
+- time: "2025-10-01T21:07:30+07:00"
+  change_id: CU-2025-10-01-smoke-api-chat
+  summary: "Extend smoke checks for chat endpoints and document guardrails"
+  files_touched:
+    - run/smoke_api_ui.sh
+    - .codex/GUARDRAILS.md
+    - run/change_units/CU-2025-10-01.yml
+    - run/daily_reports/REPORT_2025-10-01.md
+  tags: ["automation","documentation"]
+  tests_ran:
+    - smoke_api_ui: pending
+  guardrail_status: pending
+  followups: []
