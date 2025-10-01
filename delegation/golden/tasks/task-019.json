@@ -1,0 +1,10 @@
+{
+  "id": "task-019",
+  "title": "Add admin audit",
+  "description": "Log admin access to sensitive pages.",
+  "expected_outcome": "Audit log stored",
+  "tags": [
+    "security",
+    "ops"
+  ]
+}

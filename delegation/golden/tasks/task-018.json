@@ -1,0 +1,10 @@
+{
+  "id": "task-018",
+  "title": "Optimize query",
+  "description": "Add index to accelerate invoice lookup.",
+  "expected_outcome": "Query latency reduced",
+  "tags": [
+    "database",
+    "performance"
+  ]
+}

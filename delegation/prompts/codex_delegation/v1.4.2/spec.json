@@ -1,0 +1,18 @@
+{
+  "name": "codex_delegation",
+  "version": "1.4.2",
+  "description": "Implements the GG delegation protocol for CODE-IMPLEMENTER agents.",
+  "context_budget": {
+    "system_tokens": 1000,
+    "spec_tokens": 2000,
+    "example_tokens": 1500,
+    "task_tokens": 1000
+  },
+  "canonicalization": {
+    "trim": true,
+    "normalize_whitespace": true,
+    "stable_key_ordering": true,
+    "timestamp_format": "ISO-8601",
+    "locale": "en-US"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "task-020",
+  "title": "Containerize job",
+  "description": "Add Dockerfile for batch job runner.",
+  "expected_outcome": "Dockerfile builds image",
+  "tags": [
+    "ops",
+    "infra"
+  ]
+}

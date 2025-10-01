@@ -1,0 +1,10 @@
+{
+  "id": "task-013",
+  "title": "Tighten CSP",
+  "description": "Disallow unsafe-inline scripts.",
+  "expected_outcome": "CSP header updated",
+  "tags": [
+    "security",
+    "frontend"
+  ]
+}

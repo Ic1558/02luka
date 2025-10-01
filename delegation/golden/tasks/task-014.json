@@ -1,0 +1,10 @@
+{
+  "id": "task-014",
+  "title": "Stabilize flaky test",
+  "description": "Deflake user-session integration test.",
+  "expected_outcome": "Test runs reliably",
+  "tags": [
+    "test",
+    "stability"
+  ]
+}

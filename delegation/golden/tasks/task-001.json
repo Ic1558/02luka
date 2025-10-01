@@ -1,0 +1,10 @@
+{
+  "id": "task-001",
+  "title": "Fix null pointer in payment flow",
+  "description": "Resolve crash when payment token is absent.",
+  "expected_outcome": "No crashes when token missing",
+  "tags": [
+    "bugfix",
+    "backend"
+  ]
+}

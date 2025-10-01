@@ -1,0 +1,10 @@
+{
+  "id": "task-004",
+  "title": "Add loading spinner",
+  "description": "Show spinner while dashboard data loads.",
+  "expected_outcome": "Spinner visible until data arrives",
+  "tags": [
+    "frontend",
+    "feature"
+  ]
+}

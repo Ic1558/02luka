@@ -1,0 +1,10 @@
+{
+  "id": "task-003",
+  "title": "Refactor cache layer",
+  "description": "Split cache helpers into dedicated module.",
+  "expected_outcome": "Cache logic isolated",
+  "tags": [
+    "refactor",
+    "backend"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "command_gating": true,
+  "allowed_paths": ["."],
+  "banned_operations": ["network", "shell_execution"],
+  "token_budget": 4000,
+  "time_budget_seconds": 60,
+  "notes": "Delegate may only emit plan/files/tests sections in JSON response."
+}

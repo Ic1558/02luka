@@ -1,0 +1,10 @@
+{
+  "id": "task-009",
+  "title": "Add retry logic",
+  "description": "Retry queue publish up to 3 times.",
+  "expected_outcome": "Retry implemented with backoff",
+  "tags": [
+    "backend",
+    "resilience"
+  ]
+}

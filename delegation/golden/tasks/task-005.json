@@ -1,0 +1,10 @@
+{
+  "id": "task-005",
+  "title": "Update API docs",
+  "description": "Document the new analytics endpoint.",
+  "expected_outcome": "Docs mention analytics endpoint",
+  "tags": [
+    "docs",
+    "api"
+  ]
+}
