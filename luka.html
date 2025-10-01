@@ -249,7 +249,127 @@
     const copyPromptTemplate = document.getElementById('copyPromptTemplate');
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
 
-    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const statusSubtitle = document.querySelector('.status');
+
+    const BACKEND_STORAGE_KEY = 'luka.chatEndpoint';
+
+    function getDefaultBackendBase() {
+      const { protocol, origin } = window.location;
+      if (protocol && protocol !== 'file:' && origin && origin !== 'null') {
+        return origin;
+      }
+      return 'http://127.0.0.1:4000';
+    }
+
+    function normalizeBackendUrl(value) {
+      if (typeof value !== 'string') return '';
+      const trimmed = value.trim();
+      if (!trimmed) return '';
+
+      try {
+        const parsed = new URL(trimmed, getDefaultBackendBase());
+        const normalizedPath = parsed.pathname.replace(/\/+$/, '');
+        if (!normalizedPath) {
+          parsed.pathname = '/api/chat';
+          parsed.search = '';
+          parsed.hash = '';
+        }
+        return parsed.toString();
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function persistBackendUrl(url) {
+      try {
+        localStorage.setItem(BACKEND_STORAGE_KEY, url);
+      } catch (error) {
+        /* ignore */
+      }
+    }
+
+    function readPersistedBackendUrl() {
+      try {
+        return localStorage.getItem(BACKEND_STORAGE_KEY) || '';
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function readBackendFromQuery() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const value = params.get('backend') || params.get('chatEndpoint') || params.get('chat');
+        return value ? normalizeBackendUrl(value) : '';
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function resolveInitialBackendUrl() {
+      const configured = normalizeBackendUrl(window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint);
+      if (configured) return configured;
+
+      const fromQuery = readBackendFromQuery();
+      if (fromQuery) {
+        persistBackendUrl(fromQuery);
+        return fromQuery;
+      }
+
+      const stored = normalizeBackendUrl(readPersistedBackendUrl());
+      if (stored) return stored;
+
+      return new URL('/api/chat', getDefaultBackendBase()).toString();
+    }
+
+    function updateStatusSubtitle(url) {
+      if (!statusSubtitle) return;
+      try {
+        const parsed = new URL(url);
+        statusSubtitle.textContent = `Connected to ${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+      } catch (error) {
+        statusSubtitle.textContent = `Connected to ${url}`;
+      }
+    }
+
+    let BACKEND_CHAT_URL = resolveInitialBackendUrl();
+    updateStatusSubtitle(BACKEND_CHAT_URL);
+
+    function updateBackendChatUrl(url, options = {}) {
+      const { persist = true } = options;
+      const normalized = normalizeBackendUrl(url);
+      if (!normalized) {
+        throw new Error('Invalid backend URL provided.');
+      }
+      BACKEND_CHAT_URL = normalized;
+      if (persist) {
+        persistBackendUrl(normalized);
+      }
+      updateStatusSubtitle(normalized);
+      if (!window.LUKA_BACKEND) {
+        window.LUKA_BACKEND = {};
+      }
+      window.LUKA_BACKEND.chatEndpoint = normalized;
+      return normalized;
+    }
+
+    if (!window.LUKA_BACKEND) {
+      window.LUKA_BACKEND = {};
+    }
+
+    window.LUKA_BACKEND.chatEndpoint = BACKEND_CHAT_URL;
+    window.LUKA_BACKEND.setChatEndpoint = (value) => {
+      return updateBackendChatUrl(value);
+    };
+    window.LUKA_BACKEND.getChatEndpoint = () => BACKEND_CHAT_URL;
+    window.LUKA_BACKEND.clearPersistedChatEndpoint = () => {
+      try {
+        localStorage.removeItem(BACKEND_STORAGE_KEY);
+      } catch (error) {
+        /* ignore */
+      }
+      return updateBackendChatUrl('/api/chat', { persist: false });
+    };
     const TARGET_PROFILES = {
       auto: {
         id: 'auto',
@@ -480,6 +600,7 @@
       const profile = getTargetProfile(targetId);
       const lines = [
         `Backend error: ${err && err.message ? err.message : err}`,
+        `Endpoint: ${BACKEND_CHAT_URL}`,
         'Ensure the 02luka backend is running (node boss-api/server.js).'
       ];
       if (profile.tips) {
