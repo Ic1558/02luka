@@ -220,8 +220,38 @@ else
 fi
 echo ""
 
-# 9. QUICK ACTIONS
-echo "🚀 9. QUICK ACTIONS"
+# 9. BRIDGE WORKSPACE
+echo "🌉 9. BRIDGE WORKSPACE"
+echo "----------------------"
+
+BRIDGE_ROOT="f/bridge"
+BRIDGE_OK=1
+
+if [ -d "$BRIDGE_ROOT" ]; then
+    for channel in inbox outbox processed; do
+        path="$BRIDGE_ROOT/$channel"
+        if [ -d "$path" ]; then
+            echo -e "${GREEN}✅ bridge/${channel}: ready at $path${NC}"
+        else
+            echo -e "${RED}❌ bridge/${channel}: missing directory (expected $path)${NC}"
+            BRIDGE_OK=0
+        fi
+    done
+else
+    echo -e "${RED}❌ Bridge root missing: $BRIDGE_ROOT${NC}"
+    BRIDGE_OK=0
+fi
+
+if [ $BRIDGE_OK -eq 1 ]; then
+    echo "   Bridge is live. Mount or sync these folders on the host to move real files in/out."
+else
+    echo "   Fix the bridge directories to ensure the tunnel isn't just theoretical."
+    ((ISSUES++))
+fi
+echo ""
+
+# 10. QUICK ACTIONS
+echo "🚀 10. QUICK ACTIONS"
 echo "------------------"
 echo "• Run locally:     ./run_local.sh"
 echo "• Expose to web:   ./expose_gateways.sh"
@@ -229,10 +259,10 @@ echo "• View on GitHub:  open https://ic1558.github.io/02luka/"
 echo "• Check logs:      tail -f /tmp/docker-autohealing.log"
 echo ""
 
-# 10. SYSTEM SUMMARY
-echo "📊 10. SUMMARY"
+# 11. SYSTEM SUMMARY
+echo "📊 11. SUMMARY"
 echo "----------"
-TOTAL_CHECKS=9
+TOTAL_CHECKS=10
 PASSED=0
 
 [ "$DEPLOY_STATUS" = "200" ] && ((PASSED++))
@@ -241,6 +271,7 @@ lsof -iTCP:8765 -sTCP:LISTEN > /dev/null 2>&1 && ((PASSED++))
 curl -s http://localhost:11434/api/tags > /dev/null 2>&1 && ((PASSED++))
 [ -f "index.html" ] && ((PASSED++))
 [[ "${MCP_RUNNING:-0}" -gt 0 ]] && ((PASSED+=${MCP_RUNNING:-0}))
+[ $BRIDGE_OK -eq 1 ] && ((PASSED++))
 
 PERCENT=$((PASSED * 100 / TOTAL_CHECKS))
 
