@@ -1,0 +1,14 @@
+- time: "2025-10-01T12:00:00+07:00"
+  change_id: CU-2025-10-01-boss-ui-api-v1
+  summary: "Switch boss-api to resolver-only; add /api/file; wire UI click-to-open"
+  files_touched:
+    - boss-api/server.js
+    - boss-ui/index.html
+  tags: ["boss-api","boss-ui","resolver","preflight"]
+  tests_ran:
+    - preflight: OK
+    - drift_guard: OK
+    - api_list: OK
+    - api_file: OK
+  guardrail_status: OK
+  followups: ["Replace alert() with real viewer", "React/Vite migration later"]
