@@ -8,3 +8,4 @@ boss-api/node_modules/
 # Build outputs and environment files
 boss-ui/dist/
 .env
+.codex/templates/master_prompt.md.backup-
