@@ -1,0 +1,10 @@
+- time: "2025-10-02T10:15:00+07:00"
+  change_id: CU-2025-10-02-smoke-docs
+  summary: "Extend smoke checks for upload/connectors and log docs/manifests"
+  files_touched:
+    - run/smoke_api_ui.sh
+    - run/change_units/CU-2025-10-02.yml
+    - run/daily_reports/REPORT_2025-10-02.md
+  tags: ["boss-ui","boss-api","resolver","preflight"]
+  tests_ran:
+    - smoke_api_ui: pending
