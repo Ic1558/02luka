@@ -1,2 +1,3 @@
 cleanup_home_backups.sh
 *.backup-*
+boss-api/node_modules/
