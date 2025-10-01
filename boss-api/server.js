@@ -2,6 +2,8 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const fs = require('fs/promises');
+const anthropicConnector = require('../g/connectors/mcp_anthropic');
+const openaiConnector = require('../g/connectors/mcp_openai');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
@@ -47,6 +49,37 @@ const CHAT_TARGETS = {
     baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434'
   }
 };
+
+const hasAnthropicKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
+const hasOpenAiKey = () => Boolean(process.env.OPENAI_API_KEY);
+
+function localOptimizePrompt({ system, user, context }) {
+  const sections = [];
+
+  if (system && system.trim()) {
+    const cleaned = system.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`System Directive:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  if (context && context.trim()) {
+    const cleaned = context.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`Context:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  if (user && user.trim()) {
+    const cleaned = user.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`Task:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  const draft = sections.join('\n\n').trim();
+  return draft || String(user || '').trim();
+}
 
 function httpRequestJson(targetUrl, options = {}) {
   const url = new URL(targetUrl);
@@ -364,6 +397,85 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
+      return writeJson(res, 200, {
+        anthropic: { ready: hasAnthropicKey() },
+        openai: { ready: hasOpenAiKey() },
+        local: { ready: true }
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/optimize_prompt') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy();
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const system = typeof payload.system === 'string' ? payload.system : '';
+          const userPrompt = typeof payload.user === 'string'
+            ? payload.user
+            : (typeof payload.prompt === 'string' ? payload.prompt : '');
+          const context = typeof payload.context === 'string' ? payload.context : '';
+          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+
+          let engineUsed = 'local';
+          let optimizedText = '';
+          let meta = {};
+
+          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
+          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
+
+          try {
+            if (wantsAnthropic) {
+              const response = await anthropicConnector.optimizePrompt({ system, user: userPrompt, context });
+              optimizedText = String(response.text || '').trim();
+              engineUsed = 'anthropic';
+              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                model: response.raw.model || null,
+                id: response.raw.id || null
+              } : {});
+            } else if (wantsOpenAi) {
+              const response = await openaiConnector.optimizePrompt({ system, user: userPrompt, context });
+              optimizedText = String(response.text || '').trim();
+              engineUsed = 'openai';
+              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                model: response.raw.model || null,
+                id: response.raw.id || null
+              } : {});
+            }
+          } catch (err) {
+            console.error('[boss-api] optimize connector failed', err);
+            engineUsed = 'local';
+            optimizedText = '';
+            meta = { fallback: true, error: err.message };
+          }
+
+          if (!optimizedText) {
+            optimizedText = localOptimizePrompt({ system, user: userPrompt, context });
+            engineUsed = 'local';
+            meta = Object.assign({ strategy: 'heuristic' }, meta);
+          }
+
+          return writeJson(res, 200, {
+            ok: Boolean(optimizedText),
+            engine: engineUsed,
+            prompt: optimizedText,
+            meta
+          });
+        } catch (err) {
+          console.error('[boss-api] optimize parsing failed', err);
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       let raw = '';
       req.on('data', (chunk) => {
@@ -379,6 +491,33 @@ const server = http.createServer(async (req, res) => {
           const message = (payload.message || payload.prompt || payload.input || '').trim();
           if (!message) {
             return writeJson(res, 400, { error: 'message is required' });
+          }
+
+          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+          const system = typeof payload.system === 'string' ? payload.system : '';
+          const model = typeof payload.model === 'string' ? payload.model : undefined;
+          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
+          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
+
+          if (wantsAnthropic || wantsOpenAi) {
+            try {
+              const connector = wantsAnthropic ? anthropicConnector : openaiConnector;
+              const engineUsed = wantsAnthropic ? 'anthropic' : 'openai';
+              const response = await connector.chat({ input: message, system, model });
+              const text = String(response.text || '').trim();
+              return writeJson(res, 200, {
+                ok: Boolean(text),
+                engine: engineUsed,
+                response: text,
+                meta: Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                  model: response.raw.model || null,
+                  id: response.raw.id || null
+                } : {})
+              });
+            } catch (err) {
+              console.error('[boss-api] chat connector failed', err);
+              // fall through to local orchestration below
+            }
           }
 
           const targetId = typeof payload.target === 'string' && payload.target.trim()
