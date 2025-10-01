@@ -1,3 +1,4 @@
+<<<<<<< ours
 - time: "2025-10-01T12:00:00+07:00"
   change_id: CU-2025-10-01-boss-ui-api-v1
   summary: "Switch boss-api to resolver-only; add /api/file; wire UI click-to-open"
@@ -25,3 +26,43 @@
     - curl_api_file: pending
   guardrail_status: pending
   followups: ["Re-run validations before commit"]
+=======
+context_id: CU-2025-10-01
+change_id: CU-2025-10-01-boss-ui-api-v1
+branch: change/CU-2025-10-01-boss-ui-api-v1
+pr: open
+log:
+  - timestamp: 2025-10-01T00:00:00Z
+    summary: "Initialized persistent change tracking scaffolding for Codex sessions."
+    files_touched: []
+    tests_ran: []
+    guardrail_status:
+      preflight: pending
+      mapping_drift: pending
+      clc_gate: pending
+    followups:
+      - "Append a new entry for every subsequent session with summary, files, tests, guardrail status, and follow-ups."
+  - timestamp: 2024-03-09T00:00:00Z
+    summary: "Added repository-based memory scaffolding (autoload, status pointer, logs, and docs)."
+    files_touched:
+      - .codex/autoload.md
+      - docs/persistent_change_workflow.md
+      - README.md
+      - run/status/current_work.json
+      - run/worklog/CU-2025-10-01.md
+      - run/daily_reports/REPORT_2025-10-01.md
+    tests_ran:
+      - command: "bash .codex/preflight.sh"
+        result: warn
+      - command: "bash g/tools/mapping_drift_guard.sh --validate"
+        result: pass
+      - command: "bash g/tools/clc_gate.sh"
+        result: missing
+    guardrail_status:
+      preflight: warn
+      mapping_drift: pass
+      clc_gate: missing
+    followups:
+      - "Run CLC gate once the script is available in g/tools."
+      - "Keep appending to the manifest/worklog/daily report for future sessions."
+>>>>>>> theirs

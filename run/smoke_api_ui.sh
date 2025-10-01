@@ -14,6 +14,18 @@ INBOX="$("$ROOT/g/tools/path_resolver.sh" human:inbox)"
 mkdir -p "$INBOX"
 test -f "$INBOX/hello.md" || echo "# hello boss" > "$INBOX/hello.md"
 
+echo "==> Upload sample file"
+UPLOAD_CODE=$(curl -sS -o /dev/null -w "%{http_code}" -F "file=@$INBOX/hello.md" "$API/api/upload?mailbox=inbox") || {
+  echo "API upload request failed"; exit 1; }
+if [[ "$UPLOAD_CODE" != "200" ]]; then
+  echo "Unexpected upload status: $UPLOAD_CODE"; exit 1; fi
+
+echo "==> Check connectors status"
+CONNECTORS_JSON=$(curl -fsS "$API/api/connectors/status") || {
+  echo "Connectors status request failed"; exit 1; }
+echo "$CONNECTORS_JSON" | jq -e '.local.ready == true' >/dev/null || {
+  echo "Connectors not ready"; exit 1; }
+
 echo "==> Check API file"
 curl -fsS "$API/api/file/inbox/hello.md" | head -n1
 
