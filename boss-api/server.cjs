@@ -2,6 +2,9 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const fs = require('fs/promises');
+const { execFile } = require('child_process');
+const anthropicConnector = require('../g/connectors/mcp_anthropic');
+const openaiConnector = require('../g/connectors/mcp_openai');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
@@ -20,45 +23,26 @@ function writeJson(res, code, payload) {
 }
 
 const allowed = new Set(['inbox','sent','deliverables','dropbox','drafts','documents']);
-const goalMailbox = 'dropbox';
-const goalDir = path.join(bossRoot, goalMailbox);
-const MAX_GOAL_TITLE_LEN = 120;
-const MAX_GOAL_DETAILS_LEN = 5000;
+const uploadTargets = new Set(['inbox','dropbox']);
+const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB safeguard
 
-function slugifyGoalTitle(input) {
-  const slug = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
-  return slug.slice(0, 48);
-}
-
-async function reserveGoalPath(baseSlug) {
-  const baseName = baseSlug || `goal-${Date.now()}`;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const suffix = attempt === 0 ? '' : `-${attempt}`;
-    const fileName = `${baseName}${suffix}.md`;
-    const candidatePath = path.join(goalDir, fileName);
-    const rel = path.relative(goalDir, candidatePath);
-    if (rel.startsWith('..') || path.isAbsolute(rel)) {
-      throw new Error('Invalid goal filename computed');
-    }
-
-    try {
-      await fs.stat(candidatePath);
-      continue;
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        return { fileName, filePath: candidatePath };
+function resolveHumanPath(mailbox) {
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'bash',
+      ['g/tools/path_resolver.sh', `human:${mailbox}`],
+      { cwd: repoRoot },
+      (err, stdout, stderr) => {
+        if (err) {
+          err.stderr = stderr;
+          return reject(err);
+        }
+        resolve(stdout.trim());
       }
-      throw err;
-    }
-  }
+    );
 
-  throw new Error('Unable to allocate unique goal filename');
+  });
 }
-
 
 const CHAT_TARGETS = {
   auto: {
@@ -86,6 +70,37 @@ const CHAT_TARGETS = {
     baseUrl: process.env.OLLAMA_URL || 'http://localhost:11434'
   }
 };
+
+const hasAnthropicKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
+const hasOpenAiKey = () => Boolean(process.env.OPENAI_API_KEY);
+
+function localOptimizePrompt({ system, user, context }) {
+  const sections = [];
+
+  if (system && system.trim()) {
+    const cleaned = system.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`System Directive:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  if (context && context.trim()) {
+    const cleaned = context.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`Context:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  if (user && user.trim()) {
+    const cleaned = user.trim().split(/\n+/).map((line) => line.trim()).filter(Boolean);
+    if (cleaned.length) {
+      sections.push(`Task:\n- ${cleaned.join('\n- ')}`);
+    }
+  }
+
+  const draft = sections.join('\n\n').trim();
+  return draft || String(user || '').trim();
+}
 
 function httpRequestJson(targetUrl, options = {}) {
   const url = new URL(targetUrl);
@@ -403,11 +418,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
-    if (req.method === 'POST' && url.pathname === '/api/goal') {
+    if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
+      return writeJson(res, 200, {
+        anthropic: { ready: hasAnthropicKey() },
+        openai: { ready: hasOpenAiKey() },
+        local: { ready: true }
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/optimize_prompt') {
       let raw = '';
       req.on('data', (chunk) => {
         raw += chunk;
-        if (raw.length > 20_000) {
+        if (raw.length > 1_000_000) {
           req.destroy();
         }
       });
@@ -415,59 +438,60 @@ const server = http.createServer(async (req, res) => {
       req.on('end', async () => {
         try {
           const payload = raw ? JSON.parse(raw) : {};
-          const title = typeof payload.title === 'string' ? payload.title.trim() : '';
-          const details = typeof payload.details === 'string' ? payload.details.trim() : '';
+          const system = typeof payload.system === 'string' ? payload.system : '';
+          const userPrompt = typeof payload.user === 'string'
+            ? payload.user
+            : (typeof payload.prompt === 'string' ? payload.prompt : '');
+          const context = typeof payload.context === 'string' ? payload.context : '';
+          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
 
-          if (!title) {
-            return writeJson(res, 400, { error: 'title is required' });
-          }
+          let engineUsed = 'local';
+          let optimizedText = '';
+          let meta = {};
 
-          if (title.length > MAX_GOAL_TITLE_LEN) {
-            return writeJson(res, 400, { error: `title must be <= ${MAX_GOAL_TITLE_LEN} characters` });
-          }
-
-          if (details.length > MAX_GOAL_DETAILS_LEN) {
-            return writeJson(res, 400, { error: `details must be <= ${MAX_GOAL_DETAILS_LEN} characters` });
-          }
-
-          await fs.mkdir(goalDir, { recursive: true });
-
-          let reservation;
-          try {
-            reservation = await reserveGoalPath(slugifyGoalTitle(title));
-          } catch (err) {
-            console.error('[boss-api] goal reservation failed', err);
-            return writeJson(res, 500, { error: 'Failed to allocate goal filename' });
-          }
-
-          const createdAt = new Date().toISOString();
-          const contentParts = [`# Goal: ${title}`, '', `Created: ${createdAt}`];
-          if (details) {
-            contentParts.push('', details);
-          }
-          contentParts.push('', '---', 'Status: New');
-          const fileContent = `${contentParts.join('\n')}\n`;
+          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
+          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
 
           try {
-            await fs.writeFile(reservation.filePath, fileContent, 'utf8');
+            if (wantsAnthropic) {
+              const response = await anthropicConnector.optimizePrompt({ system, user: userPrompt, context });
+              optimizedText = String(response.text || '').trim();
+              engineUsed = 'anthropic';
+              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                model: response.raw.model || null,
+                id: response.raw.id || null
+              } : {});
+            } else if (wantsOpenAi) {
+              const response = await openaiConnector.optimizePrompt({ system, user: userPrompt, context });
+              optimizedText = String(response.text || '').trim();
+              engineUsed = 'openai';
+              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                model: response.raw.model || null,
+                id: response.raw.id || null
+              } : {});
+            }
           } catch (err) {
-            console.error('[boss-api] failed to write goal file', err);
-            return writeJson(res, 500, { error: 'Failed to persist goal' });
+            console.error('[boss-api] optimize connector failed', err);
+            engineUsed = 'local';
+            optimizedText = '';
+            meta = { fallback: true, error: err.message };
           }
 
-          return writeJson(res, 201, {
-            ok: true,
-            mailbox: goalMailbox,
-            id: reservation.fileName,
-            path: path.relative(repoRoot, reservation.filePath),
-            createdAt
+          if (!optimizedText) {
+            optimizedText = localOptimizePrompt({ system, user: userPrompt, context });
+            engineUsed = 'local';
+            meta = Object.assign({ strategy: 'heuristic' }, meta);
+          }
+
+          return writeJson(res, 200, {
+            ok: Boolean(optimizedText),
+            engine: engineUsed,
+            prompt: optimizedText,
+            meta
           });
         } catch (err) {
-          if (err instanceof SyntaxError) {
-            return writeJson(res, 400, { error: 'Invalid JSON payload' });
-          }
-          console.error('[boss-api] goal creation unexpected error', err);
-          return writeJson(res, 500, { error: 'Failed to create goal' });
+          console.error('[boss-api] optimize parsing failed', err);
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
         }
       });
       return;
@@ -490,6 +514,33 @@ const server = http.createServer(async (req, res) => {
             return writeJson(res, 400, { error: 'message is required' });
           }
 
+          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+          const system = typeof payload.system === 'string' ? payload.system : '';
+          const model = typeof payload.model === 'string' ? payload.model : undefined;
+          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
+          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
+
+          if (wantsAnthropic || wantsOpenAi) {
+            try {
+              const connector = wantsAnthropic ? anthropicConnector : openaiConnector;
+              const engineUsed = wantsAnthropic ? 'anthropic' : 'openai';
+              const response = await connector.chat({ input: message, system, model });
+              const text = String(response.text || '').trim();
+              return writeJson(res, 200, {
+                ok: Boolean(text),
+                engine: engineUsed,
+                response: text,
+                meta: Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                  model: response.raw.model || null,
+                  id: response.raw.id || null
+                } : {})
+              });
+            } catch (err) {
+              console.error('[boss-api] chat connector failed', err);
+              // fall through to local orchestration below
+            }
+          }
+
           const targetId = typeof payload.target === 'string' && payload.target.trim()
             ? payload.target.trim()
             : 'auto';
@@ -505,6 +556,145 @@ const server = http.createServer(async (req, res) => {
           return writeJson(res, 400, { error: 'Invalid JSON payload' });
         }
       });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/upload') {
+      const mailbox = (url.searchParams.get('mailbox') || '').trim();
+      if (!uploadTargets.has(mailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox' });
+      }
+
+      const contentType = req.headers['content-type'] || '';
+      const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      const boundaryToken = boundaryMatch ? boundaryMatch[1] || boundaryMatch[2] : '';
+      if (!boundaryToken) {
+        return writeJson(res, 400, { error: 'Missing multipart boundary' });
+      }
+
+      const boundaryBuffer = Buffer.from(`--${boundaryToken}`);
+      const endBoundaryBuffer = Buffer.from(`\r\n--${boundaryToken}`);
+      const chunks = [];
+      let totalSize = 0;
+      let responded = false;
+      const safeWrite = (code, payload) => {
+        if (responded) return;
+        responded = true;
+        writeJson(res, code, payload);
+      };
+
+      req.on('data', (chunk) => {
+        if (responded) return;
+        totalSize += chunk.length;
+        if (totalSize > MAX_UPLOAD_SIZE) {
+          safeWrite(413, { error: 'File too large' });
+          req.destroy();
+          return;
+        }
+        chunks.push(chunk);
+      });
+
+      req.on('error', (err) => {
+        if (responded) return;
+        console.error('[boss-api] upload stream error', err);
+        safeWrite(500, { error: 'Upload failed' });
+      });
+
+      req.on('end', async () => {
+        if (responded) return;
+        try {
+          const buffer = Buffer.concat(chunks);
+          if (buffer.indexOf(boundaryBuffer) !== 0) {
+            return safeWrite(400, { error: 'Malformed multipart payload' });
+          }
+
+          let offset = boundaryBuffer.length;
+          if (buffer[offset] === 13 && buffer[offset + 1] === 10) {
+            offset += 2; // skip CRLF
+          }
+
+          const headerEndToken = Buffer.from('\r\n\r\n');
+          const headerEnd = buffer.indexOf(headerEndToken, offset);
+          if (headerEnd === -1) {
+            return safeWrite(400, { error: 'Malformed multipart headers' });
+          }
+
+          const headerText = buffer.slice(offset, headerEnd).toString('utf8');
+          const dispositionLine = headerText
+            .split(/\r?\n/)
+            .find((line) => line.toLowerCase().startsWith('content-disposition'));
+          if (!dispositionLine) {
+            return safeWrite(400, { error: 'Missing content disposition' });
+          }
+
+          const fieldNameMatch = dispositionLine.match(/name="([^"]*)"/i) || dispositionLine.match(/name=([^;]+)/i);
+          const fieldName = fieldNameMatch ? fieldNameMatch[1].trim().replace(/[\r\n\u0000]/g, '') : '';
+          if (fieldName !== 'file') {
+            return safeWrite(400, { error: 'Invalid field name' });
+          }
+
+          let filename = '';
+          const quotedMatch = dispositionLine.match(/filename="([^"]*)"/i);
+          if (quotedMatch) {
+            filename = quotedMatch[1];
+          } else {
+            const bareMatch = dispositionLine.match(/filename=([^;]+)/i);
+            if (bareMatch) {
+              filename = bareMatch[1];
+            }
+          }
+
+          filename = filename.trim().replace(/[\r\n\u0000]/g, '');
+          if (!filename) {
+            return safeWrite(400, { error: 'Filename is required' });
+          }
+
+          if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          if (path.isAbsolute(filename)) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          const dataStart = headerEnd + headerEndToken.length;
+          const dataEnd = buffer.indexOf(endBoundaryBuffer, dataStart);
+          if (dataEnd === -1) {
+            return safeWrite(400, { error: 'Malformed multipart payload' });
+          }
+
+          const fileBuffer = buffer.slice(dataStart, dataEnd);
+
+          let targetDir = await resolveHumanPath(mailbox);
+          if (!targetDir) {
+            return safeWrite(500, { error: 'Failed to resolve mailbox' });
+          }
+
+          const dirStat = await fs.lstat(targetDir);
+          if (!dirStat.isDirectory() || dirStat.isSymbolicLink()) {
+            return safeWrite(500, { error: 'Upload directory unavailable' });
+          }
+
+          const realDir = await fs.realpath(targetDir);
+          const finalPath = path.join(realDir, filename);
+          const finalReal = path.resolve(realDir, filename);
+          if (finalReal !== finalPath) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          if (!finalReal.startsWith(realDir + path.sep) && finalReal !== realDir) {
+            return safeWrite(400, { error: 'Invalid filename' });
+          }
+
+          await fs.writeFile(finalReal, fileBuffer);
+
+          safeWrite(200, { ok: true, name: filename });
+        } catch (err) {
+          console.error('[boss-api] upload failed', err);
+          safeWrite(500, { error: 'Upload failed' });
+        }
+      });
+
       return;
     }
 
