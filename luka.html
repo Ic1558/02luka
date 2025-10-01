@@ -77,6 +77,17 @@
       word-break: break-word;
     }
     .message.user .content { background: #3b82f6; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
     .input-area {
       padding: 16px;
       border-top: 1px solid #262626;
@@ -229,7 +240,8 @@
   <div class="input-area">
     <div class="input-wrapper">
       <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
-      <button id="sendButton" type="button">
+      <button id="sendButton" type="button" title="Run" aria-label="Run mission">
+        <span class="sr-only">Run</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
         </svg>
@@ -404,16 +416,26 @@
         target: targetId
       };
 
-      const response = await fetch(BACKEND_CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      try {
+        response = await fetch(BACKEND_CHAT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (networkError) {
+        const error = new Error(networkError && networkError.message ? networkError.message : 'Network request failed');
+        error.cause = networkError;
+        throw error;
+      }
 
       if (!response.ok) {
         const errorPayload = await safeParseJson(response);
         const detail = errorPayload && (errorPayload.detail || errorPayload.error);
-        throw new Error(detail || `Backend responded with HTTP ${response.status}`);
+        const error = new Error(detail || `Backend responded with HTTP ${response.status}`);
+        error.status = response.status;
+        error.payload = errorPayload;
+        throw error;
       }
 
       const data = await response.json();
@@ -433,33 +455,107 @@
         return 'Backend returned an empty response.';
       }
 
-      const lines = [];
-      if (payload.best && payload.best.text) {
-        lines.push(payload.best.text.trim());
-      } else if (payload.summary) {
-        lines.push(payload.summary);
+      const hasOrchestratorShape = Boolean(payload.best || payload.summary || payload.results);
+
+      if (payload.ok === false && !hasOrchestratorShape) {
+        const lines = [`Backend error: ${payload.error || 'Unknown error.'}`];
+        if (payload.provider) {
+          lines.push(`Provider: ${payload.provider}`);
+        }
+        if (payload.detail && typeof payload.detail === 'string') {
+          lines.push(payload.detail);
+        }
+        return lines.filter(Boolean).join('\n');
       }
 
-      if (Array.isArray(payload.results) && payload.results.length) {
-        lines.push('');
-        lines.push('Delegates:');
-        payload.results.forEach((entry) => {
-          const status = entry.status === 'ok'
-            ? `ok${entry.latencyMs ? ` (${formatLatency(entry.latencyMs)})` : ''}`
-            : `error${entry.error ? `: ${entry.error}` : ''}`;
-          lines.push(`- ${entry.name || entry.id}: ${status}`);
-        });
-      }
-
-      if (!payload.ok) {
-        const profile = getTargetProfile(targetId);
-        if (profile.tips) {
+      if (payload.intent) {
+        const lines = [`Intent: ${payload.intent}`];
+        if (typeof payload.confidence === 'number') {
+          const percentage = Math.round(payload.confidence * 100);
+          lines.push(`Confidence: ${Number.isFinite(percentage) ? `${percentage}%` : payload.confidence}`);
+        }
+        if (payload.message) {
           lines.push('');
-          lines.push(`Tip: ${profile.tips}`);
+          lines.push(payload.message);
+        }
+        const parameters = payload.data || payload.parameters;
+        if (parameters && typeof parameters === 'object' && Object.keys(parameters).length) {
+          lines.push('');
+          lines.push('Parameters:');
+          Object.entries(parameters).forEach(([key, value]) => {
+            const stringValue = stringifyParameterValue(value);
+            lines.push(`- ${key}: ${stringValue}`);
+          });
+        }
+        return lines.filter(Boolean).join('\n');
+      }
+
+      if (payload.provider) {
+        const lines = [`Provider (${payload.provider}) response:`];
+        if (payload.message) {
+          lines.push('');
+          lines.push(payload.message);
+        }
+        if (payload.meta && payload.meta.status) {
+          lines.push('');
+          lines.push(`HTTP ${payload.meta.status}`);
+        }
+        return lines.filter(Boolean).join('\n');
+      }
+
+      if (hasOrchestratorShape) {
+        const lines = [];
+        if (payload.best && payload.best.text) {
+          lines.push(payload.best.text.trim());
+        } else if (payload.summary) {
+          lines.push(payload.summary);
+        }
+
+        if (Array.isArray(payload.results) && payload.results.length) {
+          lines.push('');
+          lines.push('Delegates:');
+          payload.results.forEach((entry) => {
+            const status = entry.status === 'ok'
+              ? `ok${entry.latencyMs ? ` (${formatLatency(entry.latencyMs)})` : ''}`
+              : `error${entry.error ? `: ${entry.error}` : ''}`;
+            lines.push(`- ${entry.name || entry.id}: ${status}`);
+          });
+        }
+
+        if (!payload.ok) {
+          const profile = getTargetProfile(targetId);
+          if (profile.tips) {
+            lines.push('');
+            lines.push(`Tip: ${profile.tips}`);
+          }
+        }
+
+        return lines.filter(Boolean).join('\n');
+      }
+
+      if (payload.message) {
+        return payload.message;
+      }
+
+      return JSON.stringify(payload, null, 2);
+    }
+
+    function stringifyParameterValue(value) {
+      if (value == null) return '';
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => stringifyParameterValue(item))
+          .filter(Boolean)
+          .join(', ');
+      }
+      if (typeof value === 'object') {
+        try {
+          return JSON.stringify(value);
+        } catch (error) {
+          return String(value);
         }
       }
-
-      return lines.filter(Boolean).join('\n');
+      return String(value);
     }
 
     function formatLatency(value) {
@@ -478,10 +574,34 @@
     function buildBackendFailureMessage(err) {
       const targetId = gatewaySelect.value || 'auto';
       const profile = getTargetProfile(targetId);
-      const lines = [
-        `Backend error: ${err && err.message ? err.message : err}`,
-        'Ensure the 02luka backend is running (node boss-api/server.js).'
-      ];
+      const messageText = err && err.message ? err.message : String(err);
+      const lines = [`Backend error: ${messageText}`];
+
+      if (err && typeof err.status === 'number') {
+        lines.push(`HTTP status: ${err.status}`);
+      }
+
+      const payloadProvider = err && err.payload && err.payload.provider;
+      if (payloadProvider) {
+        lines.push(`Provider: ${payloadProvider}`);
+      }
+
+      const payloadError = err && err.payload && typeof err.payload.error === 'string' ? err.payload.error : null;
+      if (payloadError && payloadError !== messageText) {
+        lines.push(`Detail: ${payloadError}`);
+      }
+
+      const payloadDetail = err && err.payload && typeof err.payload.detail === 'string' ? err.payload.detail : null;
+      if (payloadDetail && payloadDetail !== messageText && payloadDetail !== payloadError) {
+        lines.push(`Detail: ${payloadDetail}`);
+      }
+
+      if (err && err.status === 501) {
+        lines.push('Configure a server-side AI provider key (e.g. OPENAI_API_KEY or ANTHROPIC_API_KEY) to enable fallback responses.');
+      } else {
+        lines.push('Ensure the 02luka backend is running (node boss-api/server.js).');
+      }
+
       if (profile.tips) {
         lines.push(`Target tip: ${profile.tips}`);
       }
