@@ -12,3 +12,16 @@
     - api_file: OK
   guardrail_status: OK
   followups: ["Replace alert() with real viewer", "React/Vite migration later"]
+- time: "2025-10-01T13:45:00+07:00"
+  change_id: CU-2025-10-01-boss-ui-api-v1
+  summary: "Resolve merge fallout, restore /api/file handler and add inline preview"
+  files_touched:
+    - boss-api/server.js
+    - boss-ui/index.html
+    - run/change_units/CU-2025-10-01.yml
+  tags: ["boss-api","boss-ui","resolver"]
+  tests_ran:
+    - curl_api_list: pending
+    - curl_api_file: pending
+  guardrail_status: pending
+  followups: ["Re-run validations before commit"]

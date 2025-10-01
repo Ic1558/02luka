@@ -2,33 +2,18 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const fs = require('fs/promises');
-const { execFile } = require('child_process');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
+const bossRoot = path.join(repoRoot, 'boss');
 
-// ใช้ resolver ตามกติกา (ห้ามพาธฮาร์ดโค้ด)
-function resolveKey(key) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'bash',
-      ['g/tools/path_resolver.sh', key],
-      { cwd: repoRoot, encoding: 'utf8' },
-      (err, stdout) => {
-        if (err) return reject(err);
-        resolve(stdout.trim());
-      }
-    );
-  });
-}
-
-function json(res, code, payload) {
+function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
   res.writeHead(code, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(body);
@@ -372,7 +357,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     });
     return res.end();
@@ -393,7 +378,7 @@ const server = http.createServer(async (req, res) => {
           const payload = raw ? JSON.parse(raw) : {};
           const message = (payload.message || payload.prompt || payload.input || '').trim();
           if (!message) {
-            return json(res, 400, { error: 'message is required' });
+            return writeJson(res, 400, { error: 'message is required' });
           }
 
           const targetId = typeof payload.target === 'string' && payload.target.trim()
@@ -402,13 +387,13 @@ const server = http.createServer(async (req, res) => {
 
           try {
             const result = await orchestrateChat(message, targetId);
-            return json(res, 200, result);
+            return writeJson(res, 200, result);
           } catch (err) {
             console.error('[boss-api] chat orchestration failed', err);
-            return json(res, 502, { error: 'Chat orchestration failed', detail: err.message });
+            return writeJson(res, 502, { error: 'Chat orchestration failed', detail: err.message });
           }
         } catch (err) {
-          return json(res, 400, { error: 'Invalid JSON payload' });
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
         }
       });
       return;
@@ -416,61 +401,95 @@ const server = http.createServer(async (req, res) => {
 
     // /api/list/:folder
     if (req.method === 'GET' && url.pathname.startsWith('/api/list/')) {
-      const folder = url.pathname.slice('/api/list/'.length);
-      if (!allowed.has(folder)) return json(res, 400, { error: 'Invalid folder' });
+      const mailbox = decodeURIComponent(url.pathname.slice('/api/list/'.length));
 
-      const abs = await resolveKey(`human:${folder}`);
-      const dirEntries = await fs.readdir(abs, { withFileTypes: true });
-      const files = dirEntries.filter(e => e.isFile() && !e.name.startsWith('.'));
+      if (!mailbox) {
+        return writeJson(res, 400, { error: 'Mailbox is required' });
+      }
 
-      const items = await Promise.all(files.map(async e => {
-        const full = path.join(abs, e.name);
-        const st = await fs.stat(full);
+      if (!allowed.has(mailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox' });
+      }
+
+      const mailboxRoot = path.join(bossRoot, mailbox);
+      const relMailbox = path.relative(bossRoot, mailboxRoot);
+      if (relMailbox.startsWith('..') || path.isAbsolute(relMailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox path' });
+      }
+
+      let dirEntries;
+      try {
+        dirEntries = await fs.readdir(mailboxRoot, { withFileTypes: true });
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          return writeJson(res, 404, { error: 'Mailbox not found' });
+        }
+        throw err;
+      }
+
+      const files = dirEntries.filter((entry) => entry.isFile() && !entry.name.startsWith('.'));
+      const items = await Promise.all(files.map(async (entry) => {
+        const filePath = path.join(mailboxRoot, entry.name);
+        const stats = await fs.stat(filePath);
         return {
-          id: e.name,
-          name: e.name,
-          path: path.relative(repoRoot, full),
-          size: st.size,
-          updatedAt: st.mtime.toISOString(),
+          id: entry.name,
+          name: entry.name,
+          path: path.relative(repoRoot, filePath),
+          size: stats.size,
+          updatedAt: stats.mtime.toISOString()
         };
       }));
 
-      return json(res, 200, { mailbox: folder, items });
+      return writeJson(res, 200, { mailbox, items });
     }
 
     // /api/file/:folder/:name
     if (req.method === 'GET' && url.pathname.startsWith('/api/file/')) {
-      const parts = url.pathname.split('/').filter(Boolean); // ['api','file',folder, ...name]
-      const folder = parts[2];
-      const name = parts.slice(3).join('/'); // allow nested if any
+      const segments = url.pathname.split('/').filter(Boolean); // ['api','file',mailbox,...name]
+      const mailbox = segments[2] ? decodeURIComponent(segments[2]) : '';
+      const nameParts = segments.slice(3).map((part) => decodeURIComponent(part));
+      const name = nameParts.join('/');
 
-      if (!folder || !name) return json(res, 400, { error: 'folder and name required' });
-      if (!allowed.has(folder)) return json(res, 400, { error: 'Invalid folder' });
+      if (!mailbox || !name) {
+        return writeJson(res, 400, { error: 'Mailbox and filename are required' });
+      }
 
-      const abs = await resolveKey(`human:${folder}`);
-      const full = path.join(abs, name);
+      if (!allowed.has(mailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox' });
+      }
 
-      // ป้องกัน path traversal
-      if (!full.startsWith(abs)) return json(res, 400, { error: 'Invalid path' });
+      const mailboxRoot = path.join(bossRoot, mailbox);
+      const relMailbox = path.relative(bossRoot, mailboxRoot);
+      if (relMailbox.startsWith('..') || path.isAbsolute(relMailbox)) {
+        return writeJson(res, 400, { error: 'Invalid mailbox path' });
+      }
+
+      const targetFile = path.join(mailboxRoot, name);
+      const relTarget = path.relative(mailboxRoot, targetFile);
+      if (relTarget.startsWith('..') || path.isAbsolute(relTarget)) {
+        return writeJson(res, 400, { error: 'Invalid filename' });
+      }
 
       try {
-        const stat = await fs.stat(full);
-        if (!stat.isFile()) return json(res, 404, { error: 'not found' });
-        const data = await fs.readFile(full, 'utf8');
+        const data = await fs.readFile(targetFile, 'utf8');
         res.writeHead(200, {
           'Content-Type': 'text/plain; charset=utf-8',
           'Access-Control-Allow-Origin': '*'
         });
-        return res.end(data);
-      } catch {
-        return json(res, 404, { error: 'not found' });
+        res.end(data);
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          return writeJson(res, 404, { error: 'not found' });
+        }
+        return writeJson(res, 500, { error: 'Internal Server Error' });
       }
+      return;
     }
 
-    return json(res, 404, { error: 'Not Found' });
+    return writeJson(res, 404, { error: 'Not Found' });
   } catch (e) {
     console.error('[boss-api]', e.message || e);
-    return json(res, 500, { error: 'Internal Server Error' });
+    return writeJson(res, 500, { error: 'Internal Server Error' });
   }
 });
 
