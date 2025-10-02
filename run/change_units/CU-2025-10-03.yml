@@ -21,3 +21,26 @@
     - smoke_api_ui: OK
   guardrail_status: OK
   followups: []
+- time: "2025-10-03T03:40:00Z"
+  change_id: CU-2025-10-03-system-maintenance
+  summary: "Symlink fix, FastVLM port migration, LaunchAgent audit, path fixes"
+  files_touched:
+    - g/tools/quick_plist_audit.sh
+    - g/tools/smart_plist_fix.sh
+    - g/tools/fix_launchagent_paths.sh
+    - g/tools/cleanup_broken_agents.sh
+    - boss/sent/REPORT_2025-10-03_fastvlm_port_fix.md
+    - boss/sent/REPORT_2025-10-03_stream_mode_setup.md
+    - run/smoke_api_ui.sh
+    - run/daily_reports/REPORT_2025-10-03.md
+  tags: ["maintenance", "path-fixes", "launchagents", "ports"]
+  tests_ran:
+    - quick_plist_audit: 107/126 healthy
+    - fastvlm_health: OK (port 8766)
+    - symlink_validation: OK
+    - git_operations: 2 commits pushed
+  guardrail_status: OK
+  followups:
+    - "Manual removal of 19 protected LaunchAgents"
+    - "Stream Mode migration (user action required)"
+    - "Test MCP Filesystem on port 8765"
