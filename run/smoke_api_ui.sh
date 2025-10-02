@@ -35,6 +35,18 @@ CONNECTORS_JSON=$(curl -fsS "$API/api/connectors/status") || {
 echo "$CONNECTORS_JSON" | jq -e '.local.ready == true' >/dev/null || {
   echo "Connectors not ready"; exit 1; }
 
+echo "==> Check API snapshot"
+SNAPSHOT_JSON=$(curl -fsS "$API/api/snapshot") || {
+  echo "Snapshot request failed"; exit 1; }
+echo "$SNAPSHOT_JSON" | jq -e 'has("system") and has("mapping") and has("ports") and has("capabilities") and has("timestamp")' >/dev/null || {
+  echo "Snapshot response missing keys"; exit 1; }
+
+echo "==> Check API run preflight"
+RUN_JSON=$(curl -fsS -X POST "$API/api/run" -H 'Content-Type: application/json' -d '{"cmd":"preflight"}') || {
+  echo "Run preflight request failed"; exit 1; }
+echo "$RUN_JSON" | jq -e '.ok == true' >/dev/null || {
+  echo "Run preflight failed"; exit 1; }
+
 echo "==> Check API file"
 curl -fsS "$API/api/file/inbox/hello.md" | head -n1
 
