@@ -68,7 +68,7 @@ export default function App() {
           `${API_BASE}/api/list/${selectedFolder}`,
           `files-${selectedFolder}`
         );
-        setFiles(payload.files || []);
+        setFiles(payload.items || payload.files || []);
       } catch (err) {
         setError(err.message);
         setFiles([]);
