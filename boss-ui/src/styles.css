@@ -150,6 +150,82 @@ body {
   color: #f87171;
 }
 
+/* Loading skeleton styles */
+.loading-skeleton {
+  padding: 16px;
+  background: #0f172a;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Error boundary styles */
+.error-boundary {
+  padding: 24px;
+  background: #1f2937;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  margin: 16px;
+  color: #f8fafc;
+}
+
+.error-boundary h2 {
+  color: #ef4444;
+  margin-top: 0;
+}
+
+.error-boundary details {
+  margin: 16px 0;
+}
+
+.error-boundary pre {
+  background: #0f172a;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+}
+
+.retry-button {
+  background: #2563eb;
+  color: #f8fafc;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.2s ease;
+}
+
+.retry-button:hover {
+  background: #1d4ed8;
+}
+
 @media (max-width: 960px) {
   .app-shell {
     flex-direction: column;
