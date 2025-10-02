@@ -395,6 +395,30 @@ async function orchestrateChat(message, targetId = 'auto') {
   const successful = results.filter((item) => item.status === 'ok' && item.text);
   const best = successful.find((item) => item.meta?.endpoint !== '/mcp') || successful[0] || null;
 
+  // Fallback when no delegates are available
+  if (!best && results.length > 0 && results.every(r => r.status === 'error')) {
+    const fallbackResponse = {
+      ok: true,
+      target: targetId,
+      summary: 'Local fallback response (delegates unavailable)',
+      best: {
+        id: 'fallback',
+        name: 'Local Fallback',
+        text: `I received your message: "${message}". The external delegates (MCP, Ollama) are not currently available, but I can still help you with basic tasks. Try asking me to "open inbox" or "list files" for local operations.`,
+        status: 'ok',
+        latencyMs: 1
+      },
+      results: results.concat([{
+        id: 'fallback',
+        name: 'Local Fallback',
+        status: 'ok',
+        text: 'Fallback response provided',
+        latencyMs: 1
+      }])
+    };
+    return fallbackResponse;
+  }
+
   return {
     ok: Boolean(best),
     target: targetId,
