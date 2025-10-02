@@ -25,3 +25,15 @@
   tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
   guardrail_status: OK
   followups: []
+- time: "2025-10-02T12:00:00Z"
+  change_id: CU-2025-10-02-snapshot-run-endpoints
+  summary: "Add consolidated snapshot endpoint, allowlisted run executor, and extend smoke coverage."
+  files_touched:
+    - boss-api/server.cjs
+    - run/smoke_api_ui.sh
+    - run/change_units/CU-2025-10-02.yml
+    - run/daily_reports/REPORT_2025-10-02.md
+  tags: [boss-api, smoke, preflight]
+  tests_ran: []
+  guardrail_status: pending
+  followups: []

@@ -6,10 +6,75 @@ const { execFile } = require('child_process');
 const anthropicConnector = require('../g/connectors/mcp_anthropic');
 const openaiConnector = require('../g/connectors/mcp_openai');
 
-const HOST = process.env.HOST || '127.0.0.1';
+const HOST = '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+
+const SNAPSHOT_DIR = path.join(repoRoot, 'run', 'auto_context');
+const SNAPSHOT_FILES = {
+  system: 'system_snapshot.json',
+  mapping: 'mapping.snapshot.json',
+  ports: 'ports.env',
+  capabilities: 'capabilities.json'
+};
+
+const RUN_ALLOWLIST = {
+  preflight: ['bash', './.codex/preflight.sh'],
+  drift_guard: ['bash', './g/tools/mapping_drift_guard.sh', '--validate'],
+  smoke: ['bash', './run/smoke_api_ui.sh']
+};
+
+const RUN_ENV_ALLOWLIST = new Set(['API_PORT', 'UI_PORT']);
+
+function isLocalRequest(req) {
+  const remote = req.socket?.remoteAddress || '';
+  if (!remote) return false;
+  if (remote === '127.0.0.1' || remote === '::1') return true;
+  if (remote.startsWith('::ffff:')) {
+    const mapped = remote.slice('::ffff:'.length);
+    return mapped === '127.0.0.1';
+  }
+  return false;
+}
+
+async function readJsonIfExists(fileName) {
+  try {
+    const filePath = path.join(SNAPSHOT_DIR, fileName);
+    const data = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
+
+async function readPortsEnv(fileName) {
+  try {
+    const filePath = path.join(SNAPSHOT_DIR, fileName);
+    const data = await fs.readFile(filePath, 'utf8');
+    const lines = data.split(/\r?\n/);
+    const result = {};
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx === -1) continue;
+      const key = trimmed.slice(0, idx).trim();
+      const value = trimmed.slice(idx + 1).trim();
+      if (!key) continue;
+      result[key] = value;
+    }
+    return result;
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
+  }
+}
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -442,6 +507,111 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (req.method === 'GET' && url.pathname === '/api/snapshot') {
+      try {
+        const [system, mapping, ports, capabilities] = await Promise.all([
+          readJsonIfExists(SNAPSHOT_FILES.system),
+          readJsonIfExists(SNAPSHOT_FILES.mapping),
+          readPortsEnv(SNAPSHOT_FILES.ports),
+          readJsonIfExists(SNAPSHOT_FILES.capabilities)
+        ]);
+
+        console.log('[api] snapshot served');
+        return writeJson(res, 200, {
+          system: system || null,
+          mapping: mapping || null,
+          ports: ports || {},
+          capabilities: capabilities || null,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('[api] snapshot error', err);
+        return writeJson(res, 500, { error: 'Failed to load snapshot' });
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/run') {
+      if (!isLocalRequest(req)) {
+        return writeJson(res, 403, { error: 'Local requests only' });
+      }
+
+      let raw = '';
+      let tooLarge = false;
+      req.on('data', (chunk) => {
+        if (tooLarge) return;
+        raw += chunk;
+        if (raw.length > 10_000 && !res.writableEnded) {
+          tooLarge = true;
+          writeJson(res, 413, { error: 'Payload too large' });
+          req.destroy();
+        }
+      });
+
+      req.on('error', (streamErr) => {
+        if (!res.writableEnded) {
+          console.error('[api] run stream error', streamErr);
+          writeJson(res, 400, { error: 'Invalid request stream' });
+        }
+      });
+
+      req.on('end', async () => {
+        if (tooLarge || res.writableEnded) {
+          return;
+        }
+
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const cmd = typeof payload.cmd === 'string' ? payload.cmd : '';
+
+          if (!RUN_ALLOWLIST[cmd]) {
+            return writeJson(res, 400, { error: 'Command not allowed' });
+          }
+
+          const envInput = payload && typeof payload.env === 'object' && payload.env !== null
+            ? payload.env
+            : {};
+
+          const envOverrides = {};
+          for (const [key, value] of Object.entries(envInput)) {
+            if (!RUN_ENV_ALLOWLIST.has(key)) continue;
+            if (typeof value !== 'string' && typeof value !== 'number') continue;
+            const stringValue = String(value);
+            if (!/^\d{1,5}$/.test(stringValue)) continue;
+            envOverrides[key] = stringValue;
+          }
+
+          const args = RUN_ALLOWLIST[cmd];
+
+          execFile(
+            args[0],
+            args.slice(1),
+            {
+              cwd: repoRoot,
+              env: Object.assign({}, process.env, envOverrides),
+              timeout: 60_000,
+              maxBuffer: 10 * 1024 * 1024
+            },
+            (error, stdout = '', stderr = '') => {
+              const ok = !error;
+              const code = ok ? 0 : (typeof error?.code === 'number' ? error.code : 1);
+              console.log(`[api] run:${cmd} exit:${code}`);
+              return writeJson(res, 200, {
+                ok,
+                code,
+                out: stdout,
+                err: stderr
+              });
+            }
+          );
+        } catch (err) {
+          console.error('[api] run error', err);
+          return writeJson(res, 400, { error: 'Invalid payload' });
+        }
+      });
+
+      return;
+    }
+
     // Capabilities endpoint to enable full UI features
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
       const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
