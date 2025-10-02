@@ -5,7 +5,7 @@ You are working in the 02luka monorepo. Follow these rules strictly:
 - Do NOT create symlinks. Google Drive Mirror is used.
 - Do NOT write under a/, c/, o/, s/ (human-only sandboxes).
 - Production-grade tools live in g/, runtime in run/, outputs in output/.
-- Boss Workspace flow: dropbox → (router) → inbox/sent (query/answer) → deliverables.
+- Boss Workspace flow: Inbox (incoming) → Outbox (prep) → Drafts (refine) → Sent (dispatch) → Deliverables (final); dropbox alias maps to Outbox.
 - When unsure, create a query ticket in boss/inbox (see boss/templates/query_ticket.md) and stop.
 - Prefer small PRs with tests, and always update docs if behavior changes.
 

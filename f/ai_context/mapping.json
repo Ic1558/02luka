@@ -5,6 +5,7 @@
   "namespaces": {
     "human": {
       "dropbox": "boss/dropbox/",
+      "outbox": "boss/outbox/",
       "inbox": "boss/inbox/",
       "sent": "boss/sent/",
       "deliverables": "boss/deliverables/"

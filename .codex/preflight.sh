@@ -18,6 +18,25 @@ if [ -f "$ROOT/f/ai_context/mapping.json" ]; then
   jq -r '.namespaces | to_entries[] | .key + ": " + ( .value | keys | join(",") )' "$ROOT/f/ai_context/mapping.json" || true
 fi
 
+# 4) Copy latest system reports for human mailbox visibility
+REPORT_SRC="$ROOT/g/reports"
+REPORT_DST="$ROOT/boss/sent"
+if [ -d "$REPORT_SRC" ]; then
+  REPORT_FILES=()
+  while IFS= read -r -d '' report_path; do
+    REPORT_FILES+=("$report_path")
+  done < <(find "$REPORT_SRC" -maxdepth 1 -type f \( -name '*.md' -o -name '*.txt' -o -name '*.html' \) -print0 2>/dev/null)
+
+  if [ "${#REPORT_FILES[@]}" -gt 0 ]; then
+    mkdir -p "$REPORT_DST"
+    for report_file in "${REPORT_FILES[@]}"; do
+      base_name="$(basename "$report_file")"
+      cp "$report_file" "$REPORT_DST/system_${base_name}" 2>/dev/null || true
+    done
+    echo "[02luka] synced system reports to boss/sent/."
+  fi
+fi
+
 echo "[02luka] preflight ready."
 
 # Check master prompt presence

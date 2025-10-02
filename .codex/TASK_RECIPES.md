@@ -2,7 +2,7 @@
 
 1) Boss-UI (React+Node)
 - boss-api: list/read via resolver; endpoints `/api/list/:folder`, `/api/file/:folder/:name`
-- boss-ui: Gmail-like sidebar (Inbox/Sent/Deliverables/Dropbox/Drafts/Documents)
+- boss-ui: Sidebar follows 5-box flow (Inbox → Outbox → Drafts → Sent → Deliverables) with dropbox aliasing to Outbox
 - README explains Boss flow and how to run
 
 2) Add routing rule
@@ -21,14 +21,14 @@
 # Prompt: Boss UI Scaffold
 Use `.codex/PREPROMPT.md` as system context.
 
-Goal: Scaffold “Boss UI” (Gmail-like) that reads/writes via mapping keys (`human.*`) only.
+Goal: Scaffold “Boss UI” (Gmail-like) that reads/writes via mapping keys (`human.*`) only (Inbox/Outbox/Drafts/Sent/Deliverables).
 
 Steps:
 1. Read `.codex/CONTEXT_SEED.md` and `.codex/PATH_KEYS.md`.
 2. Create boss-api (Node) with endpoints `/api/list/:folder` and `/api/file/:folder/:name` that resolve paths using `g/tools/path_resolver.sh`.
-3. Create boss-ui (React) with sidebar: Inbox, Sent, Deliverables, Dropbox, Drafts, Documents; main panel: file list + markdown viewer.
+3. Create boss-ui (React) with sidebar: Inbox, Outbox, Drafts, Sent, Deliverables; main panel: file list + markdown viewer.
 4. Provide a README inside boss-ui explaining Boss Workspace flow and how to run locally.
-5. Add a smoke test plan: place a file in `human.dropbox` and verify it appears in the UI (list).
+5. Add a smoke test plan: place a file in `human.outbox` (dropbox alias) and verify it appears in the UI (list).
 6. Update docs if needed.
 
 Constraints:

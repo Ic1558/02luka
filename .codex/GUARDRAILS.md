@@ -4,6 +4,7 @@
 - CORS required for API
 - Server-only keys must remain on the server (never expose to UI/client)
 - Path traversal guard required for file reads
+- Mailboxes: Inbox → Outbox → Drafts → Sent → Deliverables; dropbox is an alias to Outbox (no new storage roots)
 
 ## Tests to run
 ```bash

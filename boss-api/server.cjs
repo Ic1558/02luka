@@ -22,15 +22,40 @@ function writeJson(res, code, payload) {
   res.end(body);
 }
 
-const allowed = new Set(['inbox','sent','deliverables','dropbox','drafts','documents']);
-const uploadTargets = new Set(['inbox','dropbox']);
+const CANONICAL_MAILBOXES = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
+const MAILBOX_ALIASES = { dropbox: 'outbox' };
+const MAILBOX_LABELS = {
+  inbox: 'Inbox',
+  outbox: 'Outbox',
+  drafts: 'Drafts',
+  sent: 'Sent',
+  deliverables: 'Deliverables'
+};
+const MAILBOX_ROLES = {
+  inbox: 'incoming',
+  outbox: 'staging',
+  drafts: 'revision',
+  sent: 'dispatch',
+  deliverables: 'final'
+};
+const canonicalMailboxSet = new Set(CANONICAL_MAILBOXES);
+const allowed = new Set([...CANONICAL_MAILBOXES, ...Object.keys(MAILBOX_ALIASES)]);
+const uploadTargets = new Set(['inbox', 'outbox', 'drafts']);
+const goalTargets = new Set(['outbox', 'drafts']);
 const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB safeguard
 
+function normalizeMailbox(mailbox) {
+  if (!mailbox) return '';
+  const key = String(mailbox).toLowerCase();
+  return MAILBOX_ALIASES[key] || key;
+}
+
 function resolveHumanPath(mailbox) {
+  const canonical = normalizeMailbox(mailbox);
   return new Promise((resolve, reject) => {
     const child = execFile(
       'bash',
-      ['g/tools/path_resolver.sh', `human:${mailbox}`],
+      ['g/tools/path_resolver.sh', `human:${canonical}`],
       { cwd: repoRoot },
       (err, stdout, stderr) => {
         if (err) {
@@ -445,6 +470,15 @@ const server = http.createServer(async (req, res) => {
     // Capabilities endpoint to enable full UI features
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
       const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
+      const aliasList = Object.entries(MAILBOX_ALIASES).map(([alias, target]) => ({ alias, target }));
+      const mailboxList = CANONICAL_MAILBOXES.map((id) => ({
+        id,
+        label: MAILBOX_LABELS[id] || id,
+        role: MAILBOX_ROLES[id] || 'general',
+        uploads: uploadTargets.has(id),
+        goalTarget: goalTargets.has(id)
+      }));
+
       return writeJson(res, 200, {
         ui: {
           inbox: true,
@@ -452,10 +486,15 @@ const server = http.createServer(async (req, res) => {
           prompt_composer: true,
           connectors: true
         },
+        mailboxes: {
+          flow: CANONICAL_MAILBOXES,
+          list: mailboxList,
+          aliases: aliasList
+        },
         features: {
           goal: true,
-          optimize_prompt: true,  // We have this endpoint
-          chat: true,              // We have this endpoint
+          optimize_prompt: true,
+          chat: true,
           nlu: Boolean(process.env.NLU_ENABLED)
         },
         engine: {
@@ -606,9 +645,130 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/goal') {
+      const requestedTarget = (url.searchParams.get('target') || 'outbox').trim().toLowerCase();
+      const mailbox = normalizeMailbox(requestedTarget);
+
+      if (!mailbox || !goalTargets.has(mailbox)) {
+        return writeJson(res, 400, { error: 'Invalid goal target' });
+      }
+
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy(new Error('Payload too large'));
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+          const summary = typeof payload.summary === 'string' ? payload.summary.trim() : '';
+          const body = typeof payload.body === 'string' ? payload.body.trim() : '';
+          const system = typeof payload.system === 'string' ? payload.system.trim() : '';
+          const context = typeof payload.context === 'string' ? payload.context.trim() : '';
+          const prompt = typeof payload.prompt === 'string' ? payload.prompt.trim() : '';
+
+          let targetDir = await resolveHumanPath(mailbox);
+          if (!targetDir) {
+            return writeJson(res, 500, { error: 'Failed to resolve goal target' });
+          }
+
+          await fs.mkdir(targetDir, { recursive: true });
+          const stats = await fs.lstat(targetDir);
+          if (!stats.isDirectory() || stats.isSymbolicLink()) {
+            return writeJson(res, 500, { error: 'Goal target unavailable' });
+          }
+
+          const realDir = await fs.realpath(targetDir);
+          const now = new Date();
+          const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '').split('.')[0];
+          const slug = title
+            ? title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+            : '';
+          const baseName = slug ? `goal_${stamp}_${slug}` : `goal_${stamp}`;
+
+          let finalName = `${baseName}.md`;
+          let counter = 1;
+          while (counter < 100) {
+            try {
+              await fs.access(path.join(realDir, finalName));
+              finalName = `${baseName}_${counter}.md`;
+              counter += 1;
+            } catch (err) {
+              if (err.code === 'ENOENT') {
+                break;
+              }
+              throw err;
+            }
+          }
+
+          const lines = [];
+          if (title) {
+            lines.push(`# GOAL: ${title}`);
+          } else {
+            lines.push('# GOAL DRAFT');
+          }
+
+          lines.push('');
+          lines.push(`- Created: ${now.toISOString()}`);
+          lines.push(`- Mailbox: ${MAILBOX_LABELS[mailbox] || mailbox}`);
+          if (summary) {
+            lines.push(`- Summary: ${summary}`);
+          }
+          lines.push('');
+
+          if (body) {
+            lines.push(body);
+            lines.push('');
+          }
+
+          if (system) {
+            lines.push('## System Directive');
+            lines.push('');
+            lines.push(system);
+            lines.push('');
+          }
+
+          if (context) {
+            lines.push('## Context');
+            lines.push('');
+            lines.push(context);
+            lines.push('');
+          }
+
+          if (prompt) {
+            lines.push('## Prompt Draft');
+            lines.push('');
+            lines.push(prompt);
+            lines.push('');
+          }
+
+          const finalPath = path.join(realDir, finalName);
+          await fs.writeFile(finalPath, lines.join('\n'), 'utf8');
+
+          return writeJson(res, 200, {
+            ok: true,
+            mailbox,
+            name: finalName,
+            path: path.relative(repoRoot, finalPath),
+            createdAt: now.toISOString()
+          });
+        } catch (err) {
+          console.error('[boss-api] goal creation failed', err);
+          return writeJson(res, 500, { error: 'Failed to create goal' });
+        }
+      });
+
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/upload') {
-      const mailbox = (url.searchParams.get('mailbox') || '').trim();
-      if (!uploadTargets.has(mailbox)) {
+      const requestedMailbox = (url.searchParams.get('mailbox') || '').trim().toLowerCase();
+      const mailbox = normalizeMailbox(requestedMailbox);
+      if (!mailbox || !uploadTargets.has(mailbox)) {
         return writeJson(res, 400, { error: 'Invalid mailbox' });
       }
 
@@ -747,13 +907,15 @@ const server = http.createServer(async (req, res) => {
 
     // /api/list/:folder
     if (req.method === 'GET' && url.pathname.startsWith('/api/list/')) {
-      const mailbox = decodeURIComponent(url.pathname.slice('/api/list/'.length));
+      const requestedMailbox = decodeURIComponent(url.pathname.slice('/api/list/'.length));
+      const mailboxKey = requestedMailbox.toLowerCase();
+      const mailbox = normalizeMailbox(mailboxKey);
 
       if (!mailbox) {
         return writeJson(res, 400, { error: 'Mailbox is required' });
       }
 
-      if (!allowed.has(mailbox)) {
+      if (!canonicalMailboxSet.has(mailbox)) {
         return writeJson(res, 400, { error: 'Invalid mailbox' });
       }
 
@@ -786,13 +948,20 @@ const server = http.createServer(async (req, res) => {
         };
       }));
 
-      return writeJson(res, 200, { mailbox, items });
+      const response = { mailbox, items };
+      if (MAILBOX_ALIASES[mailboxKey]) {
+        response.aliasOf = MAILBOX_ALIASES[mailboxKey];
+      }
+
+      return writeJson(res, 200, response);
     }
 
     // /api/file/:folder/:name
     if (req.method === 'GET' && url.pathname.startsWith('/api/file/')) {
       const segments = url.pathname.split('/').filter(Boolean); // ['api','file',mailbox,...name]
-      const mailbox = segments[2] ? decodeURIComponent(segments[2]) : '';
+      const requestedMailbox = segments[2] ? decodeURIComponent(segments[2]) : '';
+      const mailboxKey = requestedMailbox.toLowerCase();
+      const mailbox = normalizeMailbox(mailboxKey);
       const nameParts = segments.slice(3).map((part) => decodeURIComponent(part));
       const name = nameParts.join('/');
 
@@ -800,7 +969,7 @@ const server = http.createServer(async (req, res) => {
         return writeJson(res, 400, { error: 'Mailbox and filename are required' });
       }
 
-      if (!allowed.has(mailbox)) {
+      if (!canonicalMailboxSet.has(mailbox)) {
         return writeJson(res, 400, { error: 'Invalid mailbox' });
       }
 

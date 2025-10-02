@@ -6,25 +6,26 @@
   <title>Luka Control Surface</title>
   <style>
     :root {
-      color-scheme: dark;
+      color-scheme: light;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0b0b0f;
-      color: #f3f4f6;
+      background: #f9fafb;
+      color: #111827;
     }
     body {
       margin: 0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      background: #0b0b0f;
+      background: #f3f4f6;
+      color: inherit;
     }
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 16px 20px;
-      border-bottom: 1px solid #1f2937;
-      background: rgba(12, 12, 18, 0.92);
+      border-bottom: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(12px);
       position: sticky;
       top: 0;
@@ -44,6 +45,7 @@
       display: grid;
       place-items: center;
       background: #2563eb;
+      color: #fff;
       font-weight: 700;
     }
     .toolbar {
@@ -51,56 +53,63 @@
       align-items: center;
       gap: 12px;
     }
-    main {
+    .app {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 240px 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
       gap: 24px;
       padding: 24px;
     }
-    section {
-      background: #111827;
-      border: 1px solid #1f2937;
+    section,
+    aside {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
       border-radius: 16px;
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
     }
     h2 {
       margin: 0;
       font-size: 16px;
       font-weight: 600;
-      color: #e5e7eb;
+      color: #111827;
     }
     label {
       font-size: 13px;
-      color: #9ca3af;
+      color: #4b5563;
+    }
+    textarea,
+    select,
+    button,
+    input {
+      font: inherit;
     }
     textarea {
       width: 100%;
       min-height: 120px;
       border-radius: 12px;
-      border: 1px solid #1f2937;
+      border: 1px solid #d1d5db;
       padding: 12px;
-      background: #0f172a;
+      background: #ffffff;
       color: inherit;
       resize: vertical;
-      font: inherit;
       line-height: 1.5;
     }
     textarea:focus {
-      outline: 2px solid #2563eb;
+      outline: 2px solid rgba(37, 99, 235, 0.25);
       outline-offset: 2px;
     }
     select,
     button {
       appearance: none;
       border-radius: 10px;
-      border: 1px solid #1f2937;
-      background: #0f172a;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
       color: inherit;
-      font: inherit;
       padding: 10px 14px;
       cursor: pointer;
       transition: border-color 0.2s, background 0.2s, opacity 0.2s;
@@ -108,13 +117,14 @@
     button.primary {
       background: #2563eb;
       border-color: #2563eb;
+      color: #ffffff;
       font-weight: 600;
     }
     button.secondary {
-      background: transparent;
+      background: #f3f4f6;
     }
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.6;
       cursor: not-allowed;
     }
     .composer-controls {
@@ -128,9 +138,9 @@
     }
     .output-area {
       flex: 1;
-      background: #0f172a;
+      background: #f9fafb;
       border-radius: 12px;
-      border: 1px solid #1f2937;
+      border: 1px solid #e5e7eb;
       padding: 16px;
       white-space: pre-wrap;
       overflow-y: auto;
@@ -138,12 +148,140 @@
     }
     .status-line {
       font-size: 13px;
-      color: #9ca3af;
+      color: #4b5563;
+    }
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      gap: 20px;
+    }
+    .sidebar h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .mailbox-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mailbox-button {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: #f3f4f6;
+      color: inherit;
+      font-weight: 500;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .mailbox-button[data-active="true"] {
+      background: #e0e7ff;
+      border-color: rgba(37, 99, 235, 0.45);
+      color: #1d4ed8;
+    }
+    .mailbox-button span {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sidebar-actions small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .mailbox-panel {
+      grid-column: 2 / span 2;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .mailbox-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .mailbox-toolbar h2 {
+      font-size: 18px;
+    }
+    .mailbox-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 20px;
+      flex: 1;
+      min-height: 280px;
+    }
+    .mailbox-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .mailbox-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .mailbox-item:hover {
+      border-color: rgba(37, 99, 235, 0.35);
+    }
+    .mailbox-item[data-active="true"] {
+      border-color: rgba(37, 99, 235, 0.55);
+      background: #eef2ff;
+    }
+    .mailbox-item strong {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mailbox-item span {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .mailbox-preview {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .mailbox-preview pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .composer-section {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .output-section {
+      grid-column: 3;
+      grid-row: 2;
     }
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(10, 10, 15, 0.75);
+      background: rgba(15, 23, 42, 0.45);
       display: none;
       align-items: center;
       justify-content: center;
@@ -154,14 +292,14 @@
     }
     .modal {
       width: min(420px, calc(100% - 48px));
-      background: #111827;
-      border: 1px solid #1f2937;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
       border-radius: 16px;
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 16px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
     }
     .modal h3 {
       margin: 0;
@@ -173,14 +311,14 @@
       justify-content: space-between;
       padding: 12px 14px;
       border-radius: 12px;
-      background: #0f172a;
-      border: 1px solid #1f2937;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
     }
     .connector-row[data-ready="true"] {
-      border-color: rgba(34, 197, 94, 0.5);
+      border-color: rgba(34, 197, 94, 0.45);
     }
     .connector-row[data-ready="false"] {
-      border-color: rgba(248, 113, 113, 0.4);
+      border-color: rgba(248, 113, 113, 0.45);
     }
     .connector-row strong {
       font-size: 14px;
@@ -189,9 +327,18 @@
       color: #f87171;
       font-size: 12px;
     }
-    @media (max-width: 960px) {
-      main {
+    @media (max-width: 1080px) {
+      .app {
         grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .sidebar {
+        grid-row: auto;
+      }
+      .mailbox-panel,
+      .composer-section,
+      .output-section {
+        grid-column: auto;
       }
     }
   </style>
@@ -203,11 +350,44 @@
       Luka Prompt Console
     </div>
     <div class="toolbar">
+      <button id="newGoalButton" class="primary" type="button">New Goal</button>
       <button id="connectorsButton" class="secondary" type="button">Connectors</button>
     </div>
   </header>
-  <main>
-    <section>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>Mailboxes</h2>
+      <nav class="mailbox-nav" id="mailboxNav"></nav>
+      <div class="sidebar-actions">
+        <label for="goalTargetSelect">New goal target</label>
+        <select id="goalTargetSelect">
+          <option value="outbox">Outbox (default)</option>
+          <option value="drafts">Drafts</option>
+        </select>
+        <small>Goals post to the selected mailbox then move along Outbox → Sent.</small>
+      </div>
+    </aside>
+    <section class="mailbox-panel">
+      <div class="mailbox-toolbar">
+        <div>
+          <h2 id="mailboxTitle">Mailbox</h2>
+          <p class="status-line" id="mailboxStatus">Select a mailbox to load files.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="refreshMailboxButton" class="secondary" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="mailbox-content">
+        <div class="mailbox-items" id="mailboxItems">
+          <p class="status-line">Choose a mailbox from the left.</p>
+        </div>
+        <div class="mailbox-preview" id="mailboxPreview">
+          <h3 id="previewTitle">Preview</h3>
+          <pre id="previewBody">No file selected.</pre>
+        </div>
+      </div>
+    </section>
+    <section class="composer-section">
       <div>
         <h2>Prompt Composer</h2>
         <p class="status-line">Craft and optimize prompts before dispatching to delegates.</p>
@@ -234,7 +414,7 @@
         <textarea id="promptInput" placeholder="What should the assistants accomplish?"></textarea>
       </div>
     </section>
-    <section>
+    <section class="output-section">
       <div>
         <h2>Optimized Output</h2>
         <p class="status-line" id="optimizeStatus">Waiting for input…</p>
@@ -245,7 +425,7 @@
         <button id="sendChatButton" type="button" class="primary">Send to Chat</button>
       </div>
     </section>
-  </main>
+  </div>
 
   <div class="modal-backdrop" id="connectorsModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="modal">
@@ -273,10 +453,30 @@
     const connectorsModal = document.getElementById('connectorsModal');
     const closeModalButton = document.getElementById('closeModalButton');
     const connectorsList = document.getElementById('connectorsList');
+    const mailboxNav = document.getElementById('mailboxNav');
+    const mailboxItems = document.getElementById('mailboxItems');
+    const mailboxTitle = document.getElementById('mailboxTitle');
+    const mailboxStatus = document.getElementById('mailboxStatus');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewBody = document.getElementById('previewBody');
+    const refreshMailboxButton = document.getElementById('refreshMailboxButton');
+    const goalTargetSelect = document.getElementById('goalTargetSelect');
+    const newGoalButton = document.getElementById('newGoalButton');
 
     const featureState = {
       optimize_prompt: true,
       chat: true
+    };
+
+    const defaultMailboxOrder = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
+    const mailboxState = {
+      mailboxes: [],
+      metaById: new Map(),
+      flow: defaultMailboxOrder.slice(),
+      aliases: new Map(),
+      selected: null,
+      items: [],
+      activeItem: null
     };
 
     function isFeatureEnabled(name) {
@@ -286,6 +486,242 @@
     function applyFeatureState() {
       optimizeButton.disabled = !isFeatureEnabled('optimize_prompt');
       sendChatButton.disabled = !isFeatureEnabled('chat');
+    }
+
+    function getMailboxMeta(id) {
+      if (!id) return null;
+      if (mailboxState.metaById.has(id)) {
+        return mailboxState.metaById.get(id);
+      }
+      return mailboxState.mailboxes.find((entry) => entry.id === id) || null;
+    }
+
+    function renderMailboxNav() {
+      const order = Array.isArray(mailboxState.flow) && mailboxState.flow.length
+        ? mailboxState.flow
+        : mailboxState.mailboxes.map((entry) => entry.id);
+      mailboxNav.innerHTML = '';
+
+      order.forEach((id) => {
+        const meta = getMailboxMeta(id) || { id, label: id };
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mailbox-button';
+        button.dataset.id = id;
+        button.dataset.active = mailboxState.selected === id ? 'true' : 'false';
+
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = meta.label || id;
+        button.appendChild(nameEl);
+
+        if (meta.role) {
+          const roleEl = document.createElement('span');
+          roleEl.textContent = meta.role.charAt(0).toUpperCase() + meta.role.slice(1);
+          button.appendChild(roleEl);
+        }
+
+        button.addEventListener('click', () => {
+          selectMailbox(id, { force: true });
+        });
+
+        mailboxNav.appendChild(button);
+      });
+    }
+
+    function renderMailboxItems(items) {
+      mailboxItems.innerHTML = '';
+
+      if (!Array.isArray(items) || items.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'status-line';
+        empty.textContent = 'No files in this mailbox yet.';
+        mailboxItems.appendChild(empty);
+        clearPreview();
+        return;
+      }
+
+      items.forEach((item) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mailbox-item';
+        button.dataset.name = item.name;
+        button.dataset.active = mailboxState.activeItem === item.name ? 'true' : 'false';
+
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = item.name;
+        button.appendChild(nameEl);
+
+        if (item.updatedAt) {
+          const updatedEl = document.createElement('span');
+          try {
+            updatedEl.textContent = new Date(item.updatedAt).toLocaleString();
+          } catch (err) {
+            updatedEl.textContent = item.updatedAt;
+          }
+          button.appendChild(updatedEl);
+        }
+
+        button.addEventListener('click', () => {
+          openMailboxItem(item.name);
+        });
+
+        mailboxItems.appendChild(button);
+      });
+    }
+
+    function clearPreview() {
+      mailboxState.activeItem = null;
+      previewTitle.textContent = 'Preview';
+      previewBody.textContent = 'No file selected.';
+    }
+
+    function updateGoalTargetOptions() {
+      const preferred = mailboxState.mailboxes.filter((entry) => entry.goalTarget);
+      const fallbacks = preferred.length
+        ? preferred
+        : mailboxState.mailboxes.filter((entry) => entry.uploads);
+      const options = (fallbacks.length ? fallbacks : mailboxState.mailboxes).slice();
+
+      goalTargetSelect.innerHTML = '';
+      options.forEach((entry, index) => {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        const label = index === 0 ? `${entry.label} (default)` : entry.label;
+        option.textContent = label;
+        if (index === 0) {
+          option.selected = true;
+        }
+        goalTargetSelect.appendChild(option);
+      });
+    }
+
+    async function loadMailboxItems(mailboxId) {
+      if (!mailboxId) return;
+
+      mailboxStatus.textContent = 'Loading mailbox…';
+      try {
+        const res = await fetch(`${API_BASE}/api/list/${encodeURIComponent(mailboxId)}`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`Request failed (${res.status})`);
+        }
+        const data = await res.json();
+        const canonical = data.mailbox || mailboxId;
+        mailboxState.selected = canonical;
+        mailboxState.items = Array.isArray(data.items) ? data.items : [];
+        mailboxState.activeItem = null;
+        renderMailboxItems(mailboxState.items);
+
+        const meta = getMailboxMeta(canonical) || { id: canonical, label: canonical };
+        mailboxTitle.textContent = meta.label || canonical;
+
+        const aliasNotes = [];
+        if (data.aliasOf && data.aliasOf !== canonical) {
+          aliasNotes.push(`alias→${data.aliasOf}`);
+        }
+        if (meta.role) {
+          aliasNotes.push(meta.role);
+        }
+        if (meta.uploads) {
+          aliasNotes.push('uploads allowed');
+        }
+
+        mailboxStatus.textContent = `${mailboxState.items.length} item(s)${aliasNotes.length ? ' · ' + aliasNotes.join(' · ') : ''}`;
+      } catch (err) {
+        console.error(err);
+        mailboxStatus.textContent = 'Failed to load mailbox.';
+        mailboxItems.innerHTML = '';
+        const error = document.createElement('p');
+        error.className = 'status-line';
+        error.textContent = 'Unable to load mailbox contents.';
+        mailboxItems.appendChild(error);
+        clearPreview();
+      }
+    }
+
+    async function selectMailbox(mailboxId, options = {}) {
+      if (!mailboxId) return;
+      const force = options.force === true;
+      if (!force && mailboxState.selected === mailboxId) {
+        return;
+      }
+
+      await loadMailboxItems(mailboxId);
+      renderMailboxNav();
+    }
+
+    async function openMailboxItem(name) {
+      if (!name || !mailboxState.selected) {
+        return;
+      }
+
+      mailboxState.activeItem = name;
+      renderMailboxItems(mailboxState.items);
+      previewTitle.textContent = name;
+      previewBody.textContent = 'Loading…';
+
+      const encodedName = name.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+      try {
+        const res = await fetch(`${API_BASE}/api/file/${encodeURIComponent(mailboxState.selected)}/${encodedName}`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`Fetch failed (${res.status})`);
+        }
+        const text = await res.text();
+        previewBody.textContent = text;
+      } catch (err) {
+        console.error(err);
+        previewBody.textContent = 'Unable to load file. See console for details.';
+      }
+    }
+
+    async function refreshMailbox() {
+      const target = mailboxState.selected || (mailboxState.flow[0] || defaultMailboxOrder[0]);
+      await selectMailbox(target, { force: true });
+    }
+
+    async function createGoalFromComposer() {
+      const target = goalTargetSelect.value || 'outbox';
+      newGoalButton.disabled = true;
+      mailboxStatus.textContent = 'Creating goal draft…';
+
+      try {
+        const system = document.getElementById('systemInput').value.trim();
+        const context = document.getElementById('contextInput').value.trim();
+        const prompt = document.getElementById('promptInput').value.trim();
+        const optimized = optimizedPreview.textContent.trim();
+        const firstLine = prompt.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+
+        const payload = {
+          title: firstLine.slice(0, 160),
+          body: prompt,
+          system,
+          context,
+          summary: optimized.slice(0, 200)
+        };
+
+        const res = await fetch(`${API_BASE}/api/goal?target=${encodeURIComponent(target)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Goal creation failed (${res.status})`);
+        }
+
+        const data = await res.json();
+        const mailboxId = data.mailbox || target;
+        await selectMailbox(mailboxId, { force: true });
+        if (data.name) {
+          await openMailboxItem(data.name);
+        }
+        const meta = getMailboxMeta(mailboxId) || { label: mailboxId };
+        mailboxStatus.textContent = `Goal created in ${meta.label}.`;
+      } catch (err) {
+        console.error(err);
+        mailboxStatus.textContent = 'Goal creation failed. Check server logs.';
+      } finally {
+        newGoalButton.disabled = false;
+      }
     }
 
     function getComposerPayload() {
@@ -429,10 +865,48 @@
         const data = await res.json();
         featureState.optimize_prompt = data?.features?.optimize_prompt !== false;
         featureState.chat = data?.features?.chat !== false;
+        if (Array.isArray(data?.mailboxes?.list) && data.mailboxes.list.length) {
+          mailboxState.mailboxes = data.mailboxes.list.map((entry) => Object.assign({}, entry));
+          mailboxState.metaById.clear();
+          mailboxState.mailboxes.forEach((entry) => {
+            mailboxState.metaById.set(entry.id, entry);
+          });
+        } else {
+          mailboxState.mailboxes = defaultMailboxOrder.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+          mailboxState.metaById.clear();
+          mailboxState.mailboxes.forEach((entry) => mailboxState.metaById.set(entry.id, entry));
+        }
+
+        if (Array.isArray(data?.mailboxes?.flow) && data.mailboxes.flow.length) {
+          mailboxState.flow = data.mailboxes.flow.slice();
+        } else {
+          mailboxState.flow = defaultMailboxOrder.slice();
+        }
+
+        mailboxState.aliases = new Map(Array.isArray(data?.mailboxes?.aliases)
+          ? data.mailboxes.aliases.map(({ alias, target }) => [alias, target])
+          : []);
+
+        updateGoalTargetOptions();
+        renderMailboxNav();
+        const initialMailbox = mailboxState.flow[0] || (mailboxState.mailboxes[0] && mailboxState.mailboxes[0].id) || defaultMailboxOrder[0];
+        if (initialMailbox) {
+          await selectMailbox(initialMailbox, { force: true });
+        }
       } catch (err) {
         console.warn('Failed to load capabilities; defaulting to enabled features.', err);
         featureState.optimize_prompt = true;
         featureState.chat = true;
+        mailboxState.mailboxes = defaultMailboxOrder.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+        mailboxState.metaById.clear();
+        mailboxState.mailboxes.forEach((entry) => mailboxState.metaById.set(entry.id, entry));
+        mailboxState.flow = defaultMailboxOrder.slice();
+        updateGoalTargetOptions();
+        renderMailboxNav();
+        const initialMailbox = mailboxState.flow[0];
+        if (initialMailbox) {
+          await selectMailbox(initialMailbox, { force: true });
+        }
       } finally {
         applyFeatureState();
       }
@@ -457,6 +931,8 @@
       }
     });
 
+    refreshMailboxButton.addEventListener('click', refreshMailbox);
+    newGoalButton.addEventListener('click', createGoalFromComposer);
     optimizeButton.addEventListener('click', optimizePrompt);
     sendChatButton.addEventListener('click', sendChat);
     copyButton.addEventListener('click', () => {
