@@ -10,6 +10,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+const autoContextRoot = path.join(repoRoot, 'run', 'auto_context');
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -471,6 +472,149 @@ const server = http.createServer(async (req, res) => {
         openai: { ready: hasOpenAiKey() },
         local: { ready: true }
       });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/run_clc') {
+      const MAX_SIZE = 16 * 1024;
+      let raw = '';
+      let aborted = false;
+      req.setEncoding('utf8');
+
+      req.on('data', (chunk) => {
+        if (aborted) return;
+        raw += chunk;
+        if (raw.length > MAX_SIZE) {
+          aborted = true;
+          raw = '';
+          writeJson(res, 413, { error: 'Payload too large' });
+          req.destroy();
+        }
+      });
+
+      req.on('end', () => {
+        if (aborted) return;
+        let payload;
+        try {
+          payload = raw ? JSON.parse(raw) : {};
+        } catch (err) {
+          return writeJson(res, 400, { error: 'Invalid JSON body' });
+        }
+
+        const goalRaw = typeof payload.goal === 'string' ? payload.goal : '';
+        const goal = goalRaw.trim();
+        if (!goal) {
+          return writeJson(res, 400, { error: 'Goal is required' });
+        }
+        if (goal.length > 5000) {
+          return writeJson(res, 413, { error: 'Goal is too long' });
+        }
+        if (goal.includes('\u0000')) {
+          return writeJson(res, 400, { error: 'Invalid goal characters' });
+        }
+
+        const startedAt = Date.now();
+        execFile(
+          'bash',
+          ['g/tools/clc_runner.sh', goal],
+          { cwd: repoRoot, timeout: 120000, maxBuffer: 4 * 1024 * 1024 },
+          (err, stdout, stderr) => {
+            if (err) {
+              console.error('[boss-api] clc runner failed', err, stderr);
+              return writeJson(res, 500, { error: 'CLC runner failed' });
+            }
+
+            const text = (stdout || '').trim();
+            let result;
+            try {
+              const lines = text.split('\n').filter(Boolean);
+              const jsonText = lines.length ? lines[lines.length - 1] : text;
+              result = jsonText ? JSON.parse(jsonText) : null;
+            } catch (parseErr) {
+              console.error('[boss-api] clc runner parse error', parseErr, text);
+              return writeJson(res, 500, { error: 'CLC runner returned invalid data' });
+            }
+
+            if (!result || result.ok !== true) {
+              return writeJson(res, 500, { error: 'CLC runner did not complete' });
+            }
+
+            const took = typeof result.took_ms === 'number' ? result.took_ms : (Date.now() - startedAt);
+            return writeJson(res, 200, {
+              ok: true,
+              file: result.file || null,
+              model: result.model || null,
+              confidence: result.confidence ?? null,
+              reason: result.reason || null,
+              run_mode: result.run_mode || null,
+              content: result.content || '',
+              goal: result.goal || goal,
+              took_ms: took,
+              ran_at: new Date().toISOString()
+            });
+          }
+        );
+      });
+
+      req.on('error', (err) => {
+        aborted = true;
+        console.error('[boss-api] clc payload error', err);
+      });
+
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/snapshot') {
+      const snapshot = {
+        system_snapshot: null,
+        ports: null,
+        capabilities: null,
+        mapping: null
+      };
+      const missing = [];
+
+      const loadJson = async (filename) => {
+        const full = path.join(autoContextRoot, filename);
+        try {
+          const data = await fs.readFile(full, 'utf8');
+          return JSON.parse(data);
+        } catch (err) {
+          if (err.code === 'ENOENT') {
+            missing.push(filename);
+            return null;
+          }
+          console.error('[boss-api] snapshot load error', filename, err);
+          return null;
+        }
+      };
+
+      snapshot.system_snapshot = await loadJson('system_snapshot.json');
+      snapshot.capabilities = await loadJson('capabilities.json');
+      snapshot.mapping = await loadJson('mapping.snapshot.json');
+
+      const portsPath = path.join(autoContextRoot, 'ports.env');
+      try {
+        const rawPorts = await fs.readFile(portsPath, 'utf8');
+        const parsed = {};
+        rawPorts.split(/\r?\n/).forEach((line) => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) return;
+          const idx = trimmed.indexOf('=');
+          if (idx === -1) return;
+          const key = trimmed.slice(0, idx).trim();
+          const value = trimmed.slice(idx + 1).trim();
+          if (key) parsed[key] = value;
+        });
+        snapshot.ports = Object.keys(parsed).length ? parsed : null;
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          missing.push('ports.env');
+        } else {
+          console.error('[boss-api] ports snapshot error', err);
+        }
+        snapshot.ports = null;
+      }
+
+      return writeJson(res, 200, { ok: true, snapshot, missing });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/optimize_prompt') {

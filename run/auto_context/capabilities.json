@@ -1,0 +1,18 @@
+{
+  "ui": {
+    "inbox": true,
+    "preview": true,
+    "prompt_composer": true,
+    "connectors": true
+  },
+  "features": {
+    "goal": true,
+    "optimize_prompt": true,
+    "chat": true,
+    "nlu": false
+  },
+  "engine": {
+    "local": true,
+    "server_models": false
+  }
+}

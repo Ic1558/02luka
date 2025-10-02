@@ -140,6 +140,14 @@
       font-size: 13px;
       color: #9ca3af;
     }
+    .mailbox-area {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mailbox-output {
+      min-height: 140px;
+    }
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -220,6 +228,7 @@
           <option value="openai">OpenAI</option>
         </select>
         <button id="optimizeButton" class="primary" type="button">Optimize Prompt</button>
+        <button id="runClcButton" class="primary" type="button">Run with CLC</button>
       </div>
       <div>
         <label for="systemInput">System Directive</label>
@@ -240,6 +249,10 @@
         <p class="status-line" id="optimizeStatus">Waiting for input…</p>
       </div>
       <div class="output-area" id="optimizedPreview"></div>
+      <div class="mailbox-area">
+        <p class="status-line" id="inboxStatus">Mailbox snapshot not loaded.</p>
+        <div class="output-area mailbox-output" id="inboxList"></div>
+      </div>
       <div class="composer-controls">
         <button id="copyButton" type="button" class="secondary">Copy</button>
         <button id="sendChatButton" type="button" class="primary">Send to Chat</button>
@@ -265,10 +278,13 @@
 
     const engineSelect = document.getElementById('engineSelect');
     const optimizeButton = document.getElementById('optimizeButton');
+    const runClcButton = document.getElementById('runClcButton');
     const copyButton = document.getElementById('copyButton');
     const sendChatButton = document.getElementById('sendChatButton');
     const optimizedPreview = document.getElementById('optimizedPreview');
     const optimizeStatus = document.getElementById('optimizeStatus');
+    const inboxList = document.getElementById('inboxList');
+    const inboxStatus = document.getElementById('inboxStatus');
     const connectorsButton = document.getElementById('connectorsButton');
     const connectorsModal = document.getElementById('connectorsModal');
     const closeModalButton = document.getElementById('closeModalButton');
@@ -286,6 +302,48 @@
     function applyFeatureState() {
       optimizeButton.disabled = !isFeatureEnabled('optimize_prompt');
       sendChatButton.disabled = !isFeatureEnabled('chat');
+    }
+
+    function renderMailbox(label, data) {
+      if (!data || !Array.isArray(data.items) || data.items.length === 0) {
+        return `${label}: (empty)`;
+      }
+      const items = data.items.slice(0, 6).map((item) => {
+        const name = item?.name || 'unnamed';
+        let time = '';
+        if (item?.updatedAt) {
+          try {
+            time = new Date(item.updatedAt).toLocaleTimeString();
+          } catch (err) {
+            time = '';
+          }
+        }
+        return `• ${name}${time ? ` (${time})` : ''}`;
+      });
+      return `${label}:\n${items.join('\n')}`;
+    }
+
+    async function loadMailbox() {
+      if (!inboxList || !inboxStatus) return;
+      inboxStatus.textContent = 'Loading mailbox…';
+      try {
+        const [inboxRes, sentRes] = await Promise.all([
+          fetch(`${API_BASE}/api/list/inbox`, { cache: 'no-store' }),
+          fetch(`${API_BASE}/api/list/sent`, { cache: 'no-store' })
+        ]);
+        const inboxData = inboxRes.ok ? await inboxRes.json() : null;
+        const sentData = sentRes.ok ? await sentRes.json() : null;
+        const inboxBlock = renderMailbox('Inbox', inboxData);
+        const sentBlock = renderMailbox('Sent', sentData);
+        inboxList.textContent = `${inboxBlock}\n\n${sentBlock}`;
+        inboxStatus.textContent = `Mailbox refreshed at ${new Date().toLocaleTimeString()}.`;
+      } catch (err) {
+        console.error(err);
+        inboxStatus.textContent = 'Mailbox refresh failed.';
+        if (inboxList) {
+          inboxList.textContent = '';
+        }
+      }
     }
 
     function getComposerPayload() {
@@ -333,6 +391,42 @@
       } finally {
         optimizeButton.disabled = false;
         applyFeatureState();
+      }
+    }
+
+    async function runClc() {
+      if (!runClcButton) return;
+      const payload = getComposerPayload();
+      const goal = payload.prompt;
+      if (!goal) {
+        optimizeStatus.textContent = 'Provide a prompt to run CLC.';
+        return;
+      }
+      if (goal.length > 5000) {
+        optimizeStatus.textContent = 'Goal is too long for CLC (limit 5000 characters).';
+        return;
+      }
+
+      runClcButton.disabled = true;
+      optimizeStatus.textContent = 'Running CLC…';
+      try {
+        const res = await fetch(`${API_BASE}/api/run_clc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal })
+        });
+        if (!res.ok) {
+          throw new Error(`CLC request failed (${res.status})`);
+        }
+        const data = await res.json();
+        optimizedPreview.textContent = data.content || '';
+        optimizeStatus.textContent = `CLC run complete (model ${data.model || 'n/a'}).`;
+        loadMailbox();
+      } catch (err) {
+        console.error(err);
+        optimizeStatus.textContent = 'CLC run failed. Check server logs.';
+      } finally {
+        runClcButton.disabled = false;
       }
     }
 
@@ -458,6 +552,9 @@
     });
 
     optimizeButton.addEventListener('click', optimizePrompt);
+    if (runClcButton) {
+      runClcButton.addEventListener('click', runClc);
+    }
     sendChatButton.addEventListener('click', sendChat);
     copyButton.addEventListener('click', () => {
       const text = optimizedPreview.textContent;
@@ -471,7 +568,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       applyFeatureState();
-      loadCapabilities();
+      loadCapabilities().finally(() => loadMailbox());
     });
   </script>
 </body>
