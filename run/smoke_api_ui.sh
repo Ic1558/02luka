@@ -68,8 +68,17 @@ fi
 
 echo "==> Check UI port availability"
 if lsof -ti :$UI_PORT >/dev/null 2>&1; then
-  echo " - Port $UI_PORT is busy. Kill? (y/N)"
-  read -r a; [[ "$a" == "y" || "$a" == "Y" ]] && lsof -ti :$UI_PORT | xargs kill -9 || true
+  echo " - Port $UI_PORT is busy. Using existing service."
+  UI_RUNNING=1
+else
+  echo " - Port $UI_PORT is free. Starting temporary UI..."
+  if [ -d "boss-ui" ]; then
+    (cd boss-ui && python3 -m http.server $UI_PORT >/tmp/ui.log 2>&1 &)
+    UI_RUNNING=0
+  else
+    echo " - WARN: boss-ui/ not found, skipping UI test"
+    UI_RUNNING=0
+  fi
 fi
 
 echo "==> Serve boss-ui (temporary)"
