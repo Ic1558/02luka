@@ -5,235 +5,740 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Luka Prompt Orchestrator</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+      --bg-gradient-start: #050611;
+      --bg-gradient-end: #0f172a;
+      --surface-primary: rgba(17, 24, 39, 0.88);
+      --surface-secondary: rgba(31, 41, 55, 0.75);
+      --border-subtle: rgba(148, 163, 184, 0.15);
+      --border-strong: rgba(59, 130, 246, 0.55);
+      --accent: #3b82f6;
+      --accent-soft: rgba(59, 130, 246, 0.16);
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5f5;
+      --text-muted: #94a3b8;
+      --shadow-elevated: 0 24px 56px rgba(2, 6, 23, 0.55);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0a0a0a;
-      color: #fafafa;
-      height: 100vh;
+      font-family: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, var(--bg-gradient-start), var(--bg-gradient-end) 55%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(59, 130, 246, 0.08), transparent 45%, rgba(99, 102, 241, 0.08));
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .app-shell {
+      width: min(1280px, 100%);
       display: flex;
       flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(16px);
     }
-    header {
-      border-bottom: 1px solid #262626;
-      padding: 12px 16px;
+
+    .top-bar {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 18px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 18px;
+      box-shadow: var(--shadow-elevated);
+    }
+
+    .brand {
       display: flex;
       align-items: center;
       gap: 16px;
+      min-width: 240px;
     }
-    .logo {
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
-      border-radius: 8px;
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.5));
       display: grid;
       place-items: center;
-      font-weight: bold;
+      font-weight: 600;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      border: 1px solid rgba(148, 163, 184, 0.25);
     }
-    .status {
-      color: #a3a3a3;
-      font-size: 14px;
+
+    .brand-title {
+      font-size: 19px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
     }
-    .tools {
+
+    .brand-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .top-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 200px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-secondary);
+    }
+
+    .status-pill::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--text-muted);
+      transition: background 0.25s ease;
+    }
+
+    .status-pill[data-state="online"]::before {
+      background: #22c55e;
+    }
+
+    .status-pill[data-state="offline"]::before {
+      background: #ef4444;
+    }
+
+    .status-pill[data-state="checking"]::before {
+      background: #eab308;
+    }
+
+    .top-actions {
       margin-left: auto;
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .messages {
-      flex: 1;
-      overflow-y: auto;
+
+    .keyboard-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .control-panel {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
       padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      box-shadow: var(--shadow-elevated);
+      min-height: 540px;
+    }
+
+    .panel-section {
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
+
+    .panel-section header {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .control-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    select,
+    button.tool-button,
+    button.secondary,
+    button.primary,
+    button.ghost,
+    .control-panel button {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: var(--text-primary);
+      padding: 10px 14px;
+      border-radius: 12px;
+      outline: none;
+      cursor: pointer;
+      font-size: 13px;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+    }
+
+    select:hover,
+    button.tool-button:hover,
+    .control-panel button:hover,
+    button.secondary:hover,
+    button.primary:hover,
+    button.ghost:hover {
+      border-color: var(--border-strong);
+    }
+
+    button.primary {
+      background: var(--accent);
+      border-color: rgba(59, 130, 246, 0.6);
+      color: #fff;
+    }
+
+    button.secondary {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-secondary);
+    }
+
+    button.ghost {
+      background: transparent;
+      color: var(--text-muted);
+      padding: 0;
+      border: none;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .gateway-overview {
+      background: rgba(30, 41, 59, 0.68);
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .gateway-overview strong {
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .gateway-tip {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .signal-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      padding-left: 0;
+    }
+
+    .signal-list li {
+      padding-left: 18px;
+      position: relative;
+    }
+
+    .signal-list li::before {
+      content: "";
+      position: absolute;
+      top: 6px;
+      left: 4px;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .conversation-area {
+      background: var(--surface-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-elevated);
+      min-height: 540px;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      scrollbar-width: thin;
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.2);
+      border-radius: 999px;
+    }
+
     .message {
       display: flex;
-      gap: 12px;
-      max-width: 600px;
+      gap: 14px;
+      max-width: 640px;
+      padding: 18px 22px;
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(15, 23, 42, 0.72);
+      position: relative;
     }
+
+    .message.system {
+      max-width: 520px;
+      margin-inline: auto;
+      text-align: center;
+      background: rgba(37, 99, 235, 0.12);
+      border-style: dashed;
+    }
+
     .message.user {
       align-self: flex-end;
-      flex-direction: row-reverse;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(37, 99, 235, 0.55));
     }
+
     .avatar {
-      width: 32px;
-      height: 32px;
-      background: #141414;
-      border-radius: 8px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
-      font-size: 14px;
+      font-weight: 600;
+      font-size: 15px;
+      background: rgba(30, 41, 59, 0.9);
+      color: var(--text-secondary);
+      flex-shrink: 0;
     }
-    .message.user .avatar { background: #3b82f6; }
+
+    .message.user .avatar {
+      background: rgba(96, 165, 250, 0.95);
+      color: #0b1120;
+    }
+
+    .message-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .message-role {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .message-time {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .message-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .message-actions button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.75;
+      transition: opacity 0.2s ease;
+    }
+
+    .message-actions button:hover {
+      opacity: 1;
+      color: var(--text-secondary);
+    }
+
+    .message-actions svg {
+      width: 14px;
+      height: 14px;
+    }
+
     .content {
-      background: #141414;
-      padding: 12px 16px;
-      border-radius: 12px;
       font-size: 14px;
-      line-height: 1.5;
+      line-height: 1.6;
       white-space: pre-wrap;
       word-break: break-word;
     }
-    .message.user .content { background: #3b82f6; }
+
     .input-area {
-      padding: 16px;
-      border-top: 1px solid #262626;
+      padding: 24px;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+      background: rgba(15, 23, 42, 0.75);
     }
+
     .input-wrapper {
-      background: #141414;
-      border: 1px solid #262626;
-      border-radius: 12px;
-      padding: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 20px;
+      padding: 14px 16px;
       display: flex;
-      gap: 12px;
+      gap: 16px;
       align-items: flex-end;
+      width: 100%;
     }
+
     #messageInput {
       flex: 1;
       background: transparent;
       border: none;
       outline: none;
-      color: #fafafa;
-      font-size: 14px;
+      color: var(--text-primary);
+      font-size: 15px;
       resize: none;
-      min-height: 20px;
-      max-height: 120px;
+      min-height: 28px;
+      max-height: 160px;
       font-family: inherit;
+      line-height: 1.5;
+      padding-right: 8px;
     }
+
+    #messageInput::placeholder {
+      color: rgba(148, 163, 184, 0.6);
+    }
+
     #sendButton {
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
+      width: 44px;
+      height: 44px;
+      background: var(--accent);
       border: none;
-      border-radius: 8px;
+      border-radius: 14px;
       color: white;
       cursor: pointer;
       display: grid;
       place-items: center;
-      transition: opacity 0.2s;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 10px 22px rgba(59, 130, 246, 0.35);
     }
-    #sendButton:hover:not(:disabled) { opacity: 0.9; }
+
+    #sendButton:hover:not(:disabled) {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
     #sendButton:disabled {
-      opacity: 0.3;
+      opacity: 0.4;
       cursor: not-allowed;
+      box-shadow: none;
     }
-    select,
-    button.tool-button {
-      background: #141414;
-      border: 1px solid #262626;
-      color: #fafafa;
-      padding: 6px 12px;
-      border-radius: 6px;
-      outline: none;
-      cursor: pointer;
-      font-size: 12px;
-      transition: border-color 0.2s;
-    }
-    button.tool-button:hover,
-    select:hover {
-      border-color: #3b82f6;
-    }
+
     .prompt-library-panel {
       position: fixed;
-      top: 72px;
-      right: 24px;
-      width: 360px;
-      max-width: calc(100% - 48px);
-      background: #111827;
-      border: 1px solid #1f2937;
-      border-radius: 12px;
-      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      top: 96px;
+      right: 48px;
+      width: min(420px, calc(100% - 96px));
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(59, 130, 246, 0.24);
+      border-radius: 20px;
+      box-shadow: var(--shadow-elevated);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      z-index: 10;
+      z-index: 20;
+      max-height: min(560px, calc(100vh - 128px));
     }
+
     .prompt-library-panel.open {
       display: flex;
     }
+
     .prompt-library-header {
-      padding: 12px 16px;
-      border-bottom: 1px solid #1f2937;
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      font-weight: 600;
     }
+
     .prompt-library-body {
-      padding: 16px;
-      max-height: 320px;
+      padding: 18px 22px;
       overflow-y: auto;
-      font-size: 12px;
-      line-height: 1.5;
-      background: #0f172a;
+      font-size: 13px;
+      line-height: 1.6;
+      background: rgba(15, 23, 42, 0.85);
       white-space: pre-wrap;
+      scrollbar-width: thin;
     }
+
+    .prompt-library-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
     .prompt-library-actions {
-      padding: 12px 16px;
-      border-top: 1px solid #1f2937;
+      padding: 16px 22px;
+      border-top: 1px solid rgba(148, 163, 184, 0.16);
       display: flex;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 12px;
     }
-    button.secondary {
-      background: transparent;
-      color: #fafafa;
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 24px 0 12px;
     }
-    button.primary {
-      background: #3b82f6;
-      border: none;
-      color: white;
+
+    @media (max-width: 1080px) {
+      body {
+        padding: 16px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        order: 2;
+      }
+
+      .conversation-area {
+        order: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .top-actions {
+        margin-left: 0;
+      }
+
+      .input-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      #sendButton {
+        width: 100%;
+        height: 40px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 12px;
+        gap: 12px;
+      }
+      .status {
+        font-size: 12px;
+      }
+      .tools {
+        gap: 8px;
+      }
+      select,
+      button.tool-button {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+      .messages {
+        padding: 16px 12px 80px;
+      }
+      .message {
+        gap: 10px;
+      }
+      .content {
+        font-size: 15px;
+      }
+      .input-area {
+        padding: 12px;
+      }
+      .input-wrapper {
+        padding: 10px;
+        gap: 10px;
+      }
+      #messageInput {
+        font-size: 15px;
+      }
+      #sendButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
+      .prompt-library-panel {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        border-radius: 0;
+        border: none;
+      }
+      .prompt-library-header {
+        padding: 16px;
+      }
+      .prompt-library-body {
+        padding: 20px 16px 120px;
+        font-size: 14px;
+      }
+      .prompt-library-actions {
+        padding: 16px;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">L</div>
-    <div>
-      <div>Luka Orchestrator</div>
-      <div class="status">Connected to local automation</div>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-mark">L</div>
+        <div>
+          <div class="brand-title">Luka Prompt Orchestrator</div>
+          <div class="brand-subtitle">Operational control center for field agents</div>
+        </div>
+      </div>
+      <div class="top-meta">
+        <div class="status-pill" id="connectionStatus" data-state="checking">Checking status…</div>
+        <div class="keyboard-hint">Enter to send · Shift + Enter for a new line</div>
+      </div>
+      <div class="top-actions">
+        <button class="tool-button" id="promptLibraryButton" type="button">Prompt Library</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="control-panel">
+        <section class="panel-section">
+          <header>Gateway</header>
+          <div class="control-field">
+            <label for="gateway">Dispatch target</label>
+            <select id="gateway">
+              <option value="auto">Smart Delegate</option>
+              <option value="mcp">MCP Docker (5012)</option>
+              <option value="mcp_fs">MCP FS (8765)</option>
+              <option value="ollama">Ollama (11434)</option>
+            </select>
+          </div>
+          <div class="gateway-overview" id="gatewayOverview">
+            <div><strong>Smart Delegate</strong></div>
+            <div class="gateway-tip">Routes to local gateways and selects the strongest answer automatically.</div>
+            <div class="gateway-metadata" id="gatewayMetadata">Awaiting first dispatch…</div>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <header>Session tools</header>
+          <button id="clearConversation" type="button">Clear conversation</button>
+          <button id="exportConversation" type="button">Export transcript (JSON)</button>
+        </section>
+
+        <section class="panel-section">
+          <header>Runbook</header>
+          <ul class="signal-list" id="runbookList">
+            <li>Define a clear mission statement for the agents.</li>
+            <li>Verify the selected gateway is running before dispatch.</li>
+            <li>Use the master prompt template for complex automation.</li>
+          </ul>
+        </section>
+      </aside>
+
+      <main class="conversation-area">
+        <div class="messages" id="messages"></div>
+        <div class="empty-state" id="emptyState" hidden>No messages yet. Draft a mission to engage Luka.</div>
+        <div class="input-area">
+          <div class="input-wrapper">
+            <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
+            <button id="sendButton" type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
-    <div class="tools">
-      <select id="gateway">
-        <option value="auto">Smart Delegate</option>
-        <option value="mcp">MCP Docker (5012)</option>
-        <option value="mcp_fs">MCP FS (8765)</option>
-        <option value="ollama">Ollama (11434)</option>
-      </select>
-      <button class="tool-button" id="promptLibraryButton" type="button">Prompt Library</button>
-    </div>
-  </header>
+  </div>
 
   <div class="prompt-library-panel" id="promptLibraryPanel">
     <div class="prompt-library-header">
       <span>Codex Master Prompt</span>
       <button class="tool-button" id="closePromptLibrary" type="button">Close</button>
     </div>
-    <div class="prompt-library-body" id="promptLibraryBody">
-      Loading master prompt…
-    </div>
+    <div class="prompt-library-body" id="promptLibraryBody">Loading master prompt…</div>
     <div class="prompt-library-actions">
       <button class="tool-button secondary" id="copyPromptTemplate" type="button">Copy</button>
       <button class="tool-button primary" id="insertPromptTemplate" type="button">Use Template</button>
-    </div>
-  </div>
-
-  <div class="messages" id="messages">
-    <div class="message">
-      <div class="avatar">L</div>
-      <div class="content">Ready. Type a mission and press Send or Enter.</div>
-    </div>
-  </div>
-
-  <div class="input-area">
-    <div class="input-wrapper">
-      <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
-      <button id="sendButton" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-        </svg>
-      </button>
     </div>
   </div>
 
@@ -248,8 +753,17 @@
     const closePromptLibrary = document.getElementById('closePromptLibrary');
     const copyPromptTemplate = document.getElementById('copyPromptTemplate');
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const gatewayOverview = document.getElementById('gatewayOverview');
+    const gatewayMetadata = document.getElementById('gatewayMetadata');
+    const clearConversationButton = document.getElementById('clearConversation');
+    const exportConversationButton = document.getElementById('exportConversation');
+    const emptyState = document.getElementById('emptyState');
 
     const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const BACKEND_HEALTH_URL = BACKEND_CHAT_URL.includes('/api/chat')
+      ? BACKEND_CHAT_URL.replace(/\/api\/chat$/, '/health')
+      : `${BACKEND_CHAT_URL.replace(/\/$/, '')}/health`;
     const TARGET_PROFILES = {
       auto: {
         id: 'auto',
@@ -274,6 +788,7 @@
     };
 
     let masterPromptCache = '';
+    const conversationLog = [];
 
     function togglePromptLibrary(forceOpen) {
       const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
@@ -314,37 +829,107 @@
       messageInput.value = '';
       messageInput.style.height = 'auto';
       updateSendButton();
+      setConnectionStatus('checking', 'Dispatching mission…');
 
       try {
         const formatted = await routeThroughBackend(text);
         addMessage('bot', formatted);
+        setConnectionStatus('online', 'Luka backend online');
       } catch (err) {
         addMessage('bot', buildBackendFailureMessage(err));
+        setConnectionStatus('offline', 'Backend unreachable');
       }
     }
 
-    function addMessage(type, text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message' + (type === 'user' ? ' user' : '');
+    function addMessage(type, text, options = {}) {
+      const timestamp = options.timestamp ? new Date(options.timestamp) : new Date();
+      const entry = { type, text, timestamp: timestamp.toISOString() };
+      conversationLog.push(entry);
+      updateEmptyState();
+
+      const messageDiv = document.createElement('article');
+      messageDiv.className = 'message' + (type === 'user' ? ' user' : type === 'system' ? ' system' : '');
 
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
-      avatar.textContent = type === 'user' ? 'U' : 'L';
+      avatar.textContent = type === 'user' ? 'U' : type === 'system' ? 'ℹ︎' : 'L';
+
+      const messageBody = document.createElement('div');
+      messageBody.className = 'message-body';
+
+      const header = document.createElement('div');
+      header.className = 'message-header';
+
+      const label = document.createElement('span');
+      label.className = 'message-role';
+      label.textContent = type === 'user' ? 'Operator' : type === 'system' ? 'System' : 'Luka Core';
+
+      const time = document.createElement('span');
+      time.className = 'message-time';
+      time.textContent = formatTimestamp(timestamp);
+
+      const actions = document.createElement('div');
+      actions.className = 'message-actions';
+
+      if (type !== 'system') {
+        const copyButton = document.createElement('button');
+        copyButton.type = 'button';
+        copyButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+        copyButton.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            copyButton.textContent = 'Copied';
+            setTimeout(() => {
+              copyButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+            }, 1500);
+          } catch (error) {
+            copyButton.textContent = 'Copy failed';
+            setTimeout(() => {
+              copyButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+            }, 1500);
+          }
+        });
+        actions.appendChild(copyButton);
+      }
+
+      header.appendChild(label);
+      header.appendChild(time);
+      header.appendChild(actions);
 
       const content = document.createElement('div');
       content.className = 'content';
       content.textContent = text;
 
-      messageDiv.appendChild(avatar);
-      messageDiv.appendChild(content);
+      messageBody.appendChild(header);
+      messageBody.appendChild(content);
+
+      if (type !== 'system') {
+        messageDiv.appendChild(avatar);
+      }
+      messageDiv.appendChild(messageBody);
 
       messagesContainer.appendChild(messageDiv);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
+    function updateEmptyState() {
+      const hasInteractiveMessages = conversationLog.some((entry) => entry.type === 'user' || entry.type === 'bot');
+      if (emptyState) {
+        emptyState.hidden = hasInteractiveMessages ? true : false;
+      }
+    }
+
+    function renderInitialMessage() {
+      addMessage('system', 'Ready. Type a mission and press Send or Enter.');
+    }
+
+    function formatTimestamp(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     messageInput.addEventListener('input', () => {
       messageInput.style.height = 'auto';
-      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 160) + 'px';
       updateSendButton();
     });
 
@@ -394,8 +979,38 @@
       }
     });
 
-    updateSendButton();
-    messageInput.focus();
+    clearConversationButton.addEventListener('click', () => {
+      messagesContainer.innerHTML = '';
+      conversationLog.length = 0;
+      renderInitialMessage();
+    });
+
+    exportConversationButton.addEventListener('click', () => {
+      if (!conversationLog.length) {
+        return;
+      }
+      const blob = new Blob([JSON.stringify(conversationLog, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `luka-transcript-${timestamp}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+
+    gatewaySelect.addEventListener('change', () => {
+      updateGatewayOverview();
+    });
+
+    function updateGatewayOverview() {
+      const profile = getTargetProfile(gatewaySelect.value);
+      gatewayOverview.querySelector('strong').textContent = profile.name;
+      gatewayOverview.querySelector('.gateway-tip').textContent = profile.tips || 'Ensure the selected gateway is running locally.';
+      gatewayMetadata.textContent = 'Ready to dispatch.';
+    }
 
     async function routeThroughBackend(text) {
       const targetId = gatewaySelect.value || 'auto';
@@ -417,6 +1032,7 @@
       }
 
       const data = await response.json();
+      gatewayMetadata.textContent = `Last response: ${formatTimestamp(new Date())}`;
       return formatBackendResponse(data, targetId);
     }
 
@@ -487,6 +1103,41 @@
       }
       return lines.join('\n');
     }
+
+    function setConnectionStatus(state, label) {
+      connectionStatus.dataset.state = state;
+      connectionStatus.textContent = label;
+    }
+
+    async function refreshBackendStatus() {
+      setConnectionStatus('checking', 'Checking status…');
+      try {
+        const response = await fetch(BACKEND_HEALTH_URL, { method: 'GET', cache: 'no-store' });
+        if (!response.ok && response.status !== 404) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        setConnectionStatus('online', 'Luka backend online');
+      } catch (error) {
+        try {
+          const response = await fetch(BACKEND_CHAT_URL, { method: 'OPTIONS' });
+          if (response.ok) {
+            setConnectionStatus('online', 'Luka backend online');
+            return;
+          }
+          throw new Error('No response');
+        } catch (err) {
+          setConnectionStatus('offline', 'Backend unreachable');
+        }
+      }
+    }
+
+    setInterval(refreshBackendStatus, 30000);
+
+    updateSendButton();
+    updateGatewayOverview();
+    renderInitialMessage();
+    messageInput.focus();
+    refreshBackendStatus();
   </script>
 </body>
 </html>
