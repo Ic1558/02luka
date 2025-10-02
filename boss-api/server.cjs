@@ -44,6 +44,35 @@ function resolveHumanPath(mailbox) {
   });
 }
 
+function runModelRouter(taskType, hints = '') {
+  return new Promise((resolve) => {
+    const args = ['g/tools/model_router.sh', taskType];
+    if (hints) {
+      args.push(hints);
+    }
+
+    execFile('bash', args, { cwd: repoRoot }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[boss-api] model_router failed', err, stderr);
+        return resolve(null);
+      }
+
+      const text = (stdout || '').trim();
+      if (!text) {
+        return resolve(null);
+      }
+
+      try {
+        const parsed = JSON.parse(text);
+        resolve(parsed);
+      } catch (parseErr) {
+        console.error('[boss-api] model_router parse error', parseErr, text);
+        resolve(null);
+      }
+    });
+  });
+}
+
 const CHAT_TARGETS = {
   auto: {
     id: 'auto',
@@ -100,6 +129,47 @@ function localOptimizePrompt({ system, user, context }) {
 
   const draft = sections.join('\n\n').trim();
   return draft || String(user || '').trim();
+}
+
+async function optimizePromptWithOllama({ system, user, context, model, routerMeta }) {
+  const blocks = [];
+  if (system && system.trim()) {
+    blocks.push(`System Directive:\n${system.trim()}`);
+  }
+  if (context && context.trim()) {
+    blocks.push(`Context:\n${context.trim()}`);
+  }
+  if (user && user.trim()) {
+    blocks.push(`Original Prompt:\n${user.trim()}`);
+  }
+
+  const guidance = [
+    'Rewrite the prompt for a coding-focused assistant.',
+    'Integrate important context and system directives succinctly.',
+    'Respond with the improved prompt only—no explanations or bullet lists unless required by the task.'
+  ].join('\n');
+
+  const userPayload = blocks.length
+    ? `${blocks.join('\n\n')}\n\n${guidance}`
+    : guidance;
+
+  const messages = [
+    {
+      role: 'system',
+      content: 'You are a senior prompt engineer. When asked, return a single optimized prompt ready for execution. Do not add commentary.'
+    },
+    {
+      role: 'user',
+      content: userPayload
+    }
+  ];
+
+  return callOllama('Optimize prompt', CHAT_TARGETS.ollama, {
+    model,
+    messages,
+    router: routerMeta,
+    reason: 'optimize_prompt'
+  });
 }
 
 function httpRequestJson(targetUrl, options = {}) {
@@ -301,16 +371,26 @@ async function detectOllamaModel(baseUrl) {
   return null;
 }
 
-async function callOllama(message, target) {
-  const baseUrl = target.baseUrl.replace(/\/+$/, '');
-  const model = target.model || await detectOllamaModel(baseUrl) || 'llama3';
+async function callOllama(message, target, options = {}) {
+  const baseUrlSource = options.baseUrl || target.baseUrl;
+  const baseUrl = baseUrlSource.replace(/\/+$/, '');
+  const modelOverride = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : null;
+  const model = modelOverride || target.model || await detectOllamaModel(baseUrl) || 'llama3';
+
+  const defaultSystem = options.system
+    || 'You are part of the 02luka local ensemble. Provide concise, high-signal answers.';
+  const defaultMessages = [
+    { role: 'system', content: defaultSystem },
+    { role: 'user', content: message }
+  ];
+
+  const messages = Array.isArray(options.messages) && options.messages.length
+    ? options.messages
+    : defaultMessages;
 
   const payload = JSON.stringify({
     model,
-    messages: [
-      { role: 'system', content: 'You are part of the 02luka local ensemble. Provide concise, high-signal answers.' },
-      { role: 'user', content: message }
-    ]
+    messages
   });
 
   const response = await httpRequestJson(`${baseUrl}/v1/chat/completions`, {
@@ -329,14 +409,21 @@ async function callOllama(message, target) {
     }
     const text = extractTextFromPayload(parsed);
     if (text) {
-      return { text, meta: { model, endpoint: '/v1/chat/completions', status: response.status } };
+      const meta = { model, endpoint: '/v1/chat/completions', status: response.status };
+      if (options.router) {
+        meta.router = options.router;
+      }
+      if (options.reason) {
+        meta.reason = options.reason;
+      }
+      return { text, meta };
     }
   }
 
   throw new Error(`${target.name} did not return a response`);
 }
 
-async function executeTarget(targetId, message) {
+async function executeTarget(targetId, message, options = {}) {
   const target = CHAT_TARGETS[targetId];
   if (!target) {
     throw new Error(`Unknown target: ${targetId}`);
@@ -357,7 +444,7 @@ async function executeTarget(targetId, message) {
   }
 
   if (target.type === 'ollama') {
-    const result = await callOllama(message, target);
+    const result = await callOllama(message, target, options);
     return {
       id: target.id,
       name: target.name,
@@ -371,7 +458,7 @@ async function executeTarget(targetId, message) {
   throw new Error(`Target ${target.name} is not actionable`);
 }
 
-async function orchestrateChat(message, targetId = 'auto') {
+async function orchestrateChat(message, targetId = 'auto', options = {}) {
   const selected = CHAT_TARGETS[targetId] || CHAT_TARGETS.auto;
   const delegates = selected.type === 'aggregate' ? selected.delegates : [selected.id];
 
@@ -379,7 +466,7 @@ async function orchestrateChat(message, targetId = 'auto') {
   for (const id of delegates) {
     const startedAt = Date.now();
     try {
-      const outcome = await executeTarget(id, message);
+      const outcome = await executeTarget(id, message, options);
       results.push(outcome);
     } catch (err) {
       results.push({
@@ -416,16 +503,28 @@ async function orchestrateChat(message, targetId = 'auto') {
         latencyMs: 1
       }])
     };
+    if (options.router) {
+      fallbackResponse.router = options.router;
+    }
     return fallbackResponse;
   }
 
-  return {
+  const payload = {
     ok: Boolean(best),
     target: targetId,
     summary: best ? `Selected ${best.name}` : 'No delegates returned a response',
     best: best || null,
     results
   };
+
+  if (options.router) {
+    payload.router = options.router;
+    if (best) {
+      best.meta = Object.assign({}, best.meta || {}, { router: options.router });
+    }
+  }
+
+  return payload;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -490,21 +589,32 @@ const server = http.createServer(async (req, res) => {
             ? payload.user
             : (typeof payload.prompt === 'string' ? payload.prompt : '');
           const context = typeof payload.context === 'string' ? payload.context : '';
+          const strategy = typeof payload.strategy === 'string' ? payload.strategy.toLowerCase() : 'auto';
           const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+          const hints = typeof payload.hints === 'string' ? payload.hints : '';
+
+          const normalizedStrategy = strategy === 'manual' ? 'manual' : 'auto';
 
           let engineUsed = 'local';
           let optimizedText = '';
-          let meta = {};
+          let meta = { strategy: normalizedStrategy };
 
-          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
-          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
+          const wantsAnthropic = normalizedStrategy === 'manual'
+            && requestedEngine === 'anthropic'
+            && hasAnthropicKey();
+          const wantsOpenAi = normalizedStrategy === 'manual'
+            && requestedEngine === 'openai'
+            && hasOpenAiKey();
+          const shouldUseRouter = normalizedStrategy === 'auto'
+            || requestedEngine === 'auto'
+            || requestedEngine === 'local';
 
           try {
             if (wantsAnthropic) {
               const response = await anthropicConnector.optimizePrompt({ system, user: userPrompt, context });
               optimizedText = String(response.text || '').trim();
               engineUsed = 'anthropic';
-              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+              meta = Object.assign({}, meta, response.raw && typeof response.raw === 'object' ? {
                 model: response.raw.model || null,
                 id: response.raw.id || null
               } : {});
@@ -512,7 +622,7 @@ const server = http.createServer(async (req, res) => {
               const response = await openaiConnector.optimizePrompt({ system, user: userPrompt, context });
               optimizedText = String(response.text || '').trim();
               engineUsed = 'openai';
-              meta = Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+              meta = Object.assign({}, meta, response.raw && typeof response.raw === 'object' ? {
                 model: response.raw.model || null,
                 id: response.raw.id || null
               } : {});
@@ -521,13 +631,49 @@ const server = http.createServer(async (req, res) => {
             console.error('[boss-api] optimize connector failed', err);
             engineUsed = 'local';
             optimizedText = '';
-            meta = { fallback: true, error: err.message };
+            meta = Object.assign({}, meta, { fallback: true, error: err.message });
+          }
+
+          let routerDecision = null;
+
+          if (!optimizedText && shouldUseRouter) {
+            try {
+              const routerHints = hints || (userPrompt ? userPrompt.slice(0, 240) : '');
+              routerDecision = await runModelRouter('optimize', routerHints);
+            } catch (err) {
+              console.error('[boss-api] model_router optimize lookup failed', err);
+            }
+
+            if (routerDecision && routerDecision.model) {
+              try {
+                const result = await optimizePromptWithOllama({
+                  system,
+                  user: userPrompt,
+                  context,
+                  model: routerDecision.model,
+                  routerMeta: routerDecision
+                });
+                const routedText = String(result?.text || '').trim();
+                if (routedText) {
+                  optimizedText = routedText;
+                  engineUsed = 'ollama';
+                  meta = Object.assign({}, meta, result.meta || {}, { router: routerDecision, source: 'ollama' });
+                }
+              } catch (err) {
+                console.error('[boss-api] ollama optimize failed', err);
+                meta = Object.assign({}, meta, { router: routerDecision, router_error: err.message });
+              }
+            }
+          }
+
+          if (routerDecision && !meta.router) {
+            meta = Object.assign({}, meta, { router: routerDecision });
           }
 
           if (!optimizedText) {
             optimizedText = localOptimizePrompt({ system, user: userPrompt, context });
             engineUsed = 'local';
-            meta = Object.assign({ strategy: 'heuristic' }, meta);
+            meta = Object.assign({}, meta, { heuristic: true });
           }
 
           return writeJson(res, 200, {
@@ -564,8 +710,29 @@ const server = http.createServer(async (req, res) => {
           const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
           const system = typeof payload.system === 'string' ? payload.system : '';
           const model = typeof payload.model === 'string' ? payload.model : undefined;
-          const wantsAnthropic = requestedEngine === 'anthropic' && hasAnthropicKey();
-          const wantsOpenAi = requestedEngine === 'openai' && hasOpenAiKey();
+          const strategy = typeof payload.strategy === 'string' ? payload.strategy.toLowerCase() : 'auto';
+          const hints = typeof payload.hints === 'string' ? payload.hints : '';
+
+          const normalizedStrategy = strategy === 'manual' ? 'manual' : 'auto';
+          const wantsAnthropic = normalizedStrategy === 'manual'
+            && requestedEngine === 'anthropic'
+            && hasAnthropicKey();
+          const wantsOpenAi = normalizedStrategy === 'manual'
+            && requestedEngine === 'openai'
+            && hasOpenAiKey();
+          const shouldUseRouter = normalizedStrategy === 'auto'
+            || requestedEngine === 'auto'
+            || requestedEngine === 'local';
+
+          let routerDecision = null;
+          if (shouldUseRouter) {
+            try {
+              const routerHints = hints || message.slice(0, 240);
+              routerDecision = await runModelRouter('generate', routerHints);
+            } catch (err) {
+              console.error('[boss-api] model_router chat lookup failed', err);
+            }
+          }
 
           if (wantsAnthropic || wantsOpenAi) {
             try {
@@ -577,7 +744,7 @@ const server = http.createServer(async (req, res) => {
                 ok: Boolean(text),
                 engine: engineUsed,
                 response: text,
-                meta: Object.assign({}, response.raw && typeof response.raw === 'object' ? {
+                meta: Object.assign({ strategy: normalizedStrategy }, response.raw && typeof response.raw === 'object' ? {
                   model: response.raw.model || null,
                   id: response.raw.id || null
                 } : {})
@@ -592,8 +759,18 @@ const server = http.createServer(async (req, res) => {
             ? payload.target.trim()
             : 'auto';
 
+          const orchestrationOptions = {};
+          if (routerDecision && routerDecision.model) {
+            orchestrationOptions.model = routerDecision.model;
+            orchestrationOptions.router = routerDecision;
+          }
+
           try {
-            const result = await orchestrateChat(message, targetId);
+            const result = await orchestrateChat(message, targetId, orchestrationOptions);
+            if (!result.router && routerDecision) {
+              result.router = routerDecision;
+            }
+            result.strategy = normalizedStrategy;
             return writeJson(res, 200, result);
           } catch (err) {
             console.error('[boss-api] chat orchestration failed', err);
