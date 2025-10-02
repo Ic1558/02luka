@@ -1,0 +1,23 @@
+- time: "2025-10-03T00:40:00Z"
+  change_id: CU-2025-10-03-mailboxes
+  summary: "Add human outbox mailbox, aliasing, UI flow updates, and smoke guardrails"
+  files_touched:
+    - f/ai_context/mapping.json
+    - g/tools/mapping_drift_guard.sh
+    - .codex/GUARDRAILS.md
+    - .codex/TASK_RECIPES.md
+    - .codex/PREPROMPT.md
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+    - .codex/preflight.sh
+    - run/smoke_api_ui.sh
+    - boss/outbox/.gitkeep
+    - run/change_units/CU-2025-10-03.yml
+    - run/daily_reports/REPORT_2025-10-03.md
+  tags: ["boss-ui", "boss-api", "resolver", "preflight"]
+  tests_ran:
+    - preflight: OK
+    - mapping_drift_guard: OK
+    - smoke_api_ui: OK
+  guardrail_status: OK
+  followups: []
