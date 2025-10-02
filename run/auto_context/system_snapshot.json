@@ -1,0 +1,11 @@
+{
+  "timestamp": "2025-10-02T09:16:13+00:00",
+  "roots": {
+    "repository": ".",
+    "auto_context": "run/auto_context"
+  },
+  "versions": {
+    "git_commit": "92db3cc4170d84a21b64d4378c795f330e0788eb",
+    "git_short": "92db3cc"
+  }
+}
