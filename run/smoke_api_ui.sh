@@ -2,12 +2,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-<<<<<<< ours
 API="http://127.0.0.1:${API_PORT:-4000}"
 UI_PORT="${UI_PORT:-5173}"
-=======
-API="http://127.0.0.1:4000"
->>>>>>> theirs
 
 echo "==> Check API capabilities"
 CAPABILITIES_JSON=$(curl -fsS "$API/api/capabilities") || {
