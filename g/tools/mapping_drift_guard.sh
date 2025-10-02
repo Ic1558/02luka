@@ -81,6 +81,7 @@ for ns in "${REQUIRED_NAMESPACES[@]}"; do
 # Define expected keys and whether they should point to directories.
 declare -A EXPECTED
 EXPECTED["human:dropbox"]=dir
+EXPECTED["human:outbox"]=dir
 EXPECTED["human:inbox"]=dir
 EXPECTED["human:sent"]=dir
 EXPECTED["human:deliverables"]=dir
