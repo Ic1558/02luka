@@ -25,3 +25,19 @@
   tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
   guardrail_status: OK
   followups: []
+- time: "2025-10-02T11:21:05Z"
+  change_id: CU-2025-10-02-luka-clc-runner-v1
+  summary: "Add CLC runner pipeline, model routing, API snapshot, UI trigger, and updated smoke/preflight flows."
+  files_touched:
+    - g/tools/clc_runner.sh
+    - g/tools/model_router.sh
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+    - .codex/preflight.sh
+    - run/smoke_api_ui.sh
+    - run/change_units/CU-2025-10-02.yml
+    - run/daily_reports/REPORT_2025-10-02.md
+  tags: [boss-ui, boss-api, resolver, preflight, clc]
+  tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
+  guardrail_status: OK
+  followups: []
