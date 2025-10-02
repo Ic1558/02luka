@@ -1,0 +1,10 @@
+{
+  "id": "task-006",
+  "title": "Harden email validation",
+  "description": "Reject addresses without TLD.",
+  "expected_outcome": "Invalid addresses blocked",
+  "tags": [
+    "bugfix",
+    "validation"
+  ]
+}

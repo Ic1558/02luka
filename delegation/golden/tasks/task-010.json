@@ -1,0 +1,10 @@
+{
+  "id": "task-010",
+  "title": "Fix mobile nav",
+  "description": "Ensure navigation collapses on mobile.",
+  "expected_outcome": "Mobile nav functions",
+  "tags": [
+    "frontend",
+    "bugfix"
+  ]
+}
