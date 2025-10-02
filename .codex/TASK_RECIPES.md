@@ -153,3 +153,20 @@ git add -A
 git commit -m "feat: <summary> (CHANGE_ID: CU-2025-10-01-boss-ui-api-v1) #boss-api #boss-ui #resolver #preflight"
 git push
 
+
+## Recipe: Post-merge sync in Cursor (pull → verify → smoke → report)
+
+Purpose: Sync local workspace after PR merge, re-verify, and log a daily report.
+
+### Quick commands
+```bash
+git stash push -m "pre-pull safety stash" || true
+git fetch origin && git checkout main && git pull --rebase origin main
+export HOST=127.0.0.1 PORT=4000
+bash .codex/preflight.sh
+bash g/tools/mapping_drift_guard.sh --validate
+bash run/smoke_api_ui.sh
+mkdir -p run/daily_reports && echo "- $(date +%F) Post-merge sync OK" >> run/daily_reports/REPORT_$(date +%F).md
+git add run/daily_reports/REPORT_$(date +%F).md && git commit -m "chore(report): post-merge sync" || true
+git push origin main
+```
