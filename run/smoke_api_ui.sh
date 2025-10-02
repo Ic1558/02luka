@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API="http://127.0.0.1:4000"
 UI_PORT=5173
 
+echo "==> Check API capabilities (new endpoint)"
+curl -fsS "$API/api/capabilities" | jq -r '.ui, .features' || {
+  echo "API capabilities failed"; exit 1; }
+
 echo "==> Check API list"
 curl -fsS "$API/api/list/inbox" | jq -r '.mailbox, (.items[]?.name // "-")' || {
   echo "API list failed"; exit 1; }
