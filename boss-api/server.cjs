@@ -418,6 +418,28 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // Capabilities endpoint to enable full UI features
+    if (req.method === 'GET' && url.pathname === '/api/capabilities') {
+      return writeJson(res, 200, {
+        ui: {
+          inbox: true,
+          preview: true,
+          prompt_composer: true,
+          connectors: true
+        },
+        features: {
+          goal: true,
+          optimize_prompt: true,  // We have this endpoint
+          chat: true,              // We have this endpoint
+          nlu: false               // Not yet implemented
+        },
+        engine: {
+          local: true,
+          server_models: false
+        }
+      });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
       return writeJson(res, 200, {
         anthropic: { ready: hasAnthropicKey() },
