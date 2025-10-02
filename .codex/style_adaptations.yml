@@ -1,0 +1,39 @@
+# Style Adaptations for AI Assistant
+# Generated: Thu Oct  2 10:08:30 UTC 2025
+
+user:
+  name: "Boss"
+  preferences:
+    language: "thai_english_mixed"
+    detail_level: "high"
+    confirmation_required: 
+    working_style: "systematic"
+
+# Communication Adaptations
+communication:
+  use_thai_english: true
+  detailed_explanations: true
+  ask_confirmation: false
+  step_by_step: true
+
+# Working Adaptations
+working:
+  systematic_approach: true
+  testing_focus: true
+  documentation_focus: true
+  error_handling: true
+
+# Problem Solving Adaptations
+problem_solving:
+  analytical_approach: true
+  methodical_approach: true
+  detail_focus: true
+  solution_focused: true
+
+# Interaction Adaptations
+interaction:
+  greeting_style: "thai_english_mixed"
+  explanation_style: "detailed"
+  confirmation_style: "explicit"
+  working_style: "systematic"
+  documentation_style: "comprehensive"
