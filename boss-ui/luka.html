@@ -126,6 +126,24 @@
     .composer-controls select {
       min-width: 140px;
     }
+    .engine-toggle {
+      min-width: 120px;
+    }
+    .engine-toggle.auto {
+      border-color: rgba(148, 163, 184, 0.35);
+      color: #e5e7eb;
+    }
+    .engine-toggle.manual {
+      border-color: rgba(34, 211, 238, 0.5);
+      color: #a5f3fc;
+    }
+    select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    label.disabled-label {
+      opacity: 0.6;
+    }
     .output-area {
       flex: 1;
       background: #0f172a;
@@ -213,8 +231,9 @@
         <p class="status-line">Craft and optimize prompts before dispatching to delegates.</p>
       </div>
       <div class="composer-controls">
-        <label for="engineSelect">Engine</label>
-        <select id="engineSelect">
+        <button id="engineModeToggle" type="button" class="secondary engine-toggle auto">Engine: Auto</button>
+        <label for="engineSelect" id="engineSelectLabel" class="disabled-label">Manual Engine</label>
+        <select id="engineSelect" disabled>
           <option value="local">Local</option>
           <option value="anthropic">Anthropic</option>
           <option value="openai">OpenAI</option>
@@ -263,6 +282,8 @@
       ? 'https://api.theedges.work'
       : 'http://127.0.0.1:4000';
 
+    const engineModeToggle = document.getElementById('engineModeToggle');
+    const engineSelectLabel = document.getElementById('engineSelectLabel');
     const engineSelect = document.getElementById('engineSelect');
     const optimizeButton = document.getElementById('optimizeButton');
     const copyButton = document.getElementById('copyButton');
@@ -273,6 +294,8 @@
     const connectorsModal = document.getElementById('connectorsModal');
     const closeModalButton = document.getElementById('closeModalButton');
     const connectorsList = document.getElementById('connectorsList');
+
+    let engineMode = 'auto';
 
     const featureState = {
       optimize_prompt: true,
@@ -288,12 +311,42 @@
       sendChatButton.disabled = !isFeatureEnabled('chat');
     }
 
+    function updateEngineModeUI() {
+      const manual = engineMode === 'manual';
+      engineModeToggle.textContent = `Engine: ${manual ? 'Manual' : 'Auto'}`;
+      engineModeToggle.classList.toggle('manual', manual);
+      engineModeToggle.classList.toggle('auto', !manual);
+      engineSelect.disabled = !manual;
+      if (engineSelectLabel) {
+        engineSelectLabel.textContent = manual ? 'Manual Engine' : 'Manual Engine (auto mode)';
+        engineSelectLabel.classList.toggle('disabled-label', !manual);
+      }
+    }
+
+    function extractRouterMeta(data) {
+      if (!data || typeof data !== 'object') return null;
+      return data.meta?.router || data.router || data.best?.meta?.router || null;
+    }
+
+    function annotateStatusWithRouter(targetEl, routerMeta) {
+      if (!routerMeta || !routerMeta.reason || !targetEl) return;
+      if (!targetEl.textContent) {
+        targetEl.textContent = routerMeta.reason;
+        return;
+      }
+      if (!targetEl.textContent.includes(routerMeta.reason)) {
+        targetEl.textContent += ` — ${routerMeta.reason}`;
+      }
+    }
+
     function getComposerPayload() {
+      const engine = engineMode === 'manual' ? engineSelect.value : 'auto';
       return {
         system: document.getElementById('systemInput').value.trim(),
         context: document.getElementById('contextInput').value.trim(),
         prompt: document.getElementById('promptInput').value.trim(),
-        engine: engineSelect.value
+        engine,
+        strategy: engineMode
       };
     }
 
@@ -322,11 +375,18 @@
         }
         const data = await res.json();
         optimizedPreview.textContent = data.prompt || '';
-        if (data.engine && data.engine !== payload.engine) {
+        const routerMeta = extractRouterMeta(data);
+        const effectiveEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
+        if (engineMode === 'auto') {
+          optimizeStatus.textContent = data.ok
+            ? `Auto engine selected (${effectiveEngine}).`
+            : 'No optimization generated.';
+        } else if (data.engine && data.engine !== payload.engine) {
           optimizeStatus.textContent = `Fallback to ${data.engine} engine.`;
         } else {
-          optimizeStatus.textContent = data.ok ? `Optimized via ${data.engine || 'local'} engine.` : 'No optimization generated.';
+          optimizeStatus.textContent = data.ok ? `Optimized via ${effectiveEngine} engine.` : 'No optimization generated.';
         }
+        annotateStatusWithRouter(optimizeStatus, routerMeta);
       } catch (err) {
         console.error(err);
         optimizeStatus.textContent = 'Optimization failed. Check server logs.';
@@ -358,23 +418,36 @@
           body: JSON.stringify({
             message,
             system: payload.system,
-            engine: payload.engine
+            engine: payload.engine,
+            strategy: payload.strategy
           })
         });
         if (!res.ok) {
           throw new Error(`Chat failed (${res.status})`);
         }
         const data = await res.json();
+        const routerMeta = extractRouterMeta(data);
         if (data.response) {
           optimizedPreview.textContent = data.response;
-          optimizeStatus.textContent = `Chat response via ${data.engine || 'local'} engine.`;
+          const chatEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
+          if (engineMode === 'auto') {
+            optimizeStatus.textContent = `Auto chat engine (${chatEngine}).`;
+          } else {
+            optimizeStatus.textContent = `Chat response via ${chatEngine} engine.`;
+          }
         } else if (data.best && data.best.text) {
           optimizedPreview.textContent = data.best.text;
-          optimizeStatus.textContent = data.summary || 'NLU router response received.';
+          if (engineMode === 'auto') {
+            const bestLabel = data.best.meta?.model || data.best.name || 'router';
+            optimizeStatus.textContent = `Auto router selected ${bestLabel}.`;
+          } else {
+            optimizeStatus.textContent = data.summary || 'NLU router response received.';
+          }
         } else {
           optimizedPreview.textContent = '';
           optimizeStatus.textContent = 'No response received.';
         }
+        annotateStatusWithRouter(optimizeStatus, routerMeta);
       } catch (err) {
         console.error(err);
         optimizeStatus.textContent = 'Chat dispatch failed. Check server logs.';
@@ -457,6 +530,11 @@
       }
     });
 
+    engineModeToggle.addEventListener('click', () => {
+      engineMode = engineMode === 'auto' ? 'manual' : 'auto';
+      updateEngineModeUI();
+    });
+
     optimizeButton.addEventListener('click', optimizePrompt);
     sendChatButton.addEventListener('click', sendChat);
     copyButton.addEventListener('click', () => {
@@ -472,6 +550,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       applyFeatureState();
       loadCapabilities();
+      updateEngineModeUI();
     });
   </script>
 </body>
