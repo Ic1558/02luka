@@ -418,6 +418,28 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (req.method === 'GET' && url.pathname === '/api/capabilities') {
+      const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
+      return writeJson(res, 200, {
+        ui: {
+          inbox: true,
+          preview: true,
+          prompt_composer: true,
+          connectors: true
+        },
+        features: {
+          goal: true,
+          optimize_prompt: true,
+          chat: true,
+          nlu: Boolean(process.env.NLU_ENABLED)
+        },
+        engine: {
+          local: true,
+          server_models: hasServerModels
+        }
+      });
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
       return writeJson(res, 200, {
         anthropic: { ready: hasAnthropicKey() },
