@@ -1,38 +1,40 @@
-context_id: CU-2025-10-01
-change_id: CU-2025-10-01-boss-ui-api-v1
-branch: change/CU-2025-10-01-boss-ui-api-v1
-pr: open
-log:
-  - timestamp: 2025-10-01T00:00:00Z
-    summary: "Initialized persistent change tracking scaffolding for Codex sessions."
-    files_touched: []
-    tests_ran: []
-    guardrail_status:
-      preflight: pending
-      mapping_drift: pending
-      clc_gate: pending
-    followups:
-      - "Append a new entry for every subsequent session with summary, files, tests, guardrail status, and follow-ups."
-  - timestamp: 2024-03-09T00:00:00Z
-    summary: "Added repository-based memory scaffolding (autoload, status pointer, logs, and docs)."
-    files_touched:
-      - .codex/autoload.md
-      - docs/persistent_change_workflow.md
-      - README.md
-      - run/status/current_work.json
-      - run/worklog/CU-2025-10-01.md
-      - run/daily_reports/REPORT_2025-10-01.md
-    tests_ran:
-      - command: "bash .codex/preflight.sh"
-        result: warn
-      - command: "bash g/tools/mapping_drift_guard.sh --validate"
-        result: pass
-      - command: "bash g/tools/clc_gate.sh"
-        result: missing
-    guardrail_status:
-      preflight: warn
-      mapping_drift: pass
-      clc_gate: missing
-    followups:
-      - "Run CLC gate once the script is available in g/tools."
-      - "Keep appending to the manifest/worklog/daily report for future sessions."
+- time: "2025-10-01T12:00:00+07:00"
+  change_id: CU-2025-10-01-boss-ui-api-v1
+  summary: "Switch boss-api to resolver-only; add /api/file; wire UI click-to-open"
+  files_touched:
+    - boss-api/server.js
+    - boss-ui/index.html
+  tags: ["boss-api","boss-ui","resolver","preflight"]
+  tests_ran:
+    - preflight: OK
+    - drift_guard: OK
+    - api_list: OK
+    - api_file: OK
+  guardrail_status: OK
+  followups: ["Replace alert() with real viewer", "React/Vite migration later"]
+- time: "2025-10-01T13:45:00+07:00"
+  change_id: CU-2025-10-01-boss-ui-api-v1
+  summary: "Resolve merge fallout, restore /api/file handler and add inline preview"
+  files_touched:
+    - boss-api/server.js
+    - boss-ui/index.html
+    - run/change_units/CU-2025-10-01.yml
+  tags: ["boss-api","boss-ui","resolver"]
+  tests_ran:
+    - curl_api_list: pending
+    - curl_api_file: pending
+  guardrail_status: pending
+  followups: ["Re-run validations before commit"]
+- time: "2025-10-01T21:07:30+07:00"
+  change_id: CU-2025-10-01-smoke-api-chat
+  summary: "Extend smoke checks for chat endpoints and document guardrails"
+  files_touched:
+    - run/smoke_api_ui.sh
+    - .codex/GUARDRAILS.md
+    - run/change_units/CU-2025-10-01.yml
+    - run/daily_reports/REPORT_2025-10-01.md
+  tags: ["automation","documentation"]
+  tests_ran:
+    - smoke_api_ui: pending
+  guardrail_status: pending
+  followups: []
