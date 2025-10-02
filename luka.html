@@ -358,41 +358,72 @@
     };
 
     let masterPromptCache = '';
+    let masterPromptFetchPromise = null;
+    let isSending = false;
 
     function togglePromptLibrary(forceOpen) {
       const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
+      if (shouldOpen === promptLibraryPanel.classList.contains('open')) {
+        return;
+      }
       promptLibraryPanel.classList.toggle('open', shouldOpen);
     }
 
     async function loadMasterPrompt() {
       if (masterPromptCache) {
         promptLibraryBody.textContent = masterPromptCache;
-        return;
+        return masterPromptCache;
+      }
+
+      if (!masterPromptFetchPromise) {
+        promptLibraryBody.textContent = 'Loading master prompt…';
+        masterPromptFetchPromise = (async () => {
+          try {
+            const response = await fetch('./.codex/templates/master_prompt.md');
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            const text = await response.text();
+            masterPromptCache = text;
+            promptLibraryBody.textContent = text;
+            return text;
+          } catch (error) {
+            masterPromptCache = '';
+            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at .codex/templates/master_prompt.md.';
+            throw error;
+          } finally {
+            masterPromptFetchPromise = null;
+          }
+        })();
       }
 
       try {
-        const response = await fetch('./.codex/templates/master_prompt.md');
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const text = await response.text();
-        masterPromptCache = text;
-        promptLibraryBody.textContent = text;
+        return await masterPromptFetchPromise;
       } catch (error) {
-        masterPromptCache = '';
-        promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at .codex/templates/master_prompt.md.';
+        return '';
       }
     }
 
     function updateSendButton() {
       const hasText = messageInput.value.trim().length > 0;
-      sendButton.disabled = !hasText;
+      sendButton.disabled = !hasText || isSending;
+    }
+
+    function setSendingState(state) {
+      if (isSending === state) return;
+      isSending = state;
+      messageInput.readOnly = state;
+      if (!state) {
+        messageInput.focus();
+      }
+      updateSendButton();
     }
 
     async function sendMessage() {
       const text = messageInput.value.trim();
-      if (!text) return;
+      if (!text || isSending) return;
 
+      setSendingState(true);
       addMessage('user', text);
 
       messageInput.value = '';
@@ -404,10 +435,13 @@
         addMessage('bot', formatted);
       } catch (err) {
         addMessage('bot', buildBackendFailureMessage(err));
+      } finally {
+        setSendingState(false);
       }
     }
 
     function addMessage(type, text) {
+      const fragment = document.createDocumentFragment();
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message' + (type === 'user' ? ' user' : '');
 
@@ -417,13 +451,16 @@
 
       const content = document.createElement('div');
       content.className = 'content';
-      content.textContent = text;
+      content.textContent = (text ?? '').toString();
 
       messageDiv.appendChild(avatar);
       messageDiv.appendChild(content);
+      fragment.appendChild(messageDiv);
 
-      messagesContainer.appendChild(messageDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      messagesContainer.appendChild(fragment);
+      requestAnimationFrame(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      });
     }
 
     messageInput.addEventListener('input', () => {
@@ -451,10 +488,10 @@
     });
 
     copyPromptTemplate.addEventListener('click', async () => {
-      await loadMasterPrompt();
-      if (!masterPromptCache) return;
+      const text = await loadMasterPrompt();
+      if (!text) return;
       try {
-        await navigator.clipboard.writeText(masterPromptCache);
+        await navigator.clipboard.writeText(text);
         copyPromptTemplate.textContent = 'Copied!';
         setTimeout(() => { copyPromptTemplate.textContent = 'Copy'; }, 1500);
       } catch (error) {
@@ -464,9 +501,9 @@
     });
 
     insertPromptTemplate.addEventListener('click', async () => {
-      await loadMasterPrompt();
-      if (!masterPromptCache) return;
-      messageInput.value = masterPromptCache;
+      const text = await loadMasterPrompt();
+      if (!text) return;
+      messageInput.value = text;
       messageInput.dispatchEvent(new Event('input'));
       togglePromptLibrary(false);
       messageInput.focus();
@@ -488,11 +525,16 @@
         target: targetId
       };
 
-      const response = await fetch(BACKEND_CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      let response;
+      try {
+        response = await fetch(BACKEND_CHAT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (networkError) {
+        throw new Error('Unable to reach backend. Check your network or server status.');
+      }
 
       if (!response.ok) {
         const errorPayload = await safeParseJson(response);
@@ -518,16 +560,18 @@
       }
 
       const lines = [];
-      if (payload.best && payload.best.text) {
-        lines.push(payload.best.text.trim());
+      const bestText = extractBestText(payload.best);
+      if (bestText) {
+        lines.push(bestText);
       } else if (payload.summary) {
-        lines.push(payload.summary);
+        lines.push(String(payload.summary).trim());
       }
 
       if (Array.isArray(payload.results) && payload.results.length) {
         lines.push('');
         lines.push('Delegates:');
         payload.results.forEach((entry) => {
+          if (!entry) return;
           const status = entry.status === 'ok'
             ? `ok${entry.latencyMs ? ` (${formatLatency(entry.latencyMs)})` : ''}`
             : `error${entry.error ? `: ${entry.error}` : ''}`;
@@ -547,8 +591,9 @@
     }
 
     function formatLatency(value) {
-      if (!Number.isFinite(value)) return '';
-      return `${Math.round(value)}ms`;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '';
+      return `${Math.round(numeric)}ms`;
     }
 
     function getTargetProfile(id) {
@@ -562,14 +607,24 @@
     function buildBackendFailureMessage(err) {
       const targetId = gatewaySelect.value || 'auto';
       const profile = getTargetProfile(targetId);
+      const normalizedError = err instanceof Error ? err.message : String(err);
       const lines = [
-        `Backend error: ${err && err.message ? err.message : err}`,
+        `Backend error: ${normalizedError}`,
         'Ensure the 02luka backend is running (node boss-api/server.js).'
       ];
       if (profile.tips) {
         lines.push(`Target tip: ${profile.tips}`);
       }
       return lines.join('\n');
+    }
+
+    function extractBestText(best) {
+      if (!best) return '';
+      if (typeof best === 'string') return best.trim();
+      if (typeof best === 'object' && typeof best.text === 'string') {
+        return best.text.trim();
+      }
+      return '';
     }
   </script>
 </body>

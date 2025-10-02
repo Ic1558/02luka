@@ -12,6 +12,15 @@
   change_id: CU-2025-10-02-luka-upgrade  
   summary: "CLC re-check: capabilities on, endpoints validated, smoke OK"
   files_touched: [boss-api/server.cjs, boss-ui/luka.html, run/smoke_api_ui.sh]
+- time: "2025-10-02T08:33:14Z"
+  change_id: CU-2025-10-02-ports-4000-remote-access
+  summary: "Standardize API port to 4000, UI auto-switch domain, smoke updated, remote access manual added."
+  files_touched:
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+    - run/smoke_api_ui.sh
+    - docs/REMOTE_ACCESS.md
+    - .codex/TASK_RECIPES.md
   tags: [boss-api, boss-ui, resolver, preflight]
   tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
   guardrail_status: OK

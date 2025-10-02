@@ -153,3 +153,32 @@ git add -A
 git commit -m "feat: <summary> (CHANGE_ID: CU-2025-10-01-boss-ui-api-v1) #boss-api #boss-ui #resolver #preflight"
 git push
 
+---
+
+## Recipe: Standardize Ports to 4000
+
+1. Search the repository for references to `:4001` or `PORT=4001`.
+2. Update server defaults to `PORT=4000` while keeping `process.env.PORT` overrides intact.
+3. Adjust UI/config files to call `http://127.0.0.1:4000` unless a remote domain is detected.
+4. Update smoke and helper scripts to probe the new port.
+5. Run:
+
+```bash
+bash .codex/preflight.sh
+bash g/tools/mapping_drift_guard.sh --validate
+bash run/smoke_api_ui.sh
+```
+
+6. Commit with the change-id tag and push through the CLC gate.
+
+## Recipe: Remote Access via Tunnel
+
+1. Install `cloudflared` (`brew install cloudflared` on macOS).
+2. Authenticate: `cloudflared login` then `cloudflared tunnel create 02luka`.
+3. Route DNS: `cloudflared tunnel route dns 02luka api.theedges.work` and `... luka.theedges.work`.
+4. Write `~/.cloudflared/config.yml` mapping the hostnames to `http://127.0.0.1:4000` (API) and `http://127.0.0.1:5173` (UI).
+5. Launch local services on those ports.
+6. Install the tunnel as a service (`cloudflared service install`) and start it.
+7. Configure Cloudflare Zero Trust Access policies (PIN or Google SSO).
+8. Validate with `https://luka.theedges.work` (UI auto-switches API domain) and run `bash run/smoke_api_ui.sh` locally.
+

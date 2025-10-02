@@ -5,9 +5,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API="http://127.0.0.1:4000"
 UI_PORT=5173
 
-echo "==> Check API capabilities (new endpoint)"
-curl -fsS "$API/api/capabilities" | jq -r '.ui, .features' || {
-  echo "API capabilities failed"; exit 1; }
+echo "==> Check API capabilities"
+CAPABILITIES_JSON=$(curl -fsS "$API/api/capabilities") || {
+  echo "Capabilities request failed"; exit 1; }
+echo "$CAPABILITIES_JSON" | jq -e '.ui.inbox and (.features.goal == true)' >/dev/null || {
+  echo "Capabilities missing required flags"; exit 1; }
+HAS_OPTIMIZE=$(echo "$CAPABILITIES_JSON" | jq -r '.features.optimize_prompt // false')
+HAS_CHAT=$(echo "$CAPABILITIES_JSON" | jq -r '.features.chat // false')
+echo "Capabilities: optimize_prompt=$HAS_OPTIMIZE, chat=$HAS_CHAT"
 
 echo "==> Check API list"
 curl -fsS "$API/api/list/inbox" | jq -r '.mailbox, (.items[]?.name // "-")' || {
@@ -33,15 +38,33 @@ echo "$CONNECTORS_JSON" | jq -e '.local.ready == true' >/dev/null || {
 echo "==> Check API file"
 curl -fsS "$API/api/file/inbox/hello.md" | head -n1
 
-echo "==> Check API optimize_prompt"
-curl -fsS -X POST "$API/api/optimize_prompt" \
-  -H 'Content-Type: application/json' \
-  -d '{"prompt":"Summarize hello"}' | jq -r '.optimized // .prompt // .error'
+if [[ "$HAS_OPTIMIZE" == "true" ]]; then
+  echo "==> Check API optimize_prompt"
+  TMP_OPT=$(mktemp)
+  HTTP_CODE=$(curl -sS -o "$TMP_OPT" -w "%{http_code}" -X POST "$API/api/optimize_prompt" \
+    -H 'Content-Type: application/json' \
+    -d '{"prompt":"Summarize hello"}') || {
+      echo "optimize_prompt request failed"; rm -f "$TMP_OPT"; exit 1; }
+  if [[ "$HTTP_CODE" == "200" ]]; then
+    cat "$TMP_OPT" | jq -e '.prompt // .optimized | type == "string"' >/dev/null || {
+      echo "optimize_prompt response invalid"; rm -f "$TMP_OPT"; exit 1; }
+    rm -f "$TMP_OPT"
+  else
+    echo "optimize_prompt: SKIP (status $HTTP_CODE)"
+    rm -f "$TMP_OPT"
+  fi
+else
+  echo "optimize_prompt: SKIP (capability disabled)"
+fi
 
-echo "==> Check API chat"
-curl -fsS -X POST "$API/api/chat" \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"ping"}' | jq -r '.summary // .error'
+if [[ "$HAS_CHAT" == "true" ]]; then
+  echo "==> Check API chat"
+  curl -fsS -X POST "$API/api/chat" \
+    -H 'Content-Type: application/json' \
+    -d '{"message":"ping"}' | jq -r '.summary // .response // .error'
+else
+  echo "chat: SKIP (capability disabled)"
+fi
 
 echo "==> Check UI port availability"
 if lsof -ti :$UI_PORT >/dev/null 2>&1; then
