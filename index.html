@@ -407,6 +407,30 @@
       }
     ];
 
+    const GATEWAY_PROFILES = [
+      {
+        id: 'mcp',
+        match: /5012$/,
+        name: 'MCP Docker',
+        type: 'mcp',
+        tips: 'Use this gateway for local MCP tools and general automation.'
+      },
+      {
+        id: 'fastvlm',
+        match: /8765$/,
+        name: 'FastVLM Vision',
+        type: 'vision',
+        tips: 'Great for describing or questioning the contents of an image.'
+      },
+      {
+        id: 'ollama',
+        match: /11434$/,
+        name: 'Ollama',
+        type: 'ollama',
+        tips: 'Run local language models with `ollama run <model-name>`.'
+      }
+    ];
+
     // Auto-resize textarea
     messageInput.addEventListener('input', () => {
       messageInput.style.height = 'auto';
