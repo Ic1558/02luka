@@ -35,9 +35,11 @@ app.use((req, res, next) => {
   }
 });
 
-// Simple in-memory cache
+// Simple in-memory cache with size limits
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 100; // Maximum number of cached items
+const MAX_CACHE_MEMORY = 50 * 1024 * 1024; // 50MB max cache memory
 
 const allowedFolders = new Set([
   'inbox',
@@ -63,21 +65,67 @@ function getCached(key) {
 }
 
 function setCached(key, data) {
+  // Check cache size limits
+  if (cache.size >= MAX_CACHE_SIZE) {
+    // Remove oldest entries
+    const entries = Array.from(cache.entries());
+    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toRemove = Math.floor(MAX_CACHE_SIZE * 0.2); // Remove 20% of cache
+    for (let i = 0; i < toRemove; i++) {
+      cache.delete(entries[i][0]);
+    }
+  }
+  
+  // Check memory usage
+  const dataSize = JSON.stringify(data).length;
+  if (dataSize > MAX_CACHE_MEMORY / 10) { // If single item is > 10% of max memory
+    console.warn(`Large cache item detected: ${dataSize} bytes`);
+  }
+  
   cache.set(key, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    size: dataSize
   });
 }
 
 // Clean up old cache entries periodically
 setInterval(() => {
   const now = Date.now();
+  let cleaned = 0;
   for (const [key, value] of cache.entries()) {
     if ((now - value.timestamp) > CACHE_DURATION) {
       cache.delete(key);
+      cleaned++;
     }
   }
+  if (cleaned > 0) {
+    console.log(`Cache cleanup: removed ${cleaned} expired entries`);
+  }
 }, CACHE_DURATION);
+
+// Memory monitoring and garbage collection
+setInterval(() => {
+  const memUsage = process.memoryUsage();
+  const cacheSize = cache.size;
+  const cacheMemory = Array.from(cache.values()).reduce((sum, item) => sum + (item.size || 0), 0);
+  
+  console.log(`Memory: RSS=${Math.round(memUsage.rss/1024/1024)}MB, Cache: ${cacheSize} items (${Math.round(cacheMemory/1024)}KB)`);
+  
+  // Force garbage collection if memory usage is high
+  if (memUsage.rss > 100 * 1024 * 1024) { // 100MB
+    if (global.gc) {
+      global.gc();
+      console.log('Forced garbage collection');
+    }
+  }
+  
+  // Clear cache if it's too large
+  if (cacheMemory > MAX_CACHE_MEMORY) {
+    console.log('Cache too large, clearing...');
+    cache.clear();
+  }
+}, 30000); // Every 30 seconds
 
 async function resolveFolder(folder) {
   if (!allowedFolders.has(folder)) {
