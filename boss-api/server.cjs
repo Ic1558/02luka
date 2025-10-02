@@ -420,6 +420,7 @@ const server = http.createServer(async (req, res) => {
   try {
     // Capabilities endpoint to enable full UI features
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
+      const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
       return writeJson(res, 200, {
         ui: {
           inbox: true,
@@ -431,11 +432,11 @@ const server = http.createServer(async (req, res) => {
           goal: true,
           optimize_prompt: true,  // We have this endpoint
           chat: true,              // We have this endpoint
-          nlu: false               // Not yet implemented
+          nlu: Boolean(process.env.NLU_ENABLED)
         },
         engine: {
           local: true,
-          server_models: false
+          server_models: hasServerModels
         }
       });
     }

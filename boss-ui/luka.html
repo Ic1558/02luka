@@ -259,7 +259,9 @@
   </div>
 
   <script>
-    const API_BASE = 'http://127.0.0.1:4000';
+    const API_BASE = (window.location.hostname && window.location.hostname.endsWith('theedges.work'))
+      ? 'https://api.theedges.work'
+      : 'http://127.0.0.1:4000';
 
     const engineSelect = document.getElementById('engineSelect');
     const optimizeButton = document.getElementById('optimizeButton');
@@ -272,6 +274,20 @@
     const closeModalButton = document.getElementById('closeModalButton');
     const connectorsList = document.getElementById('connectorsList');
 
+    const featureState = {
+      optimize_prompt: true,
+      chat: true
+    };
+
+    function isFeatureEnabled(name) {
+      return featureState[name] !== false;
+    }
+
+    function applyFeatureState() {
+      optimizeButton.disabled = !isFeatureEnabled('optimize_prompt');
+      sendChatButton.disabled = !isFeatureEnabled('chat');
+    }
+
     function getComposerPayload() {
       return {
         system: document.getElementById('systemInput').value.trim(),
@@ -282,6 +298,11 @@
     }
 
     async function optimizePrompt() {
+      if (!isFeatureEnabled('optimize_prompt')) {
+        optimizeStatus.textContent = 'Optimization is disabled by server capabilities.';
+        return;
+      }
+
       const payload = getComposerPayload();
       if (!payload.prompt) {
         optimizeStatus.textContent = 'Provide a prompt to optimize.';
@@ -311,10 +332,16 @@
         optimizeStatus.textContent = 'Optimization failed. Check server logs.';
       } finally {
         optimizeButton.disabled = false;
+        applyFeatureState();
       }
     }
 
     async function sendChat() {
+      if (!isFeatureEnabled('chat')) {
+        optimizeStatus.textContent = 'Chat is disabled by server capabilities.';
+        return;
+      }
+
       const payload = getComposerPayload();
       const message = payload.prompt;
       if (!message) {
@@ -353,6 +380,7 @@
         optimizeStatus.textContent = 'Chat dispatch failed. Check server logs.';
       } finally {
         sendChatButton.disabled = false;
+        applyFeatureState();
       }
     }
 
@@ -392,6 +420,24 @@
       }
     }
 
+    async function loadCapabilities() {
+      try {
+        const res = await fetch(`${API_BASE}/api/capabilities`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`capabilities request failed (${res.status})`);
+        }
+        const data = await res.json();
+        featureState.optimize_prompt = data?.features?.optimize_prompt !== false;
+        featureState.chat = data?.features?.chat !== false;
+      } catch (err) {
+        console.warn('Failed to load capabilities; defaulting to enabled features.', err);
+        featureState.optimize_prompt = true;
+        featureState.chat = true;
+      } finally {
+        applyFeatureState();
+      }
+    }
+
     function openConnectorsModal() {
       connectorsModal.classList.add('open');
       connectorsModal.setAttribute('aria-hidden', 'false');
@@ -421,6 +467,11 @@
       }).catch(() => {
         optimizeStatus.textContent = 'Copy failed. Use manual copy.';
       });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      applyFeatureState();
+      loadCapabilities();
     });
   </script>
 </body>
