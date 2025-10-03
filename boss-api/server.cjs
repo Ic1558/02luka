@@ -128,6 +128,275 @@ const CHAT_TARGETS = {
 const hasAnthropicKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
 const hasOpenAiKey = () => Boolean(process.env.OPENAI_API_KEY);
 
+const MAX_RERANK_DOCUMENTS = 20;
+const MAX_RERANK_TEXT_LENGTH = 1800;
+
+function getServerEngineAvailability() {
+  return {
+    local: true,
+    anthropic: hasAnthropicKey(),
+    openai: hasOpenAiKey()
+  };
+}
+
+function normalizeEnginePreference(requested) {
+  if (typeof requested !== 'string') {
+    return 'local';
+  }
+
+  const value = requested.trim().toLowerCase();
+  if (value === 'anthropic' && hasAnthropicKey()) {
+    return 'anthropic';
+  }
+  if (value === 'openai' && hasOpenAiKey()) {
+    return 'openai';
+  }
+  if (value === 'auto') {
+    return 'auto';
+  }
+  if (value === 'local' || value === 'manual') {
+    return 'local';
+  }
+  return 'local';
+}
+
+function truncateText(text, limit = MAX_RERANK_TEXT_LENGTH) {
+  if (typeof text !== 'string') {
+    return '';
+  }
+  if (text.length <= limit) {
+    return text;
+  }
+  return `${text.slice(0, limit - 1)}…`;
+}
+
+function normalizeRagDocuments(documents = []) {
+  if (!Array.isArray(documents)) {
+    return [];
+  }
+
+  const seen = new Map();
+  return documents
+    .slice(0, MAX_RERANK_DOCUMENTS)
+    .map((entry, index) => {
+      if (!entry || typeof entry !== 'object') {
+        return null;
+      }
+
+      const rawId = typeof entry.id === 'string' && entry.id.trim()
+        ? entry.id.trim()
+        : `doc_${index + 1}`;
+      const normalizedId = rawId.replace(/[^a-zA-Z0-9_-]+/g, '_');
+      const count = seen.get(normalizedId) || 0;
+      seen.set(normalizedId, count + 1);
+      const publicId = count === 0 ? normalizedId : `${normalizedId}_${count + 1}`;
+
+      let text = '';
+      if (typeof entry.text === 'string' && entry.text.trim()) {
+        text = entry.text.trim();
+      } else if (typeof entry.content === 'string' && entry.content.trim()) {
+        text = entry.content.trim();
+      } else if (Array.isArray(entry.fragments)) {
+        text = entry.fragments.map((fragment) => {
+          if (!fragment) return '';
+          if (typeof fragment === 'string') return fragment.trim();
+          if (fragment && typeof fragment.text === 'string') return fragment.text.trim();
+          return '';
+        }).filter(Boolean).join('\n\n');
+      }
+
+      const truncated = truncateText(String(text || ''));
+
+      return {
+        id: publicId,
+        sourceId: rawId,
+        text: truncated,
+        original: entry,
+        index
+      };
+    })
+    .filter(Boolean);
+}
+
+function computeTermScore(text, terms) {
+  if (!terms.length || !text) {
+    return 0;
+  }
+
+  const haystack = text.toLowerCase();
+  let matchScore = 0;
+
+  for (const term of terms) {
+    if (!term) continue;
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'g');
+    const occurrences = haystack.match(regex);
+    if (occurrences && occurrences.length > 0) {
+      matchScore += 1 + Math.log(1 + occurrences.length);
+    }
+  }
+
+  return Math.min(1, matchScore / terms.length);
+}
+
+function normalizeBaseScore(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value >= 0 && value <= 1) {
+    return value;
+  }
+  if (value > 1) {
+    return Math.min(1, Math.log(1 + value) / 5);
+  }
+  return 0;
+}
+
+function localRerank(query, normalizedDocuments, limit) {
+  const terms = String(query || '').toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean);
+  const safeLimit = Math.max(1, Math.min(limit, normalizedDocuments.length));
+
+  const scored = normalizedDocuments.map((doc) => {
+    const termScore = computeTermScore(doc.text, terms);
+    const baseScore = normalizeBaseScore(doc.original && typeof doc.original.score === 'number'
+      ? doc.original.score
+      : Number(doc.original && doc.original.metadata && typeof doc.original.metadata.score === 'number'
+        ? doc.original.metadata.score
+        : 0));
+    const score = Number((termScore * 0.7 + baseScore * 0.3).toFixed(4));
+    return { doc, score };
+  });
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, safeLimit)
+    .map(({ doc, score }, index) => ({
+      id: doc.sourceId,
+      internalId: doc.id,
+      rank: index + 1,
+      score,
+      document: doc.original
+    }));
+}
+
+function extractJsonArray(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    return null;
+  }
+
+  const trimmed = text.trim();
+  try {
+    const direct = JSON.parse(trimmed);
+    if (Array.isArray(direct)) {
+      return direct;
+    }
+  } catch (err) {
+    // continue to bracket extraction
+  }
+
+  const start = trimmed.indexOf('[');
+  const end = trimmed.lastIndexOf(']');
+  if (start !== -1 && end !== -1 && end > start) {
+    const segment = trimmed.slice(start, end + 1);
+    try {
+      const parsed = JSON.parse(segment);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch (err) {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+async function rerankWithConnector(engineId, normalizedDocuments, { query, limit, model }) {
+  const connector = engineId === 'anthropic' ? anthropicConnector : openaiConnector;
+  if (!connector || typeof connector.chat !== 'function') {
+    return null;
+  }
+
+  const safeLimit = Math.max(1, Math.min(limit, normalizedDocuments.length));
+  const documentBlocks = normalizedDocuments.map((doc, index) => [
+    `Document ${index + 1}`,
+    `ID: ${doc.id}`,
+    `Content:`,
+    doc.text || '(empty)'
+  ].join('\n')).join('\n\n');
+
+  const systemPrompt = 'You are a retrieval ranking specialist. Return strict JSON with an array of objects {"id": string, "score": number between 0 and 1}. Do not include commentary.';
+  const userPrompt = [
+    `Query: ${query}`,
+    `Return up to ${safeLimit} results ranked from most relevant to least relevant.`,
+    'Use the document IDs exactly as provided.',
+    'Documents:',
+    documentBlocks,
+    '',
+    'Respond with only JSON array data. Example: [{"id":"doc_1","score":0.92}]'
+  ].join('\n\n');
+
+  const response = await connector.chat({
+    input: userPrompt,
+    system: systemPrompt,
+    model
+  });
+
+  const parsed = extractJsonArray(String(response?.text || ''));
+  if (!parsed) {
+    return null;
+  }
+
+  const docMap = new Map(normalizedDocuments.map((doc) => [doc.id, doc]));
+  const scored = [];
+  for (const entry of parsed) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+    const id = typeof entry.id === 'string' ? entry.id.trim() : '';
+    if (!id) {
+      continue;
+    }
+    const doc = docMap.get(id);
+    if (!doc) {
+      continue;
+    }
+    let score = entry.score;
+    if (typeof score === 'string') {
+      const numeric = Number(score.trim());
+      score = Number.isFinite(numeric) ? numeric : 0;
+    }
+    if (!Number.isFinite(score)) {
+      score = 0;
+    }
+    score = Math.max(0, Math.min(1, Number(score.toFixed(4))));
+    scored.push({ doc, score });
+  }
+
+  if (!scored.length) {
+    return null;
+  }
+
+  const limited = scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, safeLimit)
+    .map(({ doc, score }, index) => ({
+      id: doc.sourceId,
+      internalId: doc.id,
+      rank: index + 1,
+      score,
+      document: doc.original
+    }));
+
+  const meta = {};
+  if (response && response.raw && typeof response.raw === 'object') {
+    if (response.raw.model) meta.model = response.raw.model;
+    if (response.raw.id) meta.id = response.raw.id;
+  }
+
+  return { results: limited, meta };
+}
+
 function localOptimizePrompt({ system, user, context }) {
   const sections = [];
 
@@ -578,6 +847,7 @@ const server = http.createServer(async (req, res) => {
         goalTarget: goalTargets.has(id)
       }));
 
+      const engineAvailability = getServerEngineAvailability();
       return writeJson(res, 200, {
         ui: {
           inbox: true,
@@ -596,10 +866,10 @@ const server = http.createServer(async (req, res) => {
           chat: true,
           nlu: Boolean(process.env.NLU_ENABLED)
         },
-        engine: {
+        engine: Object.assign({
           local: true,
           server_models: hasServerModels
-        }
+        }, engineAvailability)
       });
     }
 
@@ -629,21 +899,21 @@ const server = http.createServer(async (req, res) => {
             : (typeof payload.prompt === 'string' ? payload.prompt : '');
           const context = typeof payload.context === 'string' ? payload.context : '';
           const strategy = typeof payload.strategy === 'string' ? payload.strategy.toLowerCase() : 'auto';
-          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+          const requestedEngine = normalizeEnginePreference(payload.engine);
           const hints = typeof payload.hints === 'string' ? payload.hints : '';
 
-          const normalizedStrategy = strategy === 'manual' ? 'manual' : 'auto';
+          const normalizedStrategy = strategy === 'manual'
+            || requestedEngine === 'anthropic'
+            || requestedEngine === 'openai'
+            ? 'manual'
+            : 'auto';
 
           let engineUsed = 'local';
           let optimizedText = '';
           let meta = { strategy: normalizedStrategy };
 
-          const wantsAnthropic = normalizedStrategy === 'manual'
-            && requestedEngine === 'anthropic'
-            && hasAnthropicKey();
-          const wantsOpenAi = normalizedStrategy === 'manual'
-            && requestedEngine === 'openai'
-            && hasOpenAiKey();
+          const wantsAnthropic = requestedEngine === 'anthropic';
+          const wantsOpenAi = requestedEngine === 'openai';
           const shouldUseRouter = normalizedStrategy === 'auto'
             || requestedEngine === 'auto'
             || requestedEngine === 'local';
@@ -746,19 +1016,19 @@ const server = http.createServer(async (req, res) => {
             return writeJson(res, 400, { error: 'message is required' });
           }
 
-          const requestedEngine = typeof payload.engine === 'string' ? payload.engine.toLowerCase() : 'local';
+          const requestedEngine = normalizeEnginePreference(payload.engine);
           const system = typeof payload.system === 'string' ? payload.system : '';
           const model = typeof payload.model === 'string' ? payload.model : undefined;
           const strategy = typeof payload.strategy === 'string' ? payload.strategy.toLowerCase() : 'auto';
           const hints = typeof payload.hints === 'string' ? payload.hints : '';
 
-          const normalizedStrategy = strategy === 'manual' ? 'manual' : 'auto';
-          const wantsAnthropic = normalizedStrategy === 'manual'
-            && requestedEngine === 'anthropic'
-            && hasAnthropicKey();
-          const wantsOpenAi = normalizedStrategy === 'manual'
-            && requestedEngine === 'openai'
-            && hasOpenAiKey();
+          const normalizedStrategy = strategy === 'manual'
+            || requestedEngine === 'anthropic'
+            || requestedEngine === 'openai'
+            ? 'manual'
+            : 'auto';
+          const wantsAnthropic = requestedEngine === 'anthropic';
+          const wantsOpenAi = requestedEngine === 'openai';
           const shouldUseRouter = normalizedStrategy === 'auto'
             || requestedEngine === 'auto'
             || requestedEngine === 'local';
@@ -816,6 +1086,113 @@ const server = http.createServer(async (req, res) => {
             return writeJson(res, 502, { error: 'Chat orchestration failed', detail: err.message });
           }
         } catch (err) {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/rag/query') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy();
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const query = typeof payload.query === 'string' ? payload.query.trim() : '';
+          const documents = Array.isArray(payload.documents) ? payload.documents : [];
+
+          if (!query) {
+            return writeJson(res, 400, { error: 'query is required' });
+          }
+          if (!documents.length) {
+            return writeJson(res, 400, { error: 'documents must be a non-empty array' });
+          }
+
+          const normalizedDocuments = normalizeRagDocuments(documents);
+          if (!normalizedDocuments.length) {
+            return writeJson(res, 400, { error: 'documents do not contain usable text' });
+          }
+
+          const requestedLimitValue = Number(payload.limit);
+          const limit = Number.isFinite(requestedLimitValue)
+            ? Math.max(1, Math.min(requestedLimitValue, normalizedDocuments.length))
+            : Math.min(5, normalizedDocuments.length);
+          const strategy = typeof payload.strategy === 'string' ? payload.strategy.toLowerCase() : 'auto';
+          const requestedEngine = normalizeEnginePreference(payload.engine);
+          const normalizedStrategy = strategy === 'manual'
+            || requestedEngine === 'anthropic'
+            || requestedEngine === 'openai'
+            ? 'manual'
+            : 'auto';
+          const model = typeof payload.model === 'string' ? payload.model : undefined;
+
+          const wantsAnthropic = requestedEngine === 'anthropic';
+          const wantsOpenAi = requestedEngine === 'openai';
+
+          let engineUsed = 'local';
+          let results = [];
+          let meta = {
+            strategy: normalizedStrategy,
+            requested_engine: requestedEngine,
+            total_documents: normalizedDocuments.length,
+            limit
+          };
+
+          if (documents.length > normalizedDocuments.length) {
+            meta = Object.assign({}, meta, {
+              truncated: {
+                provided: documents.length,
+                used: normalizedDocuments.length
+              }
+            });
+          }
+
+          if ((wantsAnthropic || wantsOpenAi) && normalizedDocuments.length) {
+            try {
+              const remote = await rerankWithConnector(
+                wantsAnthropic ? 'anthropic' : 'openai',
+                normalizedDocuments,
+                { query, limit, model }
+              );
+              if (remote && Array.isArray(remote.results) && remote.results.length) {
+                results = remote.results;
+                engineUsed = wantsAnthropic ? 'anthropic' : 'openai';
+                if (remote.meta && typeof remote.meta === 'object') {
+                  meta = Object.assign({}, meta, remote.meta);
+                }
+              }
+            } catch (err) {
+              console.error('[boss-api] rag rerank connector failed', err);
+              meta = Object.assign({}, meta, {
+                connector_error: err.message || String(err)
+              });
+            }
+          }
+
+          if (!results.length) {
+            results = localRerank(query, normalizedDocuments, limit);
+            engineUsed = 'local';
+            if (wantsAnthropic || wantsOpenAi) {
+              meta = Object.assign({}, meta, { fallback: true });
+            }
+          }
+
+          return writeJson(res, 200, {
+            ok: results.length > 0,
+            engine: engineUsed,
+            query,
+            limit,
+            results,
+            meta
+          });
+        } catch (err) {
+          console.error('[boss-api] rag rerank failed', err);
           return writeJson(res, 400, { error: 'Invalid JSON payload' });
         }
       });
