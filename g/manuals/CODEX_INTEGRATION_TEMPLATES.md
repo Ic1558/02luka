@@ -46,3 +46,8 @@ The Codex Integration Template system standardises how automation agents compose
 ## 8. Change Log
 - **2025-09-30:** Initial manual published; mapping namespace updated to include `codex:*`; Luka Prompt Library connected to backend prompt loader.
 
+## 9. Context Engine v6
+- `g/tools/context_engine.sh` exposes the v6 header (`SCRIPT_NAME=context_engine`, `VERSION=6.0`) and honours env flags `AUTO_PRUNE=1` and `ADVANCED_FEATURES=1`. Safe mode performs a straight pass-through.
+- Use `g/tools/context_engine.sh --version` to confirm rollout, or pipe payloads via `--input/--output` for explicit files.
+- `g/tools/model_router.sh <TASK_TYPE> [HINTS]` returns routing JSON (model, reason, confidence) with safe fallbacks if the preferred Ollama model is missing.
+- Example: `TASK_TYPE=review HINTS="diff cleanup" bash g/tools/model_router.sh` → prioritises `deepseek-coder` or falls back to the next available model.
