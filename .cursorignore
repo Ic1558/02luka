@@ -1,26 +1,13 @@
-# Build / deps
 node_modules/
-dist/
-build/
-out/
+boss-ui/node_modules/
+boss-api/node_modules/
 output/
-coverage/
-.next/
-*.tgz
-*.zip
-
-# Logs / caches / virtual envs
+run/
+boss/
+f/
+g/
 *.log
 *.tmp
-*.cache/
-.cache/
-.vscode-test/
-.venv*/
-__pycache__/
-
-# Repo-specific heavy dirs
-boss-api/node_modules/
-run/**/artifacts/
-run/**/tmp/
-run/**/cache/
-run/**/logs/
+*.cache
+.DS_Store
+Thumbs.db

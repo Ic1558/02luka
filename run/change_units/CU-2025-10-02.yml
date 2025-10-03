@@ -25,3 +25,24 @@
   tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
   guardrail_status: OK
   followups: []
+- time: "2025-10-02T09:51:38Z"
+  change_id: CU-2025-10-02-context-v6
+  summary: "Enable context engine v6 header and add model router shim."
+  files_touched:
+    - g/tools/context_engine.sh
+    - g/tools/model_router.sh
+    - g/manuals/CODEX_INTEGRATION_TEMPLATES.md
+  tags: [resolver, preflight]
+  tests_ran: [preflight:OK, drift_guard:OK]
+  guardrail_status: OK
+  followups: []
+- time: "2025-10-02T10:08:16Z"
+  change_id: CU-2025-10-02-router-ui-toggle
+  summary: "Route boss-api chat/optimize through model_router and expose auto/manual engine toggle in UI."
+  files_touched:
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+  tags: [boss-api, boss-ui, resolver]
+  tests_ran: [preflight:OK, drift_guard:OK]
+  guardrail_status: OK
+  followups: []

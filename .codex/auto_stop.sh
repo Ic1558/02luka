@@ -22,3 +22,9 @@ rm -f .codex/session_active.lock
 
 echo "✅ Hybrid Memory System stopped"
 echo "✅ Context saved for next session"
+
+
+
+
+
+
