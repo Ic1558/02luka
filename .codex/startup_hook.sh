@@ -48,3 +48,9 @@ echo "🎯 Hybrid Memory System startup hook installed!"
 echo "   - Auto-start on terminal open"
 echo "   - Desktop entry created"
 echo "   - Aliases added: 02luka-memory, 02luka-save, 02luka-load, 02luka-adapt"
+
+
+
+
+
+

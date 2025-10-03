@@ -1,20 +1,73 @@
 {
-  "terminal.integrated.shell.linux": "/bin/bash",
-  "terminal.integrated.shellArgs.linux": ["-l"],
-  "terminal.integrated.env.linux": {
-    "SOT_PATH": "/workspaces/02luka-repo"
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/boss-ui/node_modules/**": true,
+    "**/boss-api/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/output/**": true,
+    "**/run/**": true,
+    "**/boss/**": true,
+    "**/f/**": true,
+    "**/g/**": true
   },
-  "terminal.integrated.profiles.linux": {
-    "bash": {
-      "path": "/bin/bash",
-      "args": ["-l", "-c", "cd /workspaces/02luka-repo && bash .codex/load_context.sh && bash .codex/adapt_style.sh && exec bash"]
-    }
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/boss-ui/node_modules": true,
+    "**/boss-api/node_modules": true,
+    "**/.git": true,
+    "**/output": true,
+    "**/run": true,
+    "**/boss": true,
+    "**/f": true,
+    "**/g": true
   },
-  "terminal.integrated.defaultProfile.linux": "bash",
-  "files.autoSave": "afterDelay",
-  "files.autoSaveDelay": 1000,
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.fixAll": true
-  }
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/boss-ui/node_modules": true,
+    "**/boss-api/node_modules": true,
+    "**/output": true,
+    "**/run": true,
+    "**/boss": true,
+    "**/f": true,
+    "**/g": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.suggest.autoImports": false,
+  "javascript.suggest.autoImports": false,
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.suggest.enabled": false,
+  "javascript.suggest.enabled": false,
+  "editor.semanticHighlighting.enabled": false,
+  "editor.bracketPairColorization.enabled": false,
+  "editor.guides.bracketPairs": false,
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+  "extensions.autoUpdate": false,
+  "telemetry.telemetryLevel": "off",
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/boss-ui/node_modules/**": true,
+    "**/boss-api/node_modules/**": true,
+    "**/output/**": true,
+    "**/run/**": true,
+    "**/boss/**": true,
+    "**/f/**": true,
+    "**/g/**": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.suggest.autoImports": false,
+  "javascript.suggest.autoImports": false,
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "typescript.suggest.enabled": false,
+  "javascript.suggest.enabled": false,
+  "editor.semanticHighlighting.enabled": false,
+  "editor.bracketPairColorization.enabled": false,
+  "editor.guides.bracketPairs": false,
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+  "extensions.autoUpdate": false,
+  "telemetry.telemetryLevel": "off"
 }

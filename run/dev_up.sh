@@ -22,15 +22,15 @@ echo "🔧 Starting API on port $API_PORT..."
 cd "$ROOT"
 export HOST=127.0.0.1
 export PORT=$API_PORT
-node boss-api/server.cjs > /tmp/api.log 2>&1 &
+nohup node boss-api/server.cjs > /tmp/api.log 2>&1 &
 API_PID=$!
 echo "API started (PID: $API_PID)"
 
 # 3. Start UI (check if boss-ui exists)
-if [ -d "boss-ui" ]; then
+if [ -d "$ROOT/boss-ui" ]; then
   echo "🎨 Starting UI on port $UI_PORT..."
-  cd boss-ui
-  python3 -m http.server $UI_PORT > /tmp/ui.log 2>&1 &
+  cd "$ROOT/boss-ui"
+  nohup python3 -m http.server $UI_PORT > /tmp/ui.log 2>&1 &
   UI_PID=$!
   echo "UI started (PID: $UI_PID)"
   cd "$ROOT"

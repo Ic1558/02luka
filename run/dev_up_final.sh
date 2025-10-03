@@ -79,3 +79,10 @@ echo "UI:   http://localhost:5173/luka.html"
 echo "Logs: /tmp/api.log, /tmp/ui.log"
 echo ""
 echo "🎯 Ready for development!"
+
+
+
+
+
+
+
