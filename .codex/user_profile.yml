@@ -104,3 +104,9 @@ adaptation_rules:
   - if: "user_encounters_error"
     then: "provide_comprehensive_solution"
     confidence: 0.92
+
+
+
+
+
+
