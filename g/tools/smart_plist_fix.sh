@@ -9,8 +9,31 @@ DRY_RUN=false
 VERBOSE=false
 
 # SOT paths
-SOT_PATH="/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka"
-REPO_PATH="/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka-repo"
+STREAM_WORKSPACE="$HOME/dev/02luka-repo"
+LEGACY_SOT="$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka"
+LEGACY_REPO="$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka-repo"
+
+if [[ -z "${SOT_PATH:-}" ]]; then
+    if [[ -d "$STREAM_WORKSPACE" ]]; then
+        SOT_PATH="$STREAM_WORKSPACE"
+    else
+        SOT_PATH="$LEGACY_SOT"
+    fi
+elif [[ ! -d "$SOT_PATH" ]]; then
+    if [[ -d "$STREAM_WORKSPACE" ]]; then
+        SOT_PATH="$STREAM_WORKSPACE"
+    elif [[ -d "$LEGACY_SOT" ]]; then
+        SOT_PATH="$LEGACY_SOT"
+    fi
+fi
+
+if [[ -d "$STREAM_WORKSPACE" ]]; then
+    REPO_PATH="$STREAM_WORKSPACE"
+elif [[ -d "$LEGACY_REPO" ]]; then
+    REPO_PATH="$LEGACY_REPO"
+else
+    REPO_PATH="$SOT_PATH"
+fi
 
 # Counters
 FIXED=0
@@ -74,13 +97,19 @@ unload_agent() {
 try_fix_old_02luka() {
     local old_path="$1"
 
-    # Try repo path first
-    local try_repo="${old_path//\/Users\/icmini\/02luka\//\/Users\/icmini\/My Drive (ittipong.c@gmail.com) (1)\/02luka-repo\/}"
-    [[ -e "$try_repo" ]] && echo "$try_repo" && return 0
+    local legacy_prefix="/Users/icmini/02luka/"
+    [[ "$old_path" == $legacy_prefix* ]] || return 1
 
-    # Try SOT path
-    local try_sot="${old_path//\/Users\/icmini\/02luka\//$SOT_PATH\/}"
-    [[ -e "$try_sot" ]] && echo "$try_sot" && return 0
+    local suffix="${old_path#$legacy_prefix}"
+    local candidates=()
+
+    [[ -n "$STREAM_WORKSPACE" ]] && candidates+=("$STREAM_WORKSPACE/$suffix")
+    [[ -n "$LEGACY_REPO" ]] && candidates+=("$LEGACY_REPO/$suffix")
+    [[ -n "$LEGACY_SOT" ]] && candidates+=("$LEGACY_SOT/$suffix")
+
+    for candidate in "${candidates[@]}"; do
+        [[ -n "$candidate" && -e "$candidate" ]] && echo "$candidate" && return 0
+    done
 
     return 1
 }
@@ -88,9 +117,19 @@ try_fix_old_02luka() {
 try_fix_parent_02luka() {
     local old_path="$1"
 
-    # Change /02luka/ → /02luka-repo/
-    local try_repo="${old_path//\/02luka\//\/02luka-repo\/}"
-    [[ -e "$try_repo" ]] && echo "$try_repo" && return 0
+    [[ "$old_path" == *"/02luka/"* ]] || return 1
+
+    local suffix="${old_path#*/02luka/}"
+    local candidates=()
+
+    [[ -n "$SOT_PATH" ]] && candidates+=("$SOT_PATH/$suffix")
+    [[ -n "$STREAM_WORKSPACE" && "$STREAM_WORKSPACE" != "$SOT_PATH" ]] && candidates+=("$STREAM_WORKSPACE/$suffix")
+    [[ -n "$LEGACY_REPO" ]] && candidates+=("$LEGACY_REPO/$suffix")
+    [[ -n "$LEGACY_SOT" && "$LEGACY_SOT" != "$SOT_PATH" ]] && candidates+=("$LEGACY_SOT/$suffix")
+
+    for candidate in "${candidates[@]}"; do
+        [[ -n "$candidate" && -e "$candidate" ]] && echo "$candidate" && return 0
+    done
 
     return 1
 }
@@ -107,15 +146,17 @@ try_find_venv() {
     [[ -z "$agent" ]] && return 1
 
     # Try common venv locations
-    local locations=(
-        "$REPO_PATH/agents/$agent/.venv/bin/python"
-        "$SOT_PATH/agents/$agent/.venv/bin/python"
-        "$REPO_PATH/agents/$agent/venv/bin/python"
-        "$SOT_PATH/agents/$agent/venv/bin/python"
-    )
+    local roots=("$REPO_PATH" "$SOT_PATH" "$LEGACY_SOT" "$STREAM_WORKSPACE")
 
-    for loc in "${locations[@]}"; do
-        [[ -e "$loc" ]] && echo "$loc" && return 0
+    for root in "${roots[@]}"; do
+        [[ -n "$root" ]] || continue
+        [[ -d "$root" ]] || continue
+
+        local venv_candidate="$root/agents/$agent/.venv/bin/python"
+        [[ -e "$venv_candidate" ]] && echo "$venv_candidate" && return 0
+
+        local legacy_candidate="$root/agents/$agent/venv/bin/python"
+        [[ -e "$legacy_candidate" ]] && echo "$legacy_candidate" && return 0
     done
 
     return 1
@@ -135,7 +176,7 @@ process_broken_plist() {
     if [[ "$old_path" =~ /Users/icmini/02luka/ ]]; then
         new_path=$(try_fix_old_02luka "$old_path" || echo "")
 
-    # Strategy 2: Parent /02luka/ → /02luka-repo/
+    # Strategy 2: Rebuild relative to current Stream/Mirror workspace
     elif [[ "$old_path" =~ /02luka/ ]] && [[ ! "$old_path" =~ /02luka-repo/ ]]; then
         new_path=$(try_fix_parent_02luka "$old_path" || echo "")
 
