@@ -1,0 +1,4 @@
+# Local databases generated at runtime
+*.sqlite3
+*.sqlite
+*.db
