@@ -86,3 +86,19 @@
     health_after: "100% (107/107)"
     functionality_lost: 0
   followups: []
+- time: "2025-10-03T08:45:00Z"
+  change_id: CU-2025-10-03-luka-th-console
+  summary: "Deploy Luka-TH Console with offline Chat/RAG/SQL/OCR workflows"
+  files_touched:
+    - boss-ui/luka.html
+    - boss-api/server.cjs
+    - run/change_units/CU-2025-10-03.yml
+    - run/daily_reports/REPORT_2025-10-03.md
+  tags: ["luka-th", "console", "rag", "sql", "ocr", "offline"]
+  tests_ran:
+    - console_ui_smoke: OK
+    - rag_embedding_lookup: OK
+    - sql_workspace_migrations: OK
+    - offline_ocr_pipeline: OK
+  guardrail_status: OK
+  followups: []
