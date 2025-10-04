@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luka Prompt Orchestrator</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom)) env(safe-area-inset-left);
+    }
+    header {
+      border-bottom: 1px solid #262626;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(10, 10, 10, 0.95);
+      position: sticky;
+      top: env(safe-area-inset-top);
+      z-index: 20;
+    }
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-weight: bold;
+    }
+    .status {
+      color: #a3a3a3;
+      font-size: 14px;
+    }
+    .tools {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: min(600px, 100%);
+      width: 100%;
+    }
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      background: #141414;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+    .message.user .avatar { background: #3b82f6; }
+    .content {
+      background: #141414;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .message.user .content { background: #3b82f6; }
+    .input-area {
+      padding: 16px;
+      border-top: 1px solid #262626;
+      background: rgba(10, 10, 10, 0.95);
+      position: sticky;
+      bottom: 0;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      backdrop-filter: blur(12px);
+    }
+    .input-wrapper {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      width: 100%;
+    }
+    #messageInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fafafa;
+      font-size: 14px;
+      resize: none;
+      min-height: 20px;
+      max-height: 160px;
+      font-family: inherit;
+      line-height: 1.5;
+      padding-right: 8px;
+    }
+    #sendButton {
+      width: 40px;
+      height: 40px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: opacity 0.2s;
+    }
+    #sendButton:hover:not(:disabled) { opacity: 0.9; }
+    #sendButton:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    select,
+    button.tool-button {
+      background: #141414;
+      border: 1px solid #262626;
+      color: #fafafa;
+      padding: 6px 12px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      font-size: 12px;
+      transition: border-color 0.2s;
+    }
+    button.tool-button:hover,
+    select:hover {
+      border-color: #3b82f6;
+    }
+    .prompt-library-panel {
+      position: fixed;
+      top: 72px;
+      right: 24px;
+      width: 360px;
+      max-width: calc(100% - 48px);
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 10;
+    }
+    .prompt-library-panel.open {
+      display: flex;
+    }
+    .prompt-library-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .prompt-library-body {
+      padding: 16px;
+      max-height: 320px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.5;
+      background: #0f172a;
+      white-space: pre-wrap;
+    }
+    .prompt-library-actions {
+      padding: 12px 16px;
+      border-top: 1px solid #1f2937;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    button.secondary {
+      background: transparent;
+      color: #fafafa;
+    }
+    button.primary {
+      background: #3b82f6;
+      border: none;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 12px;
+        gap: 12px;
+      }
+      .status {
+        font-size: 12px;
+      }
+      .tools {
+        gap: 8px;
+      }
+      select,
+      button.tool-button {
+        font-size: 11px;
+        padding: 6px 10px;
+      }
+      .messages {
+        padding: 16px 12px 80px;
+      }
+      .message {
+        gap: 10px;
+      }
+      .content {
+        font-size: 15px;
+      }
+      .input-area {
+        padding: 12px;
+      }
+      .input-wrapper {
+        padding: 10px;
+        gap: 10px;
+      }
+      #messageInput {
+        font-size: 15px;
+      }
+      #sendButton {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+      }
+      .prompt-library-panel {
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: none;
+        border-radius: 0;
+        border: none;
+      }
+      .prompt-library-header {
+        padding: 16px;
+      }
+      .prompt-library-body {
+        padding: 20px 16px 120px;
+        font-size: 14px;
+      }
+      .prompt-library-actions {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">L</div>
+    <div>
+      <div>Luka Orchestrator</div>
+      <div class="status">Connected to local automation</div>
+    </div>
+    <div class="tools">
+      <select id="gateway">
+        <option value="auto">Smart Delegate</option>
+        <option value="mcp">MCP Docker (5012)</option>
+        <option value="mcp_fs">MCP FS (8765)</option>
+        <option value="ollama">Ollama (11434)</option>
+      </select>
+      <button class="tool-button" id="promptLibraryButton" type="button">Prompt Library</button>
+      <button class="tool-button" id="openChatWindowButton" type="button">Open Chat Window</button>
+    </div>
+  </header>
+
+  <div class="prompt-library-panel" id="promptLibraryPanel">
+    <div class="prompt-library-header">
+      <span>Codex Master Prompt</span>
+      <button class="tool-button" id="closePromptLibrary" type="button">Close</button>
+    </div>
+    <div class="prompt-library-body" id="promptLibraryBody">
+      Loading master prompt…
+    </div>
+    <div class="prompt-library-actions">
+      <button class="tool-button secondary" id="copyPromptTemplate" type="button">Copy</button>
+      <button class="tool-button primary" id="insertPromptTemplate" type="button">Use Template</button>
+    </div>
+  </div>
+
+  <div class="messages" id="messages">
+    <div class="message">
+      <div class="avatar">L</div>
+      <div class="content">Ready. Type a mission and press Send or Enter.</div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
+      <button id="sendButton" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const messagesContainer = document.getElementById('messages');
+    const gatewaySelect = document.getElementById('gateway');
+    const promptLibraryButton = document.getElementById('promptLibraryButton');
+    const promptLibraryPanel = document.getElementById('promptLibraryPanel');
+    const promptLibraryBody = document.getElementById('promptLibraryBody');
+    const closePromptLibrary = document.getElementById('closePromptLibrary');
+    const copyPromptTemplate = document.getElementById('copyPromptTemplate');
+    const insertPromptTemplate = document.getElementById('insertPromptTemplate');
+    const openChatWindowButton = document.getElementById('openChatWindowButton');
+
+    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const TARGET_PROFILES = {
+      auto: {
+        id: 'auto',
+        name: 'Smart Delegate',
+        tips: 'Routes to local gateways and selects the strongest answer automatically.'
+      },
+      mcp: {
+        id: 'mcp',
+        name: 'MCP Docker',
+        tips: 'Start the MCP Gateway on port 5012 before dispatching prompts.'
+      },
+      mcp_fs: {
+        id: 'mcp_fs',
+        name: 'MCP FS',
+        tips: 'Launch ~/.local/bin/mcp_fs to expose the filesystem MCP server on port 8765.'
+      },
+      ollama: {
+        id: 'ollama',
+        name: 'Ollama',
+        tips: 'Run `ollama serve` and install a model with `ollama pull <model>`.'
+      }
+    };
+
+    let masterPromptCache = '';
+    let masterPromptFetchPromise = null;
+    let isSending = false;
+
+    function togglePromptLibrary(forceOpen) {
+      const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
+      if (shouldOpen === promptLibraryPanel.classList.contains('open')) {
+        return;
+      }
+      promptLibraryPanel.classList.toggle('open', shouldOpen);
+    }
+
+    async function loadMasterPrompt() {
+      if (masterPromptCache) {
+        promptLibraryBody.textContent = masterPromptCache;
+        return masterPromptCache;
+      }
+
+      if (!masterPromptFetchPromise) {
+        promptLibraryBody.textContent = 'Loading master prompt…';
+        masterPromptFetchPromise = (async () => {
+          try {
+            const response = await fetch('./.codex/templates/master_prompt.md');
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            const text = await response.text();
+            masterPromptCache = text;
+            promptLibraryBody.textContent = text;
+            return text;
+          } catch (error) {
+            masterPromptCache = '';
+            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at .codex/templates/master_prompt.md.';
+            throw error;
+          } finally {
+            masterPromptFetchPromise = null;
+          }
+        })();
+      }
+
+      try {
+        return await masterPromptFetchPromise;
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function updateSendButton() {
+      const hasText = messageInput.value.trim().length > 0;
+      sendButton.disabled = !hasText || isSending;
+    }
+
+    function setSendingState(state) {
+      if (isSending === state) return;
+      isSending = state;
+      messageInput.readOnly = state;
+      if (!state) {
+        messageInput.focus();
+      }
+      updateSendButton();
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text || isSending) return;
+
+      setSendingState(true);
+      addMessage('user', text);
+
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      updateSendButton();
+
+      try {
+        const formatted = await routeThroughBackend(text);
+        addMessage('bot', formatted);
+      } catch (err) {
+        addMessage('bot', buildBackendFailureMessage(err));
+      } finally {
+        setSendingState(false);
+      }
+    }
+
+    function addMessage(type, text) {
+      const fragment = document.createDocumentFragment();
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message' + (type === 'user' ? ' user' : '');
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = type === 'user' ? 'U' : 'L';
+
+      const content = document.createElement('div');
+      content.className = 'content';
+      content.textContent = (text ?? '').toString();
+
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(content);
+      fragment.appendChild(messageDiv);
+
+      messagesContainer.appendChild(fragment);
+      requestAnimationFrame(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      });
+    }
+
+    messageInput.addEventListener('input', () => {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
+      updateSendButton();
+    });
+
+    messageInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendButton.addEventListener('click', sendMessage);
+
+    promptLibraryButton.addEventListener('click', async () => {
+      await loadMasterPrompt();
+      togglePromptLibrary(true);
+    });
+
+    closePromptLibrary.addEventListener('click', () => {
+      togglePromptLibrary(false);
+    });
+
+    copyPromptTemplate.addEventListener('click', async () => {
+      const text = await loadMasterPrompt();
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        copyPromptTemplate.textContent = 'Copied!';
+        setTimeout(() => { copyPromptTemplate.textContent = 'Copy'; }, 1500);
+      } catch (error) {
+        copyPromptTemplate.textContent = 'Copy failed';
+        setTimeout(() => { copyPromptTemplate.textContent = 'Copy'; }, 1500);
+      }
+    });
+
+    insertPromptTemplate.addEventListener('click', async () => {
+      const text = await loadMasterPrompt();
+      if (!text) return;
+      messageInput.value = text;
+      messageInput.dispatchEvent(new Event('input'));
+      togglePromptLibrary(false);
+      messageInput.focus();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && promptLibraryPanel.classList.contains('open')) {
+        togglePromptLibrary(false);
+      }
+    });
+
+    // Chat window functionality
+    let chatWindow = null;
+
+    openChatWindowButton.addEventListener('click', () => {
+      if (chatWindow && !chatWindow.closed) {
+        // If chat window is already open, focus it
+        chatWindow.focus();
+        chatWindow.postMessage({ type: 'open-chat' }, '*');
+      } else {
+        // Open new chat window
+        const windowFeatures = 'width=800,height=600,resizable=yes,scrollbars=yes,status=yes,toolbar=no,menubar=no,location=no';
+        chatWindow = window.open('./chat-window.html', 'luka-chat', windowFeatures);
+        
+        if (chatWindow) {
+          chatWindow.addEventListener('load', () => {
+            // Sync gateway selection with chat window
+            chatWindow.postMessage({ 
+              type: 'sync-gateway', 
+              gateway: gatewaySelect.value 
+            }, '*');
+          });
+        }
+      }
+    });
+
+    // Listen for messages from chat window
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'chat-window-closed') {
+        chatWindow = null;
+      } else if (event.data.type === 'sync-gateway') {
+        // Sync gateway selection from chat window back to main window
+        if (event.data.gateway && event.data.gateway !== gatewaySelect.value) {
+          gatewaySelect.value = event.data.gateway;
+        }
+      }
+    });
+
+    // Sync gateway changes to chat window
+    gatewaySelect.addEventListener('change', () => {
+      if (chatWindow && !chatWindow.closed) {
+        chatWindow.postMessage({ 
+          type: 'sync-gateway', 
+          gateway: gatewaySelect.value 
+        }, '*');
+      }
+    });
+
+    updateSendButton();
+    messageInput.focus();
+
+    async function routeThroughBackend(text) {
+      const targetId = gatewaySelect.value || 'auto';
+      const payload = {
+        message: text,
+        target: targetId
+      };
+
+      let response;
+      try {
+        response = await fetch(BACKEND_CHAT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (networkError) {
+        throw new Error('Unable to reach backend. Check your network or server status.');
+      }
+
+      if (!response.ok) {
+        const errorPayload = await safeParseJson(response);
+        const detail = errorPayload && (errorPayload.detail || errorPayload.error);
+        throw new Error(detail || `Backend responded with HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return formatBackendResponse(data, targetId);
+    }
+
+    async function safeParseJson(response) {
+      try {
+        return await response.clone().json();
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function formatBackendResponse(payload, targetId) {
+      if (!payload || typeof payload !== 'object') {
+        return 'Backend returned an empty response.';
+      }
+
+      const lines = [];
+      const bestText = extractBestText(payload.best);
+      if (bestText) {
+        lines.push(bestText);
+      } else if (payload.summary) {
+        lines.push(String(payload.summary).trim());
+      }
+
+      if (Array.isArray(payload.results) && payload.results.length) {
+        lines.push('');
+        lines.push('Delegates:');
+        payload.results.forEach((entry) => {
+          if (!entry) return;
+          const status = entry.status === 'ok'
+            ? `ok${entry.latencyMs ? ` (${formatLatency(entry.latencyMs)})` : ''}`
+            : `error${entry.error ? `: ${entry.error}` : ''}`;
+          lines.push(`- ${entry.name || entry.id}: ${status}`);
+        });
+      }
+
+      if (!payload.ok) {
+        const profile = getTargetProfile(targetId);
+        if (profile.tips) {
+          lines.push('');
+          lines.push(`Tip: ${profile.tips}`);
+        }
+      }
+
+      return lines.filter(Boolean).join('\n');
+    }
+
+    function formatLatency(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return '';
+      return `${Math.round(numeric)}ms`;
+    }
+
+    function getTargetProfile(id) {
+      return TARGET_PROFILES[id] || {
+        id,
+        name: id,
+        tips: 'Ensure the selected gateway is running locally.'
+      };
+    }
+
+    function buildBackendFailureMessage(err) {
+      const targetId = gatewaySelect.value || 'auto';
+      const profile = getTargetProfile(targetId);
+      const normalizedError = err instanceof Error ? err.message : String(err);
+      const lines = [
+        `Backend error: ${normalizedError}`,
+        'Ensure the 02luka backend is running (node boss-api/server.js).'
+      ];
+      if (profile.tips) {
+        lines.push(`Target tip: ${profile.tips}`);
+      }
+      return lines.join('\n');
+    }
+
+    function extractBestText(best) {
+      if (!best) return '';
+      if (typeof best === 'string') return best.trim();
+      if (typeof best === 'object' && typeof best.text === 'string') {
+        return best.text.trim();
+      }
+      return '';
+    }
+  </script>
+</body>
+</html>
