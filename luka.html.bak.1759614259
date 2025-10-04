@@ -1795,10 +1795,6 @@
 >>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
   </script>
-<script type="module">
-  import { enhanceChatbotActions } from "/boss-ui/public/js/chatbot_actions.js";
-  try { enhanceChatbotActions(window?.LUKA_CTX||{}); } catch(e){ console.error("chatbot_actions:", e); }
-</script>
 </body>
 </html>
 
