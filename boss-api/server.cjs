@@ -1,8 +1,11 @@
 const http = require('http');
 const https = require('https');
 const path = require('path');
+const os = require('os');
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const { execFile } = require('child_process');
+const { DatabaseSync } = require('node:sqlite');
 const anthropicConnector = require('../g/connectors/mcp_anthropic');
 const openaiConnector = require('../g/connectors/mcp_openai');
 
@@ -10,6 +13,13 @@ const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+const dataRoot = path.join(repoRoot, 'boss-api', 'data');
+const ragDbPath = path.join(dataRoot, 'rag.sqlite3');
+const sampleSqlitePath = path.join(dataRoot, 'sample.sqlite3');
+const embedScriptPath = path.join(repoRoot, 'g', 'tools', 'embed_text.py');
+const ocrScriptPath = path.join(repoRoot, 'g', 'tools', 'ocr_typhoon.py');
+const DEFAULT_OLLAMA_PORT = Number(process.env.OLLAMA_PORT || 11434);
+const localOllamaBaseUrl = `http://127.0.0.1:${DEFAULT_OLLAMA_PORT}`;
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -20,6 +30,61 @@ function writeJson(res, code, payload) {
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(body);
+}
+
+async function ensureDirectory(dirPath) {
+  await fs.mkdir(dirPath, { recursive: true });
+  return dirPath;
+}
+
+function ensureDirectorySync(dirPath) {
+  fsSync.mkdirSync(dirPath, { recursive: true });
+  return dirPath;
+}
+
+async function fileExists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+function isPathInside(baseDir, target) {
+  const relative = path.relative(baseDir, target);
+  if (!relative) {
+    return true;
+  }
+  return !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+const engineProbeCache = new Map();
+const ENGINE_CACHE_TTL = 15_000;
+
+function runPythonScript(scriptPath, args = [], options = {}) {
+  const execOptions = {
+    cwd: repoRoot,
+    timeout: options.timeout || 20000,
+    env: process.env
+  };
+
+  return new Promise((resolve, reject) => {
+    const child = execFile('python3', [scriptPath, ...args], execOptions, (err, stdout, stderr) => {
+      if (err) {
+        if (!err.stderr) {
+          err.stderr = stderr;
+        }
+        return reject(err);
+      }
+      resolve({ stdout, stderr });
+    });
+
+    if (options.input && child.stdin) {
+      child.stdin.write(options.input);
+      child.stdin.end();
+    }
+  });
 }
 
 const CANONICAL_MAILBOXES = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
@@ -125,6 +190,647 @@ const CHAT_TARGETS = {
   }
 };
 
+const RAG_SOURCE_FOLDERS = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
+const RAG_ALLOWED_EXTENSIONS = new Set(['.md', '.mdx', '.markdown', '.txt']);
+const MAX_RAG_DOC_SIZE = 256 * 1024; // 256 KB per document chunked
+const MAX_RAG_NEW_CHUNKS = 80;
+const RAG_REFRESH_INTERVAL_MS = 60_000;
+const MAX_RAG_RESULTS = 5;
+
+const SQL_DATASETS = {
+  sample: {
+    id: 'sample',
+    label: 'Sample Workplace Dataset',
+    path: sampleSqlitePath,
+    readonly: true
+  }
+};
+
+let ragDbInstance = null;
+let ragIndexRefreshAt = 0;
+let ragRefreshPromise = null;
+
+function getRagDatabase() {
+  if (!ragDbInstance) {
+    ensureDirectorySync(path.dirname(ragDbPath));
+    ragDbInstance = new DatabaseSync(ragDbPath);
+    ragDbInstance.exec(`
+      PRAGMA journal_mode=WAL;
+      CREATE TABLE IF NOT EXISTS documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        embedding TEXT NOT NULL,
+        mtime_ms INTEGER NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        UNIQUE(path, chunk_index)
+      );
+      CREATE INDEX IF NOT EXISTS idx_documents_path ON documents(path);
+      CREATE INDEX IF NOT EXISTS idx_documents_mtime ON documents(path, mtime_ms);
+    `);
+  }
+  return ragDbInstance;
+}
+
+function ensureSampleSqliteDataset() {
+  const dataset = SQL_DATASETS.sample;
+  ensureDirectorySync(path.dirname(dataset.path));
+  if (fsSync.existsSync(dataset.path)) {
+    return;
+  }
+
+  const db = new DatabaseSync(dataset.path);
+  try {
+    db.exec(`
+      BEGIN;
+      CREATE TABLE departments (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        location TEXT NOT NULL
+      );
+      CREATE TABLE employees (
+        id INTEGER PRIMARY KEY,
+        department_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        title TEXT NOT NULL,
+        email TEXT NOT NULL,
+        salary INTEGER NOT NULL,
+        hired_at TEXT NOT NULL,
+        FOREIGN KEY (department_id) REFERENCES departments(id)
+      );
+      CREATE TABLE projects (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        lead_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        FOREIGN KEY (lead_id) REFERENCES employees(id)
+      );
+      INSERT INTO departments (id, name, location) VALUES
+        (1, 'Engineering', 'Remote'),
+        (2, 'Operations', 'San Francisco'),
+        (3, 'Design', 'Remote');
+      INSERT INTO employees (id, department_id, name, title, email, salary, hired_at) VALUES
+        (1, 1, 'Luka Jensen', 'Staff Engineer', 'luka@example.com', 180000, '2020-02-10'),
+        (2, 1, 'Priya Patel', 'Senior Engineer', 'priya@example.com', 165000, '2021-06-18'),
+        (3, 2, 'Marcus Lee', 'Operations Manager', 'marcus@example.com', 142000, '2019-09-03'),
+        (4, 3, 'Isabel Chen', 'Product Designer', 'isabel@example.com', 138000, '2022-01-24');
+      INSERT INTO projects (id, name, lead_id, status) VALUES
+        (1, 'Local Autopilot', 1, 'in-progress'),
+        (2, 'RAG Research Notes', 2, 'planning'),
+        (3, 'Ops Automation', 3, 'shipped');
+      COMMIT;
+    `);
+  } finally {
+    db.close();
+  }
+}
+
+function getRagDocumentCount() {
+  try {
+    const db = getRagDatabase();
+    const row = db.prepare('SELECT COUNT(*) AS count FROM documents').get();
+    return Number(row?.count || 0);
+  } catch (err) {
+    return 0;
+  }
+}
+
+async function probeLocalChatEngine({ useCache = true } = {}) {
+  const cacheKey = 'chat';
+  const now = Date.now();
+  if (useCache && engineProbeCache.has(cacheKey)) {
+    const cached = engineProbeCache.get(cacheKey);
+    if (now - cached.timestamp < ENGINE_CACHE_TTL) {
+      return cached.result;
+    }
+  }
+
+  let result = { ready: false };
+  try {
+    const response = await httpRequestJson(`${localOllamaBaseUrl}/api/tags`, { method: 'GET', timeout: 2000 });
+    if (response.status >= 200 && response.status < 300) {
+      const parsed = JSON.parse(response.body || '{}');
+      const models = Array.isArray(parsed.models) ? parsed.models.map((entry) => entry.name || entry.model || '').filter(Boolean) : [];
+      const llamaModel = models.find((name) => /llama3/i.test(name));
+      result = {
+        ready: true,
+        models,
+        defaultModel: llamaModel || models[0] || process.env.OLLAMA_MODEL || 'llama3.1',
+        baseUrl: localOllamaBaseUrl
+      };
+    } else {
+      result = { ready: false, status: response.status, reason: 'Ollama HTTP status' };
+    }
+  } catch (err) {
+    result = { ready: false, error: err.message || String(err) };
+  }
+
+  engineProbeCache.set(cacheKey, { timestamp: now, result });
+  return result;
+}
+
+async function probeLocalRagEngine({ useCache = true } = {}) {
+  const cacheKey = 'rag';
+  const now = Date.now();
+  if (useCache && engineProbeCache.has(cacheKey)) {
+    const cached = engineProbeCache.get(cacheKey);
+    if (now - cached.timestamp < ENGINE_CACHE_TTL) {
+      return cached.result;
+    }
+  }
+
+  let result = { ready: false };
+  const scriptExists = await fileExists(embedScriptPath);
+  if (!scriptExists) {
+    result = { ready: false, reason: 'embed_text.py missing' };
+  } else {
+    try {
+      await runPythonScript(embedScriptPath, ['--ping'], { timeout: 4000 });
+      getRagDatabase();
+      const documents = getRagDocumentCount();
+      result = { ready: true, documents, dbPath: ragDbPath };
+    } catch (err) {
+      result = { ready: false, error: err.message || String(err) };
+    }
+  }
+
+  engineProbeCache.set(cacheKey, { timestamp: now, result });
+  return result;
+}
+
+async function probeLocalSqlEngine({ useCache = true } = {}) {
+  const cacheKey = 'sql';
+  const now = Date.now();
+  if (useCache && engineProbeCache.has(cacheKey)) {
+    const cached = engineProbeCache.get(cacheKey);
+    if (now - cached.timestamp < ENGINE_CACHE_TTL) {
+      return cached.result;
+    }
+  }
+
+  ensureSampleSqliteDataset();
+  const datasets = Object.values(SQL_DATASETS).filter((entry) => fsSync.existsSync(entry.path));
+  let result = { ready: false, reason: 'No datasets available' };
+
+  if (datasets.length > 0) {
+    try {
+      const stats = datasets.map((dataset) => {
+        const db = new DatabaseSync(dataset.path, { readonly: true });
+        try {
+          const tableRow = db.prepare("SELECT COUNT(*) AS total FROM sqlite_master WHERE type = 'table'").get();
+          return {
+            id: dataset.id,
+            label: dataset.label,
+            path: dataset.path,
+            tables: Number(tableRow?.total || 0)
+          };
+        } finally {
+          db.close();
+        }
+      });
+      result = { ready: true, datasets: stats };
+    } catch (err) {
+      result = { ready: false, error: err.message || String(err) };
+    }
+  }
+
+  engineProbeCache.set(cacheKey, { timestamp: now, result });
+  return result;
+}
+
+async function probeLocalOcrEngine({ useCache = true } = {}) {
+  const cacheKey = 'ocr';
+  const now = Date.now();
+  if (useCache && engineProbeCache.has(cacheKey)) {
+    const cached = engineProbeCache.get(cacheKey);
+    if (now - cached.timestamp < ENGINE_CACHE_TTL) {
+      return cached.result;
+    }
+  }
+
+  let result = { ready: false };
+  const scriptExists = await fileExists(ocrScriptPath);
+  if (!scriptExists) {
+    result = { ready: false, reason: 'ocr_typhoon.py missing' };
+  } else {
+    try {
+      await runPythonScript(ocrScriptPath, ['--ping'], { timeout: 4000 });
+      result = { ready: true, script: ocrScriptPath };
+    } catch (err) {
+      result = { ready: false, error: err.message || String(err) };
+    }
+  }
+
+  engineProbeCache.set(cacheKey, { timestamp: now, result });
+  return result;
+}
+
+async function loadEngineStatus(options = {}) {
+  const [chat, rag, sql, ocr] = await Promise.all([
+    probeLocalChatEngine(options),
+    probeLocalRagEngine(options),
+    probeLocalSqlEngine(options),
+    probeLocalOcrEngine(options)
+  ]);
+
+  return { chat, rag, sql, ocr };
+}
+
+function chunkTextForRag(text, chunkSize = 800, overlap = 120) {
+  const normalized = String(text || '').replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    return [];
+  }
+
+  const paragraphs = normalized.split(/\n{2,}/);
+  const chunks = [];
+  let buffer = '';
+
+  const flushBuffer = () => {
+    const trimmed = buffer.trim();
+    if (trimmed) {
+      chunks.push(trimmed);
+    }
+    buffer = '';
+  };
+
+  for (const paragraph of paragraphs) {
+    const clean = paragraph.trim();
+    if (!clean) {
+      continue;
+    }
+
+    if (!buffer) {
+      buffer = clean;
+      continue;
+    }
+
+    const candidate = `${buffer}\n\n${clean}`;
+    if (candidate.length <= chunkSize) {
+      buffer = candidate;
+      continue;
+    }
+
+    flushBuffer();
+    buffer = clean;
+
+    while (buffer.length > chunkSize) {
+      const slice = buffer.slice(0, chunkSize);
+      chunks.push(slice.trim());
+      buffer = buffer.slice(Math.max(1, chunkSize - overlap));
+    }
+  }
+
+  if (buffer.trim()) {
+    flushBuffer();
+  }
+
+  if (!chunks.length && normalized.length) {
+    chunks.push(normalized.slice(0, chunkSize));
+  }
+
+  return chunks;
+}
+
+async function embedTextWithLocalBackend(text) {
+  const scriptExists = await fileExists(embedScriptPath);
+  if (!scriptExists) {
+    throw new Error('Embedding script unavailable');
+  }
+
+  const input = String(text || '').trim();
+  if (!input) {
+    throw new Error('Empty text cannot be embedded');
+  }
+
+  const { stdout } = await runPythonScript(embedScriptPath, ['--json'], { input });
+  let parsed;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch (err) {
+    throw new Error('Failed to parse embedding response');
+  }
+
+  if (!parsed || !Array.isArray(parsed.embedding)) {
+    throw new Error('Embedding payload missing embedding array');
+  }
+
+  return {
+    embedding: parsed.embedding.map((value) => Number(value) || 0),
+    backend: parsed.backend || 'bge-m3'
+  };
+}
+
+async function collectRagCandidates() {
+  const results = [];
+  for (const folder of RAG_SOURCE_FOLDERS) {
+    const folderPath = path.join(bossRoot, folder);
+    try {
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile()) {
+          continue;
+        }
+        if (entry.name.startsWith('.')) {
+          continue;
+        }
+        const ext = path.extname(entry.name).toLowerCase();
+        if (!RAG_ALLOWED_EXTENSIONS.has(ext)) {
+          continue;
+        }
+        const fullPath = path.join(folderPath, entry.name);
+        results.push(fullPath);
+      }
+    } catch (err) {
+      continue; // Skip missing folders
+    }
+  }
+  return results;
+}
+
+async function refreshRagIndex({ force = false, maxNewChunks = MAX_RAG_NEW_CHUNKS } = {}) {
+  if (ragRefreshPromise) {
+    return ragRefreshPromise;
+  }
+
+  const shouldSkip = !force && Date.now() - ragIndexRefreshAt < RAG_REFRESH_INTERVAL_MS;
+  if (shouldSkip) {
+    return null;
+  }
+
+  const job = (async () => {
+    const db = getRagDatabase();
+    const selectStmt = db.prepare('SELECT mtime_ms FROM documents WHERE path = ? LIMIT 1');
+    const deleteStmt = db.prepare('DELETE FROM documents WHERE path = ?');
+    const insertStmt = db.prepare(`
+      INSERT OR REPLACE INTO documents (path, chunk_index, content, embedding, mtime_ms, size_bytes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const candidates = await collectRagCandidates();
+    let processedChunks = 0;
+
+    outer: for (const fullPath of candidates) {
+      let stats;
+      try {
+        stats = await fs.stat(fullPath);
+      } catch (err) {
+        continue;
+      }
+
+      if (!stats.isFile() || stats.size === 0) {
+        continue;
+      }
+
+      if (stats.size > MAX_RAG_DOC_SIZE) {
+        // Skip extremely large documents for now.
+        continue;
+      }
+
+      const relativePath = path.relative(repoRoot, fullPath);
+      const existing = selectStmt.get(relativePath);
+      const mtime = Math.round(stats.mtimeMs);
+      if (existing && Number(existing.mtime_ms) === mtime) {
+        continue;
+      }
+
+      deleteStmt.run(relativePath);
+
+      let content;
+      try {
+        content = await fs.readFile(fullPath, 'utf8');
+      } catch (err) {
+        continue;
+      }
+
+      const chunks = chunkTextForRag(content);
+      let chunkIndex = 0;
+      for (const chunk of chunks) {
+        if (!chunk.trim()) {
+          continue;
+        }
+
+        let embedding;
+        try {
+          embedding = await embedTextWithLocalBackend(chunk);
+        } catch (err) {
+          console.warn('[boss-api] embed failed for RAG chunk', relativePath, err.message || err);
+          continue;
+        }
+
+        insertStmt.run(
+          relativePath,
+          chunkIndex,
+          chunk,
+          JSON.stringify(embedding.embedding),
+          mtime,
+          Buffer.byteLength(chunk, 'utf8')
+        );
+
+        chunkIndex += 1;
+        processedChunks += 1;
+        if (processedChunks >= maxNewChunks) {
+          break outer;
+        }
+      }
+    }
+
+    ragIndexRefreshAt = Date.now();
+  })();
+
+  ragRefreshPromise = job.finally(() => {
+    ragRefreshPromise = null;
+  });
+
+  return ragRefreshPromise;
+}
+
+function cosineSimilarity(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length === 0 || a.length !== b.length) {
+    return 0;
+  }
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = Number(a[i]) || 0;
+    const y = Number(b[i]) || 0;
+    dot += x * y;
+    normA += x * x;
+    normB += y * y;
+  }
+  if (!normA || !normB) {
+    return 0;
+  }
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function runRagQuery(query, options = {}) {
+  const trimmed = String(query || '').trim();
+  if (!trimmed) {
+    return { matches: [], embedding: null };
+  }
+
+  await refreshRagIndex(options.refreshOptions || {});
+  const db = getRagDatabase();
+
+  const queryEmbedding = await embedTextWithLocalBackend(trimmed);
+  const rows = db.prepare('SELECT path, chunk_index, content, embedding, mtime_ms FROM documents').all();
+
+  const scored = rows.map((row) => {
+    let embedding;
+    try {
+      embedding = JSON.parse(row.embedding);
+    } catch (err) {
+      embedding = [];
+    }
+    const score = cosineSimilarity(queryEmbedding.embedding, embedding);
+    return {
+      path: row.path,
+      chunkIndex: row.chunk_index,
+      content: row.content,
+      mtime: row.mtime_ms,
+      score
+    };
+  }).filter((entry) => entry.score > 0);
+
+  scored.sort((a, b) => b.score - a.score);
+  const limit = Math.max(1, Math.min(options.limit || MAX_RAG_RESULTS, MAX_RAG_RESULTS));
+  const top = scored.slice(0, limit);
+
+  return {
+    matches: top,
+    embedding: queryEmbedding,
+    totalChunks: rows.length
+  };
+}
+
+function isSafeSqlQuery(query) {
+  const normalized = String(query || '').trim();
+  if (!normalized) {
+    return false;
+  }
+  const lower = normalized.toLowerCase();
+  if (!lower.startsWith('select') && !lower.startsWith('with')) {
+    return false;
+  }
+  if (normalized.split(';').filter((segment) => segment.trim()).length > 1) {
+    return false;
+  }
+  const forbidden = /\b(insert|update|delete|drop|alter|create|replace|attach|detach|pragma|vacuum|reindex|truncate)\b/i;
+  if (forbidden.test(normalized)) {
+    return false;
+  }
+  return true;
+}
+
+async function runSqlQuery(query, { datasetId = 'sample', limit = 50 } = {}) {
+  ensureSampleSqliteDataset();
+  const dataset = SQL_DATASETS[datasetId];
+  if (!dataset || !fsSync.existsSync(dataset.path)) {
+    const available = Object.values(SQL_DATASETS).filter((entry) => fsSync.existsSync(entry.path)).map((entry) => entry.id);
+    const error = available.length
+      ? `Dataset "${datasetId}" is unavailable. Available datasets: ${available.join(', ')}`
+      : 'No SQL datasets available.';
+    const err = new Error(error);
+    err.code = 'DATASET_MISSING';
+    throw err;
+  }
+
+  const trimmed = String(query || '').trim();
+  if (!isSafeSqlQuery(trimmed)) {
+    const err = new Error('Only read-only SELECT queries are permitted.');
+    err.code = 'INVALID_QUERY';
+    throw err;
+  }
+
+  const db = new DatabaseSync(dataset.path, { readonly: true });
+  try {
+    const stmt = db.prepare(trimmed);
+    const rows = stmt.all();
+    const columns = stmt.columns().map((column) => column.name);
+    const limitedRows = rows.slice(0, Math.max(1, Math.min(limit, 200)));
+    const truncated = rows.length > limitedRows.length;
+
+    let plan = [];
+    try {
+      const planStmt = db.prepare(`EXPLAIN QUERY PLAN ${trimmed}`);
+      plan = planStmt.all().map((entry) => entry.detail || Object.values(entry).join(' | '));
+    } catch (planErr) {
+      plan = [];
+    }
+
+    return {
+      rows: limitedRows,
+      columns,
+      rowCount: rows.length,
+      truncated,
+      plan,
+      dataset: dataset.id
+    };
+  } finally {
+    db.close();
+  }
+}
+
+async function runOcrTask({ filePath, buffer, format = 'json' } = {}) {
+  const scriptExists = await fileExists(ocrScriptPath);
+  if (!scriptExists) {
+    const err = new Error('OCR script unavailable');
+    err.code = 'SCRIPT_MISSING';
+    throw err;
+  }
+
+  let tempFile = null;
+  let resolvedPath = null;
+
+  if (buffer && buffer.length) {
+    tempFile = path.join(os.tmpdir(), `boss-ocr-${Date.now()}-${Math.random().toString(16).slice(2)}.png`);
+    await fs.writeFile(tempFile, buffer);
+    resolvedPath = tempFile;
+  } else if (filePath) {
+    const candidate = path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath);
+    const realPath = path.resolve(candidate);
+    if (!isPathInside(repoRoot, realPath)) {
+      const err = new Error('OCR target must be inside repository');
+      err.code = 'INVALID_PATH';
+      throw err;
+    }
+    resolvedPath = realPath;
+  } else {
+    const err = new Error('OCR request missing image payload');
+    err.code = 'NO_IMAGE';
+    throw err;
+  }
+
+  try {
+    const args = [resolvedPath];
+    if (format === 'md' || format === 'markdown') {
+      args.push('--format', 'markdown');
+    } else {
+      args.push('--format', 'json');
+    }
+    const { stdout } = await runPythonScript(ocrScriptPath, args, { timeout: 45_000 });
+    if (!stdout) {
+      return { ok: false, error: 'OCR script returned empty output' };
+    }
+    try {
+      return JSON.parse(stdout);
+    } catch (err) {
+      return { ok: false, format, raw: stdout };
+    }
+  } finally {
+    if (tempFile) {
+      try {
+        await fs.unlink(tempFile);
+      } catch (cleanupErr) {
+        // ignore cleanup failure
+      }
+    }
+  }
+}
+
 const hasAnthropicKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
 const hasOpenAiKey = () => Boolean(process.env.OPENAI_API_KEY);
 
@@ -154,6 +860,21 @@ function localOptimizePrompt({ system, user, context }) {
 
   const draft = sections.join('\n\n').trim();
   return draft || String(user || '').trim();
+}
+
+function buildLocalChatPrompt({ system, user, context }) {
+  const segments = [];
+  if (system && system.trim()) {
+    segments.push(`System:\n${system.trim()}`);
+  }
+  if (context && context.trim()) {
+    segments.push(`Context:\n${context.trim()}`);
+  }
+  if (user && user.trim()) {
+    segments.push(`User:\n${user.trim()}`);
+  }
+  segments.push('Assistant:');
+  return segments.join('\n\n');
 }
 
 async function optimizePromptWithOllama({ system, user, context, model, routerMeta }) {
@@ -568,47 +1289,319 @@ const server = http.createServer(async (req, res) => {
   try {
     // Capabilities endpoint to enable full UI features
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
-      const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
-      const aliasList = Object.entries(MAILBOX_ALIASES).map(([alias, target]) => ({ alias, target }));
-      const mailboxList = CANONICAL_MAILBOXES.map((id) => ({
-        id,
-        label: MAILBOX_LABELS[id] || id,
-        role: MAILBOX_ROLES[id] || 'general',
-        uploads: uploadTargets.has(id),
-        goalTarget: goalTargets.has(id)
-      }));
+      try {
+        const engines = await loadEngineStatus({ useCache: false });
+        const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
+        const aliasList = Object.entries(MAILBOX_ALIASES).map(([alias, target]) => ({ alias, target }));
+        const mailboxList = CANONICAL_MAILBOXES.map((id) => ({
+          id,
+          label: MAILBOX_LABELS[id] || id,
+          role: MAILBOX_ROLES[id] || 'general',
+          uploads: uploadTargets.has(id),
+          goalTarget: goalTargets.has(id)
+        }));
 
+        return writeJson(res, 200, {
+          ui: {
+            inbox: true,
+            preview: true,
+            prompt_composer: true,
+            connectors: true
+          },
+          mailboxes: {
+            flow: CANONICAL_MAILBOXES,
+            list: mailboxList,
+            aliases: aliasList
+          },
+          features: {
+            goal: true,
+            optimize_prompt: true,
+            chat: engines.chat.ready || hasServerModels,
+            rag: engines.rag.ready,
+            sql: engines.sql.ready,
+            ocr: engines.ocr.ready,
+            nlu: Boolean(process.env.NLU_ENABLED)
+          },
+          engines,
+          connectors: {
+            anthropic: { ready: hasAnthropicKey() },
+            openai: { ready: hasOpenAiKey() },
+            local: engines
+          },
+          engine: {
+            local: engines.chat.ready || engines.rag.ready || engines.sql.ready || engines.ocr.ready,
+            server_models: hasServerModels
+          }
+        });
+      } catch (err) {
+        console.error('[boss-api] capabilities probe failed', err);
+        return writeJson(res, 500, { error: 'Capabilities probe failed', detail: err.message });
+      }
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
+      const engines = await loadEngineStatus();
       return writeJson(res, 200, {
-        ui: {
-          inbox: true,
-          preview: true,
-          prompt_composer: true,
-          connectors: true
-        },
-        mailboxes: {
-          flow: CANONICAL_MAILBOXES,
-          list: mailboxList,
-          aliases: aliasList
-        },
-        features: {
-          goal: true,
-          optimize_prompt: true,
-          chat: true,
-          nlu: Boolean(process.env.NLU_ENABLED)
-        },
-        engine: {
-          local: true,
-          server_models: hasServerModels
+        anthropic: { ready: hasAnthropicKey() },
+        openai: { ready: hasOpenAiKey() },
+        local: {
+          ready: engines.chat.ready || engines.rag.ready || engines.sql.ready || engines.ocr.ready,
+          chat: engines.chat,
+          rag: engines.rag,
+          sql: engines.sql,
+          ocr: engines.ocr
         }
       });
     }
 
-    if (req.method === 'GET' && url.pathname === '/api/connectors/status') {
-      return writeJson(res, 200, {
-        anthropic: { ready: hasAnthropicKey() },
-        openai: { ready: hasOpenAiKey() },
-        local: { ready: true }
+    if (req.method === 'POST' && url.pathname === '/api/engines/chat') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy();
+        }
       });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const userPrompt = typeof payload.prompt === 'string' ? payload.prompt : (typeof payload.message === 'string' ? payload.message : '');
+          if (!userPrompt || !userPrompt.trim()) {
+            return writeJson(res, 400, { error: 'prompt is required' });
+          }
+
+          const status = await probeLocalChatEngine({ useCache: false });
+          if (!status.ready) {
+            return writeJson(res, 501, {
+              error: 'Local chat engine unavailable',
+              status
+            });
+          }
+
+          const system = typeof payload.system === 'string' ? payload.system : '';
+          const context = typeof payload.context === 'string' ? payload.context : '';
+          const model = typeof payload.model === 'string' && payload.model.trim()
+            ? payload.model.trim()
+            : (status.defaultModel || process.env.OLLAMA_MODEL || 'llama3.1');
+          const composed = buildLocalChatPrompt({ system, user: userPrompt, context });
+
+          const requestBody = JSON.stringify({
+            model,
+            prompt: composed,
+            stream: false,
+            options: {
+              temperature: typeof payload.temperature === 'number' ? payload.temperature : 0.2,
+              top_p: typeof payload.top_p === 'number' ? payload.top_p : 0.9
+            }
+          });
+
+          const started = Date.now();
+          let response;
+          try {
+            response = await httpRequestJson(`${localOllamaBaseUrl}/api/generate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: requestBody,
+              timeout: 40_000
+            });
+          } catch (err) {
+            console.error('[boss-api] local chat request failed', err);
+            return writeJson(res, 502, { error: 'Local chat request failed', detail: err.message });
+          }
+
+          if (response.status < 200 || response.status >= 300) {
+            return writeJson(res, response.status, {
+              error: 'Local chat engine returned error',
+              status: response.status,
+              body: response.body
+            });
+          }
+
+          let parsed;
+          try {
+            parsed = response.body ? JSON.parse(response.body) : {};
+          } catch (err) {
+            parsed = { raw: response.body };
+          }
+
+          const text = typeof parsed.response === 'string' ? parsed.response.trim() : '';
+          return writeJson(res, 200, {
+            ok: Boolean(text),
+            engine: 'ollama-local',
+            model,
+            response: text,
+            meta: {
+              latencyMs: Date.now() - started,
+              baseUrl: localOllamaBaseUrl,
+              tokens: {
+                prompt: parsed.prompt_eval_count || null,
+                completion: parsed.eval_count || null
+              }
+            }
+          });
+        } catch (err) {
+          console.error('[boss-api] local chat payload error', err);
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/engines/rag') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy();
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const query = typeof payload.query === 'string' ? payload.query : '';
+          if (!query.trim()) {
+            return writeJson(res, 400, { error: 'query is required' });
+          }
+
+          const status = await probeLocalRagEngine({ useCache: false });
+          if (!status.ready) {
+            return writeJson(res, 501, { error: 'Local RAG index unavailable', status });
+          }
+
+          const limit = typeof payload.limit === 'number' ? payload.limit : MAX_RAG_RESULTS;
+          const refreshOptions = payload.refresh ? { force: true } : {};
+          const result = await runRagQuery(query, { limit, refreshOptions });
+
+          const matches = result.matches.map((match) => ({
+            path: match.path,
+            chunkIndex: match.chunkIndex,
+            score: Number(match.score.toFixed(4)),
+            content: match.content,
+            mtime: match.mtime ? new Date(match.mtime).toISOString() : null
+          }));
+
+          return writeJson(res, 200, {
+            ok: true,
+            query,
+            matches,
+            meta: {
+              embedding_backend: result.embedding?.backend || 'unknown',
+              total_chunks: result.totalChunks,
+              indexed_documents: status.documents
+            }
+          });
+        } catch (err) {
+          console.error('[boss-api] local rag error', err);
+          return writeJson(res, 500, { error: 'Local RAG request failed', detail: err.message });
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/engines/sql') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 1_000_000) {
+          req.destroy();
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const query = typeof payload.query === 'string' ? payload.query : '';
+          if (!query.trim()) {
+            return writeJson(res, 400, { error: 'query is required' });
+          }
+
+          const dataset = typeof payload.dataset === 'string' ? payload.dataset : 'sample';
+          const limit = typeof payload.limit === 'number' ? payload.limit : 50;
+
+          try {
+            const result = await runSqlQuery(query, { datasetId: dataset, limit });
+            return writeJson(res, 200, {
+              ok: true,
+              dataset: result.dataset,
+              columns: result.columns,
+              rows: result.rows,
+              rowCount: result.rowCount,
+              truncated: result.truncated,
+              plan: result.plan
+            });
+          } catch (err) {
+            if (err.code === 'DATASET_MISSING') {
+              const status = await probeLocalSqlEngine({ useCache: false });
+              return writeJson(res, 501, { error: err.message, status });
+            }
+            if (err.code === 'INVALID_QUERY') {
+              return writeJson(res, 400, { error: err.message });
+            }
+            console.error('[boss-api] local sql execution failed', err);
+            return writeJson(res, 500, { error: 'SQL execution failed', detail: err.message });
+          }
+        } catch (err) {
+          console.error('[boss-api] local sql payload error', err);
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/engines/ocr') {
+      let raw = '';
+      req.on('data', (chunk) => {
+        raw += chunk;
+        if (raw.length > 5_000_000) {
+          req.destroy();
+        }
+      });
+
+      req.on('end', async () => {
+        try {
+          const payload = raw ? JSON.parse(raw) : {};
+          const format = typeof payload.format === 'string' ? payload.format.toLowerCase() : 'json';
+
+          const status = await probeLocalOcrEngine({ useCache: false });
+          if (!status.ready) {
+            return writeJson(res, 501, { error: 'Local OCR backend unavailable', status });
+          }
+
+          let buffer = null;
+          if (typeof payload.image === 'string' && payload.image.trim()) {
+            const base64Match = payload.image.match(/^data:[^;]+;base64,(.+)$/);
+            const base64Payload = base64Match ? base64Match[1] : payload.image;
+            try {
+              buffer = Buffer.from(base64Payload, 'base64');
+            } catch (err) {
+              return writeJson(res, 400, { error: 'Invalid base64 image payload' });
+            }
+          }
+
+          const filePath = typeof payload.path === 'string' ? payload.path : null;
+          let result;
+          try {
+            result = await runOcrTask({ filePath, buffer, format });
+          } catch (err) {
+            if (err.code === 'SCRIPT_MISSING') {
+              return writeJson(res, 501, { error: err.message });
+            }
+            if (err.code === 'INVALID_PATH' || err.code === 'NO_IMAGE') {
+              return writeJson(res, 400, { error: err.message });
+            }
+            console.error('[boss-api] local ocr failure', err);
+            return writeJson(res, 500, { error: 'OCR execution failed', detail: err.message });
+          }
+
+          return writeJson(res, 200, Object.assign({ ok: true }, result));
+        } catch (err) {
+          console.error('[boss-api] local ocr payload error', err);
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+      });
+      return;
     }
 
     if (req.method === 'POST' && url.pathname === '/api/optimize_prompt') {
