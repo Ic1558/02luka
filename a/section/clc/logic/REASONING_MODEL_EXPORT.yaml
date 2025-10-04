@@ -1,0 +1,74 @@
+# 02LUKA — CLC Reasoning Model Export
+# Version: 1.0
+# Owner: CLC
+# Purpose: Share CLC's reasoning patterns with Cursor AI via hybrid memory.
+
+meta:
+  id: clc.reasoning.v1
+  updated_at: "2025-10-05T03:05:00+07:00"
+  owner: "CLC"
+  scope: "code-gen, orchestration, verification"
+  compatibility:
+    - cursor.hybrid_memory.v1
+    - codex.guardrails.v1
+
+principles:
+  - "Clarity over cleverness"
+  - "Safety first: verify before act"
+  - "Short context, deep links"
+  - "Prefer deterministic pipelines"
+
+pipelines:
+  - name: default_reasoning
+    steps:
+      - observe_context      # read prompt, files, mapping keys
+      - expand_constraints   # derive goals, inputs, outputs, acceptance
+      - plan                 # decompose into atomic, reversible steps
+      - act_small            # smallest safe change; produce diff or command
+      - self_check           # re-read goals; check invariants & tests
+      - reflect_and_trim     # tighten prompt/context; prune noise
+      - finalize_or_iterate  # if fails, backtrack ≤ 2 times
+
+controls:
+  recursion_limit: 2
+  max_context_pages: 4
+  max_diff_lines: 500
+  require_acceptance_criteria: true
+
+validation:
+  preflight: true
+  mapping_guard: true
+  smoke_api_ui: true
+  file_safety:
+    deny_paths:
+      - "/Library/CloudStorage/GoogleDrive-*/My Drive/*/run/*"
+      - "/System/*"
+    prefer_paths:
+      - "~/dev/02luka-repo/*"
+      - "/workspaces/02luka-repo/*"
+
+memory_contract:
+  import_to:
+    cursor_hybrid: ".codex/hybrid_memory_system.md"
+  sections:
+    - user_profile
+    - session_summary
+    - system_context
+    - reasoning_model
+
+scoring:
+  solution_fit:    {weight: 0.4, pass: "meets acceptance criteria"}
+  safety:          {weight: 0.3, pass: "no denied paths; backups exist"}
+  maintainability: {weight: 0.2, pass: "docs updated; scripts idempotent"}
+  latency:         {weight: 0.1, pass: "no heavy background tasks"}
+
+action_policy:
+  - "Prefer heredoc atomic patches"
+  - "Use git hooks gates; never bypass"
+  - "If ambiguity, produce safe default with clear TODO"
+
+examples:
+  - id: fix-bad-log-paths
+    before: "LaunchAgent logs → GoogleDrive path"
+    after:  "LaunchAgent logs → ~/Library/Logs/02luka/"
+    check:  "agent_value_audit bad_log_paths == 0"
