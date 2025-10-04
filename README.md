@@ -39,6 +39,80 @@ bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_ap
 ./run/dev_morning.sh
 ```
 
+## 🧠 Dual Memory System (CLC ↔ Cursor AI)
+
+The **Dual Memory System** integrates Claude Code (CLC) and Cursor AI memory into one synchronized framework.
+
+### 🌉 Architecture Overview
+| Layer | Description | Path |
+|-------|--------------|------|
+| **1️⃣ Cursor AI Memory** | Local hybrid memory profile and behavioral state | `.codex/hybrid_memory_system.md` |
+| **2️⃣ CLC Memory (SOT)** | Persistent system memory for 02LUKA agents | `a/section/clc/memory/` |
+| **3️⃣ Memory Bridge** | YAML-based synchronization between Cursor and CLC | `.codex/codex_memory_bridge.yml` |
+| **4️⃣ Autosave Engine** | Auto snapshot of memory context during commits | `.codex/autosave_memory.sh` → `g/reports/memory_autosave/` |
+
+---
+
+### 🧩 Autosave Workflow
+- Triggered automatically on every **git commit**
+- Saves current Cursor AI memory and context to:
+
+```
+g/reports/memory_autosave/autosave_YYYYMMDD_HHMMSS.md
+```
+
+- Mirrors active context between Cursor and CLC folders (`mirror-latest` strategy)
+
+---
+
+### ⚙️ Development Routine
+
+**Option 1 — One-liner**
+```bash
+bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_api_ui.sh
+```
+
+**Option 2 — Convenience Script**
+```bash
+./run/dev_morning.sh
+```
+
+---
+
+### 🩺 System Health Check
+
+Run at any time to validate agents, log paths, and exit statuses:
+
+```bash
+bash "$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g/runbooks/agent_value_audit.sh"
+```
+
+**Expected output:**
+```
+Bad log paths: 0
+Exit 127/126/78: 0
+All systems operational ✅
+```
+
+---
+
+### 📦 Latest Checkpoint
+
+| Component | Status |
+|-----------|--------|
+| **Commit** | 846d993 |
+| **Tag** | v2025-10-05-cursor-ready |
+| **Memory Autosave** | ✅ autosave_20251004_194118.md |
+| **API/UI** | ✅ Running and verified |
+| **CLC Gate** | ✅ Passed (3/3 checks) |
+
+---
+
+### 🔒 Notes
+- **Do not run** from `GoogleDrive-ittipong.c@gmail.com/My Drive/...` inside devcontainer.
+- **Always open project** from symlinked path: `~/dev/02luka-repo`
+- The devcontainer automatically mounts `.codex/` memory and loads the hybrid context.
+
 ## 🔧 Available Scripts
 
 | Script | Purpose |
