@@ -75,3 +75,5 @@ git checkout main && git pull            # back to latest
 - **Reasoning wire report**: `g/reports/REASONING_MODEL_WIRE_*.md`
 - **Policy applied report**: `g/reports/POLICY_PACKS_APPLIED_*.md`
 - **Memory autosave**: `g/reports/memory_autosave/autosave_*.md`
+
+Last Session: 251005_034023
