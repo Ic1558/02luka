@@ -1,0 +1,14 @@
+version: 1.0
+mode: dual
+active_memory_sources:
+  - type: cursor_ai
+    path: .codex/hybrid_memory_system.md
+  - type: clc
+    path: a/section/clc/memory/
+sync_strategy: mirror-latest
+autosave:
+  enabled: true
+  destination: g/reports/memory_autosave/
+mcp:
+  enabled: true
+  clients: [fastvlm, redis, filesystem]
