@@ -31,6 +31,6 @@ elif command -v python &> /dev/null; then
     python -m SimpleHTTPServer 8080
 else
     echo "❌ Python not found. Please install Python to run the local server."
-    echo "   Alternative: Open index.html directly in your browser (file://)"
+    echo "   Alternative: Open luka.html directly in your browser (file://)"
     exit 1
 fi

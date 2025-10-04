@@ -1797,29 +1797,3 @@
   </script>
 </body>
 </html>
-
-<div id="promptlib-toolbar" style="position:fixed;left:16px;top:16px;background:#0f1115;color:#eaeaea;padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);font:13px system-ui;z-index:9999">
-  <strong style="margin-right:8px">Prompt Library</strong>
-  <select id="pl-select" style="margin-right:6px;max-width:240px">
-    <option value="pt-small-safe-change">pt-small-safe-change</option>
-    <option value="pt-audit-and-fix">pt-audit-and-fix</option>
-    <option value="pt-codex-readiness">pt-codex-readiness</option>
-  </select>
-  <button id="pl-insert">Insert</button>
-</div>
-<script>
-  (function(){
-    const TEMPLATES={
-      'pt-small-safe-change': 'Use 02LUKA CLC Reasoning v1.1... small, reversible change...',
-      'pt-audit-and-fix': 'Audit: Drive runtime, LaunchAgents, denied paths... rank & fix...',
-      'pt-codex-readiness': 'Run preflight → dev → smoke; write readiness report...'
-    };
-    const $=q=>document.querySelector(q);
-    const insert=(t)=>{
-      const v=TEMPLATES[t]||''; if(!v) return;
-      const ta=document.querySelector('textarea, #chat-input, #prompt, [contenteditable=true]');
-      if(ta){ if(ta.value!==undefined){ ta.value=v; } else { ta.textContent=v; } }
-    };
-    $('#pl-insert').addEventListener('click',()=>insert($('#pl-select').value));
-  })();
-</script>
