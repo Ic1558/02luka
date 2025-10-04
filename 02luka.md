@@ -1,48 +1,77 @@
-# 🎯 02luka Operations Brief
-> **Last Updated:** 2025-09-30T22:24:57Z
-> **Maintainer:** Luka Automation Stack
+# 02LUKA – System Overview (Cursor + CLC)
 
-This document keeps the lightweight mirror of the broader 02luka system status for work inside `02luka-repo`. It highlights the most recent upgrades and the architecture areas that anyone collaborating through Codex should know about.
+## 1) Dual Memory System (Cursor ↔ CLC)
+- **Cursor AI Memory**: `.codex/hybrid_memory_system.md`  
+- **CLC Memory (SOT)**: `a/section/clc/memory/`  
+- **Memory Bridge**: `.codex/codex_memory_bridge.yml` (mode: `mirror-latest`, `selective-merge`)  
+- **Autosave Engine**: `.codex/autosave_memory.sh` → `g/reports/memory_autosave/autosave_*.md`
 
-## 🧭 Architecture
-### Tools
-- **Gateway Suite:** MCP Docker (5012), MCP FS (8765), Ollama (11434)
-- **Automation Scripts:** `verify_system.sh`, `auto_tunnel.zsh`, discovery helpers under `g/tools/`
-- **Prompt Utilities:** `.codex/templates/`, `.claude/commands/` (legacy)
+### How it works
+1. Edit docs in repo → commit → pre-commit triggers autosave & (optional) write-through.
+2. Pre-push gate (preflight + mapping + smoke) ต้องผ่านก่อนขึ้น remote.
+3. Memory bridge sync ระหว่าง Cursor/CLC ตาม `mirror-latest`.
 
-#### Codex Integration Templates
-- **Purpose:** Provide a canonical prompt scaffolding so every Codex task starts with the same goals, constraints, and validation hooks.
-- **Location:** `.codex/templates/master_prompt.md` (primary), additional templates live alongside it under `.codex/templates/`.
-- **Installation:** `g/tools/install_master_prompt.sh` downloads or refreshes the template set, runs integrity checks, and backs up any existing prompts before overwriting.
-- **Usage Pattern:** Open the Prompt Library in `luka.html` or copy the template directly—always begin with `GOAL:` describing the mission, then work through context, constraints, and validation steps.
+---
 
-## 🚀 Latest Achievements
-1. **Codex Template Ecosystem Online** – Master template published to `.codex/templates/master_prompt.md` with automation script support.
-2. **Prompt Library Hooked into Luka UI** – `luka.html` now fetches the master template, enabling quick insertion or clipboard copy.
-3. **Mapping & Discovery Updated** – `f/ai_context/mapping.json` versioned to 2.1 with Codex namespace coverage and hidden-tier alignment.
-4. **LaunchAgent Cleanup Complete** – LaunchAgent cleanup complete, obsolete agents removed.
+## 2) CLC Reasoning Model v1.1 (Unified)
+- **Spec**: `a/section/clc/logic/REASONING_MODEL_EXPORT.yaml`  
+- **Linked in Hybrid Memory**: `.codex/hybrid_memory_system.md` → `reasoning_model.import`  
+- **Pipeline (7 steps)**: observe_context → expand_constraints → plan → act_small → self_check → reflect_and_trim → finalize_or_iterate (≤2)  
+- **Rubric**: solution_fit / safety / maintainability / observability  
+- **Anti-patterns**: Duct Taper, Box Ticker, Goons/Flunkies, Path Confusion  
+- **Playbooks**: morning routine, LaunchAgents fix, memory sync  
+- **Failure Modes**: API:4000, UI:5173, shebang/perm, Drive placeholder
 
-## 🧠 Dual Memory System (CLC ↔ Cursor AI)
+**Starter prompt (Cursor):**
 
-The **Dual Memory System** provides synchronized memory between Claude Code (CLC) and Cursor AI, enabling seamless context sharing and persistent learning across development sessions.
+Use 02LUKA CLC Reasoning v1.1.
+GOAL: Add a small, reversible improvement.
+ACCEPTANCE: preflight OK, smoke OK, report in g/reports/, atomic patch only.
+Follow pipeline v1.1; template: pt-small-safe-change.
+Output: heredoc patch + apply/rollback commands.
 
-### Key Components
-- **Cursor AI Memory**: `.codex/hybrid_memory_system.md` - Local developer memory profile
-- **CLC Memory**: `a/section/clc/memory/` - Persistent system memory for 02LUKA agents  
-- **Memory Bridge**: `.codex/codex_memory_bridge.yml` - YAML-based synchronization
-- **Autosave Engine**: `.codex/autosave_memory.sh` → `g/reports/memory_autosave/` - Auto snapshots
+---
 
-### Integration Points
-- **Git Hooks**: Pre-commit autosave + pre-push CLC gate validation
-- **DevContainer**: Auto-loads memory on container creation
-- **Morning Routine**: `./run/dev_morning.sh` - Preflight + dev + smoke
+## 3) Morning Routine (one-liner)
+```bash
+bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_api_ui.sh
+```
 
-### Links
-- [README.md - Dual Memory System](../README.md#-dual-memory-system-clc--cursor-ai)
-- [Memory Merge Bridge](../.codex/memory_merge_bridge.sh)
-- [Autosave Reports](../g/reports/memory_autosave/)
+---
 
-## 🔄 Next Up
-- Expand `.codex/templates/` with role-specific prompts (golden prompt, review prompt).
-- Tie the installation script into the verification pipeline for automatic compliance checks.
+## 4) Runtime Path Rules (Important)
+- ✅ ใช้: `~/dev/02luka-repo` หรือ `/workspaces/02luka-repo`
+- ❌ ห้าม runtime บน CloudStorage (Stream/Mirror) เช่น `/Library/CloudStorage/GoogleDrive-*/My Drive/*`
+- ✅ LaunchAgents logs → `~/Library/Logs/02luka/{label}.(out|err)`
 
+---
+
+## 5) Policy Packs
+- **Drive**: `a/section/clc/logic/policies/drive.yaml`
+- **LaunchAgents**: `a/section/clc/logic/policies/launchagents.yaml`
+- **Guard CLI**: `g/tools/policy_guard.sh` (advisory in pre-push)
+
+---
+
+## 6) Checkpoints & Tags
+
+| Tag | Date | Description |
+|-----|------|-------------|
+| v2025-10-05-cursor-ready | 2025-10-05 | DevContainer ready, preflight OK |
+| v2025-10-05-stabilized | 2025-10-05 | System stabilized, audit + boot guard |
+| v2025-10-05-docs-stable | 2025-10-05 | Dual Memory + docs unified |
+| v2025-10-04-locked | 2025-10-04 | Dual Memory locked baseline |
+
+**Use:**
+```bash
+git fetch --tags
+git checkout v2025-10-05-docs-stable     # read-only
+git checkout main && git pull            # back to latest
+```
+
+---
+
+## 7) Verification Quicklinks
+- **Reasoning wire report**: `g/reports/REASONING_MODEL_WIRE_*.md`
+- **Policy applied report**: `g/reports/POLICY_PACKS_APPLIED_*.md`
+- **Memory autosave**: `g/reports/memory_autosave/autosave_*.md`
