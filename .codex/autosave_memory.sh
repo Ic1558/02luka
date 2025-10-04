@@ -6,6 +6,14 @@ OUTDIR="g/reports/memory_autosave"
 RUN_ID="${RUN_ID:-$(hostname)-$$}"
 
 # ล็อกแบบ non-blocking: ถ้ามีคนใช้อยู่ ให้จบเงียบๆ
+LOCK_FALLBACK=.codex/locks/autosave.mutex
+if command -v flock >/dev/null 2>&1; then
+  exec 9>"$LOCK" || true
+  if ! flock -n 9; then echo "[autosave] another process is saving; skip"; exit 0; fi
+else
+  mkdir -p .codex/locks >/dev/null 2>&1 || true
+  if ! mkdir "$LOCK_FALLBACK" 2>/dev/null; then echo "[autosave] another process is saving (fallback); skip"; exit 0; fi
+fi
 exec 9>"$LOCK" || true
 if ! flock -n 9; then
   echo "[autosave] another process is saving; skip"
@@ -41,3 +49,4 @@ OUT="$OUTDIR/autosave_${TS}_${CUR_HASH}_${RUN_ID}.md"
 echo "$CUR_HASH" > "$LAST_HASH_FILE"
 rm -f "$TMP"
 echo "[autosave] wrote $OUT"
+trap 'rm -rf "$LOCK_FALLBACK" >/dev/null 2>&1 || true' EXIT
