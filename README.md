@@ -265,3 +265,8 @@ git reset --hard v2025-10-05-docs-stable
 - All tags are annotated (-a) and signed by GG system.
 - Each tag marks a system-stable snapshot after validation (CLC + preflight + smoke tests).
 - Tags ending in -ready are development-ready checkpoints; tags ending in -stable are production-grade baselines.
+
+## Concurrency & Autosave (CLC + Cursor AI)
+- Autosave is flock-locked and hash-deduped. Running both CLC and Cursor AI will not create duplicate memory files.
+- Files live in `g/reports/memory_autosave/` with content-hash in filenames, older duplicates are auto-archived to `.archive/`.
+- Bridge runs in `mirror-latest` mode with `prefer_run_id: newest`.
