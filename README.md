@@ -71,6 +71,10 @@ bridge live in the real world, not just in documentation.
 
 - [ChatGPT Native App Integration](docs/chatgpt_native_app.md) — embed `luka.html` inside the ChatGPT desktop client while keeping full visibility into the local 02luka workspace.
 
+## 📚 Documentation
+
+- [ChatGPT Native App Integration](docs/chatgpt_native_app.md) — embed `luka.html` inside the ChatGPT desktop client while keeping full visibility into the local 02luka workspace.
+
 ## 🤖 FastVLM Vision API
 
 The system includes Apple's FastVLM for real-time image analysis.
