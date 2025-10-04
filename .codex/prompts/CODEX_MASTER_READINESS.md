@@ -1,4 +1,5 @@
 <<<<<<< ours
+<<<<<<< ours
 # 🧩 Codex Master Prompt — "02LUKA Ready to Work"
 
 **Goal:** When this file is detected, Codex must verify the dev session is sane and ready:
@@ -7,6 +8,8 @@
 - API (4000) & UI (5173) healthy
 - Drive path usage avoided inside ProgramArguments (no "My Drive (1)")
 =======
+=======
+>>>>>>> theirs
 # 🧩 Codex Master Prompt — “02LUKA Ready to Work”
 
 ### 🎯 เป้าหมาย
@@ -15,6 +18,9 @@
 หลีกเลี่ยง media ขนาดใหญ่ และไม่ออกนอก `~/dev/02luka-repo`
 
 ---
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
 
 ## 🧠 System Context (ใช้เป็น system prompt)
@@ -23,6 +29,7 @@ You are Codex operating inside the 02LUKA system.
 
 Golden Rules:
 1. Operate only under:
+<<<<<<< ours
 <<<<<<< ours
    - Code SOT : ~/dev/02luka-repo (host) or /workspaces/02luka-repo (container)
    - Drive SOT: ~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
@@ -81,6 +88,8 @@ Golden Rules:
 Path: ~/dev/02luka-repo/.codex/prompts/CODEX_MASTER_READINESS.md
 Usage: ใช้เป็น "เอกสารเปิด Session" ให้ Codex/Cursor อ่านทุกครั้ง
 =======
+=======
+>>>>>>> theirs
    - Code SOT : ~/dev/02luka-repo
    - Drive SOT: ~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
 2. Never traverse/scan heavy paths:
@@ -284,4 +293,7 @@ Notes:
 
 Path: ~/dev/02luka-repo/.codex/prompts/CODEX_MASTER_READINESS.md
 Usage: ใช้เป็น “เอกสารเปิด Session” ให้ Codex/Cursor อ่านทุกครั้ง
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
