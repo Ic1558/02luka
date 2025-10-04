@@ -22,6 +22,26 @@ This document keeps the lightweight mirror of the broader 02luka system status f
 3. **Mapping & Discovery Updated** – `f/ai_context/mapping.json` versioned to 2.1 with Codex namespace coverage and hidden-tier alignment.
 4. **LaunchAgent Cleanup Complete** – LaunchAgent cleanup complete, obsolete agents removed.
 
+## 🧠 Dual Memory System (CLC ↔ Cursor AI)
+
+The **Dual Memory System** provides synchronized memory between Claude Code (CLC) and Cursor AI, enabling seamless context sharing and persistent learning across development sessions.
+
+### Key Components
+- **Cursor AI Memory**: `.codex/hybrid_memory_system.md` - Local developer memory profile
+- **CLC Memory**: `a/section/clc/memory/` - Persistent system memory for 02LUKA agents  
+- **Memory Bridge**: `.codex/codex_memory_bridge.yml` - YAML-based synchronization
+- **Autosave Engine**: `.codex/autosave_memory.sh` → `g/reports/memory_autosave/` - Auto snapshots
+
+### Integration Points
+- **Git Hooks**: Pre-commit autosave + pre-push CLC gate validation
+- **DevContainer**: Auto-loads memory on container creation
+- **Morning Routine**: `./run/dev_morning.sh` - Preflight + dev + smoke
+
+### Links
+- [README.md - Dual Memory System](../README.md#-dual-memory-system-clc--cursor-ai)
+- [Memory Merge Bridge](../.codex/memory_merge_bridge.sh)
+- [Autosave Reports](../g/reports/memory_autosave/)
+
 ## 🔄 Next Up
 - Expand `.codex/templates/` with role-specific prompts (golden prompt, review prompt).
 - Tie the installation script into the verification pipeline for automatic compliance checks.

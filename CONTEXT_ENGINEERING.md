@@ -48,3 +48,22 @@
 - **Health Ratio:** 100% (all LaunchAgents validated after cleanup).
 - **Notes:** MCP stack reporting healthy, zero configuration errors remaining.
 
+## Runtime Path Rules
+
+### 🚫 Avoid CloudStorage Paths at Runtime
+- **Never rely on** `GoogleDrive-ittipong.c@gmail.com/My Drive/...` paths for runtime operations
+- **CloudStorage paths** are placeholders and may not be accessible in devcontainer environments
+- **Use symlinked paths** instead: `~/dev/02luka-repo` for consistent access
+
+### ✅ Preferred Path Patterns
+- **Development Root**: `~/dev/02luka-repo` (symlinked from CloudStorage)
+- **Memory Files**: `.codex/hybrid_memory_system.md` (local to repo)
+- **Reports**: `g/reports/` (versioned under git)
+- **Logs**: `/tmp/` or `g/reports/` (avoid CloudStorage for runtime logs)
+
+### 🔧 Path Resolution Strategy
+1. **Check symlinked path first**: `~/dev/02luka-repo`
+2. **Fallback to workspace**: `/workspaces/02luka-repo` (devcontainer)
+3. **Never assume CloudStorage**: Always use resolved paths for runtime
+4. **Memory Bridge**: Uses repo-relative paths for portability
+
