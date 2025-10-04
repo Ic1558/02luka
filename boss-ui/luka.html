@@ -53,6 +53,95 @@
       align-items: center;
       gap: 12px;
     }
+    .surface-tabs {
+      margin: 24px;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tool-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tool-tab {
+      appearance: none;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #f3f4f6;
+      color: #374151;
+      padding: 8px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .tool-tab[aria-selected="true"] {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+    }
+    .tab-panels {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+    }
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tab-panel.active {
+      display: flex;
+    }
+    .tool-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .result-pane {
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 16px;
+      min-height: 120px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .rag-drop-zone {
+      border: 2px dashed rgba(37, 99, 235, 0.6);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      background: #eff6ff;
+      color: #1d4ed8;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .rag-drop-zone.drag-active {
+      border-color: #2563eb;
+      background: #dbeafe;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(37, 99, 235, 0.18);
+    }
+    .rag-status {
+      font-size: 13px;
+      color: #4b5563;
+    }
     .app {
       flex: 1;
       display: grid;
@@ -372,6 +461,62 @@
       <button id="connectorsButton" class="secondary" type="button">Connectors</button>
     </div>
   </header>
+  <div class="surface-tabs">
+    <div class="tool-tabs" role="tablist" aria-label="Boss API tools">
+      <button id="tab-chat" class="tool-tab" type="button" data-tab="chat" role="tab" aria-selected="true">Chat</button>
+      <button id="tab-rag" class="tool-tab" type="button" data-tab="rag" role="tab" aria-selected="false" tabindex="-1">RAG</button>
+      <button id="tab-sql" class="tool-tab" type="button" data-tab="sql" role="tab" aria-selected="false" tabindex="-1">SQL</button>
+      <button id="tab-ocr" class="tool-tab" type="button" data-tab="ocr" role="tab" aria-selected="false" tabindex="-1">OCR</button>
+    </div>
+    <div class="tab-panels">
+      <div class="tab-panel active" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat">
+        <form id="chatForm" class="tool-form">
+          <label for="chatMessage">Message</label>
+          <textarea id="chatMessage" placeholder="Send a quick instruction to Luka"></textarea>
+          <div class="button-row">
+            <button type="submit" class="primary">Send Chat</button>
+          </div>
+        </form>
+        <pre id="chatResult" class="result-pane" aria-live="polite">Awaiting chat request…</pre>
+      </div>
+      <div class="tab-panel" data-panel="rag" role="tabpanel" aria-labelledby="tab-rag" hidden>
+        <div class="tool-form">
+          <label for="ragDropZone">Knowledge ingest</label>
+          <div id="ragDropZone" class="rag-drop-zone" tabindex="0" role="button" aria-describedby="ragIngestStatus">Drop files here or click to browse</div>
+          <input id="ragFileInput" type="file" hidden multiple />
+          <p id="ragIngestStatus" class="rag-status">Drop files to send them to /api/rag/ingest.</p>
+        </div>
+        <form id="ragQueryForm" class="tool-form">
+          <label for="ragQuery">Query</label>
+          <input id="ragQuery" type="text" placeholder="Ask the knowledge base" />
+          <div class="button-row">
+            <button type="submit" class="primary">Run RAG Query</button>
+          </div>
+        </form>
+        <pre id="ragResult" class="result-pane" aria-live="polite">Awaiting RAG interaction…</pre>
+      </div>
+      <div class="tab-panel" data-panel="sql" role="tabpanel" aria-labelledby="tab-sql" hidden>
+        <form id="sqlForm" class="tool-form">
+          <label for="sqlQuery">SQL Query</label>
+          <textarea id="sqlQuery" placeholder="SELECT * FROM example_table LIMIT 5;"></textarea>
+          <div class="button-row">
+            <button type="submit" class="primary">Run SQL Query</button>
+          </div>
+        </form>
+        <pre id="sqlResult" class="result-pane" aria-live="polite">Awaiting SQL query…</pre>
+      </div>
+      <div class="tab-panel" data-panel="ocr" role="tabpanel" aria-labelledby="tab-ocr" hidden>
+        <form id="ocrForm" class="tool-form">
+          <label for="ocrInput">OCR Source</label>
+          <input id="ocrInput" type="text" placeholder="Paste an image URL or describe the asset" />
+          <div class="button-row">
+            <button type="submit" class="primary">Extract Text</button>
+          </div>
+        </form>
+        <pre id="ocrResult" class="result-pane" aria-live="polite">Awaiting OCR request…</pre>
+      </div>
+    </div>
+  </div>
   <div class="app">
     <aside class="sidebar">
       <h2>Mailboxes</h2>
@@ -461,6 +606,266 @@
     const API_BASE = (window.location.hostname && window.location.hostname.endsWith('theedges.work'))
       ? 'https://api.theedges.work'
       : 'http://127.0.0.1:4000';
+
+    function safeJsonStringify(value) {
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (err) {
+        return String(value);
+      }
+    }
+
+    async function postJson(path, payload) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload || {})
+      });
+
+      const text = await res.text();
+      let data = {};
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          const parseError = new Error('Invalid JSON response');
+          parseError.data = text;
+          parseError.status = res.status;
+          throw parseError;
+        }
+      }
+
+      if (!res.ok) {
+        const error = new Error((data && data.error) || `Request failed (${res.status})`);
+        error.data = data;
+        error.status = res.status;
+        throw error;
+      }
+
+      return { status: res.status, data };
+    }
+
+    function renderResult(target, status, data) {
+      if (!target) return;
+      const output = data && typeof data === 'object' && !Array.isArray(data)
+        ? Object.assign({ status }, data)
+        : { status, data };
+      target.textContent = safeJsonStringify(output);
+    }
+
+    function renderError(target, err) {
+      if (!target) return;
+      const details = err && err.data && typeof err.data === 'object'
+        ? `\n${safeJsonStringify(err.data)}`
+        : (err && typeof err.data === 'string' ? `\n${err.data}` : '');
+      target.textContent = `Error: ${(err && err.message) || 'Request failed.'}${details}`;
+    }
+
+    const tabButtons = Array.from(document.querySelectorAll('.tool-tab'));
+    const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
+    const chatForm = document.getElementById('chatForm');
+    const chatMessageInput = document.getElementById('chatMessage');
+    const chatResult = document.getElementById('chatResult');
+    const ragDropZone = document.getElementById('ragDropZone');
+    const ragFileInput = document.getElementById('ragFileInput');
+    const ragIngestStatus = document.getElementById('ragIngestStatus');
+    const ragResult = document.getElementById('ragResult');
+    const ragQueryForm = document.getElementById('ragQueryForm');
+    const ragQueryInput = document.getElementById('ragQuery');
+    const sqlForm = document.getElementById('sqlForm');
+    const sqlQueryInput = document.getElementById('sqlQuery');
+    const sqlResult = document.getElementById('sqlResult');
+    const ocrForm = document.getElementById('ocrForm');
+    const ocrInput = document.getElementById('ocrInput');
+    const ocrResult = document.getElementById('ocrResult');
+
+    function activateTab(id) {
+      tabButtons.forEach((button) => {
+        const isActive = button.dataset.tab === id;
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.tabIndex = isActive ? 0 : -1;
+        button.classList.toggle('active', isActive);
+      });
+      tabPanels.forEach((panel) => {
+        const isActive = panel.dataset.panel === id;
+        panel.classList.toggle('active', isActive);
+        panel.hidden = !isActive;
+      });
+    }
+
+    function focusAdjacentTab(delta) {
+      if (!tabButtons.length) return;
+      const activeIndex = tabButtons.findIndex((button) => button.getAttribute('aria-selected') === 'true');
+      const nextIndex = (activeIndex + delta + tabButtons.length) % tabButtons.length;
+      const nextButton = tabButtons[nextIndex];
+      activateTab(nextButton.dataset.tab);
+      nextButton.focus();
+    }
+
+    if (tabButtons.length) {
+      activateTab(tabButtons[0].dataset.tab);
+      tabButtons.forEach((button) => {
+        button.addEventListener('click', () => activateTab(button.dataset.tab));
+        button.addEventListener('keydown', (event) => {
+          if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            focusAdjacentTab(1);
+          } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            focusAdjacentTab(-1);
+          }
+        });
+      });
+    }
+
+    function updateRagStatus(message) {
+      if (ragIngestStatus) {
+        ragIngestStatus.textContent = message;
+      }
+    }
+
+    async function handleRagIngest(files) {
+      if (!ragResult) return;
+      const list = Array.from(files || []);
+      if (!list.length) {
+        updateRagStatus('No files selected for ingest.');
+        return;
+      }
+      updateRagStatus(`Sending ${list.length} file(s) to /api/rag/ingest…`);
+      ragResult.textContent = `Uploading ${list.length} file(s)…`;
+      try {
+        const payload = {
+          files: list.map((file) => ({
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream'
+          }))
+        };
+        const { status, data } = await postJson('/api/rag/ingest', payload);
+        renderResult(ragResult, status, data);
+        updateRagStatus(`Ingested ${list.length} file(s).`);
+      } catch (err) {
+        renderError(ragResult, err);
+        updateRagStatus('Ingest failed. Check server logs.');
+      }
+    }
+
+    if (ragDropZone) {
+      ragDropZone.addEventListener('click', () => {
+        if (ragFileInput) {
+          ragFileInput.value = '';
+          ragFileInput.click();
+        }
+      });
+      ragDropZone.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (ragFileInput) {
+            ragFileInput.value = '';
+            ragFileInput.click();
+          }
+        }
+      });
+      ragDropZone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+        ragDropZone.classList.add('drag-active');
+      });
+      ragDropZone.addEventListener('dragleave', (event) => {
+        if (!ragDropZone.contains(event.relatedTarget)) {
+          ragDropZone.classList.remove('drag-active');
+        }
+      });
+      ragDropZone.addEventListener('dragend', () => {
+        ragDropZone.classList.remove('drag-active');
+      });
+      ragDropZone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        ragDropZone.classList.remove('drag-active');
+        const files = event.dataTransfer ? Array.from(event.dataTransfer.files || []) : [];
+        handleRagIngest(files);
+      });
+    }
+
+    if (ragFileInput) {
+      ragFileInput.addEventListener('change', () => {
+        const files = Array.from(ragFileInput.files || []);
+        handleRagIngest(files);
+        ragFileInput.value = '';
+      });
+    }
+
+    if (chatForm && chatMessageInput && chatResult) {
+      chatForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const message = chatMessageInput.value.trim();
+        if (!message) {
+          chatResult.textContent = 'Provide a message to send.';
+          return;
+        }
+        chatResult.textContent = 'Sending chat message…';
+        try {
+          const { status, data } = await postJson('/api/chat', { message });
+          renderResult(chatResult, status, data);
+        } catch (err) {
+          renderError(chatResult, err);
+        }
+      });
+    }
+
+    if (ragQueryForm && ragQueryInput && ragResult) {
+      ragQueryForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const query = ragQueryInput.value.trim();
+        if (!query) {
+          ragResult.textContent = 'Enter a query to run.';
+          return;
+        }
+        ragResult.textContent = 'Running RAG query…';
+        try {
+          const { status, data } = await postJson('/api/rag/query', { query });
+          renderResult(ragResult, status, data);
+        } catch (err) {
+          renderError(ragResult, err);
+        }
+      });
+    }
+
+    if (sqlForm && sqlQueryInput && sqlResult) {
+      sqlForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const query = sqlQueryInput.value.trim();
+        if (!query) {
+          sqlResult.textContent = 'Enter a SQL query to execute.';
+          return;
+        }
+        sqlResult.textContent = 'Running SQL query…';
+        try {
+          const { status, data } = await postJson('/api/sql/query', { query });
+          renderResult(sqlResult, status, data);
+        } catch (err) {
+          renderError(sqlResult, err);
+        }
+      });
+    }
+
+    if (ocrForm && ocrInput && ocrResult) {
+      ocrForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const source = ocrInput.value.trim();
+        if (!source) {
+          ocrResult.textContent = 'Provide an image source to extract from.';
+          return;
+        }
+        ocrResult.textContent = 'Requesting OCR extract…';
+        try {
+          const { status, data } = await postJson('/api/ocr/extract', { source });
+          renderResult(ocrResult, status, data);
+        } catch (err) {
+          renderError(ocrResult, err);
+        }
+      });
+    }
 
     const engineModeToggle = document.getElementById('engineModeToggle');
     const engineSelectLabel = document.getElementById('engineSelectLabel');

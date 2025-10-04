@@ -43,6 +43,70 @@ const allowed = new Set([...CANONICAL_MAILBOXES, ...Object.keys(MAILBOX_ALIASES)
 const uploadTargets = new Set(['inbox', 'outbox', 'drafts']);
 const goalTargets = new Set(['outbox', 'drafts']);
 const MAX_UPLOAD_SIZE = 20 * 1024 * 1024; // 20MB safeguard
+const JSON_BODY_LIMIT = 1_000_000; // 1MB guardrail for JSON stubs
+
+function readJsonBody(req, limit = JSON_BODY_LIMIT) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    let settled = false;
+
+    req.setEncoding('utf8');
+
+    req.on('data', (chunk) => {
+      if (settled) return;
+      raw += chunk;
+      if (raw.length > limit) {
+        settled = true;
+        const err = new Error('Payload too large');
+        err.code = 'PAYLOAD_TOO_LARGE';
+        reject(err);
+        req.destroy();
+      }
+    });
+
+    req.on('end', () => {
+      if (settled) return;
+      settled = true;
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        resolve(parsed);
+      } catch (err) {
+        err.code = 'INVALID_JSON';
+        reject(err);
+      }
+    });
+
+    req.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      err.code = err.code || 'STREAM_ERROR';
+      reject(err);
+    });
+  });
+}
+
+function respondJsonBodyError(res, err) {
+  if (!err) {
+    return;
+  }
+
+  if (err.code === 'PAYLOAD_TOO_LARGE') {
+    writeJson(res, 413, { ok: false, error: 'Payload too large' });
+    return;
+  }
+
+  if (err.code === 'INVALID_JSON') {
+    writeJson(res, 400, { ok: false, error: 'Invalid JSON payload' });
+    return;
+  }
+
+  console.error('[boss-api] JSON body error', err);
+  writeJson(res, 500, { ok: false, error: 'Failed to process request body' });
+}
 
 function normalizeMailbox(mailbox) {
   if (!mailbox) return '';
@@ -594,7 +658,10 @@ const server = http.createServer(async (req, res) => {
           goal: true,
           optimize_prompt: true,
           chat: true,
-          nlu: Boolean(process.env.NLU_ENABLED)
+          nlu: Boolean(process.env.NLU_ENABLED),
+          rag: true,
+          sql: true,
+          ocr: true
         },
         engine: {
           local: true,
@@ -608,6 +675,106 @@ const server = http.createServer(async (req, res) => {
         anthropic: { ready: hasAnthropicKey() },
         openai: { ready: hasOpenAiKey() },
         local: { ready: true }
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/chat') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        respondJsonBodyError(res, err);
+        return;
+      }
+
+      const message = typeof payload.message === 'string' ? payload.message.trim() : '';
+
+      return writeJson(res, 200, {
+        ok: true,
+        message: 'Stubbed chat response. Replace with real implementation when ready.',
+        response: message ? `Echo: ${message}` : 'No message provided.',
+        received: payload || {},
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/rag/ingest') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        respondJsonBodyError(res, err);
+        return;
+      }
+
+      const files = Array.isArray(payload?.files) ? payload.files : [];
+
+      return writeJson(res, 200, {
+        ok: true,
+        message: 'Stubbed RAG ingest completed.',
+        ingested: files.length,
+        files,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/rag/query') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        respondJsonBodyError(res, err);
+        return;
+      }
+
+      const query = typeof payload.query === 'string' ? payload.query.trim() : '';
+
+      return writeJson(res, 200, {
+        ok: true,
+        message: 'Stubbed RAG query executed.',
+        answer: query ? `No knowledge base configured for: ${query}` : 'No query provided.',
+        results: [],
+        received: payload || {},
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/sql/query') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        respondJsonBodyError(res, err);
+        return;
+      }
+
+      const query = typeof payload.query === 'string' ? payload.query.trim() : '';
+
+      return writeJson(res, 200, {
+        ok: true,
+        message: 'Stubbed SQL query executed.',
+        rows: [],
+        received: payload || {},
+        summary: query ? `Query accepted: ${query}` : 'No query provided.',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ocr/extract') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        respondJsonBodyError(res, err);
+        return;
+      }
+
+      return writeJson(res, 200, {
+        ok: true,
+        message: 'Stubbed OCR extraction executed.',
+        text: 'No OCR engine configured.',
+        received: payload || {},
+        timestamp: new Date().toISOString()
       });
     }
 
