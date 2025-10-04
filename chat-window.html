@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Luka Prompt Orchestrator</title>
+  <title>Luka Chat - Separate Window</title>
   <style>
     :root {
       color-scheme: dark;
@@ -21,6 +21,43 @@
       flex-direction: column;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom)) env(safe-area-inset-left);
     }
+    
+    /* Window Controls */
+    .window-controls {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      z-index: 100;
+    }
+    
+    .window-btn {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      transition: opacity 0.2s;
+    }
+    
+    .window-btn:hover {
+      opacity: 0.8;
+    }
+    
+    .minimize-btn {
+      background: #facc15;
+      color: #000;
+    }
+    
+    .close-btn {
+      background: #ef4444;
+      color: #fff;
+    }
+    
     header {
       border-bottom: 1px solid #262626;
       padding: 12px 16px;
@@ -272,10 +309,16 @@
   </style>
 </head>
 <body>
+  <!-- Window Controls -->
+  <div class="window-controls">
+    <button class="window-btn minimize-btn" id="minimizeBtn" title="Minimize">−</button>
+    <button class="window-btn close-btn" id="closeBtn" title="Close">×</button>
+  </div>
+
   <header>
     <div class="logo">L</div>
     <div>
-      <div>Luka Orchestrator</div>
+      <div>Luka Chat</div>
       <div class="status">Connected to local automation</div>
     </div>
     <div class="tools">
@@ -286,7 +329,6 @@
         <option value="ollama">Ollama (11434)</option>
       </select>
       <button class="tool-button" id="promptLibraryButton" type="button">Prompt Library</button>
-      <button class="tool-button" id="openChatWindowButton" type="button">Open Chat Window</button>
     </div>
   </header>
 
@@ -333,7 +375,8 @@
     const closePromptLibrary = document.getElementById('closePromptLibrary');
     const copyPromptTemplate = document.getElementById('copyPromptTemplate');
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
-    const openChatWindowButton = document.getElementById('openChatWindowButton');
+    const minimizeBtn = document.getElementById('minimizeBtn');
+    const closeBtn = document.getElementById('closeBtn');
 
     const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
     const TARGET_PROFILES = {
@@ -362,6 +405,15 @@
     let masterPromptCache = '';
     let masterPromptFetchPromise = null;
     let isSending = false;
+
+    // Window Controls
+    minimizeBtn.addEventListener('click', () => {
+      window.minimize();
+    });
+
+    closeBtn.addEventListener('click', () => {
+      window.close();
+    });
 
     function togglePromptLibrary(forceOpen) {
       const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
@@ -517,53 +569,6 @@
       }
     });
 
-    // Chat window functionality
-    let chatWindow = null;
-
-    openChatWindowButton.addEventListener('click', () => {
-      if (chatWindow && !chatWindow.closed) {
-        // If chat window is already open, focus it
-        chatWindow.focus();
-        chatWindow.postMessage({ type: 'open-chat' }, '*');
-      } else {
-        // Open new chat window
-        const windowFeatures = 'width=800,height=600,resizable=yes,scrollbars=yes,status=yes,toolbar=no,menubar=no,location=no';
-        chatWindow = window.open('./chat-window.html', 'luka-chat', windowFeatures);
-        
-        if (chatWindow) {
-          chatWindow.addEventListener('load', () => {
-            // Sync gateway selection with chat window
-            chatWindow.postMessage({ 
-              type: 'sync-gateway', 
-              gateway: gatewaySelect.value 
-            }, '*');
-          });
-        }
-      }
-    });
-
-    // Listen for messages from chat window
-    window.addEventListener('message', (event) => {
-      if (event.data.type === 'chat-window-closed') {
-        chatWindow = null;
-      } else if (event.data.type === 'sync-gateway') {
-        // Sync gateway selection from chat window back to main window
-        if (event.data.gateway && event.data.gateway !== gatewaySelect.value) {
-          gatewaySelect.value = event.data.gateway;
-        }
-      }
-    });
-
-    // Sync gateway changes to chat window
-    gatewaySelect.addEventListener('change', () => {
-      if (chatWindow && !chatWindow.closed) {
-        chatWindow.postMessage({ 
-          type: 'sync-gateway', 
-          gateway: gatewaySelect.value 
-        }, '*');
-      }
-    });
-
     updateSendButton();
     messageInput.focus();
 
@@ -675,6 +680,38 @@
       }
       return '';
     }
+
+    // Handle window events
+    window.addEventListener('beforeunload', () => {
+      // Notify parent window that chat is closing
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ type: 'chat-window-closed' }, '*');
+      }
+    });
+
+    // Listen for messages from parent window
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'open-chat') {
+        // Focus the chat window when parent requests it
+        window.focus();
+        messageInput.focus();
+      } else if (event.data.type === 'sync-gateway') {
+        // Sync gateway selection from parent window
+        if (event.data.gateway && event.data.gateway !== gatewaySelect.value) {
+          gatewaySelect.value = event.data.gateway;
+        }
+      }
+    });
+
+    // Sync gateway changes back to parent window
+    gatewaySelect.addEventListener('change', () => {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage({ 
+          type: 'sync-gateway', 
+          gateway: gatewaySelect.value 
+        }, '*');
+      }
+    });
   </script>
 </body>
 </html>
