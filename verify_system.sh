@@ -13,7 +13,28 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Path configuration
-SOT_PATH="${SOT_PATH:-$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka}"
+STREAM_DEFAULT="$HOME/dev/02luka-repo"
+MIRROR_FALLBACK="$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka"
+
+ensure_sot_path() {
+    if [[ -n "${SOT_PATH:-}" ]]; then
+        if [[ ! -d "$SOT_PATH" ]]; then
+            if [[ -d "$STREAM_DEFAULT" ]]; then
+                SOT_PATH="$STREAM_DEFAULT"
+            elif [[ -d "$MIRROR_FALLBACK" ]]; then
+                SOT_PATH="$MIRROR_FALLBACK"
+            fi
+        fi
+    else
+        if [[ -d "$STREAM_DEFAULT" ]]; then
+            SOT_PATH="$STREAM_DEFAULT"
+        else
+            SOT_PATH="$MIRROR_FALLBACK"
+        fi
+    fi
+}
+
+ensure_sot_path
 
 # 1. DEPLOYMENT CHECK
 echo "📦 1. DEPLOYMENT STATUS"
@@ -115,7 +136,7 @@ echo ""
 # 5. SYSTEM MAP VALIDATION
 echo "🗺️  5. SYSTEM MAP VALIDATION"
 echo "--------------------------"
-SOT_PATH="${SOT_PATH:-$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka}"
+ensure_sot_path
 if [ -f "$SOT_PATH/g/tools/check_map_links.sh" ]; then
     MAP_OUTPUT=$(bash "$SOT_PATH/g/tools/check_map_links.sh" 2>&1 | grep -v "lsof: WARNING")
     if echo "$MAP_OUTPUT" | grep -q "All checks passed"; then

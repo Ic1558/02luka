@@ -11,7 +11,7 @@
 
 ### 2. Push to GitHub
 ```bash
-cd "/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka-repo"
+cd "$HOME/dev/02luka-repo"  # Stream Mode workspace symlink
 
 # Add GitHub remote (replace YOUR_USERNAME with your GitHub username)
 git remote add origin https://github.com/YOUR_USERNAME/02luka.git
@@ -19,6 +19,8 @@ git remote add origin https://github.com/YOUR_USERNAME/02luka.git
 # Push to GitHub
 git push -u origin main
 ```
+
+> **Note:** If the Stream Mode workspace (`~/dev/02luka-repo`) is not yet available, fall back to the legacy mirror path `"$HOME/My Drive (ittipong.c@gmail.com) (1)/02luka-repo"`.
 
 ### 3. Deploy to Cloudflare Pages
 1. Go to [dash.cloudflare.com](https://dash.cloudflare.com)
@@ -81,7 +83,7 @@ If GitHub setup is complex, you can deploy directly:
 ### Option C: Local Network Access
 ```bash
 # Serve locally but accessible on network
-cd "/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka-repo"
+cd "$HOME/dev/02luka-repo"  # Stream Mode workspace symlink
 python3 -m http.server 8080 --bind 0.0.0.0
 
 # Access from other devices: http://YOUR_MAC_IP:8080/luka_minimal.html

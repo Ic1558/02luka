@@ -11,7 +11,7 @@ Read first:
 
 ## Critical Rules
 - Always resolve paths via `g/tools/path_resolver.sh` (no absolute paths).
-- Do NOT create symlinks (Google Drive mirror is used).
+- Work from the Stream Mode workspace (`$SOT_PATH=~/dev/02luka-repo`) instead of direct Google Drive paths.
 - Do NOT write to a/, c/, o/, s/ (human-only sandboxes).
 - Always run validations before committing.
 - Guardrail FAIL = stop immediately, append manifest with fail status.
