@@ -27,11 +27,24 @@ python3 -m http.server 8080
 open http://localhost:8080
 ```
 
+## 🌅 Morning Routine
+
+**One-liner to start your day:**
+```bash
+bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_api_ui.sh
+```
+
+**Or use the convenience script:**
+```bash
+./run/dev_morning.sh
+```
+
 ## 🔧 Available Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `./run_local.sh` | Start local dev server |
+| `./run/dev_morning.sh` | **Morning routine** - preflight + dev + smoke |
 | `./tunnel` | Auto tunnel + config update |
 | `./verify_system.sh` | Full system health check |
 | `./expose_gateways.sh` | Manual Cloudflare tunnels |
