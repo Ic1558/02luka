@@ -226,3 +226,42 @@ tail -f ~/Library/Logs/02luka/com.02luka.fastvlm.err.log  # Check errors
 ## 🗂️ Persistent Change Tracking
 
 The repository now ships with a Codex-friendly workflow for carrying context between sessions. See [docs/persistent_change_workflow.md](docs/persistent_change_workflow.md) for details on change units, session logs, and daily reports that live inside the repo.
+
+---
+
+## 🔖 Checkpoints & Tags
+
+| Tag | Date | Description |
+|-----|------|--------------|
+| v2025-10-05-cursor-ready | 2025-10-05 | Cursor DevContainer ready, preflight OK |
+| v2025-10-05-stabilized | 2025-10-05 | System stabilized, daily audit + boot guard enforced |
+| v2025-10-05-docs-stable | 2025-10-05 | Stable baseline after Dual Memory + documentation unification |
+
+### 🧭 Tag Usage Guide
+
+To **switch** to a tag version (read-only snapshot):
+
+```bash
+git fetch --tags
+git checkout v2025-10-05-docs-stable
+```
+
+To return to the latest development branch:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+To rollback (hard reset local state):
+
+```bash
+git reset --hard v2025-10-05-docs-stable
+```
+
+---
+
+### 🧠 Tag Policy:
+- All tags are annotated (-a) and signed by GG system.
+- Each tag marks a system-stable snapshot after validation (CLC + preflight + smoke tests).
+- Tags ending in -ready are development-ready checkpoints; tags ending in -stable are production-grade baselines.
