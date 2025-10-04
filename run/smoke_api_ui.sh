@@ -34,9 +34,9 @@ HAS_CHAT=$(echo "$CAPABILITIES_JSON" | jq -r '.features.chat // false')
 echo "Capabilities: optimize_prompt=$HAS_OPTIMIZE, chat=$HAS_CHAT"
 
 echo "==> Resolve mailboxes"
-INBOX_DIR="$($ROOT/g/tools/path_resolver.sh human:inbox)"
-OUTBOX_DIR="$($ROOT/g/tools/path_resolver.sh human:outbox)"
-SENT_DIR="$($ROOT/g/tools/path_resolver.sh human:sent)"
+INBOX_DIR="$("$ROOT/g/tools/path_resolver.sh" human:inbox)"
+OUTBOX_DIR="$("$ROOT/g/tools/path_resolver.sh" human:outbox)"
+SENT_DIR="$("$ROOT/g/tools/path_resolver.sh" human:sent)"
 mkdir -p "$INBOX_DIR" "$OUTBOX_DIR" "$SENT_DIR"
 
 SMOKE_FILE=""
