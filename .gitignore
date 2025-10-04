@@ -9,3 +9,18 @@ boss-api/node_modules/
 boss-ui/dist/
 .env
 .codex/templates/master_prompt.md.backup-
+
+# Memory system autosaves and logs
+g/reports/memory_autosave/
+g/reports/MEMORY_MERGE_LOG_*.md
+boss/sent/system_*.md
+
+# Backup files
+*.bak-*
+*~
+
+# Temporary setup scripts
+setup_memory_merge_bridge.zsh
+
+# AI context backups
+f/ai_context/*.backup
