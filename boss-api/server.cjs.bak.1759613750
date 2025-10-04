@@ -2182,27 +2182,27 @@ server.listen(PORT, HOST, () => {
   console.log(`boss-api listening on http://${HOST}:${PORT}`);
 });
 
+// --- [merge-train] POST /api/optimize (ported from server.js) ---
+/**
+ * Body: { prompt: string, options?: { strategy?: string } }
+ * Returns: { optimized: string, meta: {...} }
+ */
+async function __defaultOptimize(p){ return `[OPTIMIZED] ${p}`; }
 
-// --- [merge-train] POST /api/optimize (raw HTTP handler) ---
-function handleOptimizeRequest(req, res) {
-  let body = '';
-  req.on('data', chunk => body += chunk);
-  req.on('end', () => {
-    try {
-      const data = JSON.parse(body);
-      const { prompt, options = {} } = data || {};
-      if (!prompt || typeof prompt !== 'string') {
-        writeJson(res, 400, { error: 'prompt (string) is required' });
-        return;
-      }
-      const optimized = `[OPTIMIZED] ${prompt}`;
-      writeJson(res, 200, {
-        optimized,
-        meta: { strategy: options.strategy || 'default', ts: new Date().toISOString() }
-      });
-    } catch (err) {
-      console.error('optimize error:', err);
-      writeJson(res, 500, { error: 'internal_error' });
+app.post('/api/optimize', async (req, res) => {
+  try {
+    const { prompt, options = {} } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'prompt (string) is required' });
     }
-  });
-}
+    const fn = (typeof optimizePrompt === 'function') ? optimizePrompt : __defaultOptimize;
+    const optimized = await fn(prompt, options);
+    return res.json({
+      optimized,
+      meta: { strategy: options.strategy || 'default', ts: new Date().toISOString() }
+    });
+  } catch (err) {
+    console.error('optimize error:', err);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+});
