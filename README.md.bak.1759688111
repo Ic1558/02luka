@@ -270,8 +270,3 @@ git reset --hard v2025-10-05-docs-stable
 - Autosave is flock-locked and hash-deduped. Running both CLC and Cursor AI will not create duplicate memory files.
 - Files live in `g/reports/memory_autosave/` with content-hash in filenames, older duplicates are auto-archived to `.archive/`.
 - Bridge runs in `mirror-latest` mode with `prefer_run_id: newest`.
-
----
-## Boss API/UI Folders (merged in batch2)
-- boss-api/: server.cjs canonical, .env.sample added
-- boss-ui/: index.html redirects to luka.html

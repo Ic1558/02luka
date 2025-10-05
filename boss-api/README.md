@@ -1,26 +1,47 @@
-# Boss API
+# 02LUKA Boss API
 
-The Boss API exposes a minimal interface for listing and reading files referenced by logical human namespace keys. Paths are resolved through `g/tools/path_resolver.sh`, ensuring all access occurs via the repository mapping configuration.
+## Overview
+- Port: 4000 (configurable via PORT)
+- Raw HTTP server (no Express)
+- Endpoints:
+  - POST /api/optimize
+  - POST /api/chat-with-nlu-router
 
-## Endpoints
+## Setup
+1) cp boss-api/.env.sample boss-api/.env
+2) bash ./run/dev_up_simple.sh
 
-- `GET /api/list/:folder` — returns `{ files: [{ name }] }` for files in the specified folder.
-- `GET /api/file/:folder/:name` — returns `{ name, content }` for a single file.
+## Notes
+- Keep server.cjs as canonical API entrypoint
+- Avoid server.js (legacy)
 
-Only the following folders are available: `inbox`, `sent`, `deliverables`, `dropbox`, `drafts`, and `documents`.
+## Incoming (merged)
+# boss-api
 
-Errors use a consistent JSON structure: `{ "message": string, "code": string }`.
+A minimal Node.js HTTP server that exposes read-only access to Boss Workspace folders.
 
-## Running locally
+## Requirements
+
+- Node.js 18+
+
+## Setup
+
+1. (Optional) Copy `.env.sample` to `.env` and adjust values.
+2. Install dependencies (none required).
+
+## Run
 
 ```bash
-cd boss-api
-cp .env.sample .env # optional
-npm install
-npm run start
+node server.js
 ```
 
-Set `SOT_PATH` in `.env` if the API is executed outside the repository; otherwise it defaults to the repo root.
+The server listens on `PORT` (default `4000`).
 
-The server listens on port `4000` by default.
+## API
 
+- `GET /api/list/:folder` – List files in an allowed folder.
+- `GET /api/file/:folder/:name` – Retrieve file contents from an allowed folder.
+
+Allowed folders: `inbox`, `sent`, `deliverables`, `dropbox`, `drafts`, `documents`.
+
+All file paths are resolved via `g/tools/path_resolver.sh` using `human:<folder>` keys to respect the Single Source of Truth mapping.

@@ -1,0 +1,16 @@
+{
+    "name": "02Luka Dev Container",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+    "remoteUser": "root",
+    "runArgs": ["--network=host"],
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "openai.codex",
+          "ms-vscode-remote.remote-containers"
+        ]
+      }
+    },
+    "postCreateCommand": "bash -lc 'apt-get update -y >/dev/null 2>&1 || true'"
+  }
+  

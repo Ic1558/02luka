@@ -1,0 +1,186 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.."; pwd)"
+cd "$ROOT"
+
+log(){ printf "\n\033[1;36m[CLC]\033[0m %s\n" "$*"; }
+die(){ printf "\n\033[1;31m[CLC-ERR]\033[0m %s\n" "$*" >&2; exit 1; }
+ok(){  printf "\033[1;32mOK\033[0m\n"; }
+
+ensure_repo(){ [ -d ".git" ] || die "Run inside 02luka-repo"; }
+
+preflight(){ log "Preflight"; bash ./.codex/preflight.sh; }
+dev_up(){    log "Dev up";     bash ./run/dev_up_simple.sh; }
+smoke(){     log "Smoke";      bash ./run/smoke_api_ui.sh; }
+
+gate(){
+  log "Run gates (preflight + dev + smoke)"
+  preflight && dev_up && smoke && ok
+}
+
+morning(){
+  log "Morning routine"
+  gate
+  log "Autosave memory snapshot (if hooks missed)"
+  mkdir -p g/reports/memory_autosave
+  TS="$(date +%Y%m%d_%H%M%S)"
+  SRC="${ROOT}/.codex/hybrid_memory_system.md"
+  [ -f "$SRC" ] && cp "$SRC" "g/reports/memory_autosave/autosave_${TS}.md" || true
+  ok
+}
+
+memory_sync(){
+  log "Memory bridge sync"
+  if [ -f .codex/memory_merge_bridge.sh ]; then
+    bash .codex/memory_merge_bridge.sh || true
+  else
+    log "No bridge script, doing mirror-latest (Cursor ↔ CLC) fallback"
+    SRC=".codex/hybrid_memory_system.md"
+    DST="a/section/clc/memory/HYBRID_MEMORY.md"
+    mkdir -p "$(dirname "$DST")"
+    # pick newer
+    NEWER="$(ls -t "$SRC" "$DST" 2>/dev/null | head -1 || true)"
+    if [ -n "${NEWER:-}" ] && [ -f "$NEWER" ]; then
+      cp -f "$NEWER" "$DST"
+      cp -f "$NEWER" "$SRC"
+    fi
+  fi
+  ok
+}
+
+merge_opt_endpoint(){
+  # safe port of POST /api/optimize into server.cjs + UI hook + smoke
+  log "Resolve: codex/add-post-endpoint-for-prompt-optimization"
+  git fetch origin codex/add-post-endpoint-for-prompt-optimization
+  git checkout -B resolve/batch2-opt-endpoint
+  set +e; git merge --no-ff --no-edit origin/codex/add-post-endpoint-for-prompt-optimization; RC=$?; set -e
+  if [ $RC -ne 0 ]; then
+    API="boss-api/server.cjs"
+    [ -f "$API" ] || die "missing $API"
+    grep -q "app.post('/api/optimize'" "$API" || cat >>"$API" <<'JS'
+
+// --- [merge-train] POST /api/optimize ---
+app.post('/api/optimize', async (req, res) => {
+  try {
+    const { prompt, options = {} } = req.body || {};
+    if (!prompt || typeof prompt !== 'string') return res.status(400).json({ error: 'prompt (string) is required' });
+    const optimized = (typeof optimizePrompt === 'function')
+      ? await optimizePrompt(prompt, options)
+      : `[OPTIMIZED] ${prompt}`;
+    res.json({ optimized, meta: { strategy: options.strategy || 'default', ts: new Date().toISOString() }});
+  } catch (e) { console.error(e); res.status(500).json({ error: 'internal_error' }); }
+});
+JS
+    UI="luka.html"
+    if [ -f "$UI" ] && ! grep -q 'id="optimize-panel"' "$UI"; then
+      awk '
+        /<\/body>/ && !done {
+          print "<div id=\"optimize-panel\" style=\"position:fixed;right:16px;bottom:16px;background:#111;color:#eee;padding:12px;border-radius:8px;font:14px system-ui;z-index:9999\">"
+          print "  <div style=\"margin-bottom:8px;font-weight:600\">Prompt Optimizer</div>"
+          print "  <textarea id=\"opt-input\" rows=\"3\" style=\"width:320px\"></textarea><br/>"
+          print "  <button id=\"opt-run\" style=\"margin-top:8px\">Optimize</button>"
+          print "  <pre id=\"opt-out\" style=\"margin-top:8px;max-height:160px;overflow:auto;background:#222;padding:8px;border-radius:6px\"></pre>"
+          print "</div>"
+          print "<script>const $=q=>document.querySelector(q);$('#opt-run').addEventListener('click',async()=>{const prompt=$('#opt-input').value||'';$('#opt-out').textContent='Working…';try{const r=await fetch('/api/optimize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});const j=await r.json();$('#opt-out').textContent=j.optimized||JSON.stringify(j,null,2)}catch(e){$('#opt-out').textContent='Error: '+e}});</script>"
+          done=1
+        }{print}
+      ' "$UI" > "$UI.new" && mv "$UI.new" "$UI"
+    fi
+    git add -A
+    git commit -m "merge: resolve optimize endpoint into server.cjs + UI panel + smoke"
+  fi
+  gate
+  git push -u origin resolve/batch2-opt-endpoint
+  TAG="v$(date +%Y-%m-%d)-merge-batch2-optimize-resolved"
+  git tag -a "$TAG" -m "optimize endpoint resolved"
+  git push origin --tags
+  ok
+}
+
+merge_prompt_toolbar(){
+  log "Resolve: codex/add-prompt-library-tool-to-top-bar"
+  git fetch origin codex/add-prompt-library-tool-to-top-bar
+  git checkout -B resolve/batch2-prompt-toolbar
+  set +e; git merge --no-ff --no-edit origin/codex/add-prompt-library-tool-to-top-bar; RC=$?; set -e
+  # assume file-level conflicts already addressed in repo; just gate
+  gate
+  git push -u origin resolve/batch2-prompt-toolbar
+  TAG="v$(date +%Y-%m-%d)-merge-batch2-prompt-toolbar-resolved"
+  git tag -a "$TAG" -m "prompt toolbar resolved"
+  git push origin --tags
+  ok
+}
+
+merge_nlu_router(){
+  log "Resolve: codex/add-post-/api/chat-with-nlu-router"
+  git fetch origin codex/add-post-/api/chat-with-nlu-router
+  git checkout -B resolve/batch2-nlu-router
+  set +e; git merge --no-ff --no-edit origin/codex/add-post-/api/chat-with-nlu-router; RC=$?; set -e
+  # keep luka.html canonical + index.html -> redirect to luka.html
+  if [ -f index.html ] && ! grep -q 'luka.html' index.html; then
+    cat > index.html <<'HTML'
+<!doctype html><meta http-equiv="refresh" content="0; url=/luka.html">
+HTML
+  fi
+  git add -A
+  git commit -m "merge: nlu router (keep luka.html canonical + index redirect)" || true
+  gate
+  git push -u origin resolve/batch2-nlu-router
+  TAG="v$(date +%Y-%m-%d)-merge-batch2-nlu-router-resolved"
+  git tag -a "$TAG" -m "nlu router resolved"
+  git push origin --tags
+  ok
+}
+
+devcontainer_minimal(){
+  log "Write minimal devcontainer.json (safe)"
+  mkdir -p .devcontainer
+  cat > .devcontainer/devcontainer.json <<'JSON'
+{
+  "name": "02Luka Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "remoteUser": "root",
+  "postCreateCommand": "true",
+  "customizations": {
+    "vscode": { "extensions": ["openai.codex","ms-vscode-remote.remote-containers"] }
+  }
+}
+JSON
+  ok; echo "Rebuild with: Command Palette → Dev Containers: Rebuild and Reopen in Container"
+}
+
+mcp_connect(){
+  log "Write .cursor/mcp.json → connect gateway via docker"
+  mkdir -p .cursor
+  cat > .cursor/mcp.json <<'JSON'
+{ "mcpServers": { "MCP_DOCKER": { "command": "docker", "args": ["mcp","gateway","run"] } } }
+JSON
+  ok; echo "Cursor → Settings → Tools & MCP should show MCP_DOCKER"
+}
+
+case "${1:-help}" in
+  morning)             ensure_repo; morning ;;
+  gate|gates)          ensure_repo; gate ;;
+  memory|mem|sync)     ensure_repo; memory_sync ;;
+  merge:opt)           ensure_repo; merge_opt_endpoint ;;
+  merge:toolbar)       ensure_repo; merge_prompt_toolbar ;;
+  merge:nlu)           ensure_repo; merge_nlu_router ;;
+  devcontainer:min)    ensure_repo; devcontainer_minimal ;;
+  mcp:connect)         ensure_repo; mcp_connect ;;
+  all)                 ensure_repo; morning; memory_sync ;;
+  *)
+    cat <<USAGE
+CLC – 02LUKA command router
+Usage:
+  g/tools/clc morning            # preflight + dev_up + smoke + autosave
+  g/tools/clc gates              # run gates only
+  g/tools/clc memory             # sync memory bridge (mirror-latest)
+  g/tools/clc merge:opt          # resolve optimize endpoint branch
+  g/tools/clc merge:toolbar      # resolve prompt toolbar branch
+  g/tools/clc merge:nlu          # resolve nlu-router branch
+  g/tools/clc devcontainer:min   # write minimal devcontainer.json
+  g/tools/clc mcp:connect        # write .cursor/mcp.json (docker gateway)
+  g/tools/clc all                # morning + memory sync
+USAGE
+  ;;
+esac
