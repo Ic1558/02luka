@@ -1150,3 +1150,25 @@
     $('#pl-insert').addEventListener('click',()=>insert($('#pl-select').value));
   })();
 </script>
+
+<div id="optimize-panel" style="position:fixed;right:16px;bottom:16px;background:#111;color:#eee;padding:12px;border-radius:8px;font:14px system-ui;z-index:9999">
+  <div style="margin-bottom:8px;font-weight:600">Prompt Optimizer</div>
+  <textarea id="opt-input" rows="3" style="width:320px"></textarea><br/>
+  <button id="opt-run" style="margin-top:8px">Optimize</button>
+  <pre id="opt-out" style="margin-top:8px;max-height:160px;overflow:auto;background:#222;padding:8px;border-radius:6px"></pre>
+</div>
+<script>
+  (function(){
+    const $ = (q)=>document.querySelector(q);
+    const run = async ()=>{
+      const prompt = ($('#opt-input')?.value||'').trim();
+      try{
+        const r = await fetch('/api/optimize', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt})});
+        const j = await r.json();
+        $('#opt-out').textContent = (j.optimized||j.prompt||JSON.stringify(j));
+      }catch(e){ $('#opt-out').textContent = 'ERR '+e; }
+    };
+    const btn = document.getElementById('opt-run');
+    if(btn) btn.addEventListener('click', run);
+  })();
+</script>
