@@ -28,3 +28,5 @@ f/ai_context/*.backup
 *.conflicted
 index_backup.html
 index_optimized.html
+.venv_mcpfs/
+test-results/
