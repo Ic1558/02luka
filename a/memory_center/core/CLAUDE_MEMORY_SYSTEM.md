@@ -254,3 +254,4 @@ bash "$SOT_PATH/g/runbooks/agent_value_audit.sh"
 **Format**: Append-only (new sessions add to history)
 - Session 251005_041651: feat: codex merge train progress (3/20 critical branches merged)
 - Session 251005_042049: Merge remote-tracking branch 'origin/codex/implement-local-engines-in-server.cjs' into codex-merge-train/20251004_2109
+- Session 251006_032355: fix(ui): correct chatbot_actions module path for static server root

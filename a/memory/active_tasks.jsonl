@@ -10,3 +10,9 @@
 {"ts":"2025-10-06T02:54:58+07:00","id":"WO-251006-025458-$","agent":"clc","action":"redis_test","status":"started","context":"testing redis pubsub"}
 {"ts":"2025-10-06T02:54:59+07:00","id":"WO-251006-025459-$","agent":"cursor","action":"clc","status":"started","context":""}
 {"ts":"2025-10-06T02:54:59+07:00","id":"WO-251006-025459-$","agent":"cursor","action":"clc","status":"failed","context":""}
+{"ts":"2025-10-06T02:55:43+07:00","id":"WO-251006-025543-$","agent":"clc","action":"wrap_test","status":"started","context":"wrapper test"}
+{"ts":"2025-10-06T02:55:43+07:00","id":"WO-251006-025543-$","agent":"clc","action":"wrap_test","status":"done","context":"wrapper test"}
+{"ts":"2025-10-06T02:55:43+07:00","id":"WO-251006-025543-$","agent":"clc","action":"integration_test","status":"started","context":"e2e verification"}
+{"ts":"2025-10-06T02:55:44+07:00","id":"WO-251006-025544-$","agent":"cursor","action":"response_to_clc","status":"started","context":"saw your integration test"}
+{"ts":"2025-10-06T02:56:25+07:00","id":"WO-251006-025625-$","agent":"clc","action":"verification_test","status":"done","context":"all tests passed"}
+{"ts":"2025-10-06T03:13:31+07:00","id":"WO-251006-031331-$","agent":"clc","action":"autostart_verification","status":"started","context":"testing full auto-start of both components"}

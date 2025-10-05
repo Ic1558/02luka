@@ -116,6 +116,53 @@ persistent_memory:
     adaptive_learning: true
 ```
 
+### 5. CLC ↔ Cursor Coordination (MCP + Task Bus)
+
+**Status:** ✅ Auto-start enabled (both components start on login)
+
+```yaml
+# Real-time coordination system
+coordination:
+  mcp_fs_server:
+    purpose: "Cursor reads 02luka files via MCP tools"
+    port: 8765
+    transport: "SSE"
+    tools:
+      - read_text(relpath)    # Read files from SOT
+      - list_dir(relpath)     # List directory contents
+      - file_info(relpath)    # Get file metadata
+    health: "http://127.0.0.1:8765/health"
+    auto_start: true
+
+  task_bus_bridge:
+    purpose: "Share task events between CLC and Cursor"
+    channel: "mcp:tasks"
+    storage: "a/memory/active_tasks.{json,jsonl}"
+    publish: "g/tools/emit_task_event.sh"
+    auto_start: true
+
+  coordination_pattern:
+    - "CLC publishes: bash g/tools/emit_task_event.sh clc action status context"
+    - "Event syncs to: a/memory/active_tasks.json (via Redis + file bridge)"
+    - "Cursor reads: read_text('a/memory/active_tasks.json') via MCP"
+    - "Cursor publishes: same emit_task_event.sh script"
+    - "CLC sees events: tail a/memory/active_tasks.jsonl or read JSON snapshot"
+```
+
+**Quick Usage for Cursor:**
+```python
+# Read latest tasks from CLC
+tasks = read_text('a/memory/active_tasks.json')
+
+# List files in a directory
+files = list_dir('g/tools')
+
+# Get file metadata
+info = file_info('02luka.md')
+```
+
+**Documentation:** See `AUTOSTART_CONFIG.md`, `TASK_BUS_SYSTEM.md`
+
 ## Usage Instructions
 
 ### For Codex AI Assistant:
