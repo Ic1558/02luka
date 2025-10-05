@@ -1550,6 +1550,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // bridge legacy/simple endpoints to raw handlers
+    if (req.method === 'POST' && url.pathname === '/api/optimize') {
+      handleOptimizeRequest(req, res);
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/chat-with-nlu-router') {
+      handleChatWithNluRouter(req, res);
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/engines/ocr') {
       let raw = '';
       req.on('data', (chunk) => {
