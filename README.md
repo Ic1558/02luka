@@ -65,6 +65,31 @@ g/reports/memory_autosave/autosave_YYYYMMDD_HHMMSS.md
 
 ---
 
+### 🔄 Real-Time Coordination (CLC ↔ Cursor)
+
+**Auto-Start Components:**
+- ✅ **MCP FS Server** (port 8765) - Cursor reads 02luka files via MCP tools
+- ✅ **Task Bus Bridge** - Real-time task event sharing between AIs
+
+**Quick Usage:**
+```bash
+# Cursor can read any file via MCP
+read_text('a/memory/active_tasks.json')
+list_dir('g/tools')
+
+# Both AIs publish task events
+bash g/tools/emit_task_event.sh clc my_action started "context"
+```
+
+**Benefits:**
+- 🎯 Instant visibility: Both AIs see each other's work in real-time
+- 📡 Event-driven: Task events sync via Redis + file storage
+- 🚀 Zero manual setup: Auto-starts on login
+
+**Documentation:** See `AUTOSTART_CONFIG.md`, `TASK_BUS_SYSTEM.md`
+
+---
+
 ### ⚙️ Development Routine
 
 **Option 1 — One-liner**

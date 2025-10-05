@@ -34,8 +34,11 @@ Output: heredoc patch + apply/rollback commands.
 
 ## 3) Morning Routine (one-liner)
 ```bash
+# Auto-start components (MCP FS + Task Bus) already running after login
 bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_api_ui.sh
 ```
+
+**Smoke test verifies:** API (4000), UI (5173), MCP FS (8765/health)
 
 ---
 
@@ -53,7 +56,44 @@ bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_ap
 
 ---
 
-## 6) Checkpoints & Tags
+## 6) CLC ↔ Cursor Coordination (Auto-Start)
+
+**Status:** ✅ Both components auto-start on login
+
+### MCP FS Server
+- **PID:** Auto-assigned (LaunchAgent: `com.02luka.mcp.fs`)
+- **Port:** 8765 (SSE transport)
+- **Tools:** `read_text`, `list_dir`, `file_info`
+- **Root:** SOT path (`$FS_ROOT`)
+- **Health:** `http://127.0.0.1:8765/health`
+- **Logs:** `/tmp/mcp_fs_py.{out,err,log}`
+
+### Task Bus Bridge
+- **PID:** Auto-assigned (LaunchAgent: `com.02luka.task.bus.bridge`)
+- **Redis:** `mcp:tasks` channel
+- **Memory:** `~/dev/02luka-repo/a/memory/active_tasks.{json,jsonl}`
+- **Logs:** `~/Library/Logs/02luka/task_bus_bridge.{out,err,log}`
+
+### Quick Usage
+```bash
+# Publish event (CLC or Cursor)
+bash g/tools/emit_task_event.sh clc my_action started "context"
+
+# Read events (Cursor via MCP)
+read_text('a/memory/active_tasks.json')
+
+# Manual control
+launchctl kickstart -k gui/$UID/com.02luka.mcp.fs
+launchctl kickstart -k gui/$UID/com.02luka.task.bus.bridge
+```
+
+**Documentation:** `AUTOSTART_CONFIG.md`, `TASK_BUS_SYSTEM.md`
+
+---
+
+## 7) Checkpoints & Tags
+
+**Latest:** v2025-10-06-mcp-autostart (MCP FS + Task Bus auto-start deployed)
 
 | Tag | Date | Description |
 |-----|------|-------------|
@@ -71,9 +111,9 @@ git checkout main && git pull            # back to latest
 
 ---
 
-## 7) Verification Quicklinks
+## 8) Verification Quicklinks
 - **Reasoning wire report**: `g/reports/REASONING_MODEL_WIRE_*.md`
 - **Policy applied report**: `g/reports/POLICY_PACKS_APPLIED_*.md`
 - **Memory autosave**: `g/reports/memory_autosave/autosave_*.md`
 
-Last Session: 251005_042049
+Last Session: 251006_032355

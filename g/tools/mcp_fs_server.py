@@ -4,6 +4,9 @@ MCP Filesystem Server for 02LUKA
 Provides read/list operations over SSE transport for Cursor integration
 """
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.routing import Route, Mount
+from starlette.responses import JSONResponse
 from pathlib import Path
 import os
 
@@ -42,8 +45,21 @@ def file_info(relpath: str) -> dict:
         "modified": stat.st_mtime
     }
 
-# Export SSE app for uvicorn
-app = mcp.sse_app
+# Health check endpoint
+async def health_check(request):
+    """Health check endpoint for monitoring"""
+    return JSONResponse({
+        "status": "ok",
+        "server": "mcp-fs",
+        "root": str(ROOT),
+        "tools": ["read_text", "list_dir", "file_info"]
+    })
+
+# Create app with health endpoint + MCP routes
+app = Starlette(routes=[
+    Route("/health", health_check),
+    Mount("/", mcp.sse_app)
+])
 
 if __name__ == "__main__":
     import uvicorn
