@@ -2206,24 +2206,3 @@ function handleOptimizeRequest(req, res) {
     }
   });
 }
-
-// --- [merge-train] POST /api/chat-with-nlu-router (raw HTTP handler) ---
-function handleChatWithNluRouter(req, res) {
-  let body = '';
-  req.on('data', chunk => body += chunk);
-  req.on('end', () => {
-    try {
-      const data = JSON.parse(body || '{}');
-      const { message = '', context = {} } = data;
-      if (!message || typeof message !== 'string') {
-        writeJson(res, 400, { error: 'message (string) is required' });
-        return;
-      }
-      const routed = { target: 'default', confidence: 0.5, policy: 'baseline' };
-      writeJson(res, 200, { routed, echo: { message, context }, ts: new Date().toISOString() });
-    } catch (err) {
-      console.error('nlu-router error:', err);
-      writeJson(res, 500, { error: 'internal_error' });
-    }
-  });
-}
