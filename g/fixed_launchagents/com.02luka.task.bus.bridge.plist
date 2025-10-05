@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.task.bus.bridge</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/icmini/dev/02luka-repo/g/bridge/task_bus_bridge.py</string>
+    </array>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>SOT</key>
+        <string>/Users/icmini/dev/02luka-repo</string>
+        <key>REDIS_URL</key>
+        <string>redis://:changeme-02luka@127.0.0.1:6379/0</string>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/Library/Logs/02luka/task_bus_bridge.out</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/Library/Logs/02luka/task_bus_bridge.err</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>
