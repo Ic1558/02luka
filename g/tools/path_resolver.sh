@@ -34,7 +34,7 @@ if [[ -z "$REL" || "$REL" == "null" ]]; then
   exit 3
 fi
 
-# Normalize to absolute path (avoid symlink surprises in Google Drive mirror)
+# Normalize to absolute path so Stream Mode symlinks stay consistent
 ABS="$ROOT/$REL"
 ABS=$(python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$ABS")
 
