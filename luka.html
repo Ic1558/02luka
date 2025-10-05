@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-<<<<<<< HEAD
   <title>Luka Prompt Orchestrator</title>
   <style>
     :root {
@@ -13,32 +12,20 @@
     html, body {
       height: 100%;
     }
-=======
-  <title>Luka - Minimal Working Version</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #0a0a0a;
       color: #fafafa;
-<<<<<<< HEAD
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(env(safe-area-inset-bottom)) env(safe-area-inset-left);
-=======
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     header {
       border-bottom: 1px solid #262626;
       padding: 12px 16px;
       display: flex;
       align-items: center;
-<<<<<<< HEAD
       gap: 16px;
       background: rgba(10, 10, 10, 0.95);
       position: sticky;
@@ -48,14 +35,6 @@
     .logo {
       width: 32px;
       height: 32px;
-=======
-      gap: 12px;
-      position: relative;
-      z-index: 2;
-    }
-    .logo {
-      width: 32px; height: 32px;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       background: #3b82f6;
       border-radius: 8px;
       display: grid;
@@ -63,7 +42,6 @@
       font-weight: bold;
     }
     .status {
-<<<<<<< HEAD
       color: #a3a3a3;
       font-size: 14px;
     }
@@ -72,16 +50,6 @@
       display: flex;
       align-items: center;
       gap: 12px;
-=======
-      flex: 1;
-      color: #a3a3a3;
-      font-size: 14px;
-    }
-    .tool-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     .messages {
       flex: 1;
@@ -90,33 +58,22 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
-<<<<<<< HEAD
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
-=======
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     .message {
       display: flex;
       gap: 12px;
-<<<<<<< HEAD
       max-width: min(600px, 100%);
       width: 100%;
-=======
-      max-width: 600px;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     .message.user {
       align-self: flex-end;
       flex-direction: row-reverse;
     }
     .avatar {
-<<<<<<< HEAD
       width: 32px;
       height: 32px;
-=======
-      width: 32px; height: 32px;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       background: #141414;
       border-radius: 8px;
       display: grid;
@@ -137,14 +94,11 @@
     .input-area {
       padding: 16px;
       border-top: 1px solid #262626;
-<<<<<<< HEAD
       background: rgba(10, 10, 10, 0.95);
       position: sticky;
       bottom: 0;
       padding-bottom: calc(16px + env(safe-area-inset-bottom));
       backdrop-filter: blur(12px);
-=======
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     .input-wrapper {
       background: #141414;
@@ -154,10 +108,7 @@
       display: flex;
       gap: 12px;
       align-items: flex-end;
-<<<<<<< HEAD
       width: 100%;
-=======
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     #messageInput {
       flex: 1;
@@ -168,7 +119,6 @@
       font-size: 14px;
       resize: none;
       min-height: 20px;
-<<<<<<< HEAD
       max-height: 160px;
       font-family: inherit;
       line-height: 1.5;
@@ -177,13 +127,6 @@
     #sendButton {
       width: 40px;
       height: 40px;
-=======
-      max-height: 100px;
-      font-family: inherit;
-    }
-    #sendButton {
-      width: 32px; height: 32px;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       background: #3b82f6;
       border: none;
       border-radius: 8px;
@@ -198,12 +141,8 @@
       opacity: 0.3;
       cursor: not-allowed;
     }
-<<<<<<< HEAD
     select,
     button.tool-button {
-=======
-    select, .tool-button {
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       background: #141414;
       border: 1px solid #262626;
       color: #fafafa;
@@ -212,7 +151,6 @@
       outline: none;
       cursor: pointer;
       font-size: 12px;
-<<<<<<< HEAD
       transition: border-color 0.2s;
     }
     button.tool-button:hover,
@@ -233,9 +171,7 @@
       flex-direction: column;
       overflow: hidden;
       z-index: 10;
-=======
     }
-<<<<<<<< HEAD:index.html
 
     .toolbar {
       display: flex;
@@ -412,47 +348,11 @@
 
     .optimizer-status.info {
       color: #38bdf8;
-========
-    .tool-button {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: 1px solid #3b82f6;
-      background: rgba(59, 130, 246, 0.12);
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .tool-button svg {
-      width: 14px;
-      height: 14px;
-    }
-    .tool-button:hover {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: #60a5fa;
-    }
-    .tool-button:focus-visible {
-      outline: 2px solid #60a5fa;
-      outline-offset: 2px;
-    }
-    .prompt-library-panel {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 16px;
-      width: min(420px, calc(100vw - 32px));
-      max-height: min(400px, calc(100vh - 160px));
-      display: none;
-      flex-direction: column;
-      background: #090909;
-      border: 1px solid #262626;
-      border-radius: 12px;
-      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
-      overflow: hidden;
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
     .prompt-library-panel.open {
       display: flex;
     }
     .prompt-library-header {
-<<<<<<< HEAD
       padding: 12px 16px;
       border-bottom: 1px solid #1f2937;
       display: flex;
@@ -471,68 +371,10 @@
     .prompt-library-actions {
       padding: 12px 16px;
       border-top: 1px solid #1f2937;
-=======
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      border-bottom: 1px solid #1f1f1f;
-      background: #0f0f0f;
-    }
-    .prompt-library-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #fafafa;
-    }
-    .prompt-library-close {
-      background: transparent;
-      border: none;
-      color: #a3a3a3;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-      transition: background 0.2s, color 0.2s;
-    }
-    .prompt-library-close:hover {
-      background: rgba(250, 250, 250, 0.08);
-      color: #fafafa;
-    }
-    .prompt-library-body {
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow: auto;
-    }
-    .prompt-library-status {
-      font-size: 12px;
-      color: #d4d4d8;
-      line-height: 1.4;
-    }
-    .prompt-library-content {
-      background: #111;
-      border: 1px solid #262626;
-      border-radius: 8px;
-      padding: 12px;
-      font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-      line-height: 1.5;
-      color: #e4e4e7;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 220px;
-      overflow: auto;
-    }
-    .prompt-library-actions {
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       display: flex;
       justify-content: flex-end;
       gap: 8px;
     }
-<<<<<<< HEAD
     button.secondary {
       background: transparent;
       color: #fafafa;
@@ -603,32 +445,12 @@
       .prompt-library-actions {
         padding: 16px;
       }
-=======
-    .prompt-library-actions button {
-      padding: 6px 12px;
-      border-radius: 6px;
-      border: 1px solid #3b82f6;
-      background: #3b82f6;
-      color: #fff;
-      font-size: 12px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .prompt-library-actions button.secondary {
-      background: rgba(59, 130, 246, 0.12);
-      color: #93c5fd;
-    }
-    .prompt-library-actions button:hover {
-      opacity: 0.85;
->>>>>>>> origin/codex/add-prompt-library-tool-to-top-bar:luka.html
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
   </style>
 </head>
 <body>
   <header>
     <div class="logo">L</div>
-<<<<<<< HEAD
     <div>
       <div>Luka Orchestrator</div>
       <div class="status">Connected to local automation</div>
@@ -658,22 +480,13 @@
       <button class="tool-button primary" id="insertPromptTemplate" type="button">Use Template</button>
     </div>
   </div>
-=======
-    <div class="status">Connected to 02luka</div>
-<<<<<<<< HEAD:index.html
-    <div class="toolbar">
-========
-    <div class="tool-actions">
->>>>>>>> origin/codex/add-prompt-library-tool-to-top-bar:luka.html
-      <select id="gateway">
-        <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
-        <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
-        <option value="http://localhost:11434">Ollama (11434)</option>
-      </select>
-<<<<<<<< HEAD:index.html
-      <button id="promptOptimizerToggle" type="button" class="button">Prompt Optimizer</button>
+
+  <div class="messages" id="messages">
+    <div class="message">
+      <div class="avatar">L</div>
+      <div class="content">Ready. Type a mission and press Send or Enter.</div>
     </div>
-  </header>
+  </div>
 
   <section id="promptOptimizerPanel" class="optimizer-panel" aria-hidden="true">
     <div class="optimizer-header">
@@ -706,76 +519,30 @@
     </div>
     <div id="optimizerStatus" class="optimizer-status"></div>
   </section>
-========
-      <button class="tool-button" id="promptLibraryButton" type="button" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5V4.5C4 4.22386 4.22386 4 4.5 4H15.5L20 8.5V19.5C20 19.7761 19.7761 20 19.5 20H4.5C4.22386 20 4 19.7761 4 19.5Z" />
-          <path d="M15 4V8H19" />
-          <path d="M8 13H16" />
-          <path d="M8 16H12" />
-          <path d="M8 10H16" />
-        </svg>
-        Prompt Library
-      </button>
-    </div>
-  </header>
-
-  <div class="prompt-library-panel" id="promptLibraryPanel" role="dialog" aria-modal="false" aria-labelledby="promptLibraryTitle">
-    <div class="prompt-library-header">
-      <div class="prompt-library-title" id="promptLibraryTitle">Prompt Library</div>
-      <button class="prompt-library-close" id="promptLibraryClose" type="button" aria-label="Close prompt library">&times;</button>
-    </div>
-    <div class="prompt-library-body">
-      <div class="prompt-library-status" id="promptLibraryStatus">Load the master prompt template to quickly start a session.</div>
-      <pre class="prompt-library-content" id="promptLibraryContent"></pre>
-      <div class="prompt-library-actions">
-        <button class="secondary" id="refreshPromptLibrary" type="button">Refresh</button>
-        <button id="applyPromptLibrary" type="button">Insert into message</button>
-      </div>
-    </div>
-  </div>
->>>>>>>> origin/codex/add-prompt-library-tool-to-top-bar:luka.html
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
 
   <div class="messages" id="messages">
     <div class="message">
       <div class="avatar">L</div>
-<<<<<<< HEAD
       <div class="content">Ready. Type a mission and press Send or Enter.</div>
-=======
-      <div class="content">Ready. Type a message and click Send or press Enter.</div>
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     </div>
   </div>
 
   <div class="input-area">
     <div class="input-wrapper">
-<<<<<<< HEAD
       <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
       <button id="sendButton" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-=======
-      <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
-      <button id="sendButton" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
         </svg>
       </button>
     </div>
   </div>
 
   <script>
-<<<<<<< HEAD
-=======
-    // Get elements
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const messagesContainer = document.getElementById('messages');
     const gatewaySelect = document.getElementById('gateway');
-<<<<<<< HEAD
     const promptLibraryButton = document.getElementById('promptLibraryButton');
     const promptLibraryPanel = document.getElementById('promptLibraryPanel');
     const promptLibraryBody = document.getElementById('promptLibraryBody');
@@ -877,32 +644,6 @@
       setSendingState(true);
       addMessage('user', text);
 
-=======
-<<<<<<<< HEAD:index.html
-    const optimizerPanel = document.getElementById('promptOptimizerPanel');
-    const optimizerToggle = document.getElementById('promptOptimizerToggle');
-    const optimizerClose = document.getElementById('promptOptimizerClose');
-    const optimizerInput = document.getElementById('optimizerInput');
-    const optimizerGatewaySelect = document.getElementById('optimizerGateway');
-    const optimizerTemplateButton = document.getElementById('optimizerTemplateButton');
-    const optimizerRunButton = document.getElementById('optimizerRunButton');
-    const optimizerStatus = document.getElementById('optimizerStatus');
-    const optimizerOutput = document.getElementById('optimizerOutput');
-    const optimizerResult = document.getElementById('optimizerResult');
-
-    let masterPromptTemplateCache = null;
-========
-    const promptLibraryButton = document.getElementById('promptLibraryButton');
-    const promptLibraryPanel = document.getElementById('promptLibraryPanel');
-    const promptLibraryContent = document.getElementById('promptLibraryContent');
-    const promptLibraryStatus = document.getElementById('promptLibraryStatus');
-    const promptLibraryClose = document.getElementById('promptLibraryClose');
-    const refreshPromptLibrary = document.getElementById('refreshPromptLibrary');
-    const applyPromptLibrary = document.getElementById('applyPromptLibrary');
-    let promptLibraryLoaded = false;
-    let promptLibraryLoading = false;
->>>>>>>> origin/codex/add-prompt-library-tool-to-top-bar:luka.html
-
     const GATEWAY_PROFILES = [
       {
         id: 'mcp',
@@ -985,7 +726,6 @@
       sendButton.disabled = !hasText;
     }
 
-<<<<<<<< HEAD:index.html
     function syncOptimizerGateway() {
       if (!optimizerGatewaySelect || !gatewaySelect) return;
       const selected = gatewaySelect.value;
@@ -1130,59 +870,10 @@
       if (!optimizerRunButton) return;
       optimizerRunButton.disabled = isLoading;
       optimizerRunButton.textContent = isLoading ? 'Optimizing…' : 'Optimize prompt';
-========
-    function togglePromptLibrary(forceOpen) {
-      if (!promptLibraryPanel) return;
-      const shouldOpen = forceOpen !== undefined ? forceOpen : !promptLibraryPanel.classList.contains('open');
-      promptLibraryPanel.classList.toggle('open', shouldOpen);
-      promptLibraryButton?.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-      if (shouldOpen) {
-        loadPromptLibrary();
-      }
-    }
-
-    async function loadPromptLibrary(forceReload = false) {
-      if (promptLibraryLoading) return;
-      if (promptLibraryLoaded && !forceReload) return;
-      if (!promptLibraryContent) return;
-
-      promptLibraryLoading = true;
-      promptLibraryStatus.textContent = 'Loading master prompt template...';
-      promptLibraryContent.textContent = '';
-
-      try {
-        const response = await fetch('.codex/templates/master_prompt.md', { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error(`Unable to load prompt library (${response.status})`);
-        }
-        const text = await response.text();
-        promptLibraryContent.textContent = text.trim();
-        promptLibraryStatus.textContent = 'Template loaded. Insert into the message box to begin using it.';
-        promptLibraryLoaded = true;
-      } catch (error) {
-        promptLibraryStatus.textContent = error.message || 'Failed to load prompt library.';
-        promptLibraryLoaded = false;
-      } finally {
-        promptLibraryLoading = false;
-      }
->>>>>>>> origin/codex/add-prompt-library-tool-to-top-bar:luka.html
-    }
-
-    // Send message
-    async function sendMessage() {
-      const text = messageInput.value.trim();
-      if (!text) return;
-
-      // Add user message
-      addMessage('user', text);
-
-      // Clear input
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       messageInput.value = '';
       messageInput.style.height = 'auto';
       updateSendButton();
 
-<<<<<<< HEAD
       try {
         const formatted = await routeThroughBackend(text);
         addMessage('bot', formatted);
@@ -1195,21 +886,6 @@
 
     function addMessage(type, text) {
       const fragment = document.createDocumentFragment();
-=======
-      // Add bot response
-      try {
-        const gateway = gatewaySelect.value;
-        const plan = planGatewayAction(text, gateway);
-        const actionResult = await executeGatewayAction(plan, gateway);
-        addMessage('bot', actionResult);
-      } catch (err) {
-        addMessage('bot', 'Error: ' + err.message);
-      }
-    }
-
-    // Add message to UI
-    function addMessage(type, text) {
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
       const messageDiv = document.createElement('div');
       messageDiv.className = 'message' + (type === 'user' ? ' user' : '');
 
@@ -1219,7 +895,6 @@
 
       const content = document.createElement('div');
       content.className = 'content';
-<<<<<<< HEAD
       content.textContent = (text ?? '').toString();
 
       messageDiv.appendChild(avatar);
@@ -1241,26 +916,10 @@
     messageInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
-=======
-      content.textContent = text;
-
-      messageDiv.appendChild(avatar);
-      messageDiv.appendChild(content);
-
-      messagesContainer.appendChild(messageDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    // Handle Enter key
-    messageInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
         sendMessage();
       }
     });
 
-<<<<<<< HEAD
     sendButton.addEventListener('click', sendMessage);
 
     promptLibraryButton.addEventListener('click', async () => {
@@ -1321,35 +980,10 @@
               gateway: gatewaySelect.value 
             }, '*');
           });
-=======
-    // Handle button click
-    sendButton.addEventListener('click', sendMessage);
-
-    promptLibraryButton?.addEventListener('click', () => togglePromptLibrary());
-    promptLibraryClose?.addEventListener('click', () => togglePromptLibrary(false));
-    refreshPromptLibrary?.addEventListener('click', () => loadPromptLibrary(true));
-    applyPromptLibrary?.addEventListener('click', () => {
-      if (!promptLibraryContent) return;
-      const template = promptLibraryContent.textContent.trim();
-      if (!template) return;
-      messageInput.value = template;
-      messageInput.dispatchEvent(new Event('input'));
-      messageInput.focus();
-      togglePromptLibrary(false);
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!promptLibraryPanel || !promptLibraryButton) return;
-      const target = event.target;
-      if (!promptLibraryPanel.contains(target) && target !== promptLibraryButton && !promptLibraryButton.contains(target)) {
-        if (promptLibraryPanel.classList.contains('open')) {
-          togglePromptLibrary(false);
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
         }
       }
     });
 
-<<<<<<< HEAD
     // Listen for messages from chat window
     window.addEventListener('message', (event) => {
       if (event.data.type === 'chat-window-closed') {
@@ -1482,317 +1116,6 @@
         return best.text.trim();
       }
       return '';
-=======
-    // Initial state
-    updateSendButton();
-    messageInput.focus();
-
-    if (optimizerGatewaySelect) {
-      if (gatewaySelect && gatewaySelect.options.length) {
-        Array.from(gatewaySelect.options).forEach((option) => {
-          optimizerGatewaySelect.appendChild(option.cloneNode(true));
-        });
-      } else {
-        GATEWAY_PROFILES.forEach((profile) => {
-          const option = document.createElement('option');
-          if (profile.id === 'ollama') {
-            option.value = 'http://localhost:11434';
-          } else if (profile.id === 'mcp') {
-            option.value = 'http://127.0.0.1:5012';
-          } else if (profile.id === 'fastvlm') {
-            option.value = 'http://127.0.0.1:8765';
-          } else {
-            option.value = typeof profile.match === 'string' ? profile.match : '';
-          }
-          option.textContent = profile.name;
-          optimizerGatewaySelect.appendChild(option);
-        });
-      }
-      syncOptimizerGateway();
-    }
-
-    // Log for debugging
-    console.log('Luka UI initialized. Elements found:', {
-      input: !!messageInput,
-      button: !!sendButton,
-      messages: !!messagesContainer
-    });
-
-    function planGatewayAction(text, gatewayUrl) {
-      const normalizedText = text.toLowerCase();
-      const profile = getGatewayProfile(gatewayUrl);
-
-      if (/(health|status|ping|alive|running|up|check)/.test(normalizedText)) {
-        return {
-          summary: `Checking ${profile.name} health...`,
-          autoExecute: true,
-          endpoint: '/health',
-          method: 'GET',
-          success: (payload) => formatHealthResponse(payload, profile),
-          failure: (payload) => formatFailureMessage(payload)
-        };
-      }
-
-      if (/(info|capabilities|version|about)/.test(normalizedText)) {
-        return {
-          summary: `Requesting info from ${profile.name}...`,
-          autoExecute: true,
-          endpoint: '/info',
-          method: 'GET',
-          success: (payload) => formatInfoResponse(payload),
-          failure: (payload) => formatFailureMessage(payload)
-        };
-      }
-
-      if (profile.type === 'vision' && /(image|photo|picture|vision|see|describe|look)/.test(normalizedText)) {
-        const analyzeUrl = joinGatewayPath(gatewayUrl, '/analyze');
-        const batchUrl = joinGatewayPath(gatewayUrl, '/batch-analyze');
-        return {
-          summary: `${profile.name} can analyze images for you.`,
-          autoExecute: false,
-          response: [
-            `To describe an image, send a POST request to ${analyzeUrl} with form-data fields \`file\` and \`prompt\`.`,
-            `Need multiple images? Use ${batchUrl}.`
-          ].join('\n')
-        };
-      }
-
-      if (profile.type === 'ollama' && /(list|show|available).*model/.test(normalizedText)) {
-        return {
-          summary: `Querying available Ollama models...`,
-          autoExecute: true,
-          endpoint: '/api/tags',
-          method: 'GET',
-          success: (payload) => formatOllamaModels(payload),
-          failure: (payload) => formatFailureMessage(payload)
-        };
-      }
-
-      return {
-        summary: `No built-in action matched for ${profile.name}.`,
-        autoExecute: false,
-        response: buildFallbackMessage(profile)
-      };
-    }
-
-    function executeGatewayAction(plan, gatewayUrl) {
-      if (!plan) {
-        return Promise.resolve('No plan available for this request.');
-      }
-
-      const lines = [plan.summary].filter(Boolean);
-
-      if (!plan.autoExecute) {
-        if (plan.response) {
-          lines.push(plan.response);
-        }
-        return Promise.resolve(lines.join('\n'));
-      }
-
-      const targetUrl = joinGatewayPath(gatewayUrl, plan.endpoint || '');
-      const options = {
-        method: plan.method || 'GET',
-        headers: Object.assign({}, plan.headers || {})
-      };
-
-      if (plan.body !== undefined) {
-        const isObjectBody = typeof plan.body === 'object' && !(plan.body instanceof FormData);
-        if (isObjectBody && !options.headers['Content-Type']) {
-          options.headers['Content-Type'] = 'application/json';
-        }
-        options.body = isObjectBody ? JSON.stringify(plan.body) : plan.body;
-      }
-
-      return fetch(targetUrl, options)
-        .then(async (response) => {
-          const payload = await parseResponsePayload(response);
-          if (!response.ok) {
-            const failureMessage = plan.failure
-              ? plan.failure(payload, response)
-              : `Request failed with status ${response.status}.`;
-            lines.push(failureMessage);
-            return lines.join('\n');
-          }
-
-          const successMessage = plan.success
-            ? plan.success(payload, response)
-            : formatGenericSuccess(payload);
-          lines.push(successMessage);
-          return lines.join('\n');
-        })
-        .catch((error) => {
-          const failureMessage = plan.failure
-            ? plan.failure(error)
-            : `Request error: ${error.message}`;
-          lines.push(failureMessage);
-          return lines.join('\n');
-        });
-    }
-
-    function getGatewayProfile(gatewayUrl) {
-      const normalized = (gatewayUrl || '').replace(/\/+$/, '');
-      const profile = GATEWAY_PROFILES.find((item) =>
-        typeof item.match === 'string' ? item.match === normalized : item.match.test(normalized)
-      );
-
-      if (profile) {
-        return profile;
-      }
-
-      return {
-        id: 'generic',
-        match: null,
-        name: normalized || 'Selected gateway',
-        type: 'generic',
-        tips: 'Connect the gateway and try running a health check to verify it is reachable.'
-      };
-    }
-
-    function joinGatewayPath(base, path) {
-      if (!base) return path;
-      const trimmedBase = base.replace(/\/+$/, '');
-      const trimmedPath = path.replace(/^\/+/, '');
-      return `${trimmedBase}/${trimmedPath}`;
-    }
-
-    function parseResponsePayload(response) {
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        return response.json();
-      }
-      return response.text();
-    }
-
-    function formatHealthResponse(payload, profile) {
-      if (!payload) {
-        return 'Health endpoint returned an empty response.';
-      }
-
-      if (typeof payload === 'string') {
-        return payload.slice(0, 400);
-      }
-
-      if (typeof payload === 'object') {
-        const status = payload.status || payload.state || payload.health || payload.ok;
-        const details = Object.entries(payload)
-          .filter(([key]) => !['status', 'state', 'health', 'ok'].includes(key))
-          .slice(0, 5)
-          .map(([key, value]) => `${key}: ${formatValue(value)}`);
-
-        return [
-          status ? `Status: ${status}` : 'Health endpoint responded.',
-          details.length ? `Details:\n- ${details.join('\n- ')}` : null,
-          profile.tips ? `Tip: ${profile.tips}` : null
-        ]
-          .filter(Boolean)
-          .join('\n');
-      }
-
-      return 'Health endpoint responded, but the data format was unexpected.';
-    }
-
-    function formatInfoResponse(payload) {
-      if (!payload) {
-        return 'Info endpoint returned an empty response.';
-      }
-
-      if (typeof payload === 'string') {
-        return payload.slice(0, 400);
-      }
-
-      if (typeof payload === 'object') {
-        const entries = Object.entries(payload)
-          .slice(0, 6)
-          .map(([key, value]) => `${key}: ${formatValue(value)}`);
-        return entries.length ? entries.join('\n') : 'Info endpoint responded with metadata.';
-      }
-
-      return 'Info endpoint responded, but the data format was unexpected.';
-    }
-
-    function formatOllamaModels(payload) {
-      if (!payload) {
-        return 'No models were returned by Ollama. Make sure it is running.';
-      }
-
-      const models = Array.isArray(payload.models) ? payload.models : payload;
-      if (!Array.isArray(models)) {
-        return formatGenericSuccess(payload);
-      }
-
-      if (models.length === 0) {
-        return 'Ollama returned zero models. Install one with `ollama pull <model>`.';
-      }
-
-      const names = models
-        .map((item) => (typeof item === 'string' ? item : item && item.name))
-        .filter(Boolean);
-
-      if (!names.length) {
-        return 'Ollama models endpoint responded, but no names were provided.';
-      }
-
-      const displayNames = names.slice(0, 8).join(', ');
-      const more = names.length > 8 ? ` ...and ${names.length - 8} more.` : '';
-      return `Available models: ${displayNames}${more}`;
-    }
-
-    function formatGenericSuccess(payload) {
-      if (payload === undefined || payload === null) {
-        return 'Request completed with no content.';
-      }
-
-      if (typeof payload === 'string') {
-        return payload.slice(0, 400);
-      }
-
-      return JSON.stringify(payload, null, 2).slice(0, 400);
-    }
-
-    function formatFailureMessage(payload) {
-      if (!payload) {
-        return 'Gateway request failed with no additional details.';
-      }
-
-      if (payload instanceof Error) {
-        return `Gateway request failed: ${payload.message}`;
-      }
-
-      if (typeof payload === 'string') {
-        return `Gateway request failed: ${payload.slice(0, 200)}`;
-      }
-
-      return `Gateway request failed: ${JSON.stringify(payload).slice(0, 200)}`;
-    }
-
-    function formatValue(value) {
-      if (value === null) return 'null';
-      if (typeof value === 'object') {
-        try {
-          const json = JSON.stringify(value);
-          return json.length > 60 ? `${json.slice(0, 57)}...` : json;
-        } catch (err) {
-          return '[object]';
-        }
-      }
-      return String(value);
-    }
-
-    function buildFallbackMessage(profile) {
-      const suggestions = [
-        'Try asking for "status" to trigger a health check.'
-      ];
-
-      if (profile.type === 'vision') {
-        suggestions.push('Mention an image or photo to get FastVLM usage instructions.');
-      }
-
-      if (profile.type === 'ollama') {
-        suggestions.push('Ask to "list models" to discover the installed Ollama models.');
-      }
-
-      return [profile.tips, suggestions.join(' ')].filter(Boolean).join('\n');
->>>>>>> origin/codex/add-prompt-library-tool-to-top-bar
     }
   </script>
 <script type="module">
