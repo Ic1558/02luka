@@ -17,7 +17,7 @@ pass "api"
 
 # UI checks
 curl -fsSI "$UI/luka.html" >/dev/null || fail "luka.html"
-curl -fsS "$UI/boss-ui/public/js/chatbot_actions.js" >/dev/null || fail "chatbot_actions.js"
+curl -fsS "$UI/js/chatbot_actions.js" >/dev/null || fail "chatbot_actions.js"
 pass "ui"
 
 # MCP FS connectivity (8765)
