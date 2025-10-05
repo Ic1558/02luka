@@ -2,16 +2,8 @@
   "name": "02Luka Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "remoteUser": "root",
-
-  // ไม่บังคับ แต่ช่วยให้ทำงานราบรื่นขึ้น
-  "runArgs": ["--network=host"],
+  "postCreateCommand": "true",
   "customizations": {
-    "vscode": {
-      "extensions": [
-        "openai.codex",               // Codex agent
-        "ms-vscode-remote.remote-containers"
-      ]
-    }
-  },
-  "postCreateCommand": "bash -lc 'apt-get update -y >/dev/null 2>&1 || true'"
+    "vscode": { "extensions": ["openai.codex","ms-vscode-remote.remote-containers"] }
+  }
 }
