@@ -1,0 +1,974 @@
+{
+  "scan_metadata": {
+    "timestamp": "2025-10-06T18:59:50Z",
+    "version": "2.0",
+    "scanner": "system_discovery_scanner.sh",
+    "description": "Comprehensive 02luka infrastructure discovery"
+  },
+  "launchagents": [
+    {
+      "name": "com.02luka.core.gg_core",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.core.gg_core.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.gemini.cli.env",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.gemini.cli.env.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.inbox_daemon",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.inbox_daemon.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.status.bridge",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.status.bridge.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.llm-router",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.llm-router.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.nas_sync_12h",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.nas_sync_12h.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.gptree_updater",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.gptree_updater.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.daily.verify",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.daily.verify.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.inbox.gc",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.inbox.gc.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.paula_av_sanity",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.paula_av_sanity.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.system_runner",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.system_runner.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.clc_inbox_watcher",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.clc_inbox_watcher.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.logrotate.daily",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.logrotate.daily.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.librarian.v2",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.librarian.v2.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.shadow_catalog_probe",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.shadow_catalog_probe.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.mcp.fs",
+      "pid": 8315,
+      "exit_code": 0,
+      "status": "running",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.mcp.fs.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.distribute.daily.learning",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.distribute.daily.learning.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.agent_inbox_daemon",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.agent_inbox_daemon.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.sr_echo_consumer.smoke4",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.sr_echo_consumer.smoke4.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.index_uplink",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.index_uplink.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.cloudflared.nas-archive",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.cloudflared.nas-archive.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.update_truth",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.update_truth.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.catalog_lite_30m",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.catalog_lite_30m.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.agent.lisa",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.agent.lisa.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.gd.guard",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.gd.guard.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.system_runner_health",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.system_runner_health.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.wo_daily_rollup",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.wo_daily_rollup.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.agent.mary",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.agent.mary.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.system_runner.v5",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.system_runner.v5.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.autostart",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.autostart.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.shadow_to_nas",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.shadow_to_nas.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.ollama-bridge",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.ollama-bridge.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.boss.audit",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.boss.audit.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.nightly.selftest",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.nightly.selftest.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.audit.bridge",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.audit.bridge.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.fastvlm.cron",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.fastvlm.cron.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.health.proxy",
+      "pid": null,
+      "exit_code": 126,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.health.proxy.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.mcp.server.fs_local",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.mcp.server.fs_local.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.inbox.core",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.inbox.core.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.redis_bridge",
+      "pid": 8335,
+      "exit_code": 0,
+      "status": "running",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.redis_bridge.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.clc.dispatcher",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.clc.dispatcher.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.localworker.bg",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.localworker.bg.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.disk_monitor",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.disk_monitor.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.bridge.daemon",
+      "pid": null,
+      "exit_code": 2,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.bridge.daemon.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "org.02luka.feedback.bridge.r2a",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/org.02luka.feedback.bridge.r2a.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.heartbeats",
+      "pid": null,
+      "exit_code": 127,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.heartbeats.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.calendar.sync",
+      "pid": null,
+      "exit_code": 1,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.calendar.sync.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.sot.enforcement",
+      "pid": null,
+      "exit_code": 0,
+      "status": "stopped_success",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.sot.enforcement.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.inbox.CLC",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.inbox.CLC.plist",
+      "type": "launchagent"
+    },
+    {
+      "name": "com.02luka.cloudflared.fastvlm",
+      "pid": null,
+      "exit_code": 78,
+      "status": "failed",
+      "plist_exists": true,
+      "plist_path": "/Users/icmini/Library/LaunchAgents/com.02luka.cloudflared.fastvlm.plist",
+      "type": "launchagent"
+    }
+  ],
+  "docker_containers": [
+    {
+      "name": "mcp_gateway_agent    Up About an hour (healthy)    02luka/mcp_gateway:1.0.0-shared               0.0.0.0:5012->5012/tcp, [::]:5012->5012/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "zealous_chaum        Exited (0) 25 hours ago       mcr.microsoft.com/devcontainers/base:ubuntu   ",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "romantic_blackwell   Up About an hour              mcr.microsoft.com/devcontainers/base:ubuntu   ",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "unruffled_elgamal    Exited (0) 3 days ago         mcr.microsoft.com/devcontainers/base:ubuntu   ",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "n8n                  Up About an hour              n8nio/n8n:latest                              127.0.0.1:5678->5678/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "terminalhandler      Up About an hour (healthy)    02luka/terminalhandler:1.0.0-shared           0.0.0.0:5008->5008/tcp, [::]:5008->5008/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "kim_bot_agent        Up About an hour (healthy)    02luka/kim_bot:1.0.0-shared                   0.0.0.0:5011->5011/tcp, [::]:5011->5011/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "lisa_agent           Up About an hour (healthy)    c902bf2e7900                                  0.0.0.0:5007->5007/tcp, [::]:5007->5007/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "02luka-redis         Up About an hour              redis:7-alpine                                0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "keane                Up 2 minutes (healthy)        02luka/keane:1.0.0-shared                     0.0.0.0:5003->5003/tcp, [::]:5003->5003/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "mary                 Up About a minute (healthy)   02luka/mary:1.0.0-shared                      0.0.0.0:5001->5001/tcp, [::]:5001->5001/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "sumo_agent           Up 2 minutes (healthy)        02luka/sumo:1.0.0-shared                      0.0.0.0:5006->5006/tcp, [::]:5006->5006/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "qs_agent             Up 2 minutes (healthy)        02luka/qs:1.0.0-shared                        0.0.0.0:5004->5004/tcp, [::]:5004->5004/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "paula_agent          Up About an hour (healthy)    02luka/paula:1.0.0-shared                     0.0.0.0:5002->5002/tcp, [::]:5002->5002/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "rooney               Up 2 minutes (healthy)        02luka/rooney:1.0.0-shared                    0.0.0.0:5005->5005/tcp, [::]:5005->5005/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "gg_core              Up About an hour (healthy)    02luka/gg_core:1.0.0-shared                   0.0.0.0:5010->5010/tcp, [::]:5010->5010/tcp, 0.0.0.0:9103->9103/tcp, [::]:9103->9103/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "gc_core              Up About an hour (healthy)    02luka/gc_core:1.0.0-shared                   0.0.0.0:5009->5009/tcp, [::]:5009->5009/tcp, 0.0.0.0:9102->9102/tcp, [::]:9102->9102/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    },
+    {
+      "name": "node-exporter        Up About an hour              prom/node-exporter:latest                     0.0.0.0:9100->9100/tcp, [::]:9100->9100/tcp",
+      "status": "stopped",
+      "health": "unknown",
+      "image": "",
+      "ports": "",
+      "raw_status": "",
+      "type": "docker_container"
+    }
+  ],
+  "network_services": [
+    {
+      "process": "ollama",
+      "pid": 8500,
+      "user": "icmini",
+      "port": "11434",
+      "port_info": "localhost:11434",
+      "type": "network_service"
+    },
+    {
+      "process": "cloudflar",
+      "pid": 8359,
+      "user": "icmini",
+      "port": "20241",
+      "port_info": "localhost:20241",
+      "type": "network_service"
+    },
+    {
+      "process": "AcQmod",
+      "pid": 8177,
+      "user": "icmini",
+      "port": "34569",
+      "port_info": "localhost:34569",
+      "type": "network_service"
+    },
+    {
+      "process": "AcEventSy",
+      "pid": 8178,
+      "user": "icmini",
+      "port": "34570",
+      "port_info": "localhost:34570",
+      "type": "network_service"
+    },
+    {
+      "process": "Cursor",
+      "pid": 10256,
+      "user": "icmini",
+      "port": "42353",
+      "port_info": "localhost:42353",
+      "type": "network_service"
+    },
+    {
+      "process": "Autodesk",
+      "pid": 8182,
+      "user": "icmini",
+      "port": "49225",
+      "port_info": "localhost:49225",
+      "type": "network_service"
+    },
+    {
+      "process": "Autodesk",
+      "pid": 8182,
+      "user": "icmini",
+      "port": "49226",
+      "port_info": "localhost:49226",
+      "type": "network_service"
+    },
+    {
+      "process": "Ollama",
+      "pid": 8416,
+      "user": "icmini",
+      "port": "49255",
+      "port_info": "localhost:49255",
+      "type": "network_service"
+    },
+    {
+      "process": "LINE",
+      "pid": 10792,
+      "user": "icmini",
+      "port": "49893",
+      "port_info": "localhost:49893",
+      "type": "network_service"
+    },
+    {
+      "process": "Cursor",
+      "pid": 67373,
+      "user": "icmini",
+      "port": "5173",
+      "port_info": "localhost:5173",
+      "type": "network_service"
+    },
+    {
+      "process": "Code\\x20H",
+      "pid": 23464,
+      "user": "icmini",
+      "port": "5318",
+      "port_info": "localhost:5318",
+      "type": "network_service"
+    },
+    {
+      "process": "Cursor",
+      "pid": 10703,
+      "user": "icmini",
+      "port": "54429",
+      "port_info": "localhost:54429",
+      "type": "network_service"
+    },
+    {
+      "process": "com.docke",
+      "pid": 8462,
+      "user": "icmini",
+      "port": "5678",
+      "port_info": "localhost:5678",
+      "type": "network_service"
+    },
+    {
+      "process": "Cursor",
+      "pid": 67347,
+      "user": "icmini",
+      "port": "61585",
+      "port_info": "localhost:61585",
+      "type": "network_service"
+    },
+    {
+      "process": "redis-ser",
+      "pid": 8304,
+      "user": "icmini",
+      "port": "6379",
+      "port_info": "localhost:6379",
+      "type": "network_service"
+    },
+    {
+      "process": "Google",
+      "pid": 8623,
+      "user": "icmini",
+      "port": "7679",
+      "port_info": "localhost:7679",
+      "type": "network_service"
+    },
+    {
+      "process": "Python",
+      "pid": 8315,
+      "user": "icmini",
+      "port": "8765",
+      "port_info": "localhost:8765",
+      "type": "network_service"
+    },
+    {
+      "process": "lghub_age",
+      "pid": 9278,
+      "user": "icmini",
+      "port": "9010",
+      "port_info": "localhost:9010",
+      "type": "network_service"
+    }
+  ],
+  "processes": [],
+  "file_services": [
+    {
+      "name": "quick_plist_audit.sh",
+      "path": "g/tools/quick_plist_audit.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/quick_plist_audit.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "emit_codex_truth.sh",
+      "path": "g/tools/emit_codex_truth.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/emit_codex_truth.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "embed_text.py",
+      "path": "g/tools/embed_text.py",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/embed_text.py",
+      "file_type": "python_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "automated_discovery_merge.sh",
+      "path": "g/tools/automated_discovery_merge.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/automated_discovery_merge.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "mapping_drift_guard.sh",
+      "path": "g/tools/mapping_drift_guard.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/mapping_drift_guard.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "mcp_health.sh",
+      "path": "g/tools/mcp_health.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/mcp_health.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "context_engine.sh",
+      "path": "g/tools/context_engine.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/context_engine.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "model_router.sh",
+      "path": "g/tools/model_router.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/model_router.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "ocr_typhoon.py",
+      "path": "g/tools/ocr_typhoon.py",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/ocr_typhoon.py",
+      "file_type": "python_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "path_resolver.sh",
+      "path": "g/tools/path_resolver.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/path_resolver.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "install_master_prompt.sh",
+      "path": "g/tools/install_master_prompt.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/install_master_prompt.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "task_bus_control.sh",
+      "path": "g/tools/task_bus_control.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/task_bus_control.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "fix_cursor_lag.sh",
+      "path": "g/tools/fix_cursor_lag.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/fix_cursor_lag.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "cleanup_broken_agents.sh",
+      "path": "g/tools/cleanup_broken_agents.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/cleanup_broken_agents.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "smart_plist_fix.sh",
+      "path": "g/tools/smart_plist_fix.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/smart_plist_fix.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "mcp_fs_stub.py",
+      "path": "g/tools/mcp_fs_stub.py",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/mcp_fs_stub.py",
+      "file_type": "python_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "fix_launchagent_paths.sh",
+      "path": "g/tools/fix_launchagent_paths.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/fix_launchagent_paths.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "autosave_dashboard.sh",
+      "path": "g/tools/autosave_dashboard.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/autosave_dashboard.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "clc_gate.sh",
+      "path": "g/tools/clc_gate.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/clc_gate.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "taskwrap.sh",
+      "path": "g/tools/taskwrap.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/taskwrap.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "mcp_fs_server.py",
+      "path": "g/tools/mcp_fs_server.py",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/mcp_fs_server.py",
+      "file_type": "python_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "emit_task_event.sh",
+      "path": "g/tools/emit_task_event.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/tools/emit_task_event.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "health_proxy_launcher.sh",
+      "path": "g/scripts/health_proxy_launcher.sh",
+      "full_path": "/Users/icmini/dev/02luka-repo/g/scripts/health_proxy_launcher.sh",
+      "file_type": "shell_script",
+      "executable": true,
+      "type": "file_service"
+    },
+    {
+      "name": "health_proxy.js",
+      "path": "gateway/health_proxy.js",
+      "full_path": "/Users/icmini/dev/02luka-repo/gateway/health_proxy.js",
+      "file_type": "javascript",
+      "executable": false,
+      "type": "file_service"
+    }
+  ],
+  "summary": {
+    "total_launchagents": 50,
+    "active_launchagents": 2,
+    "total_containers": 18,
+    "running_containers": 0,
+    "total_network_services": 18,
+    "total_file_services": 24,
+    "total_discovered_services": 110
+  }
+}
