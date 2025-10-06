@@ -1,0 +1,8 @@
+[0;34m[2025-10-06 04:31:55] === DISCOVERY-TO-MAP MERGER - ANTI-DRIFT SOLUTION ===[0m
+[2025-10-06 04:31:55] Map file: /Users/icmini/dev/02luka-repo/f/ai_context/system_map.json
+[2025-10-06 04:31:55] Backup dir: /Users/icmini/dev/02luka-repo/backups/map_snap
+[2025-10-06 04:31:55] Log file: /Users/icmini/dev/02luka-repo/run/merge_discovery_20251006_043155.log
+[2025-10-06 04:31:55] Mark new as optional: true
+[2025-10-06 04:31:55] Dry run: false
+[0;34m[2025-10-06 04:31:55] Step 0: Creating safe snapshot...[0m
+[0;31m[2025-10-06 04:31:55] ERROR: System map not found: /Users/icmini/dev/02luka-repo/f/ai_context/system_map.json[0m
