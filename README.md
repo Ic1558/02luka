@@ -8,6 +8,14 @@ Local AI Agent Gateway UI — minimal, fast, deployable anywhere.
 
 ## 🚀 Quick Start
 
+### Direct HTTP Access (No MCP Required)
+
+- **API**: [http://127.0.0.1:4000/api/capabilities](http://127.0.0.1:4000/api/capabilities)
+- **UI**: [http://127.0.0.1:5173/luka.html](http://127.0.0.1:5173/luka.html)
+- **MCP FS Stub**: [http://127.0.0.1:8765/health](http://127.0.0.1:8765/health)
+
+> ℹ️ **VS Code tip:** Forward ports **4000**, **5173**, and **8765** (Ports tab → *Add Port* → set to *Forwarded*) so they are reachable from your host machine.
+
 ### Option 1: Local Development (Recommended)
 ```bash
 ./run_local.sh
