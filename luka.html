@@ -51,6 +51,168 @@
       align-items: center;
       gap: 12px;
     }
+
+    #mode-tabs {
+      position: sticky;
+      top: 0;
+      background: #0f1115;
+      border-bottom: 1px solid #222;
+      padding: 8px 12px;
+      z-index: 1000;
+      font: 14px system-ui;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tabbtn {
+      background: #1a1f29;
+      color: #eee;
+      border: 1px solid #2a2f3a;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .tabbtn.active,
+    .tabbtn:focus-visible {
+      background: #2b3340;
+      border-color: #3d4759;
+      outline: none;
+    }
+
+    .tabview {
+      display: none;
+    }
+
+    .tabview.active {
+      display: block;
+    }
+
+    #linear-lite {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #linear-lite h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .tab-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #9ca3af;
+    }
+
+    .build-layout {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .build-column {
+      flex: 1 1 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .build-tools,
+    .ship-controls,
+    .build-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ship-controls {
+      margin-top: 8px;
+    }
+
+    .diff-input {
+      background: #0b0e13;
+      border: 1px solid #202632;
+      border-radius: 10px;
+      color: #f9fafb;
+      padding: 12px;
+      min-height: 200px;
+      max-height: 520px;
+      resize: vertical;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      width: 100%;
+    }
+
+    .diff-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+    }
+
+    .build-output,
+    .diff-preview,
+    #ship-out {
+      background: #0b0e13;
+      border: 1px solid #202632;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow: auto;
+      max-height: 320px;
+    }
+
+    .build-output {
+      min-height: 120px;
+    }
+
+    .diff-preview-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .diff-preview {
+      max-height: 280px;
+    }
+
+    .diff-line {
+      display: block;
+      white-space: pre;
+    }
+
+    .diff-line.meta {
+      color: #60a5fa;
+    }
+
+    .diff-line.add {
+      color: #4ade80;
+    }
+
+    .diff-line.remove {
+      color: #f87171;
+    }
+
+    .diff-line.context {
+      color: #e5e7eb;
+    }
     .messages {
       flex: 1;
       overflow-y: auto;
@@ -290,33 +452,11 @@
     </div>
   </header>
 
-  <nav id="mode-tabs" style="position:sticky;top:0;background:#0f1115;border-bottom:1px solid #222;padding:8px 12px;z-index:1000;font:14px system-ui">
-    <button class="tabbtn" data-tab="plan" style="margin-right:8px">Plan</button>
-    <button class="tabbtn" data-tab="build" style="margin-right:8px">Build</button>
+  <nav id="mode-tabs">
+    <button class="tabbtn" data-tab="plan">Plan</button>
+    <button class="tabbtn" data-tab="build">Build</button>
     <button class="tabbtn" data-tab="ship">Ship</button>
   </nav>
-  <style>
-    .tabview { display: none; }
-    .tabview.active { display: block; }
-    .tabbtn {
-      background: #1a1f29;
-      color: #eee;
-      border: 1px solid #2a2f3a;
-      border-radius: 6px;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .tabbtn.active {
-      background: #2b3340;
-    }
-    #linear-lite {
-      padding: 12px;
-    }
-    #linear-lite h3 {
-      font-size: 18px;
-      font-weight: 600;
-    }
-  </style>
   <main id="linear-lite">
     <section id="tab-plan" class="tabview active">
       <div class="prompt-library-panel" id="promptLibraryPanel">
@@ -352,21 +492,42 @@
       </div>
     </section>
     <section id="tab-build" class="tabview">
-      <h3 style="margin:8px 0">Build</h3>
-      <div id="build-tools" style="display:flex;gap:12px;flex-wrap:wrap">
-        <button id="btn-file-list">List Files</button>
-        <button id="btn-diff-dryrun">Dry-run Patch</button>
+      <div class="tab-section-header">
+        <h3>Build</h3>
+        <div class="build-tools">
+          <button id="btn-file-list">List Files</button>
+          <button id="btn-diff-dryrun">Dry-run Patch</button>
+        </div>
       </div>
-      <pre id="build-out" style="margin-top:10px;background:#0b0e13;border:1px solid #202632;border-radius:8px;padding:10px;max-height:320px;overflow:auto"></pre>
+      <div class="build-layout">
+        <div class="build-column">
+          <label for="diff-editor" class="section-label" data-role="diff-label">Diff draft</label>
+          <textarea id="diff-editor" class="diff-input" spellcheck="false" placeholder="Paste or compose a unified diff here…"></textarea>
+          <div class="build-actions">
+            <button id="btn-save-diff">Save Draft</button>
+            <button id="btn-clear-diff" class="secondary">Clear</button>
+          </div>
+        </div>
+        <div class="build-column">
+          <span class="section-label">Dry-run output</span>
+          <pre id="build-out" class="build-output"></pre>
+        </div>
+      </div>
+      <div class="diff-preview-wrapper">
+        <span class="section-label">Diff preview</span>
+        <pre id="diff-preview" class="diff-preview"></pre>
+      </div>
     </section>
     <section id="tab-ship" class="tabview">
-      <h3 style="margin:8px 0">Ship</h3>
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <div class="tab-section-header">
+        <h3>Ship</h3>
+      </div>
+      <div class="ship-controls">
         <button id="btn-preflight">Run Preflight</button>
         <button id="btn-dev">Dev Up</button>
         <button id="btn-smoke">Smoke</button>
       </div>
-      <pre id="ship-out" style="margin-top:10px;background:#0b0e13;border:1px solid #202632;border-radius:8px;padding:10px;max-height:320px;overflow:auto"></pre>
+      <pre id="ship-out"></pre>
     </section>
   </main>
 
@@ -386,6 +547,11 @@
     const tabViews = Array.from(document.querySelectorAll('.tabview'));
     const buildOut = document.getElementById('build-out');
     const shipOut = document.getElementById('ship-out');
+    const diffEditor = document.getElementById('diff-editor');
+    const diffPreview = document.getElementById('diff-preview');
+    const diffLabel = document.querySelector('[data-role="diff-label"]');
+    const saveDiffButton = document.getElementById('btn-save-diff');
+    const clearDiffButton = document.getElementById('btn-clear-diff');
 
     const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
     const TARGET_PROFILES = {
@@ -414,6 +580,9 @@
     let masterPromptCache = '';
     let masterPromptFetchPromise = null;
     let isSending = false;
+    const DIFF_STORAGE_KEY = 'plan.diff';
+    const SAMPLE_DIFF = '--- a/README.md\n+++ b/README.md\n@@\n-foo\n+foo';
+    let diffDirty = false;
 
     function togglePromptLibrary(forceOpen) {
       const shouldOpen = forceOpen ?? !promptLibraryPanel.classList.contains('open');
@@ -421,6 +590,161 @@
         return;
       }
       promptLibraryPanel.classList.toggle('open', shouldOpen);
+    }
+
+    function getStoredDiff() {
+      try {
+        return localStorage.getItem(DIFF_STORAGE_KEY);
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function removeStoredDiff() {
+      try {
+        localStorage.removeItem(DIFF_STORAGE_KEY);
+      } catch (err) {
+        // noop
+      }
+    }
+
+    function storeDiffDraft(value) {
+      try {
+        if (value && value.trim()) {
+          localStorage.setItem(DIFF_STORAGE_KEY, value);
+        } else {
+          removeStoredDiff();
+        }
+        return true;
+      } catch (err) {
+        console.warn('Unable to persist diff draft', err);
+        return false;
+      }
+    }
+
+    function setDiffDirty(state) {
+      diffDirty = state;
+      if (diffLabel) {
+        diffLabel.textContent = state ? 'Diff draft (unsaved)' : 'Diff draft';
+      }
+    }
+
+    function autoResizeDiff() {
+      if (!diffEditor) return;
+      diffEditor.style.height = 'auto';
+      const next = Math.min(520, Math.max(160, diffEditor.scrollHeight));
+      diffEditor.style.height = `${next}px`;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function classifyDiffLine(line) {
+      if (!line) return 'context';
+      if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('@@')) {
+        return 'meta';
+      }
+      if (line.startsWith('+')) return 'add';
+      if (line.startsWith('-')) return 'remove';
+      return 'context';
+    }
+
+    function renderDiffPreview(diffText) {
+      if (!diffPreview) return '';
+      if (!diffText) {
+        return '<span class="diff-line context">(empty)</span>';
+      }
+      return diffText.split('\n').map((line) => {
+        const role = classifyDiffLine(line);
+        const safeLine = line ? escapeHtml(line) : '&nbsp;';
+        return `<span class="diff-line ${role}">${safeLine}</span>`;
+      }).join('');
+    }
+
+    function updateDiffPreview(diffText) {
+      if (!diffPreview) return;
+      diffPreview.innerHTML = renderDiffPreview(diffText);
+    }
+
+    async function withButtonBusy(button, busyLabel, task) {
+      if (!button) {
+        return task();
+      }
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      if (busyLabel) {
+        button.textContent = busyLabel;
+      }
+      try {
+        return await task();
+      } finally {
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    }
+
+    function flashButtonLabel(button, label, duration = 1600) {
+      if (!button) return;
+      const original = button.getAttribute('data-original-label') || button.textContent;
+      button.setAttribute('data-original-label', original);
+      button.textContent = label;
+      window.setTimeout(() => {
+        const base = button.getAttribute('data-original-label') || original;
+        button.textContent = base;
+      }, duration);
+    }
+
+    function formatError(err) {
+      return err instanceof Error ? err.message : String(err);
+    }
+
+    function formatPlanResponse(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return 'No response payload.';
+      }
+
+      const blocks = [];
+      if (Array.isArray(payload.plan) && payload.plan.length) {
+        const steps = payload.plan.map((step, idx) => `  ${idx + 1}. ${step}`).join('\n');
+        blocks.push(`Plan:\n${steps}`);
+      }
+
+      if (payload.gitStatus && typeof payload.gitStatus === 'object') {
+        const stdout = typeof payload.gitStatus.stdout === 'string' ? payload.gitStatus.stdout.trim() : '';
+        const stderr = typeof payload.gitStatus.stderr === 'string' ? payload.gitStatus.stderr.trim() : '';
+        if (stdout) {
+          blocks.push(`git status --short:\n${stdout}`);
+        }
+        if (stderr) {
+          blocks.push(`stderr:\n${stderr}`);
+        }
+      }
+
+      if (Array.isArray(payload.tree) && payload.tree.length) {
+        const listing = payload.tree.slice(0, 30).map((item) => {
+          const icon = item.type === 'dir' ? '📁' : '📄';
+          return `  ${icon} ${item.name}`;
+        }).join('\n');
+        blocks.push(`Repo root sample:\n${listing}`);
+      }
+
+      if (payload.echo) {
+        blocks.push(`Echo: ${payload.echo}`);
+      }
+
+      if (payload.ts) {
+        blocks.push(`Timestamp: ${payload.ts}`);
+      }
+
+      if (!blocks.length) {
+        return JSON.stringify(payload, null, 2);
+      }
+
+      return blocks.join('\n\n');
     }
 
     async function loadMasterPrompt() {
@@ -636,6 +960,8 @@
       }
       if (targetKey === 'plan' && document.activeElement !== messageInput) {
         messageInput.focus();
+      } else if (targetKey === 'build' && diffEditor && document.activeElement !== diffEditor) {
+        diffEditor.focus();
       }
     }
 
@@ -683,58 +1009,107 @@
       return parsed;
     }
 
+    if (diffEditor) {
+      const initialDiff = getStoredDiff() ?? SAMPLE_DIFF;
+      diffEditor.value = initialDiff;
+      autoResizeDiff();
+      updateDiffPreview(initialDiff);
+      setDiffDirty(false);
+      diffEditor.addEventListener('input', () => {
+        autoResizeDiff();
+        updateDiffPreview(diffEditor.value);
+        setDiffDirty(true);
+      });
+    } else if (diffPreview) {
+      diffPreview.textContent = 'Diff preview unavailable.';
+    }
+
+    saveDiffButton?.addEventListener('click', () => {
+      if (!diffEditor) return;
+      const stored = storeDiffDraft(diffEditor.value);
+      if (stored) {
+        setDiffDirty(false);
+        flashButtonLabel(saveDiffButton, 'Saved ✓');
+      } else {
+        flashButtonLabel(saveDiffButton, 'Save failed');
+      }
+    });
+
+    clearDiffButton?.addEventListener('click', () => {
+      if (!diffEditor) return;
+      diffEditor.value = '';
+      autoResizeDiff();
+      updateDiffPreview('');
+      removeStoredDiff();
+      setDiffDirty(false);
+      diffEditor.focus();
+      flashButtonLabel(clearDiffButton, 'Cleared');
+    });
+
     const listFilesButton = document.getElementById('btn-file-list');
     if (listFilesButton && buildOut) {
       listFilesButton.addEventListener('click', async () => {
         buildOut.textContent = 'Listing…';
-        try {
-          const result = await postJson('/api/plan', { prompt: 'list-files' });
-          buildOut.textContent = JSON.stringify(result, null, 2);
-        } catch (err) {
-          buildOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
-        }
+        await withButtonBusy(listFilesButton, 'Listing…', async () => {
+          try {
+            const result = await postJson('/api/plan', { prompt: 'list-files' });
+            buildOut.textContent = formatPlanResponse(result);
+          } catch (err) {
+            buildOut.textContent = `Error: ${formatError(err)}`;
+          }
+        });
       });
     }
 
     const diffButton = document.getElementById('btn-diff-dryrun');
     if (diffButton && buildOut) {
       diffButton.addEventListener('click', async () => {
+        if (!diffEditor) {
+          buildOut.textContent = 'Diff editor unavailable.';
+          return;
+        }
+        const diff = diffEditor.value || getStoredDiff() || SAMPLE_DIFF;
+        if (!diff.trim()) {
+          buildOut.textContent = 'Add a diff before running a dry-run.';
+          return;
+        }
         buildOut.textContent = 'Dry-running…';
-        const storedDiff = (() => {
+        await withButtonBusy(diffButton, 'Dry-running…', async () => {
           try {
-            return localStorage.getItem('plan.diff');
+            const result = await postJson('/api/patch', { diff, apply: false });
+            buildOut.textContent = JSON.stringify(result, null, 2);
           } catch (err) {
-            return null;
+            buildOut.textContent = `Error: ${formatError(err)}`;
           }
-        })();
-        const sampleDiff = '--- a/README.md\n+++ b/README.md\n@@\n-foo\n+foo';
-        const diff = storedDiff || sampleDiff;
+        });
+      });
+    }
+
+    async function runShipCommand(cmd, triggerButton) {
+      if (!shipOut) return;
+      shipOut.textContent = `Running ${cmd}…`;
+      await withButtonBusy(triggerButton || null, 'Running…', async () => {
         try {
-          const result = await postJson('/api/patch', { diff, apply: false });
-          buildOut.textContent = JSON.stringify(result, null, 2);
+          const result = await postJson('/api/smoke', { cmd });
+          shipOut.textContent = JSON.stringify(result, null, 2);
         } catch (err) {
-          buildOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+          shipOut.textContent = `Error: ${formatError(err)}`;
         }
       });
     }
 
-    async function runShipCommand(cmd) {
-      if (!shipOut) return;
-      shipOut.textContent = `Running ${cmd}…`;
-      try {
-        const result = await postJson('/api/smoke', { cmd });
-        shipOut.textContent = JSON.stringify(result, null, 2);
-      } catch (err) {
-        shipOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
-      }
-    }
-
     const preflightButton = document.getElementById('btn-preflight');
-    preflightButton?.addEventListener('click', () => runShipCommand('preflight'));
+    preflightButton?.addEventListener('click', async (event) => {
+      await runShipCommand('preflight', event.currentTarget);
+    });
     const devButton = document.getElementById('btn-dev');
-    devButton?.addEventListener('click', () => runShipCommand('dev'));
+    devButton?.addEventListener('click', async (event) => {
+      await runShipCommand('dev', event.currentTarget);
+    });
     const smokeButton = document.getElementById('btn-smoke');
-    smokeButton?.addEventListener('click', () => runShipCommand('smoke'));
+    smokeButton?.addEventListener('click', async (event) => {
+      await runShipCommand('smoke', event.currentTarget);
+    });
 
     updateSendButton();
     messageInput.focus();

@@ -1139,19 +1139,47 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/plan') {
-      readJsonBody(req).then((payload) => {
+      readJsonBody(req).then(async (payload) => {
         const prompt = typeof payload.prompt === 'string' ? payload.prompt : null;
         const plan = [
-          'STEP A: prepare minimal diff',
-          'STEP B: dry-run patch',
-          'STEP C: apply + smoke'
+          'Collect context (list files / git status)',
+          'Draft or paste a unified diff in Build → Diff draft',
+          'Dry-run with /api/patch, then apply + ship when ready'
         ];
-        return writeJson(res, 200, {
+
+        const response = {
           ok: true,
           plan,
           echo: prompt,
           ts: new Date().toISOString()
-        });
+        };
+
+        if (prompt === 'list-files') {
+          const [statusResult, dirEntries] = await Promise.all([
+            runShell('git status --short'),
+            fs.readdir(repoRoot, { withFileTypes: true }).catch((err) => {
+              console.error('[boss-api] plan readdir failed', err);
+              return null;
+            })
+          ]);
+
+          response.gitStatus = statusResult;
+
+          if (Array.isArray(dirEntries)) {
+            const tree = dirEntries
+              .filter((entry) => !entry.name.startsWith('.') && entry.name !== 'node_modules')
+              .slice(0, 50)
+              .map((entry) => ({
+                name: entry.name,
+                type: entry.isDirectory() ? 'dir' : 'file'
+              }));
+            response.tree = tree;
+          }
+        } else if (prompt) {
+          response.notes = 'Planner stub: replace with Codex Plan output when ready.';
+        }
+
+        return writeJson(res, 200, response);
       }).catch((err) => {
         if (err?.statusCode === 413) {
           return writeJson(res, 413, { error: 'Payload too large' });
