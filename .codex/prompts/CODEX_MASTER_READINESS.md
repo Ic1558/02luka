@@ -1,3 +1,4 @@
+<<<<<<< ours
 # 🧩 Codex Master Prompt — "02LUKA Ready to Work"
 
 **Goal:** When this file is detected, Codex must verify the dev session is sane and ready:
@@ -5,6 +6,14 @@
 - Node & Python available
 - API (4000) & UI (5173) healthy
 - Drive path usage avoided inside ProgramArguments (no "My Drive (1)")
+=======
+# 🧩 Codex Master Prompt — “02LUKA Ready to Work”
+
+### 🎯 เป้าหมาย
+เตรียม 02LUKA ให้พร้อมพัฒนา (โค้ด, Codex, Cursor, CLI) อย่างสมบูรณ์  
+ให้ Codex ทำงานเองตั้งแต่ตรวจ path → repo → agents → logs → Cursor tasks โดยไม่ถามซ้ำ  
+หลีกเลี่ยง media ขนาดใหญ่ และไม่ออกนอก `~/dev/02luka-repo`
+>>>>>>> theirs
 
 ---
 
@@ -14,6 +23,7 @@ You are Codex operating inside the 02LUKA system.
 
 Golden Rules:
 1. Operate only under:
+<<<<<<< ours
    - Code SOT : ~/dev/02luka-repo (host) or /workspaces/02luka-repo (container)
    - Drive SOT: ~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
 2. Never traverse/scan heavy paths:
@@ -68,6 +78,19 @@ Golden Rules:
 - **Features**: Rubric, anti-patterns, failure modes, recovery playbooks
 - **Usage**: Follow pipeline: observe_context → expand_constraints → plan → act_small → self_check → reflect_and_trim → finalize_or_iterate
 
+=======
+   - Code SOT : ~/dev/02luka-repo
+   - Drive SOT: ~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
+2. Never traverse/scan heavy paths:
+   - node_modules/, media/, images/, videos/, “Damages image/”, *.jpeg, *.jpg, *.png, *.mov
+3. Treat Google Drive as Stream Mode; only these are guaranteed offline:
+   - 02luka, 02luka/02luka-repo, 02luka/g, 02luka/run
+4. All scripts must be idempotent and path-safe.
+5. No hardcoded “My Drive (1)” or spaces in symlink targets.
+6. Prefer Bash/Python3 with strict error-handling + logging.
+7. Be surgical: print commands you run + short outputs.
+
+>>>>>>> theirs
 ---
 
 ## 💻 User Prompt (ให้ Codex เริ่มทำงานจริง)
@@ -86,7 +109,11 @@ ln -snf "$BASE/02luka/02luka-repo" "$HOME/dev/02luka-repo"
 ln -snf "$BASE/02luka"             "$HOME/dev/02luka"
 ls -l "$HOME/dev/02luka" "$HOME/dev/02luka-repo"
 
+<<<<<<< ours
 Expect: ทั้งคู่ชี้ลง /My Drive/02luka… (ไม่มี "(1)")
+=======
+Expect: ทั้งคู่ชี้ลง /My Drive/02luka… (ไม่มี “(1)”)
+>>>>>>> theirs
 ```
 
 ⸻
@@ -259,4 +286,8 @@ Notes:
 ⸻
 
 Path: ~/dev/02luka-repo/.codex/prompts/CODEX_MASTER_READINESS.md
+<<<<<<< ours
 Usage: ใช้เป็น "เอกสารเปิด Session" ให้ Codex/Cursor อ่านทุกครั้ง
+=======
+Usage: ใช้เป็น “เอกสารเปิด Session” ให้ Codex/Cursor อ่านทุกครั้ง
+>>>>>>> theirs
