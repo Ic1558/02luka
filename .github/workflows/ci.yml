@@ -11,8 +11,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
       - name: Validate MCP example and local-only policy
       - name: Validate MCP paths
+          BAD=.cursor/mcp.
+          EXT=json
+          PAT="$BAD$EXT"
         run: |
-          if command -v rg >/dev/null 2>&1; then rg -n --fixed-strings ".cursor/mcp.json" --hidden --glob "!*example*" || true; else grep -Rna --exclude-dir=.git --exclude="*example*" ".cursor/mcp.json" . || true; fi
+          if command -v rg >/dev/null 2>&1; then rg -n --fixed-strings "$PAT" --hidden --glob "!*example*" || true; else grep -Rna --exclude-dir=.git --exclude="*example*" "$PAT" . || true; fi
           echo done
         run: |
           jq empty .cursor/mcp.example.json
