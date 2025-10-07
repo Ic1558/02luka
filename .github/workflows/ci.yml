@@ -12,4 +12,4 @@ jobs:
       - name: Validate MCP example and local-only policy
         run: |
           jq empty .cursor/mcp.example.json
-          test -f .cursor/mcp.json || echo ".cursor/mcp.json not present (expected on CI)"
+          test -f .cursor/mcp.example.json || echo ".cursor/mcp.example.json not present (expected on CI)"

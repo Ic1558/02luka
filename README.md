@@ -312,5 +312,5 @@ git reset --hard v2025-10-05-docs-stable
 ## MCP config
 - Edit \ only.
 - \ is local-only and ignored.
-- Run \JSON OK: /workspaces/02luka-repo/.cursor/mcp.example.json and /workspaces/02luka-repo/.cursor/mcp.json
+- Run \JSON OK: /workspaces/02luka-repo/.cursor/mcp.example.json and /workspaces/02luka-repo/.cursor/mcp.example.json
 dev-setup complete. after clone to bootstrap.

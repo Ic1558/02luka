@@ -36,7 +36,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8765
 
 ## 📝 Cursor Configuration
 
-**File:** `.cursor/mcp.json`
+**File:** `.cursor/mcp.example.json`
 
 ```json
 {
@@ -172,7 +172,7 @@ nohup ~/.venv/mcpfs/bin/python g/tools/mcp_fs_server.py > /tmp/mcp_fs_py.log 2>&
 ```
 
 ### Cursor Not Seeing Tools
-1. Check `.cursor/mcp.json` exists in repo root
+1. Check `.cursor/mcp.example.json` exists in repo root
 2. Ensure both servers are running (ports 5012 and 8765)
 3. Reload Cursor window (`Cmd+Shift+P` → "Reload Window")
 4. Check Settings → Tools & MCP for status

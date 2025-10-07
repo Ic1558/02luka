@@ -81,7 +81,7 @@ OK
 ./g/tools/clc mcp:connect
 ```
 **Result:**
-- ✅ Created `.cursor/mcp.json`
+- ✅ Created `.cursor/mcp.example.json`
 - ✅ Docker gateway connection configured
 - ✅ MCP_DOCKER server registered
 
@@ -161,7 +161,7 @@ User → clc → ensure_repo() → command handler → dependencies → OK/FAIL
 
 ## Files Modified During Deployment
 
-1. **`.cursor/mcp.json`** - MCP gateway connection (new)
+1. **`.cursor/mcp.example.json`** - MCP gateway connection (new)
 2. **`.devcontainer/devcontainer.json`** - Minimal safe config (updated)
 3. **`a/section/clc/memory/active_memory.md`** - Memory sync result (updated)
 

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp_fs": {
+      "transport": { "type": "http", "url": "http://127.0.0.1:8765" }
+    },
+    "mcp_docker": {
+      "transport": { "type": "http", "url": "http://127.0.0.1:5012" }
+    }
+  }
+}

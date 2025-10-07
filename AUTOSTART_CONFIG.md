@@ -209,7 +209,7 @@ ps aux | grep mcp_fs_server.py
 
 **2. Check Cursor MCP config:**
 ```bash
-cat .cursor/mcp.json
+cat .cursor/mcp.example.json
 # Should have: "mcp_fs": {"transport": "sse", "url": "http://127.0.0.1:8765/sse"}
 ```
 

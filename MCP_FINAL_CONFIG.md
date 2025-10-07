@@ -7,7 +7,7 @@
 
 ## 📝 Final Configuration
 
-**File:** `.cursor/mcp.json`
+**File:** `.cursor/mcp.example.json`
 
 ```json
 {
