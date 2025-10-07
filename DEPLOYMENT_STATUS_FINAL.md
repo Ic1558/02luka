@@ -66,7 +66,7 @@
 ```
 **Status:** ✅ Minimal safe configuration deployed
 
-**MCP Gateway (`.cursor/mcp.json`):**
+**MCP Gateway (`.cursor/mcp.example.json`):**
 ```json
 {
   "mcpServers": {
@@ -117,7 +117,7 @@ Health:     ✅ {"status": "healthy", "service": "mcp-api-gateway-docker"}
 ```
 
 **Cursor Integration:**
-- Configuration file: ✅ Present (`.cursor/mcp.json`)
+- Configuration file: ✅ Present (`.cursor/mcp.example.json`)
 - MCP_DOCKER toggle: ✅ Enabled (green in Cursor Settings)
 - Tools/Resources: ⚠️ "No tools, prompts, or resources" (red indicator)
 
@@ -129,7 +129,7 @@ Health:     ✅ {"status": "healthy", "service": "mcp-api-gateway-docker"}
 ./g/tools/clc                    # ✅ Help displayed
 ./g/tools/clc memory             # ✅ Synced hybrid_memory_system.md
 ./g/tools/clc devcontainer:min   # ✅ Created devcontainer.json
-./g/tools/clc mcp:connect        # ✅ Created .cursor/mcp.json
+./g/tools/clc mcp:connect        # ✅ Created .cursor/mcp.example.json
 ```
 
 **Dependencies Check:**
@@ -149,7 +149,7 @@ Health:     ✅ {"status": "healthy", "service": "mcp-api-gateway-docker"}
 | `boss-api/server.cjs` | Updated | ✅ Modified | Added API endpoints |
 | `g/tools/clc` | 7.4KB | ✅ New | CLC CLI tool |
 | `.devcontainer/devcontainer.json` | 216 bytes | ✅ Created | Minimal safe config |
-| `.cursor/mcp.json` | 96 bytes | ✅ Created | MCP gateway connection |
+| `.cursor/mcp.example.json` | 96 bytes | ✅ Created | MCP gateway connection |
 | `a/section/clc/memory/active_memory.md` | Updated | ✅ Synced | Memory sync result |
 
 ---

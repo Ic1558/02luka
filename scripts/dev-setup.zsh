@@ -8,7 +8,7 @@ mkdir -p "$CUR_DIR"
 if [[ ! -f "$EX" ]]; then
   cat > "$EX" <<'JSON'
 {
-  "//": "Local-only MCP example. Copy to .cursor/mcp.json on each machine.",
+  "//": "Local-only MCP example. Copy to .cursor/mcp.example.json on each machine.",
   "mcpServers": {
     "mcp_fs": {
       "transport": { "type": "http", "url": "http://127.0.0.1:8765" }
@@ -30,11 +30,11 @@ HOOK="$ROOT/.git/hooks/pre-commit"
 mkdir -p "$ROOT/.git/hooks"
 if [[ -f "$HOOK" ]]; then
   # Only append guard if missing
-  if ! grep -q '.cursor/mcp.json' "$HOOK"; then
+  if ! grep -q '.cursor/mcp.example.json' "$HOOK"; then
     cat >> "$HOOK" <<'SH'
 # Guard local-only Cursor MCP config
-if git diff --cached --name-only | grep -qx ".cursor/mcp.json"; then
-  echo "Refusing to commit .cursor/mcp.json (local-only)."
+if git diff --cached --name-only | grep -qx ".cursor/mcp.example.json"; then
+  echo "Refusing to commit .cursor/mcp.example.json (local-only)."
   exit 1
 fi
 SH
@@ -44,8 +44,8 @@ else
 #!/usr/bin/env bash
 set -euo pipefail
 # Guard local-only Cursor MCP config
-if git diff --cached --name-only | grep -qx ".cursor/mcp.json"; then
-  echo "Refusing to commit .cursor/mcp.json (local-only)."
+if git diff --cached --name-only | grep -qx ".cursor/mcp.example.json"; then
+  echo "Refusing to commit .cursor/mcp.example.json (local-only)."
   exit 1
 fi
 exit 0

@@ -378,7 +378,7 @@ bash -x g/tools/emit_task_event.sh clc debug started test 2>&1
 ps aux | grep mcp_fs_server.py
 
 # Check Cursor MCP config
-cat .cursor/mcp.json
+cat .cursor/mcp.example.json
 
 # Test MCP endpoint
 curl http://127.0.0.1:8765/sse
