@@ -308,3 +308,9 @@ git reset --hard v2025-10-05-docs-stable
 ## Boss API/UI Folders (merged in batch2)
 - boss-api/: server.cjs canonical, .env.sample added
 - boss-ui/: index.html redirects to luka.html
+
+## MCP config
+- Edit \ only.
+- \ is local-only and ignored.
+- Run \JSON OK: /workspaces/02luka-repo/.cursor/mcp.example.json and /workspaces/02luka-repo/.cursor/mcp.json
+dev-setup complete. after clone to bootstrap.
