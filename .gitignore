@@ -31,3 +31,4 @@ index_optimized.html
 .venv_mcpfs/
 test-results/
 .cursor/mcp.example.json
+.cursor/mcp.json
