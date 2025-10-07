@@ -150,4 +150,9 @@ else
   echo "chat: SKIP (capability disabled)"
 fi
 
+echo "==> Check Linear-lite endpoints"
+curl -sf "$API/api/capabilities" >/dev/null && echo "capabilities: OK" || { echo "capabilities: FAIL"; exit 1; }
+curl -sf -X POST -H 'Content-Type: application/json' -d '{"prompt":"ping"}' "$API/api/plan" >/dev/null && echo "plan: OK" || { echo "plan: FAIL"; exit 1; }
+curl -sf -X POST -H 'Content-Type: application/json' -d '{"diff":"--- a/README.md\n+++ b/README.md\n@@\n-foo\n+foo"}' "$API/api/patch" >/dev/null && echo "patch(dryrun): OK" || { echo "patch: FAIL"; exit 1; }
+
 echo "==> Smoke checks complete"

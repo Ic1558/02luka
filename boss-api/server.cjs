@@ -2,7 +2,8 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const fs = require('fs/promises');
-const { execFile } = require('child_process');
+const { execFile, exec } = require('child_process');
+const os = require('os');
 const anthropicConnector = require('../g/connectors/mcp_anthropic');
 const openaiConnector = require('../g/connectors/mcp_openai');
 
@@ -10,6 +11,61 @@ const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+
+function readJsonBody(req, limit = 1_000_000) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    let settled = false;
+
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    req.on('error', fail);
+    req.on('data', (chunk) => {
+      if (settled) return;
+      raw += chunk;
+      if (raw.length > limit) {
+        const err = new Error('Payload too large');
+        err.statusCode = 413;
+        fail(err);
+        req.destroy(err);
+      }
+    });
+
+    req.on('end', () => {
+      if (settled) return;
+      if (!raw) {
+        settled = true;
+        return resolve({});
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        settled = true;
+        resolve(parsed);
+      } catch (err) {
+        err.statusCode = 400;
+        fail(err);
+      }
+    });
+  });
+}
+
+function runShell(command, options = {}) {
+  return new Promise((resolve) => {
+    exec(command, { shell: '/bin/bash', timeout: 90_000, cwd: repoRoot, ...options }, (error, stdout = '', stderr = '') => {
+      const code = typeof error?.code === 'number' ? error.code : error ? 1 : 0;
+      resolve({
+        ok: !error,
+        code,
+        stdout,
+        stderr
+      });
+    });
+  });
+}
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -1079,6 +1135,112 @@ const server = http.createServer(async (req, res) => {
         }
       });
 
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/plan') {
+      readJsonBody(req).then((payload) => {
+        const prompt = typeof payload.prompt === 'string' ? payload.prompt : null;
+        const plan = [
+          'STEP A: prepare minimal diff',
+          'STEP B: dry-run patch',
+          'STEP C: apply + smoke'
+        ];
+        return writeJson(res, 200, {
+          ok: true,
+          plan,
+          echo: prompt,
+          ts: new Date().toISOString()
+        });
+      }).catch((err) => {
+        if (err?.statusCode === 413) {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err?.statusCode === 400) {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        console.error('[boss-api] plan endpoint error', err);
+        return writeJson(res, 500, { error: 'Internal Server Error' });
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/patch') {
+      readJsonBody(req).then(async (payload) => {
+        const diff = typeof payload.diff === 'string' ? payload.diff : '';
+        const apply = payload.apply === true;
+        if (!diff.trim()) {
+          return writeJson(res, 400, { ok: false, error: 'diff_required' });
+        }
+
+        const tmpName = `luka_patch_${Date.now()}_${Math.random().toString(36).slice(2)}.diff`;
+        const tmpPath = path.join(os.tmpdir(), tmpName);
+        try {
+          await fs.writeFile(tmpPath, diff, 'utf8');
+          const check = await runShell(`git apply --check "${tmpPath}"`);
+          if (!check.ok) {
+            return writeJson(res, 200, { ok: false, mode: 'dryrun', check });
+          }
+
+          let applied = null;
+          if (apply) {
+            applied = await runShell(`git apply "${tmpPath}" && git add -A`);
+            if (!applied.ok) {
+              return writeJson(res, 200, { ok: false, mode: 'apply', applied });
+            }
+          }
+
+          return writeJson(res, 200, {
+            ok: true,
+            mode: apply ? 'apply' : 'dryrun',
+            check,
+            applied
+          });
+        } finally {
+          await fs.unlink(tmpPath).catch(() => {});
+        }
+      }).catch((err) => {
+        if (err?.statusCode === 413) {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err?.statusCode === 400) {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        console.error('[boss-api] patch endpoint error', err);
+        return writeJson(res, 500, { error: 'Internal Server Error' });
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/smoke') {
+      readJsonBody(req).then(async (payload) => {
+        const cmd = typeof payload.cmd === 'string' ? payload.cmd : '';
+        let command = 'bash ./run/smoke_api_ui.sh';
+        let timeout = 120_000;
+        if (cmd === 'preflight') {
+          command = 'bash ./.codex/preflight.sh';
+          timeout = 90_000;
+        } else if (cmd === 'dev') {
+          command = 'bash ./run/dev_up_simple.sh';
+        }
+
+        const result = await runShell(command, { timeout });
+        return writeJson(res, 200, {
+          ok: result.ok,
+          code: result.code,
+          stdout: result.stdout ? result.stdout.slice(0, 50_000) : '',
+          stderr: result.stderr ? result.stderr.slice(0, 50_000) : ''
+        });
+      }).catch((err) => {
+        if (err?.statusCode === 413) {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err?.statusCode === 400) {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        console.error('[boss-api] smoke endpoint error', err);
+        return writeJson(res, 500, { error: 'Internal Server Error' });
+      });
       return;
     }
 

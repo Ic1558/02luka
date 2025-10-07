@@ -290,37 +290,85 @@
     </div>
   </header>
 
-  <div class="prompt-library-panel" id="promptLibraryPanel">
-    <div class="prompt-library-header">
-      <span>Codex Master Prompt</span>
-      <button class="tool-button" id="closePromptLibrary" type="button">Close</button>
-    </div>
-    <div class="prompt-library-body" id="promptLibraryBody">
-      Loading master prompt…
-    </div>
-    <div class="prompt-library-actions">
-      <button class="tool-button secondary" id="copyPromptTemplate" type="button">Copy</button>
-      <button class="tool-button primary" id="insertPromptTemplate" type="button">Use Template</button>
-    </div>
-  </div>
+  <nav id="mode-tabs" style="position:sticky;top:0;background:#0f1115;border-bottom:1px solid #222;padding:8px 12px;z-index:1000;font:14px system-ui">
+    <button class="tabbtn" data-tab="plan" style="margin-right:8px">Plan</button>
+    <button class="tabbtn" data-tab="build" style="margin-right:8px">Build</button>
+    <button class="tabbtn" data-tab="ship">Ship</button>
+  </nav>
+  <style>
+    .tabview { display: none; }
+    .tabview.active { display: block; }
+    .tabbtn {
+      background: #1a1f29;
+      color: #eee;
+      border: 1px solid #2a2f3a;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .tabbtn.active {
+      background: #2b3340;
+    }
+    #linear-lite {
+      padding: 12px;
+    }
+    #linear-lite h3 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+  </style>
+  <main id="linear-lite">
+    <section id="tab-plan" class="tabview active">
+      <div class="prompt-library-panel" id="promptLibraryPanel">
+        <div class="prompt-library-header">
+          <span>Codex Master Prompt</span>
+          <button class="tool-button" id="closePromptLibrary" type="button">Close</button>
+        </div>
+        <div class="prompt-library-body" id="promptLibraryBody">
+          Loading master prompt…
+        </div>
+        <div class="prompt-library-actions">
+          <button class="tool-button secondary" id="copyPromptTemplate" type="button">Copy</button>
+          <button class="tool-button primary" id="insertPromptTemplate" type="button">Use Template</button>
+        </div>
+      </div>
 
-  <div class="messages" id="messages">
-    <div class="message">
-      <div class="avatar">L</div>
-      <div class="content">Ready. Type a mission and press Send or Enter.</div>
-    </div>
-  </div>
+      <div class="messages" id="messages">
+        <div class="message">
+          <div class="avatar">L</div>
+          <div class="content">Ready. Type a mission and press Send or Enter.</div>
+        </div>
+      </div>
 
-  <div class="input-area">
-    <div class="input-wrapper">
-      <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
-      <button id="sendButton" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-        </svg>
-      </button>
-    </div>
-  </div>
+      <div class="input-area">
+        <div class="input-wrapper">
+          <textarea id="messageInput" placeholder="Use the master prompt template for best results…" rows="1"></textarea>
+          <button id="sendButton" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+    <section id="tab-build" class="tabview">
+      <h3 style="margin:8px 0">Build</h3>
+      <div id="build-tools" style="display:flex;gap:12px;flex-wrap:wrap">
+        <button id="btn-file-list">List Files</button>
+        <button id="btn-diff-dryrun">Dry-run Patch</button>
+      </div>
+      <pre id="build-out" style="margin-top:10px;background:#0b0e13;border:1px solid #202632;border-radius:8px;padding:10px;max-height:320px;overflow:auto"></pre>
+    </section>
+    <section id="tab-ship" class="tabview">
+      <h3 style="margin:8px 0">Ship</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button id="btn-preflight">Run Preflight</button>
+        <button id="btn-dev">Dev Up</button>
+        <button id="btn-smoke">Smoke</button>
+      </div>
+      <pre id="ship-out" style="margin-top:10px;background:#0b0e13;border:1px solid #202632;border-radius:8px;padding:10px;max-height:320px;overflow:auto"></pre>
+    </section>
+  </main>
 
   <script>
     const messageInput = document.getElementById('messageInput');
@@ -334,6 +382,10 @@
     const copyPromptTemplate = document.getElementById('copyPromptTemplate');
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
     const openChatWindowButton = document.getElementById('openChatWindowButton');
+    const tabButtons = Array.from(document.querySelectorAll('#mode-tabs .tabbtn'));
+    const tabViews = Array.from(document.querySelectorAll('.tabview'));
+    const buildOut = document.getElementById('build-out');
+    const shipOut = document.getElementById('ship-out');
 
     const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
     const TARGET_PROFILES = {
@@ -557,12 +609,132 @@
     // Sync gateway changes to chat window
     gatewaySelect.addEventListener('change', () => {
       if (chatWindow && !chatWindow.closed) {
-        chatWindow.postMessage({ 
-          type: 'sync-gateway', 
-          gateway: gatewaySelect.value 
+        chatWindow.postMessage({
+          type: 'sync-gateway',
+          gateway: gatewaySelect.value
         }, '*');
       }
     });
+
+    const DEFAULT_TAB = 'plan';
+
+    function setTab(key) {
+      if (!tabButtons.length || !tabViews.length) {
+        return;
+      }
+      const targetKey = tabViews.some((view) => view.id === `tab-${key}`) ? key : DEFAULT_TAB;
+      tabButtons.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === targetKey);
+      });
+      tabViews.forEach((view) => {
+        view.classList.toggle('active', view.id === `tab-${targetKey}`);
+      });
+      try {
+        localStorage.setItem('luka.tab', targetKey);
+      } catch (err) {
+        console.warn('Unable to persist tab state', err);
+      }
+      if (targetKey === 'plan' && document.activeElement !== messageInput) {
+        messageInput.focus();
+      }
+    }
+
+    if (tabButtons.length && tabViews.length) {
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', () => setTab(btn.dataset.tab));
+      });
+      const savedTab = (() => {
+        try {
+          return localStorage.getItem('luka.tab');
+        } catch (err) {
+          return null;
+        }
+      })();
+      setTab(savedTab || DEFAULT_TAB);
+    }
+
+    async function postJson(url, payload) {
+      let response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload ?? {})
+        });
+      } catch (networkError) {
+        throw new Error(networkError.message || 'Network error');
+      }
+
+      const text = await response.text();
+      let parsed = null;
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch (parseError) {
+          throw new Error('Invalid JSON response');
+        }
+      }
+
+      if (!response.ok) {
+        const detail = parsed && (parsed.detail || parsed.error);
+        throw new Error(detail ? `${detail} (HTTP ${response.status})` : `HTTP ${response.status}`);
+      }
+
+      return parsed;
+    }
+
+    const listFilesButton = document.getElementById('btn-file-list');
+    if (listFilesButton && buildOut) {
+      listFilesButton.addEventListener('click', async () => {
+        buildOut.textContent = 'Listing…';
+        try {
+          const result = await postJson('/api/plan', { prompt: 'list-files' });
+          buildOut.textContent = JSON.stringify(result, null, 2);
+        } catch (err) {
+          buildOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      });
+    }
+
+    const diffButton = document.getElementById('btn-diff-dryrun');
+    if (diffButton && buildOut) {
+      diffButton.addEventListener('click', async () => {
+        buildOut.textContent = 'Dry-running…';
+        const storedDiff = (() => {
+          try {
+            return localStorage.getItem('plan.diff');
+          } catch (err) {
+            return null;
+          }
+        })();
+        const sampleDiff = '--- a/README.md\n+++ b/README.md\n@@\n-foo\n+foo';
+        const diff = storedDiff || sampleDiff;
+        try {
+          const result = await postJson('/api/patch', { diff, apply: false });
+          buildOut.textContent = JSON.stringify(result, null, 2);
+        } catch (err) {
+          buildOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      });
+    }
+
+    async function runShipCommand(cmd) {
+      if (!shipOut) return;
+      shipOut.textContent = `Running ${cmd}…`;
+      try {
+        const result = await postJson('/api/smoke', { cmd });
+        shipOut.textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        shipOut.textContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    }
+
+    const preflightButton = document.getElementById('btn-preflight');
+    preflightButton?.addEventListener('click', () => runShipCommand('preflight'));
+    const devButton = document.getElementById('btn-dev');
+    devButton?.addEventListener('click', () => runShipCommand('dev'));
+    const smokeButton = document.getElementById('btn-smoke');
+    smokeButton?.addEventListener('click', () => runShipCommand('smoke'));
 
     updateSendButton();
     messageInput.focus();
