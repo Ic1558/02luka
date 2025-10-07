@@ -1,8 +1,10 @@
 {
   "mcpServers": {
     "mcp_fs": {
-      "transport": "sse",
-      "url": "http://127.0.0.1:8765/sse"
+      "transport": { "type": "http", "url": "http://127.0.0.1:8765" }
+    },
+    "mcp_docker": {
+      "transport": { "type": "http", "url": "http://127.0.0.1:5012" }
     }
   }
 }
