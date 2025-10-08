@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: dev validate ci validate-mcp proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss
+.PHONY: dev validate ci validate-mcp proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss status boss-find
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -56,3 +56,12 @@ mem:
 boss:
 	@make boss-refresh >/dev/null || true
 	@echo "Open: boss/reports/index.md  |  boss/memory/index.md"
+
+status:
+	@f=$$(ls -t g/reports/proof/*_proof.md 2>/dev/null | head -1); \
+	echo "Latest proof: $$f"; \
+	grep -E 'Total files|Out-of-zone files|Max path depth' "$$f" 2>/dev/null || true; \
+	echo "Open: boss/reports/index.md  |  boss/memory/index.md"
+
+boss-find:
+	@./scripts/boss_find.sh "$(q)"
