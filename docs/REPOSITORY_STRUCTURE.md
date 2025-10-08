@@ -536,6 +536,40 @@ Three guards prevent commits that violate structure rules:
 
 ---
 
+## 📊 Structure SLA
+
+**Service Level Agreement for Repository Structure**
+
+### Targets
+
+- **Out-of-zone files:** ≤ 1% of total files (or < 10 files absolute)
+- **Boss findability:** Any content accessible within ≤ 2 clicks from `boss/` directory
+- **Daily Proof:** Must pass; if failing, must be fixed same day
+
+### Monitoring
+
+```bash
+make status              # Quick check: latest proof + metrics
+make validate-zones      # Detailed: check all zone violations
+make proof               # Full proof with all metrics
+```
+
+### Response
+
+**If out-of-zone count exceeds SLA:**
+1. Run `make tidy-plan` to generate move plan
+2. Review plan at `g/reports/proof/*_MOVEPLAN.tsv`
+3. Execute: `make tidy-apply`
+4. Verify: `make validate-zones && make proof`
+
+**If Daily Proof CI fails:**
+1. Check GitHub Actions → Daily Proof (Option C) job
+2. Download artifact `latest-proof` for details
+3. Fix violations same day
+4. If urgent work blocks fix, use `docs/BREAKGLASS.md` procedures
+
+---
+
 ## 📝 Maintenance
 
 **This document should be updated when:**
