@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Repository Structure Improvement Report
 
 **Date:** 2025-10-08T03:53:00+07:00

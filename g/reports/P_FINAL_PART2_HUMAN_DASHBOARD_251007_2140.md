@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # P-FINAL PART 2: HUMAN DASHBOARD AUTO-UPDATE RESTORATION
 
 **Report ID:** P_FINAL_PART2_HUMAN_DASHBOARD_251007_2140

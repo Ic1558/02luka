@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Test Report: Batch #2 Merge Conflict Resolution
 
 **Date:** 2025-10-06

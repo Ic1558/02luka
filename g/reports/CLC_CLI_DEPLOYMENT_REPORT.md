@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # CLC CLI Deployment & Verification Report
 
 **Date:** 2025-10-06

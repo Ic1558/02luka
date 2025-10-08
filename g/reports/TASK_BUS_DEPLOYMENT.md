@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Task Bus Deployment Summary ✅
 
 **Timestamp:** 2025-10-06T02:50:00Z

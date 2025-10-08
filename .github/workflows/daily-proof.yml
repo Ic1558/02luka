@@ -1,0 +1,21 @@
+name: Daily Proof (Option C)
+
+on:
+  schedule: [{ cron: "12 1 * * *" }]  # 08:12 ICT ทุกวัน
+  workflow_dispatch:
+
+jobs:
+  daily-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate structure (Option C)
+        run: |
+          make validate-zones
+          make proof || true
+      - name: Upload latest proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-proof
+          path: g/reports/proof/*_proof.md
+          if-no-files-found: warn

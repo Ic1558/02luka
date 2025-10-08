@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # LaunchAgent Diagnosis & Resolution - Complete
 
 **Date:** 2025-10-06T04:00:00Z

@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # P3 Final Cleanup — Last 5 Exit=1 Agents — 251007_0456
 
 ## Executive Summary
