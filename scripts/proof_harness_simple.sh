@@ -21,7 +21,12 @@ dup_name=$(find "$ROOT" -type f -not -path "*/.git/*" -not -path "*/node_modules
 
 echo "Testing findability..."
 find_time_save=$(date +%s)
-rg -l "save.sh" "$ROOT" >/dev/null || true
+# Use rg if available, otherwise use grep
+if command -v rg >/dev/null 2>&1; then
+  rg -l "save.sh" "$ROOT" >/dev/null || true
+else
+  grep -r "save.sh" "$ROOT" >/dev/null 2>&1 || true
+fi
 find_time_end=$(date +%s)
 find_ms=$(( (find_time_end - find_time_save) * 1000 ))
 
@@ -38,7 +43,7 @@ cat > "$OUT" <<EOF
 - Max path depth: ${max_depth}
 - Duplicate filenames: ${dup_name}
 
-## Findability (ripgrep)
+## Findability (ripgrep/grep)
 - save.sh search: ${find_ms}ms
 
 ## Git Signals (90 days)
