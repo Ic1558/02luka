@@ -5,11 +5,11 @@ echo "Generating boss catalogs..."
 
 # helper: read front-matter key (very lightweight)
 fm_get() { # fm_get <file> <key>
-  awk '
-    BEGIN{FS=": *"; in=0}
-    /^---[[:space:]]*$/{in=!in; next}
-    in && $1==key {print $2; exit}
-  ' key="$2" "$1" 2>/dev/null
+  awk -v key="$2" '
+    BEGIN{FS=": *"; inside=0}
+    /^---[[:space:]]*$/{inside=!inside; next}
+    inside && $1==key {print $2; exit}
+  ' "$1" 2>/dev/null
 }
 
 # boss/reports/index.md
@@ -37,24 +37,14 @@ fm_get() { # fm_get <file> <key>
   # By Project (from front-matter 'project:')
   echo
   echo "## By Project"
-  tmp="$(mktemp)"; trap 'rm -f "$tmp"' EXIT
-  # build TSV: project \t name \t relpath
-  while IFS= read -r -d '' f; do
-    p="$(fm_get "$f" project)"; [ -z "$p" ] && p="(none)"
-    n="$(basename "$f")"
-    echo -e "$p\t$n\t../../g/reports/$n" >> "$tmp"
+  TMP="$(mktemp)"
+  while IFS= read -r -d '' F; do
+    P="$(fm_get "$F" project)"; [ -z "$P" ] && P="(none)"
+    N="$(basename "$F")"
+    printf "%s\t%s\t../../g/reports/%s\n" "$P" "$N" "$N" >> "$TMP"
   done < <(find "$ROOT/g/reports" -maxdepth 1 -type f -name "*.md" -print0)
-  # print grouped (top 5 projects alphabetically)
-  awk -F'\t' '{print $0}' "$tmp" | sort -f | awk -F'\t' '
-    BEGIN{cur=""; count=0}
-    {
-      if($1!=cur){
-        if(cur!="" && count>0) print "";
-        cur=$1; count=0;
-        print "### " cur
-      }
-      print "- [" $2 "](" $3 ")"; count++
-    }'
+  sort -t$'\t' -k1,1 "$TMP" | awk -F'\t' 'BEGIN{cur=""} {if($1!=cur){if(cur!="")print ""; print "### " $1; cur=$1} print "- [" $2 "](" $3 ")"}'
+  rm -f "$TMP"
 } > "$ROOT/boss/reports/index.md"
 
 # boss/memory/index.md
