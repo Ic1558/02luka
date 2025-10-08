@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Integration Deployment Verification
 
 - **Issue Fixed:** Hash mismatch resolved. `verify_system.sh` now checks against `d177684c8ce1bb2f4cf49df3107dd884babdf731c4a5d639ffcd44aa5ee64532` and the installed `.codex/templates/master_prompt.md` matches.

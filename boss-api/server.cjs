@@ -5,6 +5,7 @@ const os = require('os');
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const { execFile } = require('child_process');
+const { randomUUID } = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 const anthropicConnector = require('../g/connectors/mcp_anthropic');
 const openaiConnector = require('../g/connectors/mcp_openai');
@@ -20,6 +21,45 @@ const embedScriptPath = path.join(repoRoot, 'g', 'tools', 'embed_text.py');
 const ocrScriptPath = path.join(repoRoot, 'g', 'tools', 'ocr_typhoon.py');
 const DEFAULT_OLLAMA_PORT = Number(process.env.OLLAMA_PORT || 11434);
 const localOllamaBaseUrl = `http://127.0.0.1:${DEFAULT_OLLAMA_PORT}`;
+const agentsRoot = path.join(repoRoot, 'agents', 'lukacode');
+const agentScriptCandidates = {
+  plan: [
+    'plan.cjs',
+    'plan.js',
+    'plan.mjs',
+    'planner.cjs',
+    'planner.js',
+    'planner.mjs',
+    path.join('plan', 'index.cjs'),
+    path.join('plan', 'index.js'),
+    path.join('plan', 'index.mjs')
+  ],
+  patch: [
+    'patch.cjs',
+    'patch.js',
+    'patch.mjs',
+    'apply_patch.cjs',
+    'apply_patch.js',
+    'apply_patch.mjs',
+    path.join('patch', 'index.cjs'),
+    path.join('patch', 'index.js'),
+    path.join('patch', 'index.mjs')
+  ],
+  smoke: [
+    'smoke.cjs',
+    'smoke.js',
+    'smoke.mjs',
+    path.join('smoke', 'index.cjs'),
+    path.join('smoke', 'index.js'),
+    path.join('smoke', 'index.mjs')
+  ]
+};
+const MAX_AGENT_PAYLOAD_BYTES = 512 * 1024; // 512 KB per request
+const MAX_AGENT_STDOUT_BYTES = 4 * 1024 * 1024; // 4 MB guardrail
+const MAX_DIFF_BYTES = 512 * 1024;
+const MAX_PATCH_COUNT = 20;
+const DEFAULT_AGENT_TIMEOUT = 90_000;
+const MAX_AGENT_STDOUT_PREVIEW = 64 * 1024;
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -58,6 +98,234 @@ function isPathInside(baseDir, target) {
   }
   return !relative.startsWith('..') && !path.isAbsolute(relative);
 }
+
+async function readJsonBody(req, limit = MAX_AGENT_PAYLOAD_BYTES) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    let aborted = false;
+
+    req.on('data', (chunk) => {
+      if (aborted) {
+        return;
+      }
+      raw += chunk;
+      if (raw.length > limit) {
+        aborted = true;
+        const err = new Error('Payload too large');
+        err.code = 'PAYLOAD_TOO_LARGE';
+        try {
+          req.destroy();
+        } catch (destroyErr) {
+          // ignore
+        }
+        reject(err);
+      }
+    });
+
+    req.on('end', () => {
+      if (aborted) {
+        return;
+      }
+      if (!raw) {
+        return resolve({});
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        resolve(parsed && typeof parsed === 'object' ? parsed : {});
+      } catch (err) {
+        err.code = 'INVALID_JSON';
+        reject(err);
+      }
+    });
+
+    req.on('error', (err) => {
+      if (aborted) {
+        return;
+      }
+      reject(err);
+    });
+  });
+}
+
+function safeParseJson(text) {
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    return null;
+  }
+}
+
+function collectStatusLogs(stderr = '') {
+  return stderr
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(-100);
+}
+
+function sanitizeRelativePath(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  let candidate = value.trim();
+  if (!candidate || candidate.includes('\0')) {
+    return null;
+  }
+  candidate = candidate.replace(/\\/g, '/');
+  if (candidate.startsWith('./')) {
+    candidate = candidate.slice(2);
+  }
+  const normalized = candidate.replace(/\/+/g, '/');
+  const resolved = path.resolve(repoRoot, normalized);
+  if (!isPathInside(repoRoot, resolved)) {
+    return null;
+  }
+  return path.relative(repoRoot, resolved);
+}
+
+function ensureRunId(value) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length >= 8) {
+      return trimmed;
+    }
+  }
+  return randomUUID();
+}
+
+function validateFileInputs(files) {
+  if (!files) {
+    return [];
+  }
+  if (!Array.isArray(files)) {
+    throw Object.assign(new Error('files must be an array'), { code: 'INVALID_FILES' });
+  }
+  const sanitized = [];
+  for (const entry of files) {
+    const value = typeof entry === 'string' ? entry : (entry && typeof entry.path === 'string' ? entry.path : null);
+    if (!value) {
+      throw Object.assign(new Error('Invalid file entry'), { code: 'INVALID_FILES' });
+    }
+    const sanitizedPath = sanitizeRelativePath(value);
+    if (!sanitizedPath) {
+      throw Object.assign(new Error(`Invalid file path: ${value}`), { code: 'INVALID_FILES' });
+    }
+    sanitized.push(sanitizedPath);
+  }
+  return sanitized;
+}
+
+function validatePatchSet(patches) {
+  if (!Array.isArray(patches) || patches.length === 0) {
+    throw Object.assign(new Error('patches must be a non-empty array'), { code: 'INVALID_PATCH' });
+  }
+  if (patches.length > MAX_PATCH_COUNT) {
+    throw Object.assign(new Error(`Too many patches (max ${MAX_PATCH_COUNT})`), { code: 'INVALID_PATCH' });
+  }
+  const sanitized = [];
+  let totalDiffBytes = 0;
+  for (const patch of patches) {
+    if (!patch || typeof patch !== 'object') {
+      throw Object.assign(new Error('Invalid patch entry'), { code: 'INVALID_PATCH' });
+    }
+    const targetPath = sanitizeRelativePath(patch.path || patch.file || '');
+    if (!targetPath) {
+      throw Object.assign(new Error(`Invalid patch path: ${patch.path || patch.file || ''}`), { code: 'INVALID_PATCH' });
+    }
+    const diff = typeof patch.diff === 'string' ? patch.diff : null;
+    if (!diff) {
+      throw Object.assign(new Error(`Missing diff for ${targetPath}`), { code: 'INVALID_PATCH' });
+    }
+    totalDiffBytes += Buffer.byteLength(diff, 'utf8');
+    if (totalDiffBytes > MAX_DIFF_BYTES) {
+      throw Object.assign(new Error('Diff payload too large'), { code: 'INVALID_PATCH' });
+    }
+    sanitized.push({ path: targetPath, diff });
+  }
+  return sanitized;
+}
+
+function resolveAgentScript(key) {
+  const candidates = agentScriptCandidates[key] || [];
+  for (const candidate of candidates) {
+    const candidatePath = path.isAbsolute(candidate)
+      ? candidate
+      : path.join(agentsRoot, candidate);
+    try {
+      const stat = fsSync.statSync(candidatePath);
+      if (stat.isFile()) {
+        const command = buildAgentCommand(candidatePath);
+        if (command) {
+          return {
+            path: candidatePath,
+            ...command
+          };
+        }
+      }
+    } catch (err) {
+      continue;
+    }
+  }
+  return null;
+}
+
+function buildAgentCommand(scriptPath) {
+  const ext = path.extname(scriptPath).toLowerCase();
+  if (ext === '.py') {
+    return { executable: 'python3', args: [scriptPath] };
+  }
+  if (ext === '.sh') {
+    return { executable: 'bash', args: [scriptPath] };
+  }
+  if (ext === '.mjs' || ext === '.cjs' || ext === '.js') {
+    return { executable: 'node', args: [scriptPath] };
+  }
+  return null;
+}
+
+function runAgentScript(scriptInfo, payload, options = {}) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const child = execFile(
+      scriptInfo.executable,
+      scriptInfo.args,
+      {
+        cwd: repoRoot,
+        env: process.env,
+        timeout: options.timeout || DEFAULT_AGENT_TIMEOUT,
+        maxBuffer: options.maxBuffer || MAX_AGENT_STDOUT_BYTES
+      },
+      (err, stdout = '', stderr = '') => {
+        const durationMs = Date.now() - started;
+        resolve({
+          ok: !err,
+          stdout,
+          stderr,
+          durationMs,
+          exitCode: err && typeof err.code === 'number' ? err.code : 0,
+          signal: err ? err.signal || null : null,
+          timedOut: Boolean(err && err.killed && err.signal === 'SIGTERM'),
+          error: err ? err.message : null,
+          scriptPath: scriptInfo.path
+        });
+      }
+    );
+
+    if (payload && child.stdin) {
+      try {
+        child.stdin.write(JSON.stringify(payload));
+        child.stdin.end('\n');
+      } catch (err) {
+        // Best effort only
+      }
+    }
+  });
+}
+
+
 
 const engineProbeCache = new Map();
 const ENGINE_CACHE_TTL = 15_000;
@@ -1352,6 +1620,213 @@ const server = http.createServer(async (req, res) => {
           ocr: engines.ocr
         }
       });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/plan') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const prompt = typeof payload.prompt === 'string' ? payload.prompt.trim() : '';
+      if (!prompt) {
+        return writeJson(res, 400, { error: 'prompt is required' });
+      }
+
+      let filePaths = [];
+      try {
+        const fileInput = payload.files ?? payload.file_paths ?? payload.filePaths ?? [];
+        filePaths = validateFileInputs(fileInput);
+      } catch (err) {
+        return writeJson(res, 400, { error: err.message || 'Invalid file list' });
+      }
+
+      const runId = ensureRunId(payload.runId);
+      const scriptInfo = resolveAgentScript('plan');
+      if (!scriptInfo) {
+        return writeJson(res, 501, {
+          error: 'Planner agent unavailable',
+          runId,
+          hint: 'Place a plan.cjs script under agents/lukacode/'
+        });
+      }
+
+      const agentPayload = {
+        runId,
+        prompt,
+        context: typeof payload.context === 'string' ? payload.context : '',
+        files: filePaths,
+        metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {}
+      };
+
+      const agentResult = await runAgentScript(scriptInfo, agentPayload);
+      const statusLogs = collectStatusLogs(agentResult.stderr);
+      const parsed = safeParseJson(agentResult.stdout);
+      const response = {
+        ok: Boolean(agentResult.ok),
+        runId,
+        status: {
+          exitCode: agentResult.exitCode,
+          signal: agentResult.signal,
+          timedOut: agentResult.timedOut,
+          durationMs: agentResult.durationMs,
+          scriptPath: agentResult.scriptPath
+        },
+        statusLogs
+      };
+
+      if (parsed && typeof parsed === 'object') {
+        response.plan = parsed;
+      } else if (agentResult.stdout) {
+        response.rawOutput = agentResult.stdout.slice(0, MAX_AGENT_STDOUT_PREVIEW);
+      }
+
+      if (!agentResult.ok) {
+        response.error = agentResult.error || 'Planner execution failed';
+      }
+
+      return writeJson(res, agentResult.ok ? 200 : 502, response);
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/patch') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const runId = ensureRunId(payload.runId);
+      let patches;
+      try {
+        const patchInput = payload.patches ?? payload.changes ?? [];
+        patches = validatePatchSet(patchInput);
+      } catch (err) {
+        return writeJson(res, 400, { error: err.message || 'Invalid patch payload', runId });
+      }
+
+      const scriptInfo = resolveAgentScript('patch');
+      if (!scriptInfo) {
+        return writeJson(res, 501, {
+          error: 'Patch agent unavailable',
+          runId,
+          hint: 'Place a patch.cjs script under agents/lukacode/'
+        });
+      }
+
+      const agentPayload = {
+        runId,
+        patches,
+        summary: typeof payload.summary === 'string' ? payload.summary : '',
+        dryRun: Boolean(payload.dryRun),
+        metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {}
+      };
+
+      const agentResult = await runAgentScript(scriptInfo, agentPayload);
+      const statusLogs = collectStatusLogs(agentResult.stderr);
+      const parsed = safeParseJson(agentResult.stdout);
+      const response = {
+        ok: Boolean(agentResult.ok),
+        runId,
+        status: {
+          exitCode: agentResult.exitCode,
+          signal: agentResult.signal,
+          timedOut: agentResult.timedOut,
+          durationMs: agentResult.durationMs,
+          scriptPath: agentResult.scriptPath
+        },
+        statusLogs
+      };
+
+      if (parsed && typeof parsed === 'object') {
+        response.patch = parsed;
+      } else if (agentResult.stdout) {
+        response.rawOutput = agentResult.stdout.slice(0, MAX_AGENT_STDOUT_PREVIEW);
+      }
+
+      if (!agentResult.ok) {
+        response.error = agentResult.error || 'Patch execution failed';
+      }
+
+      return writeJson(res, agentResult.ok ? 200 : 502, response);
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/smoke') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const runId = ensureRunId(payload.runId);
+      const scriptInfo = resolveAgentScript('smoke');
+      if (!scriptInfo) {
+        return writeJson(res, 501, {
+          error: 'Smoke agent unavailable',
+          runId,
+          hint: 'Place a smoke.cjs script under agents/lukacode/'
+        });
+      }
+
+      const scope = Array.isArray(payload.scope) ? payload.scope.map((value) => String(value)).slice(0, 20) : [];
+      const checks = Array.isArray(payload.checks) ? payload.checks.map((value) => String(value)).slice(0, 20) : [];
+
+      const agentPayload = {
+        runId,
+        scope,
+        checks,
+        mode: typeof payload.mode === 'string' ? payload.mode : '',
+        metadata: payload.metadata && typeof payload.metadata === 'object' ? payload.metadata : {}
+      };
+
+      const agentResult = await runAgentScript(scriptInfo, agentPayload);
+      const statusLogs = collectStatusLogs(agentResult.stderr);
+      const parsed = safeParseJson(agentResult.stdout);
+      const response = {
+        ok: Boolean(agentResult.ok),
+        runId,
+        status: {
+          exitCode: agentResult.exitCode,
+          signal: agentResult.signal,
+          timedOut: agentResult.timedOut,
+          durationMs: agentResult.durationMs,
+          scriptPath: agentResult.scriptPath
+        },
+        statusLogs
+      };
+
+      if (parsed && typeof parsed === 'object') {
+        response.smoke = parsed;
+      } else if (agentResult.stdout) {
+        response.rawOutput = agentResult.stdout.slice(0, MAX_AGENT_STDOUT_PREVIEW);
+      }
+
+      if (!agentResult.ok) {
+        response.error = agentResult.error || 'Smoke execution failed';
+      }
+
+      return writeJson(res, agentResult.ok ? 200 : 502, response);
     }
 
     if (req.method === 'POST' && url.pathname === '/api/engines/chat') {
