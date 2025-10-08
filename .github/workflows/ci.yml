@@ -9,14 +9,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
-      - name: Validate MCP example and local-only policy
-      - name: Validate MCP paths
-          BAD=.cursor/mcp.
-          EXT=json
-          PAT="$BAD$EXT"
-        run: |
-          if command -v rg >/dev/null 2>&1; then rg -n --fixed-strings "$PAT" --hidden --glob "!*example*" || true; else grep -Rna --exclude-dir=.git --exclude="*example*" "$PAT" . || true; fi
-          echo done
+      - name: Validate MCP example
         run: |
           jq empty .cursor/mcp.example.json
           test -f .cursor/mcp.example.json || echo ".cursor/mcp.example.json not present (expected on CI)"
+      - name: Validate MCP paths
+        run: |
+          BAD=.cursor/mcp.
+          EXT=json
+          PAT="$BAD$EXT"
+          if command -v rg >/dev/null 2>&1; then rg -n --fixed-strings "$PAT" --hidden --glob "!*example*" || true; else grep -Rna --exclude-dir=.git --exclude="*example*" "$PAT" . || true; fi
+          echo done
+      - name: Validate structure (Option C)
+        run: |
+          make validate-zones
+          make proof || true
