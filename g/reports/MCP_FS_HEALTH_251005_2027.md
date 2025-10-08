@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # MCP FS Health Check
 
 - **Timestamp:** 2025-10-05 20:28 UTC

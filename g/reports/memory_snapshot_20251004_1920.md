@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Hybrid Memory System for Codex
 
 ## Overview

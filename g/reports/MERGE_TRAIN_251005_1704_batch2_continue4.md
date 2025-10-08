@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train — batch2 (continue-4) Sun Oct  5 17:04:12 UTC 2025
 
 ## Merge codex/create-boss-api-and-boss-ui-folders

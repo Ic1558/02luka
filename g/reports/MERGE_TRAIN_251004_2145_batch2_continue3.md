@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train — batch2 (continue-3) Sat Oct  4 21:45:34 UTC 2025
 
 ## Merge codex/add-post-/api/chat-with-nlu-router

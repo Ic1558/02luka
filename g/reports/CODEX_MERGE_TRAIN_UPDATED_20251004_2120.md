@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train - Updated Summary
 
 ## Date: $(date)

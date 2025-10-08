@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # 02LUKA Reports Index
 
 Generated: 2025-10-04 20:26:21

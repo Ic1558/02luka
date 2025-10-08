@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # MCP Auto-Start Deployment - Complete ✅
 
 **Timestamp:** 2025-10-06T03:24:00Z  

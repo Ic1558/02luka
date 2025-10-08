@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # MCP Servers Deployment - Complete ✅
 
 **Timestamp:** 2025-10-06T01:55:00Z

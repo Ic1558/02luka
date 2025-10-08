@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Outstanding Tasks Dashboard
 
 **Updated:** 2025-10-06T03:35:00Z

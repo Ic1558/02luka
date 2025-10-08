@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: dev validate ci validate-mcp proof tidy-plan tidy-apply validate-zones boss-refresh report mem
+.PHONY: dev validate ci validate-mcp proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -52,3 +52,7 @@ report:
 mem:
 	@f=$$(./scripts/new_mem.zsh "$(agent)" "$(title)"); echo "✅ $$f"
 	@make boss-refresh >/dev/null || true
+
+boss:
+	@make boss-refresh >/dev/null || true
+	@echo "Open: boss/reports/index.md  |  boss/memory/index.md"

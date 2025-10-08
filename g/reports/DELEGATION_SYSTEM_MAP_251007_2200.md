@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # 02LUKA Delegation System Map
 
 **Report ID:** DELEGATION_SYSTEM_MAP_251007_2200
