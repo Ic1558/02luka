@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev validate ci proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss status boss-find
+.PHONY: dev validate ci proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss status boss-find report-menu menu
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -59,3 +59,8 @@ status:
 
 boss-find:
 	@./scripts/boss_find.sh "$(q)"
+
+report-menu:
+	@./scripts/new_ops_menu.zsh
+
+menu: report-menu
