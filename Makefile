@@ -1,4 +1,4 @@
-SHELL := /bin/zsh
+SHELL := /bin/bash
 
 .PHONY: dev validate ci proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss status boss-find
 
