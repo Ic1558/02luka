@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev validate ci proof tidy-plan tidy-apply validate-zones boss-refresh report mem boss status boss-find report-menu menu
+.PHONY: dev validate ci proof tidy-plan tidy-apply tidy-retention validate-zones boss-refresh report mem boss status boss-find report-menu menu
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -30,6 +30,28 @@ tidy-apply:
 	if [ -z "$$PLAN" ]; then echo "❌ No move plan found. Run 'make tidy-plan' first."; exit 1; fi; \
 	./scripts/apply_moveplan.zsh "$$PLAN" --apply; \
 	make proof
+
+tidy-retention:
+	@echo "🧹 Cleaning old files (>30 days)..."
+	@deleted=0; \
+	if [ -d .trash ]; then \
+		count=$$(find .trash -type f -mtime +30 2>/dev/null | wc -l | tr -d ' '); \
+		find .trash -type f -mtime +30 -delete 2>/dev/null || true; \
+		find .trash -type d -empty -delete 2>/dev/null || true; \
+		echo "  .trash/: $$count files removed"; \
+		deleted=$$((deleted + count)); \
+	fi; \
+	if [ -d g/reports/proof ]; then \
+		count=$$(find g/reports/proof -type f -name "*_proof.md" -mtime +30 2>/dev/null | wc -l | tr -d ' '); \
+		find g/reports/proof -type f -name "*_proof.md" -mtime +30 -delete 2>/dev/null || true; \
+		echo "  g/reports/proof/: $$count proof files removed"; \
+		deleted=$$((deleted + count)); \
+	fi; \
+	if [ $$deleted -eq 0 ]; then \
+		echo "✅ No files to clean (nothing >30 days old)"; \
+	else \
+		echo "✅ Total removed: $$deleted files"; \
+	fi
 
 validate-zones:
 	@echo "Checking SOT compliance..."
