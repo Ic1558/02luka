@@ -1,9 +1,15 @@
 # Reports Catalog (Auto-Generated)
 
-**Last Updated:** 2025-10-09T01:09:09+07:00
+**Last Updated:** 2025-10-10T04:03:41+07:00
 
 ## Latest Reports (Last 50)
 
+- [251009_1707_ops-menu.md](../../g/reports/251009_1707_ops-menu.md)
+- [251010_0052_outstanding-tasks.md](../../g/reports/251010_0052_outstanding-tasks.md)
+- [251010_0048_ops-menu-complete.md](../../g/reports/251010_0048_ops-menu-complete.md)
+- [251010_0045_ops-boss-daily-html.md](../../g/reports/251010_0045_ops-boss-daily-html.md)
+- [251009_1837_ops-backfill-agents.md](../../g/reports/251009_1837_ops-backfill-agents.md)
+- [251009_1804_ops-implementation.md](../../g/reports/251009_1804_ops-implementation.md)
 - [memory_snapshot_20251004_1920.md](../../g/reports/memory_snapshot_20251004_1920.md)
 - [VERIFICATION_OVERCLAIM_CHECK.md](../../g/reports/VERIFICATION_OVERCLAIM_CHECK.md)
 - [TEST_REPORT_BATCH2_MERGE_20251005_1955.md](../../g/reports/TEST_REPORT_BATCH2_MERGE_20251005_1955.md)
@@ -34,9 +40,6 @@
 - [MERGE_TRAIN_251004_2136_batch2_cont.md](../../g/reports/MERGE_TRAIN_251004_2136_batch2_cont.md)
 - [MERGE_TRAIN_251004_2128.md](../../g/reports/MERGE_TRAIN_251004_2128.md)
 - [MERGE_TRAIN_20251004_2114.md](../../g/reports/MERGE_TRAIN_20251004_2114.md)
-- [MEMORY_MERGE_LOG_20251006_011638.md](../../g/reports/MEMORY_MERGE_LOG_20251006_011638.md)
-- [MEMORY_MERGE_LOG_20251005_024620.md](../../g/reports/MEMORY_MERGE_LOG_20251005_024620.md)
-- [MEMORY_MERGE_LOG_20251004_194505.md](../../g/reports/MEMORY_MERGE_LOG_20251004_194505.md)
 - [MCP_FS_HEALTH_251005_2027.md](../../g/reports/MCP_FS_HEALTH_251005_2027.md)
 - [MCP_DEPLOYMENT_COMPLETE.md](../../g/reports/MCP_DEPLOYMENT_COMPLETE.md)
 - [MCP_AUTOSTART_DEPLOYMENT_COMPLETE.md](../../g/reports/MCP_AUTOSTART_DEPLOYMENT_COMPLETE.md)
@@ -51,22 +54,19 @@
 - [DOC_REFRESH_2025-10-04.md](../../g/reports/DOC_REFRESH_2025-10-04.md)
 - [DEPLOYMENT_STATUS_FINAL.md](../../g/reports/DEPLOYMENT_STATUS_FINAL.md)
 - [DELEGATION_SYSTEM_MAP_251007_2200.md](../../g/reports/DELEGATION_SYSTEM_MAP_251007_2200.md)
-- [CURSOR_READINESS_2025-10-05.md](../../g/reports/CURSOR_READINESS_2025-10-05.md)
-- [CURSOR_READINESS_2025-10-04.md](../../g/reports/CURSOR_READINESS_2025-10-04.md)
-- [CODEX_MERGE_TRAIN_UPDATED_20251004_2120.md](../../g/reports/CODEX_MERGE_TRAIN_UPDATED_20251004_2120.md)
 
 ## Proof Evidence
 
+- [251009_0653_proof.md](../../g/reports/proof/251009_0653_proof.md)
+- [251008_2129_proof.md](../../g/reports/proof/251008_2129_proof.md)
+- [251008_2032_proof.md](../../g/reports/proof/251008_2032_proof.md)
+- [251008_2031_proof.md](../../g/reports/proof/251008_2031_proof.md)
+- [251008_2030_proof.md](../../g/reports/proof/251008_2030_proof.md)
 - [251008_1607_proof.md](../../g/reports/proof/251008_1607_proof.md)
 - [251008_1529_proof.md](../../g/reports/proof/251008_1529_proof.md)
 - [251008_1516_proof.md](../../g/reports/proof/251008_1516_proof.md)
 - [251008_1250_proof.md](../../g/reports/proof/251008_1250_proof.md)
 - [251008_1246_proof.md](../../g/reports/proof/251008_1246_proof.md)
-- [251008_1244_proof.md](../../g/reports/proof/251008_1244_proof.md)
-- [251008_1229_proof.md](../../g/reports/proof/251008_1229_proof.md)
-- [251008_0353_proof.md](../../g/reports/proof/251008_0353_proof.md)
-- [251008_0341_SUCCESS.md](../../g/reports/proof/251008_0341_SUCCESS.md)
-- [251008_0341_proof.md](../../g/reports/proof/251008_0341_proof.md)
 
 ## By Project
 ### general
@@ -126,3 +126,11 @@
 - [TEST_REPORT_BATCH2_MERGE_20251005_1955.md](../../g/reports/TEST_REPORT_BATCH2_MERGE_20251005_1955.md)
 - [VERIFICATION_OVERCLAIM_CHECK.md](../../g/reports/VERIFICATION_OVERCLAIM_CHECK.md)
 - [memory_snapshot_20251004_1920.md](../../g/reports/memory_snapshot_20251004_1920.md)
+
+### system-stabilization
+- [251009_1707_ops-menu.md](../../g/reports/251009_1707_ops-menu.md)
+- [251009_1804_ops-implementation.md](../../g/reports/251009_1804_ops-implementation.md)
+- [251009_1837_ops-backfill-agents.md](../../g/reports/251009_1837_ops-backfill-agents.md)
+- [251010_0045_ops-boss-daily-html.md](../../g/reports/251010_0045_ops-boss-daily-html.md)
+- [251010_0048_ops-menu-complete.md](../../g/reports/251010_0048_ops-menu-complete.md)
+- [251010_0052_outstanding-tasks.md](../../g/reports/251010_0052_outstanding-tasks.md)
