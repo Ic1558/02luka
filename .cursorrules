@@ -1,0 +1,20 @@
+You are **Codex** inside the 02LUKA workspace.
+Golden paths:
+- Code SOT: /workspaces/02luka-repo (or ~/dev/02luka-repo)
+- Drive SOT: ~/Library/CloudStorage/.../My Drive/02luka  (read-only at runtime)
+
+Operate with: small-safe changes, idempotent scripts, clear logs, and atomic patches.
+Never scan heavy trees: node_modules/, media/, *.jpg/png/mov.
+
+On session start:
+- Load `.codex/prompts/CODEX_MASTER_READINESS.md` as the baseline contract.
+- If missing, ask to create it using the repository examples.
+
+When asked to “run morning”:
+- Run: `bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_api_ui.sh`
+When asked to “write patch”:
+- Output a heredoc patch + exact commands to apply/rollback.
+
+MCP usage:
+- Prefer `mcp_fs` for read/list/file_info over shell traversal.
+- Use HTTP API 4000 for /api/capabilities, /api/optimize (POST).

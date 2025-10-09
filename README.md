@@ -8,6 +8,14 @@ Local AI Agent Gateway UI — minimal, fast, deployable anywhere.
 
 ## 🚀 Quick Start
 
+### Direct HTTP Access (No MCP Required)
+
+- **API**: [http://127.0.0.1:4000/api/capabilities](http://127.0.0.1:4000/api/capabilities)
+- **UI**: [http://127.0.0.1:5173/luka.html](http://127.0.0.1:5173/luka.html)
+- **MCP FS Stub**: [http://127.0.0.1:8765/health](http://127.0.0.1:8765/health)
+
+> ℹ️ **VS Code tip:** Forward ports **4000**, **5173**, and **8765** (Ports tab → *Add Port* → set to *Forwarded*) so they are reachable from your host machine.
+
 ### Option 1: Local Development (Recommended)
 ```bash
 ./run_local.sh
@@ -62,6 +70,31 @@ g/reports/memory_autosave/autosave_YYYYMMDD_HHMMSS.md
 ```
 
 - Mirrors active context between Cursor and CLC folders (`mirror-latest` strategy)
+
+---
+
+### 🔄 Real-Time Coordination (CLC ↔ Cursor)
+
+**Auto-Start Components:**
+- ✅ **MCP FS Server** (port 8765) - Cursor reads 02luka files via MCP tools
+- ✅ **Task Bus Bridge** - Real-time task event sharing between AIs
+
+**Quick Usage:**
+```bash
+# Cursor can read any file via MCP
+read_text('a/memory/active_tasks.json')
+list_dir('g/tools')
+
+# Both AIs publish task events
+bash g/tools/emit_task_event.sh clc my_action started "context"
+```
+
+**Benefits:**
+- 🎯 Instant visibility: Both AIs see each other's work in real-time
+- 📡 Event-driven: Task events sync via Redis + file storage
+- 🚀 Zero manual setup: Auto-starts on login
+
+**Documentation:** See `AUTOSTART_CONFIG.md`, `TASK_BUS_SYSTEM.md`
 
 ---
 
@@ -265,3 +298,19 @@ git reset --hard v2025-10-05-docs-stable
 - All tags are annotated (-a) and signed by GG system.
 - Each tag marks a system-stable snapshot after validation (CLC + preflight + smoke tests).
 - Tags ending in -ready are development-ready checkpoints; tags ending in -stable are production-grade baselines.
+
+## Concurrency & Autosave (CLC + Cursor AI)
+- Autosave is flock-locked and hash-deduped. Running both CLC and Cursor AI will not create duplicate memory files.
+- Files live in `g/reports/memory_autosave/` with content-hash in filenames, older duplicates are auto-archived to `.archive/`.
+- Bridge runs in `mirror-latest` mode with `prefer_run_id: newest`.
+
+---
+## Boss API/UI Folders (merged in batch2)
+- boss-api/: server.cjs canonical, .env.sample added
+- boss-ui/: index.html redirects to luka.html
+
+## MCP config
+- Edit \ only.
+- \ is local-only and ignored.
+- Run \JSON OK: /workspaces/02luka-repo/.cursor/mcp.example.json and /workspaces/02luka-repo/.cursor/mcp.example.json
+dev-setup complete. after clone to bootstrap.

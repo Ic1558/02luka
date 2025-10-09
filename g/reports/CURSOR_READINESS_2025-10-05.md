@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Cursor Readiness (2025-10-05)
 
 ## System Status ✅
