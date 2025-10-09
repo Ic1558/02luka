@@ -30,7 +30,7 @@ Golden Rules:
 2) `node -v` and `python3 -V` should respond
 3) `curl -fsS http://127.0.0.1:4000/api/ping` returns JSON with `"status":"ok"` or fallback
 4) UI reachable at `http://localhost:5173/luka.html`
-5) If any check fails, propose the *exact* one-liner fix, then run it.
+5) If any check fails, propose the exact one-liner fix, then run it.
 
 ## What Codex should do next
 - Load `.codex/PREPROMPT.md` and apply project style in `.codex/style_adaptations.yml`
@@ -39,7 +39,7 @@ Golden Rules:
   - `.codex/preflight.sh`
   - `run/dev_up_simple.sh`
   - `run/smoke_api_ui.sh`
-- If LaunchAgents context is needed, read `g/reports/AGENT_VALUE_AUDIT_*.json` and *do not* write into CloudStorage paths.
+- If LaunchAgents context is needed, read `g/reports/AGENT_VALUE_AUDIT_*.json` and do not write into CloudStorage paths.
 
 ## Output contract
 - Print a 3-line status summary:
@@ -72,7 +72,7 @@ Golden Rules:
 
 ## 💻 User Prompt (ให้ Codex เริ่มทำงานจริง)
 
-**Goal:** Prepare & validate 02LUKA for development — from path setup → repo → agent rationalization → Cursor workspace ready.  
+**Goal:** Prepare & validate 02LUKA for development — from path setup → repo → agent rationalization → Cursor workspace ready.
 Do everything automatically, safely, and write a final markdown report.
 
 ---
@@ -91,8 +91,7 @@ Expect: ทั้งคู่ชี้ลง /My Drive/02luka… (ไม่ม�
 
 ⸻
 
-✅ Step 2 — Repo Health (no heavy scan)
-
+### ✅ Step 2 — Repo Health (no heavy scan)
 ```bash
 cd "$HOME/dev/02luka-repo"
 git fetch --all --prune
@@ -105,8 +104,7 @@ Report: current branch, ahead/behind, dirty/untracked summary
 
 ⸻
 
-✅ Step 3 — Preflight & Smoke (fail-fast, collect logs)
-
+### ✅ Step 3 — Preflight & Smoke (fail-fast, collect logs)
 ```bash
 cd "$HOME/dev/02luka-repo"
 bash ./.codex/preflight.sh
@@ -118,8 +116,7 @@ Capture: pass/fail + log paths (อย่า npm i ซ้ำถ้ามี node
 
 ⸻
 
-✅ Step 4 — Agent Rationalization Loop (enforce + audit)
-
+### ✅ Step 4 — Agent Rationalization Loop (enforce + audit)
 ```bash
 D="$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
 bash "$D/g/runbooks/install_agent_rationalization.sh"
@@ -131,10 +128,8 @@ Summarize: total agents, missing scripts, bad log paths, disabled count
 
 ⸻
 
-✅ Step 5 — Auto-fix Bad Log Paths (PlistBuddy → reload)
-
+### ✅ Step 5 — Auto-fix Bad Log Paths (PlistBuddy → reload)
 สำหรับทุก agent ที่ audit ว่า bad_log_paths:
-
 ```bash
 LOGDIR="$HOME/Library/Logs/02luka"; mkdir -p "$LOGDIR"
 # For each <label> (จากรายงาน audit):
@@ -149,10 +144,8 @@ launchctl bootstrap "gui/$UID" "$PL"
 
 ⸻
 
-✅ Step 6 — Cursor Integration (one-click run)
-
+### ✅ Step 6 — Cursor Integration (one-click run)
 สร้าง/อัปเดต .vscode/tasks.json และ .vscode/launch.json (สำรองไฟล์เดิมอัตโนมัติ):
-
 ```bash
 cd "$HOME/dev/02luka-repo"
 mkdir -p .vscode
@@ -185,8 +178,7 @@ LAUNCH
 
 ⸻
 
-✅ Step 7 — Model Router (dry-run only)
-
+### ✅ Step 7 — Model Router (dry-run only)
 ```bash
 cd "$HOME/dev/02luka-repo"
 bash ./g/tools/model_router.sh status || true
@@ -196,8 +188,7 @@ echo "To install: bash ./g/tools/model_router.sh install qwen2.5-coder deepseek-
 
 ⸻
 
-✅ Step 8 — Final Markdown Report (single file)
-
+### ✅ Step 8 — Final Markdown Report (single file)
 ```bash
 RDIR="$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g/reports"
 mkdir -p "$RDIR"
@@ -239,24 +230,5 @@ echo "✅ Report written: $RPT"
 
 ⸻
 
-✅ Expected Outcome
-
-| Area           | Status                                           |
-| -------------- | ------------------------------------------------ |
-| Drive paths    | Correct (symlinks to Stream SOT)                 |
-| Git repo       | Clean, tracking origin/main                      |
-| Preflight/Smoke| Pass (logs captured)                             |
-| Agents         | Enforced; bad logs auto-fixed                    |
-| Logs dir       | ~/Library/Logs/02luka                            |
-| Cursor         | tasks/launch ready (+ backups)                   |
-| Report         | 02luka/g/reports/CODEX_READINESS_*.md            |
-
-Notes:
-- ถ้าโฟลเดอร์ยังไม่ offline (pin) ให้เตือนแต่ไม่บล็อคงาน
-- หลีกเลี่ยง traversal เข้า media trees เสมอ
-- ทุกคอมมานด์ idempotent, safe to re-run
-
-⸻
-
-Path: ~/dev/02luka-repo/.codex/prompts/CODEX_MASTER_READINESS.md
-Usage: ใช้เป็น "เอกสารเปิด Session" ให้ Codex/Cursor อ่านทุกครั้ง
+### Usage
+ใช้เป็น "เอกสารเปิด Session" ให้ Codex/Cursor อ่านทุกครั้ง

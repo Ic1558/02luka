@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Reasoning Model Wire Report (2025-10-05)
 
 ## Overview

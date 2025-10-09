@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Agent State Snapshot - 2025-10-04
 
 ## Status

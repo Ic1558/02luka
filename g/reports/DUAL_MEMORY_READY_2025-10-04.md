@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Dual Memory Ready (2025-10-04)
 
 ## Result

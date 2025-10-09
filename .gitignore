@@ -24,3 +24,11 @@ setup_memory_merge_bridge.zsh
 
 # AI context backups
 f/ai_context/*.backup
+*.bak.*
+*.conflicted
+index_backup.html
+index_optimized.html
+.venv_mcpfs/
+test-results/
+.cursor/mcp.example.json
+.cursor/mcp.json
