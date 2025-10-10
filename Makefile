@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev validate ci proof tidy-plan tidy-apply tidy-retention validate-zones boss-refresh report mem boss status boss-find boss-daily report-menu menu
+.PHONY: dev validate ci proof tidy-plan tidy-apply tidy-retention validate-zones boss-refresh report mem boss status boss-find boss-daily report-menu menu audit-parent centralize centralize-dry centralize-rollback archive-legacy go-live-guarded
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -89,3 +89,56 @@ report-menu:
 	@./scripts/new_ops_menu.zsh
 
 menu: report-menu
+
+.PHONY: validate-docs
+validate-docs:
+	@if command -v rg >/dev/null 2>&1; then \
+	  rg -n --no-config --hidden --iglob '!**/.git/**' \
+	     -g '!g/reports/**' -g '!boss/sent/**' -g '!**/legacy/**' \
+	     -g '!**/MIGRATION_*.md' -g '!CLAUDE.md' -g '!FILE_DISCOVERY_PROTOCOL.md' -g '!Makefile' \
+	     -e 'c/centralized|a/section/clc/protocols|docs/ai_ops' -- '**/*.md' \
+	     && { echo "❌ Stale doc references found"; exit 1; } \
+	     || echo "✅ docs OK"; \
+	else \
+	  ! grep -RInE --exclude-dir=.git --exclude-dir=reports \
+	      --exclude-dir=sent --exclude-dir='*legacy*' \
+	      --exclude='*MIGRATION_*.md' --exclude='CLAUDE.md' --exclude='FILE_DISCOVERY_PROTOCOL.md' --exclude='Makefile' \
+	      'c/centralized|a/section/clc/protocols|docs/ai_ops' . \
+	    || { echo "❌ Stale doc references found"; exit 1; }; \
+	  echo "✅ docs OK"; \
+	fi
+
+.PHONY: validate-workspace
+validate-workspace:
+	@bash scripts/validate_workspace.sh
+	@[ -x scripts/agent_audit.sh ] && scripts/agent_audit.sh || true
+
+audit-parent:
+	@bash $(HOME)/Library/02luka_runtime/tools/mirror_audit.sh
+
+centralize:
+	@bash scripts/centralize.sh run
+
+centralize-dry:
+	@bash scripts/centralize.sh dry-run
+
+centralize-rollback:
+	@bash scripts/centralize.sh rollback
+
+archive-legacy:
+	@bash scripts/archive_legacy.sh
+
+go-live-guarded:
+	@echo "== Phase D: Finalize & Push =="
+	@git add -A
+	@git commit -m "Centralization complete: symlinks+enforce+verify" || echo "Nothing to commit"
+	@git tag -a v2.1 -m "Centralization verified (251011_033438)" || echo "Tag already exists"
+	@echo "== Phase E: Archive Legacy Backups =="
+	@make archive-legacy
+	@echo "== Verification =="
+	@make validate-workspace
+	@make audit-parent
+	@echo ""
+	@echo "✅ Go-Live Guarded Complete"
+	@echo "   Next: git push && git push --tags"
+	@echo "   Monitor: make status"

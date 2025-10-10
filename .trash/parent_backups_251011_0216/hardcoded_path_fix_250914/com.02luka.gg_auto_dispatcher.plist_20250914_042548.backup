@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.gg_auto_dispatcher</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/icmini/02luka/services/gg_auto_dispatcher.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>REDIS_PASSWORD</key><string>#UbvUhVlFq^y6R@nJ32kxDZY0</string>
+    <key>REDIS_URL</key><string>redis://:#UbvUhVlFq^y6R@nJ32kxDZY0@127.0.0.1:6379/0</string>
+    <key>GG_STREAM</key><string>gg:requests</string>
+    <key>GG_GROUP</key><string>gg_auto</string>
+    <key>CLC_INBOX</key><string>/Users/icmini/02luka/CLC/inbox</string>
+    <key>EVENT_STREAM</key><string>02luka:agents:events</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/logs/gg_auto.out</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/logs/gg_auto.err</string>
+</dict></plist>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.clc.executor</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>python3</string>
+        <string>agents/clc_executor/executor.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/icmini/02luka</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>REDIS_HOST</key>
+        <string>localhost</string>
+        <key>REDIS_PORT</key>
+        <string>6379</string>
+        <key>REDIS_PASSWORD</key>
+        <string>changeme-02luka</string>
+        <key>CLC_STREAM_IN</key>
+        <string>02luka:agents:clc:requests</string>
+        <key>CLC_STREAM_OUT</key>
+        <string>02luka:agents:clc:responses</string>
+        <key>CLC_GROUP</key>
+        <string>clc_executor</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/run/logs/clc_executor.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/run/logs/clc_executor.error.log</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
