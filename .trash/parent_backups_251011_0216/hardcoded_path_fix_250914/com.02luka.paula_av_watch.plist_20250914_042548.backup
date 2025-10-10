@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key><string>com.02luka.paula_av_watch</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/usr/bin/python3</string>
+      <string>/Users/icmini/02luka/monitors/paula_av_watch.py</string>
+    </array>
+    <key>StandardOutPath</key><string>/Users/icmini/02luka/logs/paula_av_watch.out</string>
+    <key>StandardErrorPath</key><string>/Users/icmini/02luka/logs/paula_av_watch.err</string>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>WorkingDirectory</key><string>/Users/icmini/02luka</string>
+  </dict>
+</plist>

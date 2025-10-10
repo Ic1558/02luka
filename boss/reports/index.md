@@ -1,9 +1,12 @@
 # Reports Catalog (Auto-Generated)
 
-**Last Updated:** 2025-10-10T04:03:41+07:00
+**Last Updated:** 2025-10-11T03:36:04+07:00
 
 ## Latest Reports (Last 50)
 
+- [251011_0334_parent_migration_audit.md](../../g/reports/251011_0334_parent_migration_audit.md)
+- [251011_0332_parent_migration_audit.md](../../g/reports/251011_0332_parent_migration_audit.md)
+- [251011_0258_parent_migration_audit.md](../../g/reports/251011_0258_parent_migration_audit.md)
 - [251009_1707_ops-menu.md](../../g/reports/251009_1707_ops-menu.md)
 - [251010_0052_outstanding-tasks.md](../../g/reports/251010_0052_outstanding-tasks.md)
 - [251010_0048_ops-menu-complete.md](../../g/reports/251010_0048_ops-menu-complete.md)
@@ -51,22 +54,19 @@
 - [E2E_VERIFICATION_251005_035800.md](../../g/reports/E2E_VERIFICATION_251005_035800.md)
 - [DUAL_MEMORY_READY_2025-10-04.md](../../g/reports/DUAL_MEMORY_READY_2025-10-04.md)
 - [DRIVE_RECOVERY_VERIFICATION_251004_2051.md](../../g/reports/DRIVE_RECOVERY_VERIFICATION_251004_2051.md)
-- [DOC_REFRESH_2025-10-04.md](../../g/reports/DOC_REFRESH_2025-10-04.md)
-- [DEPLOYMENT_STATUS_FINAL.md](../../g/reports/DEPLOYMENT_STATUS_FINAL.md)
-- [DELEGATION_SYSTEM_MAP_251007_2200.md](../../g/reports/DELEGATION_SYSTEM_MAP_251007_2200.md)
 
 ## Proof Evidence
 
+- [251011_0312_proof.md](../../g/reports/proof/251011_0312_proof.md)
+- [251011_0258_proof.md](../../g/reports/proof/251011_0258_proof.md)
+- [251011_0202_proof.md](../../g/reports/proof/251011_0202_proof.md)
+- [251011_0157_proof.md](../../g/reports/proof/251011_0157_proof.md)
+- [251011_0154_proof.md](../../g/reports/proof/251011_0154_proof.md)
 - [251009_0653_proof.md](../../g/reports/proof/251009_0653_proof.md)
 - [251008_2129_proof.md](../../g/reports/proof/251008_2129_proof.md)
 - [251008_2032_proof.md](../../g/reports/proof/251008_2032_proof.md)
 - [251008_2031_proof.md](../../g/reports/proof/251008_2031_proof.md)
 - [251008_2030_proof.md](../../g/reports/proof/251008_2030_proof.md)
-- [251008_1607_proof.md](../../g/reports/proof/251008_1607_proof.md)
-- [251008_1529_proof.md](../../g/reports/proof/251008_1529_proof.md)
-- [251008_1516_proof.md](../../g/reports/proof/251008_1516_proof.md)
-- [251008_1250_proof.md](../../g/reports/proof/251008_1250_proof.md)
-- [251008_1246_proof.md](../../g/reports/proof/251008_1246_proof.md)
 
 ## By Project
 ### general
@@ -134,3 +134,6 @@
 - [251010_0045_ops-boss-daily-html.md](../../g/reports/251010_0045_ops-boss-daily-html.md)
 - [251010_0048_ops-menu-complete.md](../../g/reports/251010_0048_ops-menu-complete.md)
 - [251010_0052_outstanding-tasks.md](../../g/reports/251010_0052_outstanding-tasks.md)
+- [251011_0258_parent_migration_audit.md](../../g/reports/251011_0258_parent_migration_audit.md)
+- [251011_0332_parent_migration_audit.md](../../g/reports/251011_0332_parent_migration_audit.md)
+- [251011_0334_parent_migration_audit.md](../../g/reports/251011_0334_parent_migration_audit.md)
