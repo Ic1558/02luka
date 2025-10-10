@@ -40,7 +40,6 @@ com.02luka.core.mary_core** — `Error Reading File: /Users/icmini/Library/Launc
     Hour = 3
     Minute = 0
 }
-- **com.02luka.disk_monitor** — `/bin/bash` — every 3600s 
 - **com.02luka.distribute.daily.learning** — `/bin/bash`  — calendar Dict {
     Hour = 23
     Minute = 55
@@ -50,10 +49,6 @@ com.02luka.core.mary_core** — `Error Reading File: /Users/icmini/Library/Launc
 - **com.02luka.fleet.supervisor** — `bash` — every 300s 
 - **com.02luka.gc_core** — `/bin/bash`  
 - **com.02luka.gci.env** — `/bin/launchctl`  
-- **com.02luka.gci.topic.reports** — `/bin/bash`  — calendar Dict {
-    Hour = 23
-    Minute = 45
-}
 - **com.02luka.gd.guard** — `/usr/bin/python3`  
 - **com.02luka.gemini.cli.env** — `/bin/launchctl`  
 - **com.02luka.gg_local_llm** — `/opt/homebrew/bin/python3`  
