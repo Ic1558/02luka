@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: dev validate ci proof tidy-plan tidy-apply tidy-retention validate-zones boss-refresh report mem boss status boss-find boss-daily report-menu menu audit-parent centralize centralize-dry centralize-rollback archive-legacy go-live-guarded
+.PHONY: dev validate ci proof tidy-plan tidy-apply tidy-retention validate-zones boss-refresh report mem boss status boss-find boss-daily report-menu menu audit-parent centralize centralize-dry centralize-rollback archive-legacy go-live-guarded health agent-polish
 
 dev:
 	@./scripts/dev-setup.zsh
@@ -142,3 +142,28 @@ go-live-guarded:
 	@echo "✅ Go-Live Guarded Complete"
 	@echo "   Next: git push && git push --tags"
 	@echo "   Monitor: make status"
+
+health:
+	@bash scripts/health_check.sh
+
+agent-polish:
+	@echo "== Phase F: Agent Polish =="
+	@echo "F1) Refresh agent roster..."
+	@[ -x scripts/agent_audit.sh ] && scripts/agent_audit.sh || echo "  agent_audit.sh not executable, skipping"
+	@echo ""
+	@echo "F2) Pause non-core agents..."
+	@for lb in com.02luka.gci.topic.reports com.02luka.disk_monitor com.docker.autohealing; do \
+	  p="$$HOME/Library/LaunchAgents/$$lb.plist"; \
+	  [ -f "$$p" ] || continue; \
+	  launchctl bootout gui/$$UID "$$p" 2>/dev/null || true; \
+	  mkdir -p "$$HOME/Library/LaunchAgents/.disabled"; \
+	  mv "$$p" "$$HOME/Library/LaunchAgents/.disabled/" 2>/dev/null && echo "  ⏸  $$lb" || true; \
+	done
+	@echo ""
+	@echo "F3) Health check..."
+	@make health
+	@echo ""
+	@echo "✅ Agent Polish Complete"
+	@echo "   Core agents: boot_guard, health_proxy, discovery.merge.daily, sot.render"
+	@echo "   Paused: gci.topic.reports, disk_monitor, docker_autohealing"
+	@echo "   Monitor: make health && make status"
