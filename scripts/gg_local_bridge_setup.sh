@@ -304,3 +304,10 @@ echo "Tip: send a test ->"
 echo "  echo '{\"action\":\"create_file\",\"path\":\"$SOT/g/reports/HELLO_GG.md\",\"content\":\"Hello from GG Local\"}' | $PYTHON $AGENT_DIR/gg_send.py"
 echo "  # then tail results -> $PYTHON $AGENT_DIR/gg_tail.py"
 
+
+# --- dynamic allow paths (override with env when running the setup) ---
+SOT_PATH="${SOT_PATH:-$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka}"
+REPO_PATH="${REPO_PATH:-$HOME/dev/02luka-repo}"
+# when generating LaunchAgent plist:
+#   <key>ALLOW_PATH_1</key><string>'"$SOT_PATH"'</string>
+#   <key>ALLOW_PATH_2</key><string>'"$REPO_PATH"'</string>

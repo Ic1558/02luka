@@ -1,27 +1,17 @@
-export async function jfetch(path, opts = {}) {
-  const url = new URL(path, location.origin);
-  const init = Object.assign({
-    headers: { 'Content-Type': 'application/json' }
-  }, opts || {});
-  const response = await fetch(url.toString(), init);
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    const error = new Error(detail || `Request failed: ${response.status}`);
-    error.status = response.status;
-    throw error;
-  }
-  const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('json')) {
-    return response.json();
-  }
-  return response.text();
-}
+// NOTE: explicit API base so UI (5173) can talk to API (4000)
+window.API_BASE = window.API_BASE || "http://127.0.0.1:4000";
 
-export const API = {
-  plan: (payload) => jfetch('/api/plan', { method: 'POST', body: JSON.stringify(payload) }),
-  patch: (payload) => jfetch('/api/patch', { method: 'POST', body: JSON.stringify(payload) }),
-  smoke: (payload) => jfetch('/api/smoke', { method: 'POST', body: JSON.stringify(payload) }),
-  chat: (payload) => jfetch('/api/chat', { method: 'POST', body: JSON.stringify(payload) }),
-  caps: () => jfetch('/api/capabilities'),
-  health: () => jfetch('/healthz')
-};
+export async function jfetch(path, opts = {}) {
+  const base = window.API_BASE || "http://127.0.0.1:4000";
+  const url  = new URL(path, base);
+  const init = { headers: { 'Content-Type': 'application/json' }, ...(opts||{}) };
+  const res  = await fetch(url.toString(), init);
+  if (!res.ok) {
+    const txt = await res.text().catch(()=> '');
+    throw new Error(`API ${res.status} ${res.statusText} @ ${url}: ${txt}`);
+  }
+  // try JSON first; fall back to text
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) return res.json();
+  return res.text();
+}
