@@ -32,3 +32,4 @@ index_optimized.html
 test-results/
 .cursor/mcp.example.json
 .cursor/mcp.json
+.env.local

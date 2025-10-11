@@ -51,8 +51,25 @@ git commit -m "docs: add dashboard deployment report $(date +%Y%m%d_%H%M)"
 ## Environment Variables Required
 
 ```bash
-export CLOUDFLARE_API_TOKEN="EaHaZw9Y1PrIPlOGXbb7BzY2XROjpAI-zQPBU69w"
-export CLOUDFLARE_ACCOUNT_ID="2cf1e9eb0dfd2477af7b0bea5bcc53d6"
+# Load from .env.local (recommended)
+set -a; source .env.local; set +a
+
+# Or export manually (NOT recommended - use .env.local instead)
+export CLOUDFLARE_API_TOKEN="your_token_here"
+export CLOUDFLARE_ACCOUNT_ID="your_account_id_here"
+```
+
+**Get credentials:**
+- API Token: https://dash.cloudflare.com/profile/api-tokens (Cloudflare Pages Edit permission)
+- Account ID: https://dash.cloudflare.com/ (visible in URL or sidebar)
+
+**Setup:**
+```bash
+# Copy template and fill in values
+cp .env.local.example .env.local
+# Edit .env.local with your credentials
+# Load before deploy
+set -a; source .env.local; set +a
 ```
 
 ## Quick Deploy Command
