@@ -190,6 +190,7 @@ bridge live in the real world, not just in documentation.
 ## 📚 Documentation
 
 - [ChatGPT Native App Integration](docs/chatgpt_native_app.md) — embed `luka.html` inside the ChatGPT desktop client while keeping full visibility into the local 02luka workspace.
+- [GG Local Bridge setup](docs/gg-local-bridge.md) — bootstrap the macOS worker that connects Redis queues to the local orchestrator.
 
 ## 🤖 FastVLM Vision API
 
