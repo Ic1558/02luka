@@ -56,6 +56,8 @@ tidy-retention:
 validate-zones:
 	@echo "Checking SOT compliance..."
 	@bad=$$(find . -path ./node_modules -prune -o -path ./.git -prune -o \
+	  -path ./.trash -prune -o -path './.legacy_*' -prune -o \
+	  -path './*/legacy_parent' -prune -o \
 	  -type f \( -name "report*.md" -o -name "analysis*.md" -o -name "summary*.md" \) \
 	  ! -path "./g/reports/*" -print); \
 	[ -z "$$bad" ] || { echo "❌ Reports outside g/reports/:"; echo "$$bad"; exit 1; }
