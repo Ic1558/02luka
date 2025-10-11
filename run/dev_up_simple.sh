@@ -12,6 +12,7 @@ UI_ROOT="$ROOT_DIR/boss-ui"
 if [ ! -d "$UI_ROOT" ]; then echo "[dev-up] ERROR: UI root not found: $UI_ROOT" >&2; exit 1; fi
 (
   cd "$UI_ROOT"
+export API_BASE="http://127.0.0.1:4000"
   nohup python3 -m http.server "$UI_PORT" --bind 127.0.0.1 >/tmp/boss-ui.out 2>/tmp/boss-ui.err &
 )
 check_agent_endpoint(){
