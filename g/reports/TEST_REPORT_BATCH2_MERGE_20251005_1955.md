@@ -71,7 +71,7 @@ Successfully resolved complex nested merge conflicts that Cursor AI couldn't han
 ### 5. Dependencies ✅
 
 **master_prompt.md:**
-- Location: `.codex/templates/master_prompt.md`
+- Location: `prompts/master_prompt.md`
 - Size: 2.2KB
 - Status: ✅ Accessible to Prompt Library
 

@@ -16,36 +16,23 @@ main() {
   LEGACY_COUNT=$(find "$BASE" -maxdepth 1 -name ".legacy_*" -type d 2>/dev/null | wc -l | tr -d ' ')
 
   if [ "$LEGACY_COUNT" -eq 0 ]; then
-    say "✓ No legacy backups to archive"
+    say "✓ No legacy backups found"
     exit 0
   fi
 
   say "Found $LEGACY_COUNT legacy backup directories"
 
-  # Create trash dir
-  mkdir -p "$TRASH"
+  # List legacy dirs with sizes
+  say "Legacy backups (kept for rollback):"
+  find "$BASE" -maxdepth 1 -name ".legacy_*" -type d -exec du -sh {} \; | sed 's/^/  /'
 
-  # Archive legacy dirs
-  say "→ Creating archive: ${ARCHIVE##$REPO/}"
-  tar -C "$BASE" -czf "$ARCHIVE" .legacy_* 2>/dev/null || {
-    say "❌ tar failed"; exit 1;
-  }
-
-  # Verify archive
-  ARCHIVE_SIZE=$(du -h "$ARCHIVE" | cut -f1)
-  FILE_COUNT=$(tar -tzf "$ARCHIVE" | wc -l | tr -d ' ')
-  say "✓ Archive created: $ARCHIVE_SIZE, $FILE_COUNT files"
-
-  # Show sample contents
-  say "Sample contents (first 10 files):"
-  tar -tzf "$ARCHIVE" | head -10 | sed 's/^/  /'
-
-  # Remove legacy dirs
-  say "→ Removing legacy backup directories"
-  rm -rf "$BASE"/.legacy_*
-
-  say "✅ Legacy backups archived to ${ARCHIVE##$REPO/}"
-  say "   Rollback: tar -C '$BASE' -xzf '$ARCHIVE'"
+  say ""
+  say "✅ Legacy backups preserved in-place"
+  say "   Location: /02luka/.legacy_*"
+  say "   Rollback: make centralize-rollback"
+  say "   Cleanup: Managed by make tidy-retention (30+ days)"
+  say ""
+  say "⚠️  Note: tar archiving skipped (Google Drive Stream compatibility)"
 }
 
 main "$@"

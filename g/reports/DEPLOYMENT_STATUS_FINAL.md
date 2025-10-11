@@ -16,7 +16,7 @@ tags: [legacy]
 ### 1. Merge Conflict Resolution
 - **Files Resolved:**
   - `luka.html` (23 conflicts, 8-character markers)
-  - `.codex/templates/master_prompt.md` (1 conflict)
+  - `prompts/master_prompt.md` (1 conflict)
   - `index.html` (UU status conflict)
 - **Strategy:** Context-aware 3-way merge preserving both feature sets
 - **Result:** 0 conflict markers remaining, all features intact
@@ -148,7 +148,7 @@ Health:     ✅ {"status": "healthy", "service": "mcp-api-gateway-docker"}
 | File | Size | Status | Description |
 |------|------|--------|-------------|
 | `luka.html` | 33,643 bytes | ✅ Merged | UI with Optimizer + Library + Chatbot |
-| `.codex/templates/master_prompt.md` | 2.2KB | ✅ Resolved | Codex automation template |
+| `prompts/master_prompt.md` | 2.2KB | ✅ Resolved | Codex automation template |
 | `index.html` | 154 bytes | ✅ Resolved | Redirect stub |
 | `boss-api/server.cjs` | Updated | ✅ Modified | Added API endpoints |
 | `g/tools/clc` | 7.4KB | ✅ New | CLC CLI tool |

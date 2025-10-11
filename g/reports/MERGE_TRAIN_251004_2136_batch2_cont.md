@@ -20,7 +20,7 @@ Changes to be committed:
 
 Unmerged paths:
   (use "git add <file>..." to mark resolution)
-	both added:      .codex/templates/master_prompt.md
+	both added:      prompts/master_prompt.md
 	both added:      luka.html
 	both modified:   verify_system.sh
 
