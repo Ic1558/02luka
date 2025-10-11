@@ -1,0 +1,10 @@
+{
+  "id": "task-007",
+  "title": "Instrument metrics",
+  "description": "Emit histogram for job duration.",
+  "expected_outcome": "New histogram in metrics",
+  "tags": [
+    "ops",
+    "metrics"
+  ]
+}

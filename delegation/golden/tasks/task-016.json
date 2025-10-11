@@ -1,0 +1,10 @@
+{
+  "id": "task-016",
+  "title": "Improve error copy",
+  "description": "Clarify error message on import failure.",
+  "expected_outcome": "New copy shipped",
+  "tags": [
+    "ux",
+    "frontend"
+  ]
+}

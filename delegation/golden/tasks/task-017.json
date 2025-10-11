@@ -1,0 +1,10 @@
+{
+  "id": "task-017",
+  "title": "Replace logo",
+  "description": "Update header logo to new branding.",
+  "expected_outcome": "New logo visible",
+  "tags": [
+    "frontend",
+    "brand"
+  ]
+}

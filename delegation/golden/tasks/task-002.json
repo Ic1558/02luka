@@ -1,0 +1,10 @@
+{
+  "id": "task-002",
+  "title": "Add unit test for login throttle",
+  "description": "Ensure login throttle logic is covered by tests.",
+  "expected_outcome": "New test fails on regression",
+  "tags": [
+    "test",
+    "auth"
+  ]
+}

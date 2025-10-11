@@ -1,0 +1,10 @@
+{
+  "id": "task-008",
+  "title": "Remove deprecated flag",
+  "description": "Delete feature flag old_checkout.",
+  "expected_outcome": "Flag removed from code",
+  "tags": [
+    "cleanup",
+    "config"
+  ]
+}

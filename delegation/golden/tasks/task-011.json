@@ -1,0 +1,10 @@
+{
+  "id": "task-011",
+  "title": "Document env vars",
+  "description": "List required env vars for deployment.",
+  "expected_outcome": "Docs include env table",
+  "tags": [
+    "docs",
+    "ops"
+  ]
+}
