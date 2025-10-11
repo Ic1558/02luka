@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-10-05T20:32:27Z",
+  "timestamp": "2025-10-11T19:00:25Z",
   "tasks": [
     {
       "ts": "2025-10-06T02:48:22+07:00",
@@ -104,6 +104,38 @@
       "action": "verification_test",
       "status": "started",
       "context": "testing auto-start deployment claims"
+    },
+    {
+      "ts": "2025-10-12T02:00:15+07:00",
+      "id": "WO-251012-020015-$",
+      "agent": "clc",
+      "action": "dashboard_deployment",
+      "status": "done",
+      "context": "Boss-UI deployed to Cloudflare Pages (theedges-dashboard.pages.dev)"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "domain_migration",
+      "status": "done",
+      "context": "Migrated dashboard.theedges.work to Pages, n8n to subdomain"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "api_documentation",
+      "status": "done",
+      "context": "Complete API docs with /api/smoke endpoint"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "tracking_workflow",
+      "status": "started",
+      "context": "Implementing proper todo/pending tracking system"
     },
     {
       "ts": "2025-10-06T02:48:37+07:00",
