@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Luka Workspace · Mission Control</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { mountAppShell, createPanel, hydrateStatus } from '/shared/components.js';
+
+    const { main, statusBar } = mountAppShell({
+      active: 'landing',
+      title: 'Luka Workspace',
+      subtitle: 'Five-lane control surface for boss mode'
+    });
+
+    hydrateStatus(statusBar);
+
+    const hero = createPanel('Mission Control', 'Pick a lane to orchestrate your workflow.');
+    hero.insertAdjacentHTML('beforeend', `
+      <p>Each lane focuses on a single phase of the Luka lifecycle. Hop between chat, planning, build, and shipping without losing context.</p>
+    `);
+    main.appendChild(hero);
+
+    const grid = document.createElement('div');
+    grid.className = 'card-grid';
+    grid.innerHTML = `
+      <article class="card">
+        <h3>Chat</h3>
+        <p>Work directly with Luka for quick questions, clarifications, and decisions.</p>
+        <a href="/chat">Open Chat</a>
+      </article>
+      <article class="card">
+        <h3>Plan</h3>
+        <p>Draft structured task plans, review capabilities, and capture scope before execution.</p>
+        <a href="/plan">Open Planner</a>
+      </article>
+      <article class="card">
+        <h3>Build</h3>
+        <p>Stage diffs, run dry-runs, and prepare patch payloads for Luka to execute.</p>
+        <a href="/build">Open Builder</a>
+      </article>
+      <article class="card">
+        <h3>Ship</h3>
+        <p>Run smoke checks and validate deliverables before shipping to stakeholders.</p>
+        <a href="/ship">Open Ship Room</a>
+      </article>
+    `;
+    main.appendChild(grid);
+
+    const note = createPanel('Shared backend API');
+    note.insertAdjacentHTML('beforeend', `
+      <p>All applications reuse the same <code>/api/*</code> routes. Use the navigation above to switch lanes without reloading credentials.</p>
+    `);
+    main.appendChild(note);
+  </script>
+</body>
+</html>
