@@ -56,14 +56,15 @@
 - **Use symlinked paths** instead: `~/dev/02luka-repo` for consistent access
 
 ### ✅ Preferred Path Patterns
-- **Development Root**: `~/dev/02luka-repo` (symlinked from CloudStorage)
+- **Development Root**: `/workspaces/02luka-repo` (canonical, devcontainer) or `~/dev/02luka-repo` (optional symlink, host)
 - **Memory Files**: `.codex/hybrid_memory_system.md` (local to repo)
 - **Reports**: `g/reports/` (versioned under git)
 - **Logs**: `/tmp/` or `g/reports/` (avoid CloudStorage for runtime logs)
 
 ### 🔧 Path Resolution Strategy
-1. **Check symlinked path first**: `~/dev/02luka-repo`
-2. **Fallback to workspace**: `/workspaces/02luka-repo` (devcontainer)
-3. **Never assume CloudStorage**: Always use resolved paths for runtime
-4. **Memory Bridge**: Uses repo-relative paths for portability
+1. **Use canonical workspace**: `/workspaces/02luka-repo` (devcontainer) - primary
+2. **Optional symlink**: `~/dev/02luka-repo` (host) - for legacy compatibility
+3. **Dynamic resolution**: Use `scripts/repo_root_resolver.sh` in all scripts
+4. **Never assume CloudStorage**: Always use resolved paths for runtime
+5. **Memory Bridge**: Uses repo-relative paths for portability
 

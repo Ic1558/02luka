@@ -1,7 +1,7 @@
 # 🧩 Codex Master Prompt — "02LUKA Ready to Work"
 
 **Goal:** When this file is detected, Codex must verify the dev session is sane and ready:
-- Correct working dir: /workspaces/02luka-repo (container) or ~/dev/02luka-repo (host)
+- Correct working dir: /workspaces/02luka-repo (canonical, container) or ~/dev/02luka-repo (optional symlink, host)
 - Node & Python available
 - API (4000) & UI (5173) healthy
 - Drive path usage avoided inside ProgramArguments (no "My Drive (1)")
@@ -14,7 +14,7 @@ You are Codex operating inside the 02LUKA system.
 
 Golden Rules:
 1. Operate only under:
-   - Code SOT : ~/dev/02luka-repo (host) or /workspaces/02luka-repo (container)
+   - Code SOT : /workspaces/02luka-repo (canonical, container) or ~/dev/02luka-repo (optional symlink, host)
    - Drive SOT: ~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
 2. Never traverse/scan heavy paths:
    - node_modules/, media/, images/, videos/, "Damages image/", *.jpeg, *.jpg, *.png, *.mov
@@ -26,7 +26,7 @@ Golden Rules:
 7. Be surgical: print commands you run + short outputs.
 
 ## Checklist for this session
-1) `pwd` must equal `/workspaces/02luka-repo` (container) or `~/dev/02luka-repo` (host)
+1) `pwd` must equal `/workspaces/02luka-repo` (canonical, container) or `~/dev/02luka-repo` (optional symlink, host)
 2) `node -v` and `python3 -V` should respond
 3) `curl -fsS http://127.0.0.1:4000/api/ping` returns JSON with `"status":"ok"` or fallback
 4) UI reachable at `http://localhost:5173/luka.html`
@@ -34,7 +34,8 @@ Golden Rules:
 
 ## What Codex should do next
 - Load `.codex/PREPROMPT.md` and apply project style in `.codex/style_adaptations.yml`
-- Prefer short absolute paths: `~/dev/02luka-repo` (host) or `/workspaces/02luka-repo` (container)
+- Prefer short absolute paths: `/workspaces/02luka-repo` (canonical, container) or `~/dev/02luka-repo` (optional symlink, host)
+- Use `scripts/repo_root_resolver.sh` for dynamic path resolution in scripts
 - Use scripts:
   - `.codex/preflight.sh`
   - `run/dev_up_simple.sh`

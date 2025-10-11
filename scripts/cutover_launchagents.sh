@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Source universal path resolver
+source "$(dirname "$0")/repo_root_resolver.sh"
+
 PARENT="$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
-REPO="$PARENT/02luka-repo"
+REPO="$REPO_ROOT"
 LOGDIR="$HOME/Library/Logs/02luka"
 TS="$(date +%y%m%d_%H%M%S)"
 

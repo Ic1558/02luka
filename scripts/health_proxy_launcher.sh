@@ -3,6 +3,9 @@
 # Runs from repo (LaunchAgent permissions OK) using SOT health_proxy.js
 set -euo pipefail
 
+# Source universal path resolver
+source "$(dirname "$0")/repo_root_resolver.sh"
+
 # Paths
 SOT_PATH="${SOT_PATH:-$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka}"
 HEALTH_PROXY_JS="$SOT_PATH/gateway/health_proxy.js"
@@ -24,7 +27,7 @@ export NODE_ENV="${NODE_ENV:-production}"
 export SOT_PATH
 
 # Change to a safe working directory (repo, not Drive)
-cd "$HOME/dev/02luka-repo"
+cd "$REPO_ROOT"
 
 # Run health proxy
 # Note: Node can read the .js file from Drive even if cd into Drive fails
