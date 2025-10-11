@@ -24,10 +24,10 @@
       "tickets": "run/tickets/"
     },
     "codex": {
-      "templates": ".codex/templates/",
-      "prompts": ".codex/templates/",
-      "master_prompt": ".codex/templates/master_prompt.md",
-      "golden_prompt": ".codex/templates/golden_prompt.md",
+      "templates": "prompts/",
+      "prompts": "prompts/",
+      "master_prompt": "prompts/master_prompt.md",
+      "golden_prompt": "prompts/golden_prompt.md",
       "memory_bridge": true,
       "autosave": true,
       "gate": true

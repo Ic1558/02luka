@@ -1,21 +1,3 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-}"
-
-if [[ -z "$PROJECT_ROOT" ]]; then
-  if PROJECT_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-    :
-  else
-    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-  fi
-fi
-
-TEMPLATE_DIR="$PROJECT_ROOT/prompts"
-TARGET_FILE="$TEMPLATE_DIR/master_prompt.md"
-EXPECTED_SHA="74b48f28a92392cc05c1b11ef07f716df966249aff96b84d62eb1e7160da6aa0"
-EXPECTED_CONTENT="$(cat <<'TEMPLATE'
 # Master Prompt for Codex – 02luka System
 
 You are Codex working in the 02luka monorepo.
@@ -85,51 +67,3 @@ GOAL:
   2. Manifest entry appended
   3. Daily report bullet appended
   4. Commit message (Conventional) with CHANGE_ID + tags
-TEMPLATE
-)"
-
-mkdir -p "$TEMPLATE_DIR"
-
-if [[ -f "$TARGET_FILE" ]]; then
-  ACTUAL_SHA=$(shasum -a 256 "$TARGET_FILE" | awk '{print $1}')
-  if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
-    timestamp="$(date +%Y%m%d-%H%M%S)"
-    backup_file="${TARGET_FILE}.backup-${timestamp}"
-    cp "$TARGET_FILE" "$backup_file"
-    echo "Existing template differed. Backed up to $backup_file"
-  else
-    echo "Master prompt template already installed."
-    echo "ใช้เทมเพลตเดิมได้เลย: $TARGET_FILE"
-    echo "Use prompts/master_prompt.md with GOAL: <งานที่ต้องการ>"
-    exit 0
-  fi
-else
-  echo "Master prompt template missing. Creating new file."
-fi
-
-printf '%s' "$EXPECTED_CONTENT" > "$TARGET_FILE"
-
-EXTRA_TARGET_DIRS=(
-  "$PROJECT_ROOT/boss-ui/public/prompts"
-  "$PROJECT_ROOT/g/web/prompts"
-)
-
-for extra_dir in "${EXTRA_TARGET_DIRS[@]}"; do
-  mkdir -p "$extra_dir"
-  cp -a "$TEMPLATE_DIR/." "$extra_dir/"
-  echo "Synced templates to $extra_dir/"
-done
-
-cat <<'MSG'
-✅ Installation complete.
-
-How to use / วิธีใช้งาน:
-  1. Open prompts/master_prompt.md
-  2. Replace GOAL with the Thai description of the task (งานที่ต้องการ)
-  3. Fill each section before running Codex
-
-Quick commands:
-  • ใช้เทมเพลต: Use prompts/master_prompt.md with GOAL: <งานที่ต้องการ>
-  • ติดตั้งในโปรเจกต์นี้: g/tools/install_master_prompt.sh
-  • คัดลอกไปโปรเจกต์อื่น: cp 'prompts/master_prompt.md' /path/to/your/project/prompts/
-MSG

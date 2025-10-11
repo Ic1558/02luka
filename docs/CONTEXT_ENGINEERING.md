@@ -6,7 +6,7 @@
 ```
 ┌───────────────────────────────┐
 │          Context Layer         │
-│  - .codex/templates/           │
+│  - prompts/                   │
 │  - .claude/commands/ (legacy)  │
 │  - f/ai_context/*.json         │
 └───────────────┬───────────────┘
@@ -30,9 +30,9 @@
 ```
 
 ## Codex Template Usage Pattern
-- **Always start from** `.codex/templates/master_prompt.md` when drafting a task for Codex.
+- **Always start from** `prompts/master_prompt.md` when drafting a task for Codex.
 - Populate the `GOAL:` line with the mission statement, then fill sections for context, constraints, resources, validation, and follow-up.
-- Store any project-specific variations inside `.codex/templates/` to keep them discoverable through the mapping namespace `codex:*`.
+- Store any project-specific variations inside `prompts/` to keep them discoverable through the mapping namespace `codex:*`.
 
 ## Installation & Maintenance
 - Use `g/tools/install_master_prompt.sh` to install or refresh the templates. The script validates content hashes, creates backups, and prints usage reminders.
@@ -40,7 +40,7 @@
 - Update the mapping whenever new template families are added so downstream bots inherit the structure.
 
 ## Integration Checklist
-- [x] Luka UI prompt library reads from `.codex/templates/master_prompt.md`.
+- [x] Luka UI prompt library reads from `prompts/master_prompt.md`.
 - [x] Backend orchestration forwards prompt metadata through `/api/chat`.
 - [ ] Automate template freshness checks inside `verify_system.sh` (planned).
 

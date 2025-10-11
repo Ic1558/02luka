@@ -28,7 +28,7 @@ Flow: dropbox → inbox/sent → deliverables
 - human:sent → boss/sent/
 - human:deliverables → boss/deliverables/
 - infra:clc_gate → g/tools/clc_gate.sh
-- codex:prompts → .codex/templates/
+- codex:prompts → prompts/
 
 ## Network Defaults
 - boss-api: http://127.0.0.1:4000

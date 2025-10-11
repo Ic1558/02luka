@@ -4,7 +4,7 @@ tags: [legacy]
 ---
 # Codex Integration Deployment Verification
 
-- **Issue Fixed:** Hash mismatch resolved. `verify_system.sh` now checks against `d177684c8ce1bb2f4cf49df3107dd884babdf731c4a5d639ffcd44aa5ee64532` and the installed `.codex/templates/master_prompt.md` matches.
+- **Issue Fixed:** Hash mismatch resolved. `verify_system.sh` now checks against `d177684c8ce1bb2f4cf49df3107dd884babdf731c4a5d639ffcd44aa5ee64532` and the installed `prompts/master_prompt.md` matches.
 - **System Health:** 100% (9/9 checks passed)
 - **MCP Infrastructure:** 4/4 servers operational
 - **Template Integrity:** ✅ Hash verified
@@ -27,7 +27,7 @@ tags: [legacy]
 - Luka Prompt Library (`luka.html`) loads `master_prompt.md` directly; serve repo via `python3 -m http.server 8080` before use.
 - Quick Codex sanity prompt:
   ```
-  Use .codex/templates/master_prompt.md
+  Use prompts/master_prompt.md
   GOAL: print the list of resolver keys you will use and the files you intend to touch, then stop.
   ```
   Expected response: inspection only, no edits until instructed.
