@@ -177,4 +177,36 @@ make boss-refresh
 - **Structure improvement**: `g/reports/STRUCTURE_IMPROVEMENT_251008_0353.md`
 - **Proof baseline**: `g/reports/proof/251008_0353_proof.md`
 
-Last Session: 251008_034105
+---
+
+## 10) Latest Deployment (2025-10-11)
+
+**Dashboard Deployment to Cloudflare Pages** ✅
+
+### Infrastructure
+- **Boss-UI Dashboard**: https://dashboard.theedges.work (Cloudflare Pages)
+- **Boss-UI (alternate)**: https://theedges-dashboard.pages.dev
+- **n8n Workflow**: https://n8n.theedges.work (Cloudflare Tunnel)
+
+### Deployment Features
+- OAuth authentication for Cloudflare API
+- Automated deployment script: `scripts/deploy_dashboard.sh`
+- Health check endpoints: `/healthz`, `/api/smoke`
+- Complete API documentation: `docs/api_endpoints.md`
+- CI/CD workflow: `.github/workflows/deploy_dashboard.yml`
+
+### Key Commits
+- `67c83ed` - OAuth authentication in deploy script
+- `8fc8291` - /api/smoke endpoint + API docs
+- `eff81c5` - Git conflict resolution (api.js merge)
+- `4e7db50` - Deployment reports
+
+### Reports
+- Dashboard deployment: `g/reports/deploy/dashboard_20251011_190534.md`
+- Domain migration: `g/reports/deploy/domain_migration_20251011_184500.md`
+
+**Tag:** v251011_1845_domain_migration
+
+---
+
+Last Session: 251012_014952
