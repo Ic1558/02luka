@@ -8,7 +8,7 @@ kill_on_port(){ local p="$1"; lsof -ti tcp:"$p" >/dev/null 2>&1 && lsof -ti tcp:
 kill_on_port "$API_PORT"; kill_on_port "$UI_PORT"
 mkdir -p "$ROOT_DIR/boss-api/data"
 nohup node "$ROOT_DIR/boss-api/server.cjs" >/tmp/boss-api.out 2>/tmp/boss-api.err &
-UI_ROOT="$ROOT_DIR/boss-ui/public"
+UI_ROOT="$ROOT_DIR/boss-ui"
 if [ ! -d "$UI_ROOT" ]; then echo "[dev-up] ERROR: UI root not found: $UI_ROOT" >&2; exit 1; fi
 (
   cd "$UI_ROOT"
@@ -32,5 +32,6 @@ curl -fsS http://127.0.0.1:$API_PORT/api/capabilities >/dev/null && echo "API:UP
 check_agent_endpoint "PLAN" "/api/plan" '{"runId":"dev-up","prompt":"health check","files":[]}'
 check_agent_endpoint "PATCH" "/api/patch" '{"runId":"dev-up","dryRun":true,"summary":"health check","patches":[{"path":"README.md","diff":"diff --git a/README.md b/README.md\\n"}]}'
 check_agent_endpoint "SMOKE" "/api/smoke" '{"runId":"dev-up","mode":"health-check","scope":["api"],"checks":[]}'
-curl -fsSI http://127.0.0.1:$UI_PORT/luka.html >/dev/null && echo "UI:UP" || echo "UI:DOWN"
-echo "Open: http://127.0.0.1:$UI_PORT/luka.html"
+curl -fsSI http://127.0.0.1:$UI_PORT/apps/landing.html >/dev/null && echo "UI Landing:UP" || echo "UI Landing:DOWN"
+curl -fsSI http://127.0.0.1:$UI_PORT/luka.html >/dev/null && echo "UI Legacy:UP" || echo "UI Legacy:DOWN"
+echo "Open: http://127.0.0.1:$UI_PORT/apps/landing.html"
