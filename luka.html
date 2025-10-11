@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'">
+  <meta name="referrer" content="no-referrer">
   <title>Luka Prompt Orchestrator</title>
   <style>
     :root {
@@ -335,7 +337,8 @@
     const insertPromptTemplate = document.getElementById('insertPromptTemplate');
     const openChatWindowButton = document.getElementById('openChatWindowButton');
 
-    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const APP_ORIGIN = window.location.origin;
+    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || '/api/chat';
     const TARGET_PROFILES = {
       auto: {
         id: 'auto',
@@ -381,7 +384,7 @@
         promptLibraryBody.textContent = 'Loading master prompt…';
         masterPromptFetchPromise = (async () => {
           try {
-            const response = await fetch('./.codex/templates/master_prompt.md');
+            const response = await fetch('./prompts/master_prompt.md');
             if (!response.ok) {
               throw new Error(`HTTP ${response.status}`);
             }
@@ -391,7 +394,7 @@
             return text;
           } catch (error) {
             masterPromptCache = '';
-            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at .codex/templates/master_prompt.md.';
+            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at prompts/master_prompt.md.';
             throw error;
           } finally {
             masterPromptFetchPromise = null;
@@ -524,19 +527,19 @@
       if (chatWindow && !chatWindow.closed) {
         // If chat window is already open, focus it
         chatWindow.focus();
-        chatWindow.postMessage({ type: 'open-chat' }, '*');
+        chatWindow.postMessage({ type: 'open-chat' }, APP_ORIGIN);
       } else {
         // Open new chat window
         const windowFeatures = 'width=800,height=600,resizable=yes,scrollbars=yes,status=yes,toolbar=no,menubar=no,location=no';
         chatWindow = window.open('./chat-window.html', 'luka-chat', windowFeatures);
-        
+
         if (chatWindow) {
           chatWindow.addEventListener('load', () => {
             // Sync gateway selection with chat window
-            chatWindow.postMessage({ 
-              type: 'sync-gateway', 
-              gateway: gatewaySelect.value 
-            }, '*');
+            chatWindow.postMessage({
+              type: 'sync-gateway',
+              gateway: gatewaySelect.value
+            }, APP_ORIGIN);
           });
         }
       }
@@ -544,6 +547,9 @@
 
     // Listen for messages from chat window
     window.addEventListener('message', (event) => {
+      if (event.origin !== APP_ORIGIN || !event.data || typeof event.data !== 'object') {
+        return;
+      }
       if (event.data.type === 'chat-window-closed') {
         chatWindow = null;
       } else if (event.data.type === 'sync-gateway') {
@@ -556,13 +562,27 @@
 
     // Sync gateway changes to chat window
     gatewaySelect.addEventListener('change', () => {
+      try {
+        localStorage.setItem('luka.gateway', gatewaySelect.value);
+      } catch (storageError) {
+        // Ignore storage errors (private browsing, etc.)
+      }
       if (chatWindow && !chatWindow.closed) {
-        chatWindow.postMessage({ 
-          type: 'sync-gateway', 
-          gateway: gatewaySelect.value 
-        }, '*');
+        chatWindow.postMessage({
+          type: 'sync-gateway',
+          gateway: gatewaySelect.value
+        }, APP_ORIGIN);
       }
     });
+
+    try {
+      const savedGateway = localStorage.getItem('luka.gateway');
+      if (savedGateway && TARGET_PROFILES[savedGateway]) {
+        gatewaySelect.value = savedGateway;
+      }
+    } catch (storageError) {
+      // Ignore storage errors (private browsing, etc.)
+    }
 
     updateSendButton();
     messageInput.focus();
@@ -575,14 +595,22 @@
       };
 
       let response;
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 20000);
       try {
         response = await fetch(BACKEND_CHAT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
       } catch (networkError) {
+        if (networkError.name === 'AbortError') {
+          throw new Error('Request to backend timed out after 20 seconds.');
+        }
         throw new Error('Unable to reach backend. Check your network or server status.');
+      } finally {
+        window.clearTimeout(timeoutId);
       }
 
       if (!response.ok) {
@@ -657,14 +685,14 @@
       const targetId = gatewaySelect.value || 'auto';
       const profile = getTargetProfile(targetId);
       const normalizedError = err instanceof Error ? err.message : String(err);
-      const lines = [
+      const parts = [
         `Backend error: ${normalizedError}`,
         'Ensure the 02luka backend is running (node boss-api/server.js).'
       ];
       if (profile.tips) {
-        lines.push(`Target tip: ${profile.tips}`);
+        parts.push(`Tip: ${profile.tips}`);
       }
-      return lines.join('\n');
+      return parts.join(' ');
     }
 
     function extractBestText(best) {
@@ -676,54 +704,61 @@
       return '';
     }
   </script>
+
+  <div id="optimize-panel" style="position:fixed;right:16px;bottom:16px;background:#111;color:#eee;padding:12px;border-radius:8px;font:14px system-ui;z-index:9999">
+    <div style="margin-bottom:8px;font-weight:600">Prompt Optimizer</div>
+    <textarea id="opt-input" rows="3" style="width:320px"></textarea><br/>
+    <button id="opt-run" style="margin-top:8px">Optimize</button>
+    <pre id="opt-out" style="margin-top:8px;max-height:160px;overflow:auto;background:#222;padding:8px;border-radius:6px"></pre>
+  </div>
+  <script>
+    (function(){
+      const $ = (q)=>document.querySelector(q);
+      const run = async ()=>{
+        const prompt = ($('#opt-input')?.value||'').trim();
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+        try{
+          const r = await fetch('/api/optimize', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt}), signal: controller.signal});
+          const j = await r.json();
+          $('#opt-out').textContent = (j.optimized||j.prompt||JSON.stringify(j));
+        }catch(e){
+          const message = e && e.name === 'AbortError' ? 'Request timed out. Try again.' : `ERR ${e}`;
+          $('#opt-out').textContent = message;
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
+      };
+      const btn = document.getElementById('opt-run');
+      if(btn) btn.addEventListener('click', run);
+    })();
+  </script>
+
+  <div id="promptlib-toolbar" style="position:fixed;left:16px;top:16px;background:#0f1115;color:#eaeaea;padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);font:13px system-ui;z-index:9999">
+    <strong style="margin-right:8px">Prompt Library</strong>
+    <select id="pl-select" style="margin-right:6px;max-width:240px">
+      <option value="pt-small-safe-change">pt-small-safe-change</option>
+      <option value="pt-audit-and-fix">pt-audit-and-fix</option>
+      <option value="pt-codex-readiness">pt-codex-readiness</option>
+    </select>
+    <button id="pl-insert">Insert</button>
+  </div>
+  <script>
+    (function(){
+      const TEMPLATES={
+        'pt-small-safe-change':'Use 02LUKA CLC Reasoning v1.1... small, reversible change...',
+        'pt-audit-and-fix':'Audit: Drive runtime, LaunchAgents, denied paths... rank & fix...',
+        'pt-codex-readiness':'Run preflight → dev → smoke; write readiness report...'
+      };
+      const $=(q)=>document.querySelector(q);
+      const insert=(t)=>{
+        const v=TEMPLATES[t]||''; if(!v) return;
+        const ta=document.querySelector('textarea, #chat-input, #prompt, [contenteditable=true]');
+        if(ta){ if(ta.value!==undefined){ ta.value=v; } else { ta.textContent=v; } }
+      };
+      const btn=document.getElementById('pl-insert');
+      if(btn) btn.addEventListener('click',()=>insert(document.getElementById('pl-select')?.value));
+    })();
+  </script>
 </body>
 </html>
-
-<div id="optimize-panel" style="position:fixed;right:16px;bottom:16px;background:#111;color:#eee;padding:12px;border-radius:8px;font:14px system-ui;z-index:9999">
-  <div style="margin-bottom:8px;font-weight:600">Prompt Optimizer</div>
-  <textarea id="opt-input" rows="3" style="width:320px"></textarea><br/>
-  <button id="opt-run" style="margin-top:8px">Optimize</button>
-  <pre id="opt-out" style="margin-top:8px;max-height:160px;overflow:auto;background:#222;padding:8px;border-radius:6px"></pre>
-</div>
-<script>
-  (function(){
-    const $ = (q)=>document.querySelector(q);
-    const run = async ()=>{
-      const prompt = ($('#opt-input')?.value||'').trim();
-      try{
-        const r = await fetch('/api/optimize', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({prompt})});
-        const j = await r.json();
-        $('#opt-out').textContent = (j.optimized||j.prompt||JSON.stringify(j));
-      }catch(e){ $('#opt-out').textContent = 'ERR '+e; }
-    };
-    const btn = document.getElementById('opt-run');
-    if(btn) btn.addEventListener('click', run);
-  })();
-</script>
-
-<div id="promptlib-toolbar" style="position:fixed;left:16px;top:16px;background:#0f1115;color:#eaeaea;padding:10px 12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);font:13px system-ui;z-index:9999">
-  <strong style="margin-right:8px">Prompt Library</strong>
-  <select id="pl-select" style="margin-right:6px;max-width:240px">
-    <option value="pt-small-safe-change">pt-small-safe-change</option>
-    <option value="pt-audit-and-fix">pt-audit-and-fix</option>
-    <option value="pt-codex-readiness">pt-codex-readiness</option>
-  </select>
-  <button id="pl-insert">Insert</button>
-</div>
-<script>
-  (function(){
-    const TEMPLATES={
-      'pt-small-safe-change':'Use 02LUKA CLC Reasoning v1.1... small, reversible change...',
-      'pt-audit-and-fix':'Audit: Drive runtime, LaunchAgents, denied paths... rank & fix...',
-      'pt-codex-readiness':'Run preflight → dev → smoke; write readiness report...'
-    };
-    const $=(q)=>document.querySelector(q);
-    const insert=(t)=>{
-      const v=TEMPLATES[t]||''; if(!v) return;
-      const ta=document.querySelector('textarea, #chat-input, #prompt, [contenteditable=true]');
-      if(ta){ if(ta.value!==undefined){ ta.value=v; } else { ta.textContent=v; } }
-    };
-    const btn=document.getElementById('pl-insert');
-    if(btn) btn.addEventListener('click',()=>insert(document.getElementById('pl-select')?.value));
-  })();
-</script>

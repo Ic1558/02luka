@@ -378,7 +378,8 @@
     const minimizeBtn = document.getElementById('minimizeBtn');
     const closeBtn = document.getElementById('closeBtn');
 
-    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || 'http://127.0.0.1:4000/api/chat';
+    const APP_ORIGIN = window.location.origin;
+    const BACKEND_CHAT_URL = (window.LUKA_BACKEND && window.LUKA_BACKEND.chatEndpoint) || '/api/chat';
     const TARGET_PROFILES = {
       auto: {
         id: 'auto',
@@ -433,7 +434,7 @@
         promptLibraryBody.textContent = 'Loading master prompt…';
         masterPromptFetchPromise = (async () => {
           try {
-            const response = await fetch('./.codex/templates/master_prompt.md');
+            const response = await fetch('./prompts/master_prompt.md');
             if (!response.ok) {
               throw new Error(`HTTP ${response.status}`);
             }
@@ -443,7 +444,7 @@
             return text;
           } catch (error) {
             masterPromptCache = '';
-            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at .codex/templates/master_prompt.md.';
+            promptLibraryBody.textContent = 'Unable to load master prompt template. Verify the file exists at prompts/master_prompt.md.';
             throw error;
           } finally {
             masterPromptFetchPromise = null;
@@ -685,12 +686,15 @@
     window.addEventListener('beforeunload', () => {
       // Notify parent window that chat is closing
       if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: 'chat-window-closed' }, '*');
+        window.opener.postMessage({ type: 'chat-window-closed' }, APP_ORIGIN);
       }
     });
 
     // Listen for messages from parent window
     window.addEventListener('message', (event) => {
+      if (event.origin !== APP_ORIGIN || !event.data || typeof event.data !== 'object') {
+        return;
+      }
       if (event.data.type === 'open-chat') {
         // Focus the chat window when parent requests it
         window.focus();
@@ -706,10 +710,10 @@
     // Sync gateway changes back to parent window
     gatewaySelect.addEventListener('change', () => {
       if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ 
-          type: 'sync-gateway', 
-          gateway: gatewaySelect.value 
-        }, '*');
+        window.opener.postMessage({
+          type: 'sync-gateway',
+          gateway: gatewaySelect.value
+        }, APP_ORIGIN);
       }
     });
   </script>
