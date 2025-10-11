@@ -11,10 +11,16 @@ echo "=== 02LUKA Dashboard Deploy ==="
 echo ""
 
 # 1️⃣ Environment check
-if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+# Check if wrangler is authenticated (via OAuth or API token)
+if npx wrangler whoami >/dev/null 2>&1; then
+  echo "✅ Wrangler authenticated"
+elif [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
   echo "❌ Missing Cloudflare credentials"
   echo ""
-  echo "Please set:"
+  echo "Option 1: Use wrangler login"
+  echo "  npx wrangler login"
+  echo ""
+  echo "Option 2: Set environment variables"
   echo "  export CLOUDFLARE_API_TOKEN='...'"
   echo "  export CLOUDFLARE_ACCOUNT_ID='...'"
   exit 1
