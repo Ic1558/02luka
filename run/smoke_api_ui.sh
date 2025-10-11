@@ -79,14 +79,14 @@ echo ""
 # Test Linear-lite API endpoints (optional for now)
 echo "=== Linear-lite API Endpoints (Optional) ==="
 
-# Plan endpoint
-test_endpoint "API Plan" "POST" "http://127.0.0.1:4000/api/plan" '{"goal":"test smoke check"}' "200" "true" || true
+# Plan endpoint (requires 'prompt' field)
+test_endpoint "API Plan" "POST" "http://127.0.0.1:4000/api/plan" '{"prompt":"smoke test plan"}' "200" "true" || true
 
-# Patch endpoint (dry-run)
-test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":true}' "200" "true" || true
+# Patch endpoint (requires 'patches' array, use dryRun mode)
+test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"patches":[],"dryRun":true}' "200" "true" || true
 
-# Smoke endpoint
-test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" || true
+# Smoke endpoint (health check - should always pass)
+test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "false" || true
 
 echo ""
 

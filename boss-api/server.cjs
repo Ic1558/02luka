@@ -1613,6 +1613,47 @@ const server = http.createServer(async (req, res) => {
       return writeJson(res, 200, { ok: true, status: 'ready', ts: new Date().toISOString() });
     }
 
+    if (req.method === 'GET' && url.pathname === '/api/smoke') {
+      // System health check endpoint
+      const services = {
+        api: true, // API is responding if we're here
+        ui: false,
+        mcp: false,
+        ollama: false
+      };
+
+      // Check UI files exist
+      try {
+        await fs.access(path.join(appsUiRoot, 'landing.html'));
+        services.ui = true;
+      } catch {}
+
+      // Check MCP FS (optional, timeout 1s)
+      try {
+        const mcpCheck = await Promise.race([
+          fetch('http://127.0.0.1:8765/health').then(r => r.ok),
+          new Promise(resolve => setTimeout(() => resolve(false), 1000))
+        ]);
+        services.mcp = mcpCheck;
+      } catch {}
+
+      // Check Ollama (optional, timeout 1s)
+      try {
+        const ollamaCheck = await Promise.race([
+          fetch(`${localOllamaBaseUrl}/api/tags`).then(r => r.ok),
+          new Promise(resolve => setTimeout(() => resolve(false), 1000))
+        ]);
+        services.ollama = ollamaCheck;
+      } catch {}
+
+      const allCritical = services.api && services.ui;
+      return writeJson(res, 200, {
+        status: allCritical ? 'healthy' : 'degraded',
+        services,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     if (req.method === 'GET') {
       const staticRoutes = [
         { prefix: '/shared/', root: sharedUiRoot },
