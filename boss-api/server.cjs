@@ -14,6 +14,9 @@ const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+const bossUiRoot = path.join(repoRoot, 'boss-ui');
+const sharedUiRoot = path.join(bossUiRoot, 'shared');
+const appsUiRoot = path.join(bossUiRoot, 'apps');
 const dataRoot = path.join(repoRoot, 'boss-api', 'data');
 const ragDbPath = path.join(dataRoot, 'rag.sqlite3');
 const sampleSqlitePath = path.join(dataRoot, 'sample.sqlite3');
@@ -80,6 +83,57 @@ async function ensureDirectory(dirPath) {
 function ensureDirectorySync(dirPath) {
   fsSync.mkdirSync(dirPath, { recursive: true });
   return dirPath;
+}
+
+const staticMimeTypes = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml'
+};
+
+async function serveStaticFile(res, filePath) {
+  try {
+    const buffer = await fs.readFile(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = staticMimeTypes[ext] || 'application/octet-stream';
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Access-Control-Allow-Origin': '*'
+    });
+    res.end(buffer);
+    return true;
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      console.error('[boss-api] static serve failed', err);
+    }
+    return false;
+  }
+}
+
+async function serveFromStaticRoot(res, rootDir, relativePath) {
+  if (!relativePath) {
+    return false;
+  }
+  const normalized = relativePath.replace(/\\/g, '/').replace(/^\/+/g, '');
+  if (!normalized || normalized.includes('..')) {
+    return false;
+  }
+  const target = path.join(rootDir, normalized);
+  if (!isPathInside(rootDir, target)) {
+    return false;
+  }
+  return serveStaticFile(res, target);
+}
+
+async function sendAppPage(res, fileName) {
+  if (!fileName) {
+    return false;
+  }
+  return serveFromStaticRoot(res, appsUiRoot, fileName);
 }
 
 async function fileExists(filePath) {
@@ -1555,6 +1609,51 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    if (req.method === 'GET' && url.pathname === '/healthz') {
+      return writeJson(res, 200, { ok: true, status: 'ready', ts: new Date().toISOString() });
+    }
+
+    if (req.method === 'GET') {
+      const staticRoutes = [
+        { prefix: '/shared/', root: sharedUiRoot },
+        { prefix: '/apps/', root: appsUiRoot }
+      ];
+
+      for (const route of staticRoutes) {
+        if (url.pathname === route.prefix.slice(0, -1)) {
+          res.writeHead(302, { Location: route.prefix });
+          res.end();
+          return;
+        }
+        if (url.pathname.startsWith(route.prefix)) {
+          const relativePath = url.pathname.slice(route.prefix.length);
+          const served = await serveFromStaticRoot(res, route.root, relativePath);
+          if (!served) {
+            res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Not Found');
+          }
+          return;
+        }
+      }
+
+      const appPageMap = {
+        '/': 'landing.html',
+        '/chat': 'chat.html',
+        '/plan': 'plan.html',
+        '/build': 'build.html',
+        '/ship': 'ship.html'
+      };
+
+      if (appPageMap[url.pathname]) {
+        const served = await sendAppPage(res, appPageMap[url.pathname]);
+        if (!served) {
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+          res.end('Not Found');
+        }
+        return;
+      }
+    }
+
     // Capabilities endpoint to enable full UI features
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
       try {

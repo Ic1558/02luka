@@ -54,6 +54,9 @@ test_endpoint() {
 # Test core services
 echo "=== Core Services ==="
 
+# API Health
+test_endpoint "API Health" "GET" "http://127.0.0.1:4000/healthz" "" "200" || true
+
 # API Capabilities
 test_endpoint "API Capabilities" "GET" "http://127.0.0.1:4000/api/capabilities" "" "200" || true
 
