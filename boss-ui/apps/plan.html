@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plan · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { API } from '/shared/api.js';
+    import { mountAppShell, createPanel, hydrateStatus, showResult, showError } from '/shared/components.js';
+
+    const { main, statusBar } = mountAppShell({
+      active: 'plan',
+      title: 'Plan · Luka Workspace',
+      subtitle: 'Break down work into actionable steps'
+    });
+
+    hydrateStatus(statusBar);
+
+    const panel = createPanel('Generate plan', 'Provide a goal and optional context files to get a structured plan.');
+
+    const form = document.createElement('form');
+    form.className = 'form-grid';
+
+    const prompt = document.createElement('textarea');
+    prompt.name = 'prompt';
+    prompt.placeholder = 'Example: Ship a README update that documents the new CLI flags...';
+    prompt.required = true;
+    form.appendChild(prompt);
+
+    const files = document.createElement('textarea');
+    files.name = 'files';
+    files.placeholder = 'Optional: One file path per line to include in context.';
+    files.rows = 4;
+    form.appendChild(files);
+
+    const controls = document.createElement('div');
+    controls.className = 'form-actions';
+
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = 'Request Plan';
+    controls.appendChild(submit);
+
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'secondary';
+    reset.textContent = 'Clear';
+    controls.appendChild(reset);
+
+    form.appendChild(controls);
+    panel.appendChild(form);
+
+    const output = document.createElement('pre');
+    output.className = 'output';
+    output.textContent = 'Plan results will appear here.';
+    panel.appendChild(output);
+
+    reset.addEventListener('click', () => {
+      prompt.value = '';
+      files.value = '';
+      output.textContent = 'Plan results will appear here.';
+      prompt.focus();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!prompt.value.trim()) {
+        prompt.focus();
+        return;
+      }
+      submit.disabled = true;
+      output.textContent = 'Planning...';
+      try {
+        const payload = {
+          prompt: prompt.value.trim(),
+          files: files.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+        };
+        const response = await API.plan(payload);
+        showResult(output, response);
+      } catch (err) {
+        showError(output, err);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    main.appendChild(panel);
+  </script>
+</body>
+</html>
