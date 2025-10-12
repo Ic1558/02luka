@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Signals · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { jfetch } from '/shared/api.js';
+    import { mountAppShell, hydrateStatus, createPanel } from '/shared/components.js';
+
+    const TAB_STORAGE_KEY = 'signals.activeTab';
+    const JOB_POLL_MS = 5000;
+    const STATS_REFRESH_MS = 30000;
+    const METRICS_REFRESH_MS = 45000;
+
+    const { main, statusBar } = mountAppShell({
+      active: 'signals',
+      title: 'Signals · Luka Workspace',
+      subtitle: 'Monitor crawl health and auto-train coverage'
+    });
+
+    hydrateStatus(statusBar);
+
+    const panel = createPanel(
+      'Signals control',
+      'Trigger crawls, watch live ingestion jobs, and keep auto-training metrics within reach.'
+    );
+    panel.classList.add('tab-container');
+
+    const toastContainer = ensureToastContainer();
+
+    const dataView = createDataView();
+    const autoTrainView = createAutoTrainView();
+
+    const tabDefinitions = [
+      { id: 'data', label: 'Data', view: dataView },
+      { id: 'auto-train', label: 'Auto-Train', view: autoTrainView }
+    ];
+
+    const tabButtons = new Map();
+    const tabPanels = new Map();
+    const tabActions = new Map();
+
+    const tabList = document.createElement('div');
+    tabList.className = 'tab-list';
+    tabList.setAttribute('role', 'tablist');
+    tabList.setAttribute('aria-label', 'Signals views');
+
+    const panelsWrapper = document.createElement('div');
+    panelsWrapper.className = 'tab-panels';
+
+    tabDefinitions.forEach((tab, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tab-button';
+      button.id = `tab-${tab.id}`;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', 'false');
+      button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+      button.textContent = tab.label;
+      button.addEventListener('click', () => setActiveTab(tab.id, { focus: true }));
+      button.addEventListener('keydown', (event) => handleTabKeydown(event, tab.id));
+      tabButtons.set(tab.id, button);
+      tabList.appendChild(button);
+
+      const panelEl = tab.view.panel;
+      panelEl.id = `panel-${tab.id}`;
+      panelEl.setAttribute('role', 'tabpanel');
+      panelEl.setAttribute('aria-labelledby', button.id);
+      panelEl.hidden = index !== 0;
+      panelEl.setAttribute('aria-hidden', index !== 0 ? 'true' : 'false');
+      tabPanels.set(tab.id, panelEl);
+      tabActions.set(tab.id, tab.view.actions || {});
+      panelsWrapper.appendChild(panelEl);
+    });
+
+    panel.appendChild(tabList);
+    panel.appendChild(panelsWrapper);
+    main.appendChild(panel);
+
+    const storedTab = readStoredTab();
+    setActiveTab(tabButtons.has(storedTab) ? storedTab : tabDefinitions[0].id);
+
+    let jobSource;
+    let jobPollTimer;
+    let jobErrorNotified = false;
+    let statsTimer;
+    let metricsTimer;
+
+    connectJobStream();
+    refreshJobStatus({ silent: true });
+    refreshDataStats({ silent: true });
+    refreshMetrics({ silent: true });
+
+    statsTimer = setInterval(() => refreshDataStats({ silent: true }), STATS_REFRESH_MS);
+    metricsTimer = setInterval(() => refreshMetrics({ silent: true }), METRICS_REFRESH_MS);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(statsTimer);
+        clearInterval(metricsTimer);
+        statsTimer = null;
+        metricsTimer = null;
+      } else {
+        if (!statsTimer) {
+          refreshDataStats({ silent: true });
+          statsTimer = setInterval(() => refreshDataStats({ silent: true }), STATS_REFRESH_MS);
+        }
+        if (!metricsTimer) {
+          refreshMetrics({ silent: true });
+          metricsTimer = setInterval(() => refreshMetrics({ silent: true }), METRICS_REFRESH_MS);
+        }
+      }
+    });
+
+    function ensureToastContainer() {
+      let el = document.querySelector('.toast-container');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'toast-container';
+        document.body.appendChild(el);
+      }
+      return el;
+    }
+
+    function showToast(message, variant = 'error') {
+      if (!message) {
+        return;
+      }
+      const toast = document.createElement('div');
+      toast.className = `toast ${variant}`;
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.textContent = message;
+      toast.addEventListener('click', () => toast.remove());
+      toastContainer.appendChild(toast);
+      window.setTimeout(() => {
+        toast.remove();
+      }, 4600);
+    }
+
+    function getErrorMessage(error, fallback = 'Something went wrong') {
+      if (!error) {
+        return fallback;
+      }
+      if (typeof error === 'string') {
+        return error;
+      }
+      if (error.message) {
+        return error.message;
+      }
+      return fallback;
+    }
+
+    function setActiveTab(nextId, options = {}) {
+      if (!tabButtons.has(nextId)) {
+        nextId = tabDefinitions[0].id;
+      }
+      tabButtons.forEach((button, id) => {
+        const isActive = id === nextId;
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        button.setAttribute('tabindex', isActive ? '0' : '-1');
+        if (isActive && options.focus) {
+          button.focus();
+        }
+      });
+      tabPanels.forEach((panelEl, id) => {
+        const isActive = id === nextId;
+        panelEl.hidden = !isActive;
+        panelEl.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      });
+      storeTab(nextId);
+      const actions = tabActions.get(nextId);
+      if (actions && typeof actions.onShow === 'function') {
+        actions.onShow();
+      }
+    }
+
+    function handleTabKeydown(event, currentId) {
+      const currentIndex = tabDefinitions.findIndex((tab) => tab.id === currentId);
+      if (currentIndex === -1) {
+        return;
+      }
+      let targetIndex = currentIndex;
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        targetIndex = (currentIndex + 1) % tabDefinitions.length;
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        targetIndex = (currentIndex - 1 + tabDefinitions.length) % tabDefinitions.length;
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        targetIndex = 0;
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        targetIndex = tabDefinitions.length - 1;
+      }
+      if (targetIndex !== currentIndex) {
+        const target = tabDefinitions[targetIndex];
+        setActiveTab(target.id, { focus: true });
+      }
+    }
+
+    function readStoredTab() {
+      try {
+        return window.localStorage.getItem(TAB_STORAGE_KEY) || '';
+      } catch (err) {
+        return '';
+      }
+    }
+
+    function storeTab(value) {
+      try {
+        window.localStorage.setItem(TAB_STORAGE_KEY, value);
+      } catch (err) {
+        // ignore storage errors (private mode, etc.)
+      }
+    }
+
+    function connectJobStream() {
+      if (!('EventSource' in window)) {
+        startJobPolling();
+        return;
+      }
+      try {
+        if (jobSource) {
+          return;
+        }
+        jobSource = new EventSource('/api/signals/jobs/stream');
+        jobSource.onopen = () => {
+          if (jobPollTimer) {
+            clearInterval(jobPollTimer);
+            jobPollTimer = undefined;
+          }
+        };
+        jobSource.onmessage = (event) => {
+          if (!event.data) {
+            return;
+          }
+          let payload;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (err) {
+            payload = { jobs: [], message: event.data };
+          }
+          jobErrorNotified = false;
+          handleJobPayload(payload);
+        };
+        jobSource.onerror = () => {
+          if (jobSource) {
+            jobSource.close();
+            jobSource = undefined;
+          }
+          startJobPolling();
+          window.setTimeout(() => {
+            connectJobStream();
+          }, 6000);
+        };
+      } catch (err) {
+        jobSource = undefined;
+        startJobPolling();
+        window.setTimeout(() => {
+          connectJobStream();
+        }, 6000);
+      }
+    }
+
+    function startJobPolling() {
+      if (jobPollTimer) {
+        return;
+      }
+      jobPollTimer = window.setInterval(() => {
+        refreshJobStatus({ silent: true });
+      }, JOB_POLL_MS);
+    }
+
+    async function refreshJobStatus({ silent = false } = {}) {
+      if (!silent) {
+        dataView.showJobLoading();
+      }
+      try {
+        const payload = await jfetch('/api/signals/jobs');
+        handleJobPayload(payload);
+        jobErrorNotified = false;
+      } catch (err) {
+        if (!silent && !jobErrorNotified) {
+          jobErrorNotified = true;
+          const message = getErrorMessage(err, 'Unable to load job status');
+          showToast(message, 'error');
+          dataView.showJobError(message);
+        }
+      }
+    }
+
+    function handleJobPayload(payload) {
+      const jobs = extractJobs(payload);
+      if (jobs.length === 0) {
+        dataView.renderJobStatuses([]);
+        return;
+      }
+      dataView.renderJobStatuses(jobs);
+    }
+
+    function extractJobs(payload) {
+      if (!payload) {
+        return [];
+      }
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      if (Array.isArray(payload.jobs)) {
+        return payload.jobs;
+      }
+      if (Array.isArray(payload.active)) {
+        return payload.active;
+      }
+      if (payload.status && Array.isArray(payload.status.jobs)) {
+        return payload.status.jobs;
+      }
+      if (payload.results && Array.isArray(payload.results.jobs)) {
+        return payload.results.jobs;
+      }
+      if (payload.job) {
+        return [payload.job];
+      }
+      if (payload.data && Array.isArray(payload.data.jobs)) {
+        return payload.data.jobs;
+      }
+      return [];
+    }
+
+    async function refreshDataStats({ silent = false } = {}) {
+      if (!silent) {
+        dataView.showStatsLoading();
+      }
+      try {
+        const payload = await jfetch('/api/signals/stats');
+        const rows = extractTopDomains(payload);
+        const updatedAt = payload && (payload.updated_at || payload.updatedAt || payload.refreshed_at || payload.refreshedAt);
+        dataView.renderStats(rows, { updatedAt });
+      } catch (err) {
+        const message = getErrorMessage(err, 'Unable to load data stats');
+        if (!silent) {
+          showToast(message, 'error');
+        }
+        dataView.renderStats([], { error: message });
+      }
+    }
+
+    function extractTopDomains(payload) {
+      if (!payload) {
+        return [];
+      }
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      if (Array.isArray(payload.top_domains)) {
+        return payload.top_domains;
+      }
+      if (Array.isArray(payload.topDomains)) {
+        return payload.topDomains;
+      }
+      if (Array.isArray(payload.domains)) {
+        return payload.domains;
+      }
+      if (payload.stats && Array.isArray(payload.stats.top_domains)) {
+        return payload.stats.top_domains;
+      }
+      if (payload.stats && Array.isArray(payload.stats.domains)) {
+        return payload.stats.domains;
+      }
+      if (payload.data && Array.isArray(payload.data.top_domains)) {
+        return payload.data.top_domains;
+      }
+      return [];
+    }
+
+    async function refreshMetrics({ silent = false } = {}) {
+      if (!silent) {
+        autoTrainView.showMetricsLoading();
+      }
+      try {
+        const payload = await jfetch('/api/signals/metrics');
+        const metrics = normalizeMetrics(payload);
+        autoTrainView.updateMetrics(metrics);
+      } catch (err) {
+        const message = getErrorMessage(err, 'Unable to load training metrics');
+        if (!silent) {
+          showToast(message, 'error');
+        }
+        autoTrainView.showMetricsError(message);
+      }
+    }
+
+    function normalizeMetrics(payload) {
+      if (!payload) {
+        return {};
+      }
+      if (Array.isArray(payload)) {
+        return payload[0] || {};
+      }
+      if (payload.metrics && typeof payload.metrics === 'object') {
+        return payload.metrics;
+      }
+      if (payload.latest && typeof payload.latest === 'object') {
+        return payload.latest;
+      }
+      if (payload.data && typeof payload.data.metrics === 'object') {
+        return payload.data.metrics;
+      }
+      return payload;
+    }
+
+    function createDataView() {
+      const root = document.createElement('div');
+      root.className = 'tab-panel';
+
+      const form = document.createElement('form');
+      form.className = 'form-grid';
+      form.noValidate = true;
+
+      const label = document.createElement('label');
+      label.setAttribute('for', 'data-seeds');
+      label.textContent = 'Seed URLs (one per line)';
+      form.appendChild(label);
+
+      const textarea = document.createElement('textarea');
+      textarea.id = 'data-seeds';
+      textarea.placeholder = 'https://example.com/feed\nhttps://blog.example.com/';
+      textarea.setAttribute('aria-describedby', 'data-seeds-help');
+      form.appendChild(textarea);
+
+      const helper = document.createElement('p');
+      helper.id = 'data-seeds-help';
+      helper.className = 'data-help';
+      helper.textContent = 'Paste RSS, sitemap, or seed URLs. Duplicates are removed automatically.';
+      form.appendChild(helper);
+
+      const controls = document.createElement('div');
+      controls.className = 'form-actions';
+
+      const runButton = document.createElement('button');
+      runButton.type = 'submit';
+      runButton.textContent = 'Run crawl';
+      controls.appendChild(runButton);
+      form.appendChild(controls);
+      root.appendChild(form);
+
+      const jobSection = document.createElement('section');
+      jobSection.className = 'job-status-pane';
+
+      const jobHeading = document.createElement('h3');
+      jobHeading.textContent = 'Live job status';
+      jobSection.appendChild(jobHeading);
+
+      const jobList = document.createElement('ul');
+      jobList.className = 'job-status-list';
+      jobList.setAttribute('role', 'list');
+      jobList.setAttribute('aria-live', 'polite');
+      jobList.setAttribute('aria-busy', 'false');
+      jobSection.appendChild(jobList);
+      root.appendChild(jobSection);
+
+      const statsSection = document.createElement('section');
+
+      const statsHeading = document.createElement('h3');
+      statsHeading.textContent = 'Top domains';
+      statsSection.appendChild(statsHeading);
+
+      const statsUpdated = document.createElement('p');
+      statsUpdated.className = 'data-updated';
+      statsUpdated.textContent = 'Last updated: —';
+      statsSection.appendChild(statsUpdated);
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'data-table-wrapper';
+
+      const table = document.createElement('table');
+      table.className = 'data-table';
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      ['Domain', 'Docs', 'Last fetched', 'Error rate'].forEach((heading) => {
+        const th = document.createElement('th');
+        th.scope = 'col';
+        th.textContent = heading;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+      statsSection.appendChild(tableWrapper);
+      root.appendChild(statsSection);
+
+      renderJobStatuses([], { loading: true });
+      renderStats([], { loading: true });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const seeds = textarea.value
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+        if (seeds.length === 0) {
+          textarea.focus();
+          showToast('Add at least one seed URL to trigger a crawl.', 'error');
+          return;
+        }
+        runButton.disabled = true;
+        try {
+          await jfetch('/api/signals/crawl', {
+            method: 'POST',
+            body: JSON.stringify({ seeds })
+          });
+          showToast('Crawl requested. Watching job stream…', 'success');
+          connectJobStream();
+          refreshJobStatus({ silent: true });
+          window.setTimeout(() => refreshDataStats({ silent: true }), 1500);
+        } catch (err) {
+          showToast(getErrorMessage(err, 'Unable to start crawl'), 'error');
+        } finally {
+          runButton.disabled = false;
+        }
+      });
+
+      function renderJobStatuses(jobs, { loading = false, error = '' } = {}) {
+        jobList.setAttribute('aria-busy', loading ? 'true' : 'false');
+        jobList.innerHTML = '';
+        if (error) {
+          const item = document.createElement('li');
+          item.className = 'job-status-empty';
+          item.textContent = error;
+          jobList.appendChild(item);
+          return;
+        }
+        if (loading) {
+          const item = document.createElement('li');
+          item.className = 'job-status-empty';
+          item.textContent = 'Loading jobs…';
+          jobList.appendChild(item);
+          return;
+        }
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          const item = document.createElement('li');
+          item.className = 'job-status-empty';
+          item.textContent = 'No active jobs.';
+          jobList.appendChild(item);
+          return;
+        }
+        jobs.forEach((job, index) => {
+          const normalized = normalizeJob(job, index);
+          const item = document.createElement('li');
+          item.className = 'job-status-item';
+
+          const header = document.createElement('header');
+
+          const title = document.createElement('h4');
+          title.textContent = normalized.title;
+          header.appendChild(title);
+
+          const state = document.createElement('span');
+          state.className = `status-chip ${normalized.stateClass}`;
+          state.textContent = normalized.stateLabel;
+          header.appendChild(state);
+
+          item.appendChild(header);
+
+          if (normalized.message) {
+            const message = document.createElement('p');
+            message.className = 'job-status-message';
+            message.textContent = normalized.message;
+            item.appendChild(message);
+          }
+
+          if (normalized.meta.length > 0) {
+            const meta = document.createElement('div');
+            meta.className = 'job-status-meta';
+            normalized.meta.forEach((entry) => {
+              const span = document.createElement('span');
+              span.textContent = entry;
+              meta.appendChild(span);
+            });
+            item.appendChild(meta);
+          }
+
+          jobList.appendChild(item);
+        });
+      }
+
+      function renderStats(rows, { loading = false, error = '', updatedAt } = {}) {
+        tbody.innerHTML = '';
+        if (loading) {
+          statsUpdated.textContent = 'Refreshing stats…';
+          appendEmptyRow('Loading domain stats…');
+          return;
+        }
+        if (error) {
+          statsUpdated.textContent = 'Last updated: —';
+          appendEmptyRow(error);
+          return;
+        }
+        if (!Array.isArray(rows) || rows.length === 0) {
+          statsUpdated.textContent = updatedAt ? `Last updated: ${formatDate(updatedAt)}` : 'Last updated: —';
+          appendEmptyRow('No crawl stats yet.');
+          return;
+        }
+        statsUpdated.textContent = updatedAt ? `Last updated: ${formatDate(updatedAt)}` : `Last updated: ${formatDate(new Date())}`;
+        rows.forEach((row) => {
+          const normalized = normalizeDomainRow(row);
+          const tr = document.createElement('tr');
+
+          const domainCell = document.createElement('td');
+          domainCell.textContent = normalized.domain || '—';
+          tr.appendChild(domainCell);
+
+          const docsCell = document.createElement('td');
+          docsCell.textContent = normalized.docs;
+          tr.appendChild(docsCell);
+
+          const fetchedCell = document.createElement('td');
+          fetchedCell.textContent = normalized.lastFetched;
+          tr.appendChild(fetchedCell);
+
+          const errCell = document.createElement('td');
+          errCell.textContent = normalized.errRate;
+          tr.appendChild(errCell);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      function appendEmptyRow(message) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 4;
+        td.className = 'table-empty';
+        td.textContent = message;
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+
+      function normalizeJob(job, index) {
+        const fallbackName = `Job #${index + 1}`;
+        const title = job?.name || job?.title || job?.id || job?.type || job?.kind || fallbackName;
+        const stateRaw = (job?.state || job?.status || job?.phase || job?.stage || 'pending').toString();
+        const stateNormalized = stateRaw.toLowerCase().replace(/\s+/g, '-');
+        const stateLabel = stateRaw.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        const meta = [];
+        const progressValue = job?.progress ?? job?.completion ?? job?.percent_complete;
+        if (progressValue !== undefined && progressValue !== null) {
+          meta.push(`${formatPercent(progressValue)} complete`);
+        }
+        const docCount = job?.docs ?? job?.documents ?? job?.doc_count;
+        if (docCount !== undefined && docCount !== null) {
+          meta.push(`${formatNumber(docCount)} docs`);
+        }
+        const durationValue = job?.duration_ms ?? job?.durationMs ?? job?.duration;
+        if (durationValue !== undefined && durationValue !== null) {
+          meta.push(`${formatDuration(durationValue)} elapsed`);
+        }
+        const updatedValue =
+          job?.updated_at ||
+          job?.updatedAt ||
+          job?.finished_at ||
+          job?.finishedAt ||
+          job?.started_at ||
+          job?.startedAt;
+        if (updatedValue) {
+          meta.push(formatRelative(updatedValue));
+        }
+        const message = job?.message || job?.detail || job?.status_text || job?.note || '';
+        return {
+          title,
+          stateClass: stateNormalized || 'pending',
+          stateLabel: stateLabel || 'Pending',
+          meta,
+          message
+        };
+      }
+
+      function normalizeDomainRow(row) {
+        const domain = row?.domain || row?.host || row?.name || row?.url || '—';
+        const docsValue = row?.docs ?? row?.documents ?? row?.count ?? null;
+        const lastFetchedValue = row?.last_fetched || row?.lastFetched || row?.updated_at || row?.updatedAt || row?.last_seen;
+        const errValue = row?.err_rate ?? row?.error_rate ?? row?.errors ?? null;
+        return {
+          domain,
+          docs: docsValue !== null && docsValue !== undefined ? formatNumber(docsValue) : '—',
+          lastFetched: lastFetchedValue ? formatDate(lastFetchedValue) : '—',
+          errRate: errValue !== null && errValue !== undefined ? formatPercent(errValue) : '—'
+        };
+      }
+
+      return {
+        panel: root,
+        actions: {
+          onShow: () => {
+            refreshJobStatus({ silent: true });
+            refreshDataStats({ silent: true });
+          }
+        },
+        renderJobStatuses: renderJobStatuses,
+        showJobLoading: () => renderJobStatuses([], { loading: true }),
+        showJobError: (message) => renderJobStatuses([], { error: message }),
+        renderStats: renderStats,
+        showStatsLoading: () => renderStats([], { loading: true })
+      };
+    }
+
+    function createAutoTrainView() {
+      const root = document.createElement('div');
+      root.className = 'tab-panel';
+
+      const form = document.createElement('form');
+      form.className = 'form-grid';
+
+      const label = document.createElement('label');
+      label.setAttribute('for', 'auto-strategy');
+      label.textContent = 'Training strategy';
+      form.appendChild(label);
+
+      const select = document.createElement('select');
+      select.id = 'auto-strategy';
+      select.innerHTML = `
+        <option value="daily">Daily delta (24h)</option>
+        <option value="new">New documents only</option>
+        <option value="all">Full corpus</option>
+      `;
+      form.appendChild(select);
+
+      const controls = document.createElement('div');
+      controls.className = 'form-actions';
+
+      const button = document.createElement('button');
+      button.type = 'submit';
+      button.textContent = 'Schedule training run';
+      controls.appendChild(button);
+      form.appendChild(controls);
+      root.appendChild(form);
+
+      const metricsCard = document.createElement('section');
+      metricsCard.className = 'metrics-card';
+
+      const metricsHeading = document.createElement('h3');
+      metricsHeading.textContent = 'Last training metrics';
+      metricsCard.appendChild(metricsHeading);
+
+      const metricsGrid = document.createElement('dl');
+      metricsGrid.className = 'metrics-grid';
+
+      const fields = [
+        { key: 'accuracy', label: 'Accuracy', format: formatPercent },
+        { key: 'f1', label: 'F1', format: formatPercent },
+        { key: 'sharpe', label: 'Sharpe', format: formatNumber },
+        { key: 'winrate', label: 'Win rate', format: formatPercent },
+        { key: 'last_model_sha', label: 'Last model SHA', format: formatSha }
+      ];
+
+      const nodes = new Map();
+      fields.forEach((field) => {
+        const dt = document.createElement('dt');
+        dt.textContent = field.label;
+        const dd = document.createElement('dd');
+        dd.textContent = '—';
+        dd.dataset.key = field.key;
+        metricsGrid.appendChild(dt);
+        metricsGrid.appendChild(dd);
+        nodes.set(field.key, { node: dd, format: field.format });
+      });
+
+      metricsCard.appendChild(metricsGrid);
+      root.appendChild(metricsCard);
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        const strategy = select.value || 'daily';
+        try {
+          await jfetch('/api/signals/train', {
+            method: 'POST',
+            body: JSON.stringify({ strategy })
+          });
+          showToast(`Auto-train (${strategy}) queued.`, 'success');
+          connectJobStream();
+          refreshJobStatus({ silent: true });
+          window.setTimeout(() => refreshMetrics({ silent: true }), 1500);
+        } catch (err) {
+          showToast(getErrorMessage(err, 'Unable to schedule training'), 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+
+      function updateMetrics(data) {
+        const normalized = data && typeof data === 'object' ? data : {};
+        metricsHeading.textContent = 'Last training metrics';
+        metricsCard.removeAttribute('title');
+        nodes.forEach((entry, key) => {
+          const value = pickField(normalized, key);
+          if (value !== undefined && value !== null) {
+            entry.node.textContent = entry.format(value);
+            entry.node.title = key === 'last_model_sha' ? String(value) : entry.node.textContent;
+          } else {
+            entry.node.textContent = '—';
+            entry.node.title = '';
+          }
+        });
+      }
+
+      function showMetricsLoading() {
+        nodes.forEach((entry) => {
+          entry.node.textContent = '…';
+          entry.node.title = '';
+        });
+        metricsHeading.textContent = 'Last training metrics (loading…)';
+        metricsCard.removeAttribute('title');
+      }
+
+      function showMetricsError(message) {
+        metricsHeading.textContent = 'Last training metrics';
+        if (message) {
+          metricsCard.title = message;
+        } else {
+          metricsCard.removeAttribute('title');
+        }
+        nodes.forEach((entry) => {
+          entry.node.textContent = '—';
+          entry.node.title = '';
+        });
+      }
+
+      return {
+        panel: root,
+        actions: {
+          onShow: () => {
+            refreshMetrics({ silent: true });
+          }
+        },
+        updateMetrics,
+        showMetricsLoading,
+        showMetricsError
+      };
+    }
+
+    function pickField(obj, key) {
+      if (!obj) {
+        return undefined;
+      }
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        return obj[key];
+      }
+      const camelKey = key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+      if (Object.prototype.hasOwnProperty.call(obj, camelKey)) {
+        return obj[camelKey];
+      }
+      return undefined;
+    }
+
+    function formatNumber(value) {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value.toLocaleString();
+      }
+      const numeric = Number(value);
+      if (!Number.isNaN(numeric)) {
+        return numeric.toLocaleString();
+      }
+      return '—';
+    }
+
+    function formatPercent(value) {
+      if (value === null || value === undefined) {
+        return '—';
+      }
+      const numeric = Number(value);
+      if (Number.isNaN(numeric)) {
+        return String(value);
+      }
+      if (numeric <= 1 && numeric >= -1) {
+        return `${(numeric * 100).toFixed(1)}%`;
+      }
+      return `${numeric.toFixed(1)}%`;
+    }
+
+    function formatSha(value) {
+      if (!value) {
+        return '—';
+      }
+      const text = String(value);
+      return text.length > 10 ? `${text.slice(0, 10)}…` : text;
+    }
+
+    function formatDate(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return String(value);
+      }
+      return date.toLocaleString();
+    }
+
+    function formatDuration(milliseconds) {
+      const ms = Number(milliseconds);
+      if (!Number.isFinite(ms) || ms <= 0) {
+        return '—';
+      }
+      const seconds = Math.floor(ms / 1000);
+      if (seconds < 60) {
+        return `${seconds}s`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) {
+        const remaining = seconds % 60;
+        return remaining ? `${minutes}m ${remaining}s` : `${minutes}m`;
+      }
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+
+    function formatRelative(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return String(value);
+      }
+      const diffMs = Date.now() - date.getTime();
+      const diffMinutes = Math.round(diffMs / 60000);
+      if (diffMinutes < 1) {
+        return 'just now';
+      }
+      if (diffMinutes < 60) {
+        return `${diffMinutes}m ago`;
+      }
+      const diffHours = Math.round(diffMinutes / 60);
+      if (diffHours < 24) {
+        return `${diffHours}h ago`;
+      }
+      const diffDays = Math.round(diffHours / 24);
+      return `${diffDays}d ago`;
+    }
+  </script>
+</body>
+</html>
