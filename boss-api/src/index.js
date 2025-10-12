@@ -66,16 +66,43 @@ async function listFiles(folderPath) {
 }
 
 async function readFileSafe(folderPath, fileName) {
-  const requestedPath = path.join(folderPath, fileName);
+  let basePath;
+  try {
+    basePath = await fs.realpath(folderPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new HttpError(404, 'Folder not found');
+    }
+
+    throw new HttpError(500, 'Failed to read file');
+  }
+
+  const requestedPath = path.join(basePath, fileName);
   const normalizedPath = path.normalize(requestedPath);
-  const relativePath = path.relative(folderPath, normalizedPath);
+  const relativePath = path.relative(basePath, normalizedPath);
 
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     throw new HttpError(400, 'Invalid file path');
   }
 
+  let resolvedPath;
   try {
-    const content = await fs.readFile(normalizedPath, 'utf8');
+    resolvedPath = await fs.realpath(normalizedPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new HttpError(404, `File not found: ${fileName}`);
+    }
+
+    throw new HttpError(500, 'Failed to read file');
+  }
+
+  const resolvedRelativePath = path.relative(basePath, resolvedPath);
+  if (resolvedRelativePath.startsWith('..') || path.isAbsolute(resolvedRelativePath)) {
+    throw new HttpError(400, 'Invalid file path');
+  }
+
+  try {
+    const content = await fs.readFile(resolvedPath, 'utf8');
     return content;
   } catch (error) {
     if (error.code === 'ENOENT') {
