@@ -60,6 +60,9 @@ test_endpoint "API Health" "GET" "http://127.0.0.1:4000/healthz" "" "200" || tru
 # API Capabilities
 test_endpoint "API Capabilities" "GET" "http://127.0.0.1:4000/api/capabilities" "" "200" || true
 
+# Agents Gateway Health
+test_endpoint "Agents Gateway Health" "GET" "http://127.0.0.1:4000/api/agents/health" "" "200" || true
+
 # UI Accessibility  
 test_endpoint "UI Index" "GET" "http://127.0.0.1:5173/" "" "200" || true
 test_endpoint "UI Luka" "GET" "http://127.0.0.1:5173/luka.html" "" "200" || true
