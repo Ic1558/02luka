@@ -60,7 +60,10 @@ test_endpoint "API Health" "GET" "http://127.0.0.1:4000/healthz" "" "200" || tru
 # API Capabilities
 test_endpoint "API Capabilities" "GET" "http://127.0.0.1:4000/api/capabilities" "" "200" || true
 
-# UI Accessibility  
+# Config discovery
+test_endpoint "API Config" "GET" "http://127.0.0.1:4000/config.json" "" "200" || true
+
+# UI Accessibility
 test_endpoint "UI Index" "GET" "http://127.0.0.1:5173/" "" "200" || true
 test_endpoint "UI Luka" "GET" "http://127.0.0.1:5173/luka.html" "" "200" || true
 
@@ -87,6 +90,38 @@ test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"patches":[
 
 # Smoke endpoint (health check - should always pass)
 test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "false" || true
+
+echo ""
+
+echo "=== Gateway Health ==="
+
+echo -n "AI Gateway... "
+ai_status=$(curl -s -w "%{http_code}" -o /tmp/smoke_ai_gateway.json -X POST "http://127.0.0.1:4000/api/ai/chat" -H "Content-Type: application/json" -d '{"health":true}' 2>/dev/null || echo "000")
+ai_code="${ai_status: -3}"
+if [ "$ai_code" = "200" ]; then
+  echo "✅ AI gateway smoke OK"
+  PASS=$((PASS + 1))
+elif [ "$ai_code" = "503" ]; then
+  echo "⚠️  AI gateway not configured"
+  WARN=$((WARN + 1))
+else
+  echo "❌ AI gateway check failed ($ai_code)"
+  FAIL=$((FAIL + 1))
+fi
+
+echo -n "Agents Gateway... "
+agents_status=$(curl -s -w "%{http_code}" -o /tmp/smoke_agents_gateway.json "http://127.0.0.1:4000/api/agents/health" 2>/dev/null || echo "000")
+agents_code="${agents_status: -3}"
+if [ "$agents_code" = "200" ]; then
+  echo "✅ Agents gateway health OK"
+  PASS=$((PASS + 1))
+elif [ "$agents_code" = "503" ]; then
+  echo "⚠️  Agents gateway not configured"
+  WARN=$((WARN + 1))
+else
+  echo "❌ Agents gateway check failed ($agents_code)"
+  FAIL=$((FAIL + 1))
+fi
 
 echo ""
 
