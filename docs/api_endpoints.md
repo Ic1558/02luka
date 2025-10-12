@@ -87,6 +87,27 @@ curl http://127.0.0.1:4000/api/capabilities | jq .
 
 ---
 
+### GET /config.json
+
+Serves runtime configuration used by the Luka UI. Provides the base URLs for API, AI, and agents gateways plus configuration flags.
+
+**Response:**
+```json
+{
+  "api": { "baseUrl": "http://127.0.0.1:4000" },
+  "ai": { "baseUrl": "http://127.0.0.1:4000", "gateway": { "configured": true } },
+  "agents": { "baseUrl": "http://127.0.0.1:4000", "gateway": { "configured": false } },
+  "timestamp": "2025-10-11T18:53:16.591Z"
+}
+```
+
+**Example:**
+```bash
+curl http://127.0.0.1:4000/config.json | jq .
+```
+
+---
+
 ## Agent Endpoints
 
 ### POST /api/plan
@@ -257,6 +278,98 @@ All endpoints return JSON error responses with appropriate HTTP status codes:
 ```json
 {
   "error": "prompt is required"
+}
+```
+
+---
+
+## Gateway Proxy Endpoints
+
+### POST /api/ai/complete
+
+Forwards a text completion request to the configured Cloudflare AI Gateway. Supports provider-specific payloads by proxying the request body.
+
+**Request Body (example):**
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "prompt": "Summarize the Luka architecture."
+}
+```
+
+**Response (Success):**
+```json
+{
+  "ok": true,
+  "status": 200,
+  "route": "complete",
+  "provider": "openai",
+  "endpoint": "openai/completions",
+  "configured": true,
+  "data": { "id": "cf-gw-response", "choices": [ ... ] }
+}
+```
+
+### POST /api/ai/chat
+
+Routes a chat-style request to the AI Gateway. Accepts the same payload shape as `/api/ai/complete` but optimized for chat models (e.g. OpenAI chat completions or Anthropic messages).
+
+**Request Body (example):**
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "messages": [
+    { "role": "system", "content": "You are Luka." },
+    { "role": "user", "content": "Plan a deployment." }
+  ]
+}
+```
+
+**Response:** Same envelope as `/api/ai/complete` with the upstream chat payload under `data`.
+
+### POST /api/agents/route
+
+Sends a manual instruction to the Agents Gateway (Lisa, Mary, GG). Payload is proxied, enabling arbitrary agent interactions.
+
+**Request Body (example):**
+```json
+{
+  "agent": "lisa",
+  "action": "status",
+  "payload": { "detail": true }
+}
+```
+
+**Response (Success):**
+```json
+{
+  "ok": true,
+  "status": 200,
+  "configured": true,
+  "route": "route",
+  "data": { "agent": "lisa", "status": "ready" }
+}
+```
+
+### GET /api/agents/health
+
+Checks the health of the Agents Gateway. Returns `configured: false` when no gateway is present.
+
+**Example:**
+```bash
+curl http://127.0.0.1:4000/api/agents/health | jq .
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "status": 200,
+  "configured": true,
+  "data": { "status": "ok" },
+  "timestamp": "2025-10-11T18:53:16.591Z"
 }
 ```
 

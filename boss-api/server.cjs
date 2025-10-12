@@ -25,6 +25,50 @@ const ocrScriptPath = path.join(repoRoot, 'g', 'tools', 'ocr_typhoon.py');
 const DEFAULT_OLLAMA_PORT = Number(process.env.OLLAMA_PORT || 11434);
 const localOllamaBaseUrl = `http://127.0.0.1:${DEFAULT_OLLAMA_PORT}`;
 const agentsRoot = path.join(repoRoot, 'agents', 'lukacode');
+const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
+const trimLeadingSlash = (value = '') => value.replace(/^\/+/, '');
+const joinUrl = (base, suffix) => {
+  if (!base || !suffix) {
+    return null;
+  }
+  const normalizedBase = trimTrailingSlash(base);
+  const normalizedSuffix = trimLeadingSlash(suffix);
+  return `${normalizedBase}/${normalizedSuffix}`;
+};
+
+const AI_GATEWAY_BASE = trimTrailingSlash(
+  process.env.AI_GATEWAY_BASE
+  || process.env.AI_GATEWAY_URL
+  || process.env.CLOUDFLARE_AI_GATEWAY_URL
+  || ''
+);
+const AI_GATEWAY_AUTH = (process.env.AI_GATEWAY_AUTH
+  || process.env.AI_GATEWAY_TOKEN
+  || process.env.CLOUDFLARE_AI_GATEWAY_TOKEN
+  || '').trim();
+const AI_GATEWAY_AUTH_HEADER = (process.env.AI_GATEWAY_AUTH_HEADER || 'Authorization').trim();
+const AI_GATEWAY_AUTH_PREFIX = process.env.AI_GATEWAY_AUTH_PREFIX !== undefined
+  ? process.env.AI_GATEWAY_AUTH_PREFIX
+  : 'Bearer';
+
+const AGENTS_GATEWAY_BASE = trimTrailingSlash(
+  process.env.AGENTS_GATEWAY_BASE
+  || process.env.AGENTS_GATEWAY_URL
+  || ''
+);
+const AGENTS_GATEWAY_AUTH = (process.env.AGENTS_GATEWAY_AUTH
+  || process.env.AGENTS_GATEWAY_KEY
+  || '').trim();
+const AGENTS_GATEWAY_AUTH_HEADER = (process.env.AGENTS_GATEWAY_AUTH_HEADER || 'Authorization').trim();
+const AGENTS_GATEWAY_AUTH_PREFIX = process.env.AGENTS_GATEWAY_AUTH_PREFIX !== undefined
+  ? process.env.AGENTS_GATEWAY_AUTH_PREFIX
+  : 'Bearer';
+const AGENTS_GATEWAY_ROUTE_PATH = (process.env.AGENTS_GATEWAY_ROUTE_PATH || 'route').trim();
+const AGENTS_GATEWAY_HEALTH_PATH = (process.env.AGENTS_GATEWAY_HEALTH_PATH || 'health').trim();
+
+const PUBLIC_API_BASE = process.env.PUBLIC_API_BASE || `http://${HOST}:${PORT}`;
+const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || PUBLIC_API_BASE;
+const PUBLIC_AGENTS_BASE = process.env.PUBLIC_AGENTS_BASE || PUBLIC_API_BASE;
 const agentScriptCandidates = {
   plan: [
     'plan.cjs',
@@ -83,6 +127,94 @@ async function ensureDirectory(dirPath) {
 function ensureDirectorySync(dirPath) {
   fsSync.mkdirSync(dirPath, { recursive: true });
   return dirPath;
+}
+
+function normalizeHeaderMap(base = {}) {
+  const headers = {};
+  for (const [key, value] of Object.entries(base || {})) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    headers[key] = typeof value === 'string' ? value : String(value);
+  }
+  return headers;
+}
+
+function hasHeader(headers, key) {
+  const target = String(key || '').toLowerCase();
+  return Object.keys(headers).some((existing) => existing.toLowerCase() === target);
+}
+
+function setHeader(headers, key, value) {
+  if (!key) {
+    return headers;
+  }
+  const target = key.toLowerCase();
+  for (const existing of Object.keys(headers)) {
+    if (existing.toLowerCase() === target) {
+      headers[existing] = value;
+      return headers;
+    }
+  }
+  headers[key] = value;
+  return headers;
+}
+
+function buildUpstreamBody(payload, reservedKeys = []) {
+  if (payload && Object.prototype.hasOwnProperty.call(payload, 'body')) {
+    return payload.body;
+  }
+  const reserved = new Set(['provider', 'path', 'endpoint', 'headers', 'body'].concat(reservedKeys));
+  const result = {};
+  for (const [key, value] of Object.entries(payload || {})) {
+    if (reserved.has(key)) {
+      continue;
+    }
+    result[key] = value;
+  }
+  return result;
+}
+
+function resolveAiGatewayPath(routeKind, payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  const explicitPath = typeof payload.path === 'string' && payload.path.trim()
+    ? payload.path.trim()
+    : null;
+  if (explicitPath) {
+    return trimLeadingSlash(explicitPath);
+  }
+
+  const provider = typeof payload.provider === 'string' && payload.provider.trim()
+    ? payload.provider.trim().toLowerCase()
+    : 'openai';
+  const customEndpoint = typeof payload.endpoint === 'string' && payload.endpoint.trim()
+    ? payload.endpoint.trim()
+    : null;
+
+  if (customEndpoint) {
+    const normalizedEndpoint = trimLeadingSlash(customEndpoint);
+    if (normalizedEndpoint.startsWith(`${provider}/`)) {
+      return normalizedEndpoint;
+    }
+    return trimLeadingSlash(`${provider}/${normalizedEndpoint}`);
+  }
+
+  if (provider === 'anthropic') {
+    return 'anthropic/v1/messages';
+  }
+  if (provider === 'ollama') {
+    return routeKind === 'chat' ? 'ollama/api/chat' : 'ollama/api/generate';
+  }
+  if (provider === 'gpt' || provider === 'openai') {
+    return routeKind === 'chat' ? 'openai/chat/completions' : 'openai/completions';
+  }
+
+  if (routeKind === 'chat') {
+    return `${provider}/chat`;
+  }
+  return `${provider}/complete`;
 }
 
 const staticMimeTypes = {
@@ -1654,6 +1786,27 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
+    if (req.method === 'GET' && url.pathname === '/config.json') {
+      return writeJson(res, 200, {
+        api: {
+          baseUrl: PUBLIC_API_BASE
+        },
+        ai: {
+          baseUrl: PUBLIC_AI_BASE,
+          gateway: {
+            configured: Boolean(AI_GATEWAY_BASE)
+          }
+        },
+        agents: {
+          baseUrl: PUBLIC_AGENTS_BASE,
+          gateway: {
+            configured: Boolean(AGENTS_GATEWAY_BASE)
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
     if (req.method === 'GET') {
       const staticRoutes = [
         { prefix: '/shared/', root: sharedUiRoot },
@@ -2346,6 +2499,269 @@ const server = http.createServer(async (req, res) => {
         }
       });
       return;
+    }
+
+    if (req.method === 'POST' && (url.pathname === '/api/ai/complete' || url.pathname === '/api/ai/chat')) {
+      if (!AI_GATEWAY_BASE) {
+        return writeJson(res, 503, {
+          error: 'AI gateway not configured',
+          configured: false
+        });
+      }
+
+      let payload;
+      try {
+        payload = await readJsonBody(req, 1_000_000);
+      } catch (err) {
+        const status = err && err.code === 'INVALID_JSON' ? 400 : err && err.code === 'PAYLOAD_TOO_LARGE' ? 413 : 400;
+        return writeJson(res, status, { error: err.message || 'Invalid JSON payload' });
+      }
+
+      const routeKind = url.pathname.endsWith('/chat') ? 'chat' : 'complete';
+      const gatewayPath = resolveAiGatewayPath(routeKind, payload);
+      if (!gatewayPath) {
+        return writeJson(res, 400, { error: 'Unable to resolve AI gateway path' });
+      }
+
+      const upstreamUrl = joinUrl(AI_GATEWAY_BASE, gatewayPath);
+      if (!upstreamUrl) {
+        return writeJson(res, 500, { error: 'Failed to construct AI gateway URL' });
+      }
+
+      const requestHeaders = normalizeHeaderMap(
+        payload && payload.headers && typeof payload.headers === 'object' ? payload.headers : {}
+      );
+      const upstreamBody = buildUpstreamBody(payload);
+      let serializedBody;
+      let bodyIsJson = false;
+
+      if (upstreamBody === undefined || upstreamBody === null) {
+        serializedBody = undefined;
+      } else if (typeof upstreamBody === 'string' || upstreamBody instanceof Buffer) {
+        serializedBody = upstreamBody;
+      } else {
+        serializedBody = JSON.stringify(upstreamBody);
+        bodyIsJson = true;
+      }
+
+      if (serializedBody !== undefined && bodyIsJson && !hasHeader(requestHeaders, 'content-type')) {
+        setHeader(requestHeaders, 'Content-Type', 'application/json');
+      }
+
+      if (AI_GATEWAY_AUTH && AI_GATEWAY_AUTH_HEADER) {
+        if (!hasHeader(requestHeaders, AI_GATEWAY_AUTH_HEADER)) {
+          const prefix = AI_GATEWAY_AUTH_PREFIX === undefined ? 'Bearer' : AI_GATEWAY_AUTH_PREFIX;
+          const value = prefix ? `${prefix} ${AI_GATEWAY_AUTH}`.trim() : AI_GATEWAY_AUTH;
+          setHeader(requestHeaders, AI_GATEWAY_AUTH_HEADER, value);
+        }
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort(new Error('AI gateway request timed out'));
+      }, 45_000);
+
+      try {
+        const upstreamResponse = await fetch(upstreamUrl, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: serializedBody,
+          signal: controller.signal
+        });
+
+        const responseContentType = upstreamResponse.headers.get('content-type') || '';
+        let responsePayload;
+        if (responseContentType.includes('application/json')) {
+          try {
+            responsePayload = await upstreamResponse.json();
+          } catch (err) {
+            responsePayload = { error: 'Failed to parse JSON response', detail: err.message };
+          }
+        } else {
+          responsePayload = await upstreamResponse.text().catch(() => '');
+        }
+
+        return writeJson(res, upstreamResponse.status, {
+          ok: upstreamResponse.ok,
+          status: upstreamResponse.status,
+          route: routeKind,
+          provider: typeof payload?.provider === 'string' ? payload.provider : null,
+          endpoint: gatewayPath,
+          configured: true,
+          data: responsePayload
+        });
+      } catch (err) {
+        const status = err && err.name === 'AbortError' ? 504 : 502;
+        return writeJson(res, status, {
+          error: 'AI gateway request failed',
+          detail: err.message,
+          configured: true
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/agents/route') {
+      if (!AGENTS_GATEWAY_BASE) {
+        return writeJson(res, 503, {
+          error: 'Agents gateway not configured',
+          configured: false
+        });
+      }
+
+      let payload;
+      try {
+        payload = await readJsonBody(req, 512 * 1024);
+      } catch (err) {
+        const status = err && err.code === 'INVALID_JSON' ? 400 : err && err.code === 'PAYLOAD_TOO_LARGE' ? 413 : 400;
+        return writeJson(res, status, { error: err.message || 'Invalid JSON payload' });
+      }
+
+      const routePath = typeof payload?.path === 'string' && payload.path.trim()
+        ? payload.path.trim()
+        : AGENTS_GATEWAY_ROUTE_PATH;
+      const upstreamUrl = joinUrl(AGENTS_GATEWAY_BASE, routePath);
+      if (!upstreamUrl) {
+        return writeJson(res, 500, { error: 'Failed to construct agents gateway URL' });
+      }
+
+      const requestHeaders = normalizeHeaderMap(
+        payload && payload.headers && typeof payload.headers === 'object' ? payload.headers : {}
+      );
+
+      const upstreamBody = buildUpstreamBody(payload);
+      let serializedBody;
+      let bodyIsJson = false;
+      if (upstreamBody === undefined || upstreamBody === null) {
+        serializedBody = undefined;
+      } else if (typeof upstreamBody === 'string' || upstreamBody instanceof Buffer) {
+        serializedBody = upstreamBody;
+      } else {
+        serializedBody = JSON.stringify(upstreamBody);
+        bodyIsJson = true;
+      }
+
+      if (serializedBody !== undefined && bodyIsJson && !hasHeader(requestHeaders, 'content-type')) {
+        setHeader(requestHeaders, 'Content-Type', 'application/json');
+      }
+
+      if (AGENTS_GATEWAY_AUTH && AGENTS_GATEWAY_AUTH_HEADER) {
+        if (!hasHeader(requestHeaders, AGENTS_GATEWAY_AUTH_HEADER)) {
+          const prefix = AGENTS_GATEWAY_AUTH_PREFIX === undefined ? 'Bearer' : AGENTS_GATEWAY_AUTH_PREFIX;
+          const value = prefix ? `${prefix} ${AGENTS_GATEWAY_AUTH}`.trim() : AGENTS_GATEWAY_AUTH;
+          setHeader(requestHeaders, AGENTS_GATEWAY_AUTH_HEADER, value);
+        }
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort(new Error('Agents gateway request timed out'));
+      }, 45_000);
+
+      try {
+        const upstreamResponse = await fetch(upstreamUrl, {
+          method: 'POST',
+          headers: requestHeaders,
+          body: serializedBody,
+          signal: controller.signal
+        });
+
+        const responseContentType = upstreamResponse.headers.get('content-type') || '';
+        let responsePayload;
+        if (responseContentType.includes('application/json')) {
+          try {
+            responsePayload = await upstreamResponse.json();
+          } catch (err) {
+            responsePayload = { error: 'Failed to parse JSON response', detail: err.message };
+          }
+        } else {
+          responsePayload = await upstreamResponse.text().catch(() => '');
+        }
+
+        return writeJson(res, upstreamResponse.status, {
+          ok: upstreamResponse.ok,
+          status: upstreamResponse.status,
+          configured: true,
+          route: routePath,
+          data: responsePayload
+        });
+      } catch (err) {
+        const status = err && err.name === 'AbortError' ? 504 : 502;
+        return writeJson(res, status, {
+          error: 'Agents gateway request failed',
+          detail: err.message,
+          configured: true
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/agents/health') {
+      if (!AGENTS_GATEWAY_BASE) {
+        return writeJson(res, 200, {
+          ok: false,
+          configured: false,
+          status: 'unconfigured',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      const upstreamUrl = joinUrl(AGENTS_GATEWAY_BASE, AGENTS_GATEWAY_HEALTH_PATH);
+      if (!upstreamUrl) {
+        return writeJson(res, 500, { error: 'Failed to construct agents gateway health URL' });
+      }
+
+      const requestHeaders = {};
+      if (AGENTS_GATEWAY_AUTH && AGENTS_GATEWAY_AUTH_HEADER) {
+        const prefix = AGENTS_GATEWAY_AUTH_PREFIX === undefined ? 'Bearer' : AGENTS_GATEWAY_AUTH_PREFIX;
+        const value = prefix ? `${prefix} ${AGENTS_GATEWAY_AUTH}`.trim() : AGENTS_GATEWAY_AUTH;
+        setHeader(requestHeaders, AGENTS_GATEWAY_AUTH_HEADER, value);
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort(new Error('Agents gateway health timed out'));
+      }, 15_000);
+
+      try {
+        const upstreamResponse = await fetch(upstreamUrl, {
+          method: 'GET',
+          headers: requestHeaders,
+          signal: controller.signal
+        });
+        const contentType = upstreamResponse.headers.get('content-type') || '';
+        let responsePayload;
+        if (contentType.includes('application/json')) {
+          try {
+            responsePayload = await upstreamResponse.json();
+          } catch (err) {
+            responsePayload = { error: 'Failed to parse JSON response', detail: err.message };
+          }
+        } else {
+          responsePayload = await upstreamResponse.text().catch(() => '');
+        }
+
+        return writeJson(res, upstreamResponse.status, {
+          ok: upstreamResponse.ok,
+          status: upstreamResponse.status,
+          configured: true,
+          data: responsePayload,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        const status = err && err.name === 'AbortError' ? 504 : 502;
+        return writeJson(res, status, {
+          ok: false,
+          configured: true,
+          error: 'Agents gateway health check failed',
+          detail: err.message,
+          timestamp: new Date().toISOString()
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     if (req.method === 'POST' && url.pathname === '/api/chat') {

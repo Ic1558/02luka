@@ -12,85 +12,220 @@
     import { API } from '/shared/api.js';
     import { mountAppShell, createPanel, hydrateStatus, showResult, showError } from '/shared/components.js';
 
-    const { main, statusBar } = mountAppShell({
-      active: 'chat',
-      title: 'Chat · Luka Workspace',
-      subtitle: 'Talk with Luka across any configured engines'
-    });
+    async function init() {
+      const { main, statusBar } = mountAppShell({
+        active: 'chat',
+        title: 'Chat · Luka Workspace',
+        subtitle: 'Talk with Luka across any configured engines'
+      });
 
-    hydrateStatus(statusBar);
+      hydrateStatus(statusBar);
 
-    const chatPanel = createPanel('Live conversation', 'Send a message to Luka and receive a routed response.');
-
-    const form = document.createElement('form');
-    form.className = 'form-grid';
-
-    const message = document.createElement('textarea');
-    message.name = 'message';
-    message.placeholder = 'Ask Luka for help with a task or decision...';
-    message.required = true;
-    form.appendChild(message);
-
-    const controls = document.createElement('div');
-    controls.className = 'form-actions';
-
-    const engineSelect = document.createElement('select');
-    engineSelect.name = 'engine';
-    engineSelect.innerHTML = `
-      <option value="auto" selected>Auto</option>
-      <option value="local">Local</option>
-      <option value="anthropic">Anthropic (if configured)</option>
-      <option value="openai">OpenAI (if configured)</option>
-    `;
-    controls.appendChild(engineSelect);
-
-    const submit = document.createElement('button');
-    submit.type = 'submit';
-    submit.textContent = 'Send';
-    controls.appendChild(submit);
-
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'secondary';
-    clear.textContent = 'Clear';
-    controls.appendChild(clear);
-
-    form.appendChild(controls);
-    chatPanel.appendChild(form);
-
-    const output = document.createElement('pre');
-    output.className = 'output';
-    output.textContent = 'Output will appear here.';
-    chatPanel.appendChild(output);
-
-    clear.addEventListener('click', () => {
-      message.value = '';
-      output.textContent = 'Output will appear here.';
-      message.focus();
-    });
-
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (!message.value.trim()) {
-        message.focus();
-        return;
-      }
-      submit.disabled = true;
-      output.textContent = 'Working...';
       try {
-        const response = await API.chat({
-          message: message.value.trim(),
-          engine: engineSelect.value
-        });
-        showResult(output, response);
+        await API.ready;
       } catch (err) {
-        showError(output, err);
-      } finally {
-        submit.disabled = false;
+        console.warn('[chat] failed to hydrate config', err);
       }
-    });
 
-    main.appendChild(chatPanel);
+      const runtimeConfig = await API.config().catch(() => null);
+
+      const chatPanel = createPanel('Live conversation', 'Send a message to Luka and receive a routed response.');
+
+      const form = document.createElement('form');
+      form.className = 'form-grid';
+
+      const message = document.createElement('textarea');
+      message.name = 'message';
+      message.placeholder = 'Ask Luka for help with a task or decision...';
+      message.required = true;
+      form.appendChild(message);
+
+      const controls = document.createElement('div');
+      controls.className = 'form-actions';
+
+      const engineSelect = document.createElement('select');
+      engineSelect.name = 'engine';
+      engineSelect.innerHTML = `
+        <option value="auto" selected>Auto</option>
+        <option value="local">Local</option>
+        <option value="anthropic">Anthropic (if configured)</option>
+        <option value="openai">OpenAI (if configured)</option>
+      `;
+      controls.appendChild(engineSelect);
+
+      const submit = document.createElement('button');
+      submit.type = 'submit';
+      submit.textContent = 'Send';
+      controls.appendChild(submit);
+
+      const clear = document.createElement('button');
+      clear.type = 'button';
+      clear.className = 'secondary';
+      clear.textContent = 'Clear';
+      controls.appendChild(clear);
+
+      form.appendChild(controls);
+      chatPanel.appendChild(form);
+
+      const output = document.createElement('pre');
+      output.className = 'output';
+      output.textContent = 'Output will appear here.';
+      chatPanel.appendChild(output);
+
+      clear.addEventListener('click', () => {
+        message.value = '';
+        output.textContent = 'Output will appear here.';
+        message.focus();
+      });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!message.value.trim()) {
+          message.focus();
+          return;
+        }
+        submit.disabled = true;
+        output.textContent = 'Working...';
+        try {
+          const response = await API.chat({
+            message: message.value.trim(),
+            engine: engineSelect.value
+          });
+          showResult(output, response);
+        } catch (err) {
+          showError(output, err);
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      main.appendChild(chatPanel);
+
+      const routerPanel = createPanel('Agent Router', 'Send direct instructions to a specific agent through the Agents Gateway.');
+
+      const routerForm = document.createElement('form');
+      routerForm.className = 'form-grid';
+
+      const agentInput = document.createElement('input');
+      agentInput.type = 'text';
+      agentInput.name = 'agent';
+      agentInput.placeholder = 'Agent (e.g. lisa, mary, gg)';
+      agentInput.required = true;
+      routerForm.appendChild(agentInput);
+
+      const actionInput = document.createElement('input');
+      actionInput.type = 'text';
+      actionInput.name = 'action';
+      actionInput.placeholder = 'Action (e.g. status, route, assist)';
+      actionInput.required = true;
+      routerForm.appendChild(actionInput);
+
+      const payloadInput = document.createElement('textarea');
+      payloadInput.name = 'payload';
+      payloadInput.placeholder = '{ "message": "hello" } (optional JSON payload)';
+      payloadInput.rows = 4;
+      routerForm.appendChild(payloadInput);
+
+      const routerControls = document.createElement('div');
+      routerControls.className = 'form-actions';
+
+      const routeButton = document.createElement('button');
+      routeButton.type = 'submit';
+      routeButton.textContent = 'Route request';
+      routerControls.appendChild(routeButton);
+
+      const routerClear = document.createElement('button');
+      routerClear.type = 'button';
+      routerClear.className = 'secondary';
+      routerClear.textContent = 'Clear';
+      routerControls.appendChild(routerClear);
+
+      const healthButton = document.createElement('button');
+      healthButton.type = 'button';
+      healthButton.className = 'secondary';
+      healthButton.textContent = 'Check health';
+      routerControls.appendChild(healthButton);
+
+      routerForm.appendChild(routerControls);
+      routerPanel.appendChild(routerForm);
+
+      const routerOutput = document.createElement('pre');
+      routerOutput.className = 'output';
+      routerOutput.textContent = 'Gateway responses will appear here.';
+      routerPanel.appendChild(routerOutput);
+
+      routerClear.addEventListener('click', () => {
+        agentInput.value = '';
+        actionInput.value = '';
+        payloadInput.value = '';
+        routerOutput.textContent = 'Gateway responses will appear here.';
+        agentInput.focus();
+      });
+
+      routerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const agent = agentInput.value.trim();
+        const action = actionInput.value.trim();
+        if (!agent || !action) {
+          agentInput.focus();
+          return;
+        }
+
+        let parsedPayload = {};
+        const rawPayload = payloadInput.value.trim();
+        if (rawPayload) {
+          try {
+            parsedPayload = JSON.parse(rawPayload);
+          } catch (err) {
+            showError(routerOutput, new Error(`Payload JSON invalid: ${err.message}`));
+            return;
+          }
+        }
+
+        routeButton.disabled = true;
+        routerOutput.textContent = 'Routing...';
+        try {
+          const response = await API.agentRoute({
+            agent,
+            action,
+            payload: parsedPayload
+          });
+          showResult(routerOutput, response);
+        } catch (err) {
+          showError(routerOutput, err);
+        } finally {
+          routeButton.disabled = false;
+        }
+      });
+
+      const runAgentHealth = async () => {
+        routerOutput.textContent = 'Checking agents gateway...';
+        try {
+          const status = await API.agentHealth({ allowHttpError: true });
+          showResult(routerOutput, status);
+        } catch (err) {
+          showError(routerOutput, err);
+        }
+      };
+
+      healthButton.addEventListener('click', runAgentHealth);
+
+      if (runtimeConfig?.raw?.agents?.gateway?.configured) {
+        runAgentHealth();
+      } else {
+        routerOutput.textContent = 'Agents gateway not configured.';
+      }
+
+      main.appendChild(routerPanel);
+    }
+
+    init().catch((err) => {
+      console.error('[chat] failed to initialise app', err);
+      const fallback = document.createElement('pre');
+      fallback.className = 'output';
+      fallback.textContent = `Failed to load chat interface: ${err?.message || err}`;
+      document.body.appendChild(fallback);
+    });
   </script>
 </body>
 </html>
