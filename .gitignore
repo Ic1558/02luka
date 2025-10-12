@@ -14,6 +14,7 @@ boss-ui/dist/
 g/reports/memory_autosave/
 g/reports/MEMORY_MERGE_LOG_*.md
 boss/sent/system_*.md
+boss-api/data/paula_logs/
 
 # Backup files
 *.bak-*
