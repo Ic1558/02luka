@@ -1,8 +1,8 @@
-// NOTE: explicit API base so UI (5173) can talk to API (4000)
-window.API_BASE = window.API_BASE || "http://127.0.0.1:4000";
+import { ensureConfigReady, getApiBase } from './config.js';
 
 export async function jfetch(path, opts = {}) {
-  const base = window.API_BASE || "http://127.0.0.1:4000";
+  await ensureConfigReady();
+  const base = getApiBase();
   const url = new URL(path, base);
   const init = { headers: { 'Content-Type': 'application/json' }, ...(opts || {}) };
   const res = await fetch(url.toString(), init);

@@ -95,6 +95,30 @@ const staticMimeTypes = {
   '.svg': 'image/svg+xml'
 };
 
+function buildRuntimeConfig() {
+  const apiBase = process.env.API_BASE
+    || `http://${HOST}:${PORT}`;
+  const aiGatewayUrl = process.env.AI_GATEWAY_URL || '';
+  const agentsGatewayUrl = process.env.AGENTS_GATEWAY_URL || '';
+
+  const config = {
+    API_BASE: apiBase,
+    AI_BASE: process.env.AI_BASE || aiGatewayUrl,
+    GATEWAYS: {
+      ai: {
+        baseUrl: aiGatewayUrl,
+        configured: Boolean(aiGatewayUrl && process.env.AI_GATEWAY_KEY)
+      },
+      agents: {
+        baseUrl: agentsGatewayUrl,
+        configured: Boolean(agentsGatewayUrl && process.env.AGENTS_GATEWAY_KEY)
+      }
+    }
+  };
+
+  return config;
+}
+
 async function serveStaticFile(res, filePath) {
   try {
     const buffer = await fs.readFile(filePath);
@@ -1611,6 +1635,16 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && url.pathname === '/healthz') {
       return writeJson(res, 200, { ok: true, status: 'ready', ts: new Date().toISOString() });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/config.json') {
+      const payload = buildRuntimeConfig();
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify(payload));
+      return;
     }
 
     if (req.method === 'GET' && url.pathname === '/api/smoke') {

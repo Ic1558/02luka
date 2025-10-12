@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, memo } from 'react';
 import { marked } from 'marked';
 import ErrorBoundary from './ErrorBoundary';
-
-const API_BASE = 'http://localhost:4000';
+import { ensureConfigReady, getApiBase } from '../shared/config.js';
 
 const folders = [
   { key: 'inbox', label: 'Inbox' },
@@ -37,6 +36,21 @@ export default function App() {
   const [content, setContent] = useState(defaultMarkdown);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiBase, setApiBase] = useState(getApiBase());
+
+  useEffect(() => {
+    let mounted = true;
+    ensureConfigReady().then(() => {
+      if (mounted) {
+        setApiBase(getApiBase());
+      }
+    }).catch((err) => {
+      console.warn('Failed to hydrate runtime config', err);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Cache cleanup function
   const cleanupCache = useCallback(() => {
@@ -100,6 +114,10 @@ export default function App() {
   }, [cleanupCache]);
 
   useEffect(() => {
+    if (!apiBase) {
+      return;
+    }
+
     async function loadFiles() {
       setIsLoading(true);
       setError(null);
@@ -108,7 +126,7 @@ export default function App() {
       
       try {
         const payload = await fetchWithCache(
-          `${API_BASE}/api/list/${selectedFolder}`,
+          `${apiBase}/api/list/${selectedFolder}`,
           `files-${selectedFolder}`
         );
         setFiles(payload.items || payload.files || []);
@@ -121,16 +139,19 @@ export default function App() {
     }
 
     loadFiles();
-  }, [selectedFolder, fetchWithCache]);
+  }, [selectedFolder, fetchWithCache, apiBase]);
 
   const openFile = useCallback(async (file) => {
+    if (!apiBase) {
+      return;
+    }
     setIsLoading(true);
     setError(null);
     
     try {
       const cacheKey = `file-${selectedFolder}-${file.name}`;
       const payload = await fetchWithCache(
-        `${API_BASE}/api/file/${selectedFolder}/${encodeURIComponent(file.name)}`,
+        `${apiBase}/api/file/${selectedFolder}/${encodeURIComponent(file.name)}`,
         cacheKey
       );
       setSelectedFile(payload.name);
@@ -140,7 +161,7 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedFolder, fetchWithCache]);
+  }, [selectedFolder, fetchWithCache, apiBase]);
 
   // Memoized markdown rendering with better performance
   const renderedMarkdown = useMemo(() => {

@@ -8,8 +8,12 @@
 </head>
 <body>
   <noscript>This workspace requires JavaScript.</noscript>
+  <script src="/shared/config-loader.js"></script>
   <script type="module">
+    import { ensureConfigReady } from '/shared/config.js';
     import { mountAppShell, createPanel, hydrateStatus } from '/shared/components.js';
+
+    await ensureConfigReady();
 
     const { main, statusBar } = mountAppShell({
       active: 'landing',

@@ -13,6 +13,7 @@
 ## API Summary
 - `GET /api/capabilities`
 - `GET /api/connectors/status`
+- `GET /config.json`
 - `POST /api/plan`
 - `POST /api/patch`
 - `POST /api/smoke`
@@ -115,3 +116,15 @@ All mailbox paths are resolved via `g/tools/path_resolver.sh human:<folder>` to 
 - `bash ./run/dev_up_simple.sh` boots the API & static UI and performs health probes (including planner/patch/smoke endpoints).
 - `bash ./run/smoke_api_ui.sh` launches a deeper end-to-end smoke.
 - Keep `server.cjs` as the authoritative API entrypoint; `server.js` remains legacy.
+
+## Runtime configuration
+
+The API exposes a lightweight `/config.json` endpoint used by the UI to discover service bases and gateway readiness. Populate the following environment variables before launching the server:
+
+| Variable | Purpose |
+|----------|---------|
+| `API_BASE` | Public URL the UI should use for API calls. Defaults to `http://127.0.0.1:4000`. |
+| `AI_GATEWAY_URL` | Base URL for the AI gateway (surfaced in `AI_BASE` and `GATEWAYS.ai.baseUrl`). |
+| `AI_GATEWAY_KEY` | Presence marks the AI gateway as configured; the key itself is not returned. |
+| `AGENTS_GATEWAY_URL` | Base URL for the agents gateway (`GATEWAYS.agents.baseUrl`). |
+| `AGENTS_GATEWAY_KEY` | Presence marks the agents gateway as configured; the key itself is not returned. |

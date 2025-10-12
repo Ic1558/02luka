@@ -457,10 +457,25 @@
     </div>
   </div>
 
+  <script src="/shared/config-loader.js"></script>
   <script>
-    const API_BASE = (window.location.hostname && window.location.hostname.endsWith('theedges.work'))
-      ? 'https://api.theedges.work'
-      : 'http://127.0.0.1:4000';
+    window.__lukaConfigPromise.then(() => {
+      const runtimeConfig = window.LUKA_CONFIG || {};
+      const API_BASE = runtimeConfig.API_BASE || 'http://127.0.0.1:4000';
+      const gateways = runtimeConfig.GATEWAYS && typeof runtimeConfig.GATEWAYS === 'object'
+        ? runtimeConfig.GATEWAYS
+        : {};
+      const aiGateway = gateways.ai && typeof gateways.ai === 'object' ? gateways.ai : {};
+      const agentsGateway = gateways.agents && typeof gateways.agents === 'object' ? gateways.agents : {};
+      const AI_BASE = runtimeConfig.AI_BASE || aiGateway.baseUrl || '';
+      const AGENTS_BASE = agentsGateway.baseUrl || '';
+
+      window.LUKA_RUNTIME = Object.assign({}, window.LUKA_RUNTIME || {}, {
+        API_BASE,
+        AI_BASE,
+        AGENTS_BASE,
+        gateways
+      });
 
     const engineModeToggle = document.getElementById('engineModeToggle');
     const engineSelectLabel = document.getElementById('engineSelectLabel');
@@ -760,6 +775,9 @@
       loadCapabilities();
       updateEngineModeUI();
     });
+  }).catch((err) => {
+    console.error('[luka] runtime initialization failed', err);
+  });
   </script>
 </body>
 </html>
