@@ -51,8 +51,13 @@
           status.textContent = `${payload.items.length} items in ${payload.mailbox}`;
           payload.items.forEach((item) => {
             const li = document.createElement('li');
-            li.innerHTML = `<strong>${item.name}</strong>
-                        <div class="meta">${item.updatedAt} · ${item.size} bytes</div>`;
+            const title = document.createElement('strong');
+            title.textContent = item.name;
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = `${item.updatedAt} · ${item.size} bytes`;
+            li.appendChild(title);
+            li.appendChild(meta);
             li.style.cursor = 'pointer';
             li.onclick = async () => {
               try {

@@ -83,10 +83,13 @@ const server = http.createServer(async (req, res) => {
       if (!allowed.has(folder)) return json(res, 400, { error: 'Invalid folder' });
 
       const abs = await resolveKey(`human:${folder}`);
-      const full = path.join(abs, name);
+      const full = path.resolve(abs, name);
 
       // ป้องกัน path traversal
-      if (!full.startsWith(abs)) return json(res, 400, { error: 'Invalid path' });
+      const rel = path.relative(abs, full);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) {
+        return json(res, 400, { error: 'Invalid path' });
+      }
 
       try {
         const stat = await fs.stat(full);
