@@ -111,6 +111,23 @@ Then you can command Codex:
 3. Configure monitoring and error tracking
 4. Test file upload functionality over HTTPS
 
+## ⚙️ Config with AI/Agents Gateway
+
+Set these secrets in your repository (Settings → Secrets and variables → Actions) so CI can reach the preview gateways:
+
+| Secret | Purpose |
+| --- | --- |
+| `PREVIEW_AGENTS_GATEWAY_URL` | Base URL for `/api/agents/health` checks. |
+| `PREVIEW_AI_GATEWAY_URL` | Base URL for `/api/ai/complete` requests. |
+| `CLOUDFLARE_AI_GATEWAY_TOKEN` | Cloudflare token used for authenticated AI completions. |
+
+The CI `gateways` job fails fast if any value is missing or the endpoints are unhealthy. Once configured, every run will:
+
+1. Call `${PREVIEW_AGENTS_GATEWAY_URL}/api/agents/health` and require an `ok`/`healthy` response.
+2. Send a minimal completion request to `${PREVIEW_AI_GATEWAY_URL}/api/ai/complete` using the Cloudflare token (never logged).
+
+> Tip: Rotate the Cloudflare token periodically and update the secret to keep automation access secure.
+
 **Repository Ready for Codex!** 🎯
 ---
 
