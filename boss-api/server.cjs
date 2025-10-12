@@ -1,10 +1,177 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs').promises;
-const { exec } = require('child_process');
+const fs = require('fs');
+const fsp = fs.promises;
+const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+
+const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
+
+const MANAGED_PAYLOAD_LIMIT = 1024 * 1024; // 1MB
+const BACKGROUND_TIMEOUT_MS = 60000;
+
+const logsRoot = path.join(repoRoot, 'boss-api', 'logs');
+
+async function ensureDirectory(dirPath) {
+  await fsp.mkdir(dirPath, { recursive: true });
+}
+
+function sanitizeTimestamp(date = new Date()) {
+  return date.toISOString().replace(/[:.]/g, '-');
+}
+
+function enforcePayloadLimit(req) {
+  const headerLength = req.get('content-length');
+  if (headerLength && Number(headerLength) > MANAGED_PAYLOAD_LIMIT) {
+    const error = new Error('Payload exceeds 1MB limit');
+    error.statusCode = 413;
+    throw error;
+  }
+
+  if (req.body) {
+    const jsonBody = JSON.stringify(req.body);
+    if (Buffer.byteLength(jsonBody, 'utf8') > MANAGED_PAYLOAD_LIMIT) {
+      const error = new Error('Payload exceeds 1MB limit');
+      error.statusCode = 413;
+      throw error;
+    }
+  }
+}
+
+async function launchBackgroundProcess({
+  command,
+  args = [],
+  cwd = repoRoot,
+  env = {},
+  logLabel
+}) {
+  await ensureDirectory(logsRoot);
+  const timestamp = sanitizeTimestamp();
+  const logFileName = `${logLabel}-${timestamp}.log`;
+  const logPath = path.join(logsRoot, logFileName);
+  const logStream = fs.createWriteStream(logPath, { flags: 'a' });
+  const commandLine = [command, ...args].join(' ');
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const child = spawn(command, args, {
+      cwd,
+      env: { ...process.env, ...env },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    const timeoutId = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        child.kill();
+        logStream.end();
+        reject(new Error('Process start timeout exceeded'));
+      }
+    }, BACKGROUND_TIMEOUT_MS);
+
+    const finalize = () => {
+      clearTimeout(timeoutId);
+    };
+
+    if (child.stdout) {
+      child.stdout.pipe(logStream, { end: false });
+    }
+
+    if (child.stderr) {
+      child.stderr.pipe(logStream, { end: false });
+    }
+
+    child.once('error', error => {
+      if (!settled) {
+        settled = true;
+        finalize();
+        logStream.end();
+        reject(error);
+      }
+    });
+
+    child.once('spawn', () => {
+      if (!settled) {
+        settled = true;
+        finalize();
+        resolve({
+          pid: child.pid,
+          logPath,
+          startedAt: new Date().toISOString(),
+          command: commandLine
+        });
+      }
+    });
+
+    child.once('close', () => {
+      logStream.end();
+    });
+  });
+}
+
+async function pathExists(targetPath, mode = fs.constants.F_OK) {
+  try {
+    await fsp.access(targetPath, mode);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readCorpusStats() {
+  const corpusDir = path.join(repoRoot, 'boss-api', 'data', 'paula');
+  const statsPath = path.join(corpusDir, 'corpus-stats.json');
+
+  try {
+    const raw = await fsp.readFile(statsPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return {
+      counts: parsed.counts || {},
+      last_updated: parsed.last_updated || null,
+      top_domains: parsed.top_domains || []
+    };
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return {
+        counts: { documents: 0, pages: 0, tokens: 0 },
+        last_updated: null,
+        top_domains: []
+      };
+    }
+
+    throw error;
+  }
+}
+
+function handleRouteError(res, error, defaultStatus = 500) {
+  const statusCode = error.statusCode || defaultStatus;
+  const message = error.message || 'Internal server error';
+
+  if (statusCode >= 500) {
+    console.error(error);
+  }
+
+  writeJson(res, statusCode, { error: message });
+}
+
+async function resolveTrainerScript() {
+  if (process.env.PAULA_TRAINER_SCRIPT) {
+    return process.env.PAULA_TRAINER_SCRIPT;
+  }
+
+  const candidates = ['run/auto_train.sh', 'run/train.sh', 'run/trainer.sh'];
+
+  for (const candidate of candidates) {
+    const candidatePath = path.join(repoRoot, candidate);
+    if (await pathExists(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  return null;
+}
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -17,9 +184,6 @@ const AGENTS_GATEWAY_URL = process.env.AGENTS_GATEWAY_URL || '';
 const AGENTS_GATEWAY_KEY = process.env.AGENTS_GATEWAY_KEY || '';
 const PUBLIC_API_BASE = process.env.PUBLIC_API_BASE || '';
 const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
-
-const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
-const bossRoot = path.join(repoRoot, 'boss');
 
 // Middleware
 app.use(cors());
@@ -119,6 +283,167 @@ app.get('/api/capabilities', async (req, res) => {
     writeJson(res, 200, capabilities);
   } catch (error) {
     writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.post('/api/paula/crawl', async (req, res) => {
+  try {
+    enforcePayloadLimit(req);
+
+    const payload = req.body || {};
+    const seeds = Array.isArray(payload.seeds) ? payload.seeds : [];
+    const normalizedSeeds = seeds
+      .filter(seed => typeof seed === 'string')
+      .map(seed => seed.trim())
+      .filter(seed => seed.length > 0);
+
+    if (normalizedSeeds.length === 0) {
+      const error = new Error('At least one seed URL is required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    let normalizedMaxPages;
+    if (payload.max_pages !== undefined) {
+      const parsed = Number(payload.max_pages);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        const error = new Error('max_pages must be a positive number');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      normalizedMaxPages = Math.floor(parsed);
+    }
+
+    const crawlScript = path.join(repoRoot, 'run', 'crawl.sh');
+    if (!(await pathExists(crawlScript))) {
+      const error = new Error(`crawl script not found: ${crawlScript}`);
+      error.statusCode = 500;
+      throw error;
+    }
+
+    const env = {
+      PAULA_CRAWL_SEEDS: JSON.stringify(normalizedSeeds)
+    };
+
+    if (normalizedMaxPages !== undefined) {
+      env.PAULA_CRAWL_MAX_PAGES = String(normalizedMaxPages);
+    }
+
+    const result = await launchBackgroundProcess({
+      command: 'bash',
+      args: [crawlScript],
+      cwd: repoRoot,
+      env,
+      logLabel: 'paula-crawl'
+    });
+
+    const { pid, logPath, startedAt, command } = result;
+
+    writeJson(res, 202, {
+      status: 'started',
+      seeds: normalizedSeeds,
+      max_pages: normalizedMaxPages ?? null,
+      pid,
+      log_path: logPath,
+      started_at: startedAt,
+      command
+    });
+  } catch (error) {
+    handleRouteError(res, error);
+  }
+});
+
+app.post('/api/paula/ingest', async (req, res) => {
+  try {
+    enforcePayloadLimit(req);
+
+    const ingestScript = path.join(repoRoot, 'crawler', 'ingest.py');
+    if (!(await pathExists(ingestScript))) {
+      const error = new Error(`ingest script not found: ${ingestScript}`);
+      error.statusCode = 500;
+      throw error;
+    }
+
+    const pythonBinary = process.env.PAULA_PYTHON_BIN || 'python3';
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const env = {};
+
+    if (Object.keys(payload).length > 0) {
+      env.PAULA_INGEST_OPTIONS = JSON.stringify(payload);
+    }
+
+    const result = await launchBackgroundProcess({
+      command: pythonBinary,
+      args: [ingestScript],
+      cwd: repoRoot,
+      env,
+      logLabel: 'paula-ingest'
+    });
+
+    const { pid, logPath, startedAt, command } = result;
+
+    writeJson(res, 202, {
+      status: 'started',
+      pid,
+      log_path: logPath,
+      started_at: startedAt,
+      command
+    });
+  } catch (error) {
+    handleRouteError(res, error);
+  }
+});
+
+app.post('/api/paula/auto-train', async (req, res) => {
+  try {
+    enforcePayloadLimit(req);
+
+    const payload = req.body || {};
+    const strategy = typeof payload.strategy === 'string' ? payload.strategy.trim() : '';
+
+    if (!strategy) {
+      const error = new Error('strategy is required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const trainerScript = await resolveTrainerScript();
+    if (!trainerScript) {
+      const error = new Error('Trainer script could not be located');
+      error.statusCode = 500;
+      throw error;
+    }
+
+    const result = await launchBackgroundProcess({
+      command: 'bash',
+      args: [trainerScript],
+      cwd: repoRoot,
+      env: { PAULA_TRAINING_STRATEGY: strategy },
+      logLabel: 'paula-auto-train'
+    });
+
+    const { pid, logPath, startedAt, command } = result;
+
+    writeJson(res, 202, {
+      status: 'started',
+      strategy,
+      pid,
+      log_path: logPath,
+      started_at: startedAt,
+      command
+    });
+  } catch (error) {
+    handleRouteError(res, error);
+  }
+});
+
+app.get('/api/paula/corpus/stats', async (req, res) => {
+  try {
+    const stats = await readCorpusStats();
+    writeJson(res, 200, stats);
+  } catch (error) {
+    handleRouteError(res, error);
   }
 });
 
