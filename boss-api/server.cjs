@@ -24,6 +24,10 @@ const embedScriptPath = path.join(repoRoot, 'g', 'tools', 'embed_text.py');
 const ocrScriptPath = path.join(repoRoot, 'g', 'tools', 'ocr_typhoon.py');
 const DEFAULT_OLLAMA_PORT = Number(process.env.OLLAMA_PORT || 11434);
 const localOllamaBaseUrl = `http://127.0.0.1:${DEFAULT_OLLAMA_PORT}`;
+const AI_GATEWAY_URL = (process.env.AI_GATEWAY_URL || '').trim();
+const AI_GATEWAY_KEY = (process.env.AI_GATEWAY_KEY || process.env.AI_GATEWAY_SECRET || '').trim();
+const DEFAULT_AI_MODEL = (process.env.AI_GATEWAY_MODEL || process.env.OPENAI_MODEL || 'gpt-4o-mini').trim();
+const AI_GATEWAY_TIMEOUT_MS = Number(process.env.AI_GATEWAY_TIMEOUT_MS || 45_000);
 const agentsRoot = path.join(repoRoot, 'agents', 'lukacode');
 const agentScriptCandidates = {
   plan: [
@@ -151,6 +155,163 @@ function isPathInside(baseDir, target) {
     return true;
   }
   return !relative.startsWith('..') && !path.isAbsolute(relative);
+}
+
+function hasAiGateway() {
+  return Boolean(AI_GATEWAY_URL && AI_GATEWAY_KEY);
+}
+
+function buildAiGatewayUrl(endpointPath = '') {
+  const normalized = String(endpointPath || '').replace(/^\/+/, '');
+  if (!normalized) {
+    const err = new Error('AI gateway endpoint path is required');
+    err.code = 'INVALID_GATEWAY_PATH';
+    throw err;
+  }
+  const base = AI_GATEWAY_URL.endsWith('/') ? AI_GATEWAY_URL : `${AI_GATEWAY_URL}/`;
+  return new URL(normalized, base).toString();
+}
+
+async function callAiGateway(endpointPath, payload = {}, options = {}) {
+  if (!hasAiGateway()) {
+    const err = new Error('AI gateway not configured');
+    err.code = 'NO_GATEWAY';
+    throw err;
+  }
+
+  const url = buildAiGatewayUrl(endpointPath);
+  const controller = new AbortController();
+  const timeoutMs = Number.isFinite(options.timeout) && options.timeout > 0
+    ? Number(options.timeout)
+    : AI_GATEWAY_TIMEOUT_MS;
+  const abortTimer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  const headers = Object.assign(
+    {
+      'Content-Type': 'application/json',
+      'CF-AI-GATEWAY-SECRET': AI_GATEWAY_KEY
+    },
+    options.headers || {}
+  );
+
+  const normalizedPath = String(endpointPath || '').replace(/^\/+/, '');
+  if (!headers.Authorization && normalizedPath.startsWith('openai/') && process.env.OPENAI_API_KEY) {
+    headers.Authorization = `Bearer ${process.env.OPENAI_API_KEY}`;
+  }
+  if (!headers['x-api-key'] && normalizedPath.startsWith('anthropic/') && process.env.ANTHROPIC_API_KEY) {
+    headers['x-api-key'] = process.env.ANTHROPIC_API_KEY;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload || {}),
+      signal: controller.signal
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      const err = new Error(`AI gateway request failed: ${res.status} ${res.statusText}`.trim());
+      err.code = 'GATEWAY_HTTP_ERROR';
+      err.status = res.status;
+      err.body = text;
+      throw err;
+    }
+
+    if (!text) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      const parseErr = new Error('AI gateway response was not valid JSON');
+      parseErr.code = 'GATEWAY_INVALID_JSON';
+      parseErr.body = text;
+      parseErr.cause = err;
+      throw parseErr;
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeoutErr = new Error('AI gateway request timed out');
+      timeoutErr.code = 'GATEWAY_TIMEOUT';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    if (abortTimer) {
+      clearTimeout(abortTimer);
+    }
+  }
+}
+
+function extractChatTextFromGateway(data) {
+  if (!data) {
+    return '';
+  }
+  const choices = Array.isArray(data.choices) ? data.choices : [];
+  const primary = choices[0];
+  const message = primary && primary.message ? primary.message : null;
+  if (message && typeof message.content === 'string') {
+    return message.content.trim();
+  }
+  if (Array.isArray(message?.content)) {
+    return message.content.map((part) => part?.text || '').join('').trim();
+  }
+  if (typeof data.response === 'string') {
+    return data.response.trim();
+  }
+  return '';
+}
+
+function applyGatewayOptions(target, payload = {}) {
+  if (!target || typeof target !== 'object') {
+    return target;
+  }
+
+  const floatKeys = ['temperature', 'top_p', 'presence_penalty', 'frequency_penalty'];
+  for (const key of floatKeys) {
+    if (payload[key] !== undefined && payload[key] !== null && payload[key] !== '') {
+      const value = Number(payload[key]);
+      if (!Number.isNaN(value)) {
+        target[key] = value;
+      }
+    }
+  }
+
+  const maxTokenCandidates = ['maxTokens', 'max_tokens'];
+  for (const candidate of maxTokenCandidates) {
+    if (payload[candidate] !== undefined && payload[candidate] !== null && payload[candidate] !== '') {
+      const value = Number(payload[candidate]);
+      if (Number.isInteger(value) && value > 0) {
+        target.max_tokens = value;
+        break;
+      }
+    }
+  }
+
+  if (Array.isArray(payload.stop)) {
+    target.stop = payload.stop.map((entry) => String(entry));
+  }
+
+  if (Array.isArray(payload.tools)) {
+    target.tools = payload.tools;
+  }
+
+  const objectKeys = ['response_format', 'metadata', 'logit_bias', 'modalities'];
+  for (const key of objectKeys) {
+    const value = payload[key];
+    if (value && typeof value === 'object') {
+      target[key] = value;
+    }
+  }
+
+  if (payload.responseFormat && typeof payload.responseFormat === 'object') {
+    target.response_format = payload.responseFormat;
+  }
+
+  return target;
 }
 
 async function readJsonBody(req, limit = MAX_AGENT_PAYLOAD_BYTES) {
@@ -1699,7 +1860,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/api/capabilities') {
       try {
         const engines = await loadEngineStatus({ useCache: false });
-        const hasServerModels = hasAnthropicKey() || hasOpenAiKey();
+        const hasServerModels = hasAnthropicKey() || hasOpenAiKey() || hasAiGateway();
         const aliasList = Object.entries(MAILBOX_ALIASES).map(([alias, target]) => ({ alias, target }));
         const mailboxList = CANONICAL_MAILBOXES.map((id) => ({
           id,
@@ -1734,6 +1895,7 @@ const server = http.createServer(async (req, res) => {
           connectors: {
             anthropic: { ready: hasAnthropicKey() },
             openai: { ready: hasOpenAiKey() },
+            gateway: { ready: hasAiGateway(), url: AI_GATEWAY_URL || null },
             local: engines
           },
           engine: {
@@ -1752,6 +1914,7 @@ const server = http.createServer(async (req, res) => {
       return writeJson(res, 200, {
         anthropic: { ready: hasAnthropicKey() },
         openai: { ready: hasOpenAiKey() },
+        gateway: { ready: hasAiGateway(), url: AI_GATEWAY_URL || null },
         local: {
           ready: engines.chat.ready || engines.rag.ready || engines.sql.ready || engines.ocr.ready,
           chat: engines.chat,
@@ -1760,6 +1923,41 @@ const server = http.createServer(async (req, res) => {
           ocr: engines.ocr
         }
       });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/agent/route') {
+      let payload;
+      try {
+        payload = await readJsonBody(req, 64 * 1024);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const rawTask = typeof payload.task === 'string' ? payload.task.trim() : '';
+      const normalizedTask = rawTask && /^[a-z0-9_-]{3,48}$/i.test(rawTask) ? rawTask.toLowerCase() : 'generate';
+      const hintsSource = typeof payload.hints === 'string'
+        ? payload.hints
+        : (typeof payload.prompt === 'string'
+          ? payload.prompt
+          : (typeof payload.message === 'string' ? payload.message : ''));
+      const hints = String(hintsSource || '').slice(0, 800);
+
+      try {
+        const decision = await runModelRouter(normalizedTask, hints);
+        if (!decision) {
+          return writeJson(res, 503, { error: 'Model router unavailable', task: normalizedTask, hints });
+        }
+        return writeJson(res, 200, { ok: true, task: normalizedTask, hints, router: decision });
+      } catch (err) {
+        console.error('[boss-api] agent route failed', err);
+        return writeJson(res, 500, { error: 'Model router lookup failed', detail: err.message });
+      }
     }
 
     if (req.method === 'POST' && url.pathname === '/api/plan') {
@@ -2346,6 +2544,204 @@ const server = http.createServer(async (req, res) => {
         }
       });
       return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/complete') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      if (!hasAiGateway()) {
+        return writeJson(res, 501, { error: 'AI gateway not configured' });
+      }
+
+      const prompt = typeof payload.prompt === 'string'
+        ? payload.prompt
+        : (typeof payload.message === 'string'
+          ? payload.message
+          : (typeof payload.input === 'string' ? payload.input : ''));
+      const trimmedPrompt = prompt ? prompt.trim() : '';
+      if (!trimmedPrompt) {
+        return writeJson(res, 400, { error: 'prompt is required' });
+      }
+
+      const system = typeof payload.system === 'string' ? payload.system.trim() : '';
+      const model = typeof payload.model === 'string' && payload.model.trim()
+        ? payload.model.trim()
+        : DEFAULT_AI_MODEL;
+
+      const requestPayload = {
+        model,
+        messages: []
+      };
+
+      if (system) {
+        requestPayload.messages.push({ role: 'system', content: system });
+      }
+      requestPayload.messages.push({ role: 'user', content: trimmedPrompt });
+      applyGatewayOptions(requestPayload, payload);
+
+      try {
+        const response = await callAiGateway('openai/chat/completions', requestPayload);
+        const text = extractChatTextFromGateway(response);
+        const choices = Array.isArray(response.choices)
+          ? response.choices.map((choice) => ({
+            index: choice.index,
+            finish_reason: choice.finish_reason || null
+          }))
+          : [];
+        const modelUsed = response.model || model;
+        const meta = {
+          id: response.id || null,
+          created: response.created || null,
+          model: modelUsed,
+          usage: response.usage || null,
+          finish_reason: choices[0]?.finish_reason || null
+        };
+
+        return writeJson(res, 200, {
+          ok: Boolean(text),
+          prompt: trimmedPrompt,
+          response: text,
+          model: modelUsed,
+          meta,
+          choices
+        });
+      } catch (err) {
+        if (err.code === 'NO_GATEWAY') {
+          return writeJson(res, 501, { error: 'AI gateway not configured' });
+        }
+        if (err.code === 'GATEWAY_TIMEOUT') {
+          return writeJson(res, 504, { error: 'AI gateway request timed out' });
+        }
+        const status = Number.isInteger(err.status) ? err.status : 502;
+        const safeStatus = status >= 400 && status < 600 ? status : 502;
+        const detail = err.body || err.detail || undefined;
+        console.error('[boss-api] ai complete failed', err);
+        return writeJson(res, safeStatus, {
+          error: err.message || 'AI gateway request failed',
+          detail
+        });
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/chat') {
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      if (!hasAiGateway()) {
+        return writeJson(res, 501, { error: 'AI gateway not configured' });
+      }
+
+      const system = typeof payload.system === 'string' ? payload.system.trim() : '';
+      const model = typeof payload.model === 'string' && payload.model.trim()
+        ? payload.model.trim()
+        : DEFAULT_AI_MODEL;
+
+      const incomingMessages = Array.isArray(payload.messages) ? payload.messages : [];
+      const normalizedMessages = [];
+      for (const entry of incomingMessages) {
+        if (!entry || typeof entry !== 'object') {
+          continue;
+        }
+        const role = typeof entry.role === 'string' ? entry.role.trim() : '';
+        if (!role) {
+          continue;
+        }
+        if ('content' in entry) {
+          if (typeof entry.content === 'string') {
+            normalizedMessages.push({ role, content: entry.content });
+          } else if (Array.isArray(entry.content) || (entry.content && typeof entry.content === 'object')) {
+            normalizedMessages.push({ role, content: entry.content });
+          }
+        }
+      }
+
+      const fallbackMessage = typeof payload.message === 'string'
+        ? payload.message
+        : (typeof payload.prompt === 'string'
+          ? payload.prompt
+          : (typeof payload.input === 'string' ? payload.input : ''));
+      if (!normalizedMessages.length && fallbackMessage && fallbackMessage.trim()) {
+        normalizedMessages.push({ role: 'user', content: fallbackMessage.trim() });
+      }
+
+      const hasUserMessage = normalizedMessages.some((msg) => (msg.role || '').toLowerCase() === 'user');
+      if (!hasUserMessage) {
+        return writeJson(res, 400, { error: 'messages must include at least one user entry' });
+      }
+
+      const hasSystemMessage = normalizedMessages.some((msg) => (msg.role || '').toLowerCase() === 'system');
+      if (system && !hasSystemMessage) {
+        normalizedMessages.unshift({ role: 'system', content: system });
+      }
+
+      const requestPayload = {
+        model,
+        messages: normalizedMessages
+      };
+      applyGatewayOptions(requestPayload, payload);
+
+      try {
+        const response = await callAiGateway('openai/chat/completions', requestPayload);
+        const text = extractChatTextFromGateway(response);
+        const choices = Array.isArray(response.choices)
+          ? response.choices.map((choice) => ({
+            index: choice.index,
+            finish_reason: choice.finish_reason || null
+          }))
+          : [];
+        const modelUsed = response.model || model;
+        const meta = {
+          id: response.id || null,
+          created: response.created || null,
+          model: modelUsed,
+          usage: response.usage || null,
+          finish_reason: choices[0]?.finish_reason || null
+        };
+
+        return writeJson(res, 200, {
+          ok: Boolean(text),
+          response: text,
+          model: modelUsed,
+          meta,
+          choices
+        });
+      } catch (err) {
+        if (err.code === 'NO_GATEWAY') {
+          return writeJson(res, 501, { error: 'AI gateway not configured' });
+        }
+        if (err.code === 'GATEWAY_TIMEOUT') {
+          return writeJson(res, 504, { error: 'AI gateway request timed out' });
+        }
+        const status = Number.isInteger(err.status) ? err.status : 502;
+        const safeStatus = status >= 400 && status < 600 ? status : 502;
+        const detail = err.body || err.detail || undefined;
+        console.error('[boss-api] ai chat failed', err);
+        return writeJson(res, safeStatus, {
+          error: err.message || 'AI gateway request failed',
+          detail
+        });
+      }
     }
 
     if (req.method === 'POST' && url.pathname === '/api/chat') {

@@ -18,6 +18,9 @@ export async function jfetch(path, opts = {}) {
 
 // API helper object with convenience methods
 export const API = {
+  aiComplete: (payload) => jfetch('/api/ai/complete', { method: 'POST', body: JSON.stringify(payload) }),
+  aiChat: (payload) => jfetch('/api/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
+  agentRoute: (payload) => jfetch('/api/agent/route', { method: 'POST', body: JSON.stringify(payload) }),
   plan: (payload) => jfetch('/api/plan', { method: 'POST', body: JSON.stringify(payload) }),
   patch: (payload) => jfetch('/api/patch', { method: 'POST', body: JSON.stringify(payload) }),
   smoke: (payload) => jfetch('/api/smoke', { method: 'POST', body: JSON.stringify(payload) }),

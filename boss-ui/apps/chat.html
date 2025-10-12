@@ -12,6 +12,10 @@
     import { API } from '/shared/api.js';
     import { mountAppShell, createPanel, hydrateStatus, showResult, showError } from '/shared/components.js';
 
+    const GATEWAY_DEFAULT_MODEL = 'gpt-4o-mini';
+    const ROUTER_HINT_LIMIT = 500;
+    const defaultOutputText = 'Output will appear here.';
+
     const { main, statusBar } = mountAppShell({
       active: 'chat',
       title: 'Chat · Luka Workspace',
@@ -31,18 +35,36 @@
     message.required = true;
     form.appendChild(message);
 
+    const system = document.createElement('textarea');
+    system.name = 'system';
+    system.placeholder = 'Optional system prompt or persona (used for direct gateway mode).';
+    system.rows = 2;
+    form.appendChild(system);
+
     const controls = document.createElement('div');
     controls.className = 'form-actions';
 
+    const modeSelect = document.createElement('select');
+    modeSelect.name = 'mode';
+    modeSelect.innerHTML = `
+      <option value="delegated" selected>Delegated agents</option>
+      <option value="gateway">Cloudflare AI Gateway</option>
+    `;
+    modeSelect.title = 'Choose how Luka should answer this request.';
+    controls.appendChild(modeSelect);
+
     const engineSelect = document.createElement('select');
     engineSelect.name = 'engine';
-    engineSelect.innerHTML = `
-      <option value="auto" selected>Auto</option>
-      <option value="local">Local</option>
-      <option value="anthropic">Anthropic (if configured)</option>
-      <option value="openai">OpenAI (if configured)</option>
-    `;
+    engineSelect.title = 'Select a routing target or preferred model.';
     controls.appendChild(engineSelect);
+
+    const modelInput = document.createElement('input');
+    modelInput.type = 'text';
+    modelInput.name = 'model';
+    modelInput.placeholder = 'Custom model (gateway mode only)';
+    modelInput.autocomplete = 'off';
+    modelInput.disabled = true;
+    controls.appendChild(modelInput);
 
     const submit = document.createElement('button');
     submit.type = 'submit';
@@ -60,29 +82,185 @@
 
     const output = document.createElement('pre');
     output.className = 'output';
-    output.textContent = 'Output will appear here.';
+    output.textContent = defaultOutputText;
     chatPanel.appendChild(output);
+
+    const delegatedEngineOptions = [
+      { value: 'auto', label: 'Auto (router)' },
+      { value: 'local', label: 'Local' },
+      { value: 'anthropic', label: 'Anthropic (if configured)' },
+      { value: 'openai', label: 'OpenAI (if configured)' }
+    ];
+
+    const gatewayEngineOptions = [
+      { value: 'auto', label: 'Auto (model router)' },
+      { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
+      { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
+      { value: 'o3-mini', label: 'o3-mini' }
+    ];
+
+    const populateEngineOptions = (options, selected) => {
+      engineSelect.innerHTML = '';
+      options.forEach(({ value, label }) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        engineSelect.appendChild(option);
+      });
+      if (selected && options.some((entry) => entry.value === selected)) {
+        engineSelect.value = selected;
+      } else if (engineSelect.options.length) {
+        engineSelect.selectedIndex = 0;
+      }
+    };
+
+    let delegatedSelection = 'auto';
+    let gatewaySelection = 'auto';
+    let lastMode = null;
+
+    const updateModeUI = () => {
+      const currentMode = modeSelect.value === 'gateway' ? 'gateway' : 'delegated';
+      if (currentMode !== lastMode) {
+        if (currentMode === 'gateway') {
+          delegatedSelection = engineSelect.value || delegatedSelection;
+          populateEngineOptions(gatewayEngineOptions, gatewaySelection);
+          engineSelect.value = gatewaySelection;
+        } else {
+          gatewaySelection = engineSelect.value || gatewaySelection;
+          populateEngineOptions(delegatedEngineOptions, delegatedSelection);
+          engineSelect.value = delegatedSelection;
+        }
+        lastMode = currentMode;
+      }
+
+      const gatewayMode = currentMode === 'gateway';
+      modelInput.disabled = !gatewayMode;
+      modelInput.placeholder = gatewayMode
+        ? 'Custom model (optional)'
+        : 'Custom model (gateway mode only)';
+      if (!gatewayMode && !modelInput.dataset.touched) {
+        modelInput.value = '';
+      }
+    };
+
+    populateEngineOptions(delegatedEngineOptions, delegatedSelection);
+    updateModeUI();
+
+    modeSelect.addEventListener('change', () => {
+      updateModeUI();
+      message.focus();
+    });
+
+    engineSelect.addEventListener('change', () => {
+      if (modeSelect.value === 'gateway') {
+        gatewaySelection = engineSelect.value;
+      } else {
+        delegatedSelection = engineSelect.value;
+      }
+    });
+
+    modelInput.addEventListener('input', () => {
+      if (modelInput.value.trim()) {
+        modelInput.dataset.touched = 'true';
+      } else {
+        delete modelInput.dataset.touched;
+      }
+    });
 
     clear.addEventListener('click', () => {
       message.value = '';
-      output.textContent = 'Output will appear here.';
+      system.value = '';
+      modeSelect.value = 'delegated';
+      delegatedSelection = 'auto';
+      gatewaySelection = 'auto';
+      delete modelInput.dataset.touched;
+      modelInput.value = '';
+      lastMode = null;
+      updateModeUI();
+      output.textContent = defaultOutputText;
       message.focus();
     });
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      if (!message.value.trim()) {
+      const userMessage = message.value.trim();
+      if (!userMessage) {
         message.focus();
         return;
       }
+
       submit.disabled = true;
       output.textContent = 'Working...';
+
+      const mode = modeSelect.value === 'gateway' ? 'gateway' : 'delegated';
+      const engine = engineSelect.value;
+      const systemPrompt = system.value.trim();
+
       try {
-        const response = await API.chat({
-          message: message.value.trim(),
-          engine: engineSelect.value
-        });
-        showResult(output, response);
+        if (mode === 'gateway') {
+          const customModel = modelInput.value.trim();
+          const hasCustomModel = Boolean(customModel);
+          let routerInfo = null;
+          let model = hasCustomModel ? customModel : '';
+
+          if (!hasCustomModel && engine && engine !== 'auto') {
+            model = engine;
+          }
+
+          if (engine === 'auto') {
+            try {
+              const route = await API.agentRoute({ task: 'generate', hints: userMessage.slice(0, ROUTER_HINT_LIMIT) });
+              if (route && route.router) {
+                routerInfo = route.router;
+                if (!hasCustomModel && (!model || model === GATEWAY_DEFAULT_MODEL)) {
+                  if (route.router.model) {
+                    model = route.router.model;
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('[chat] agent route lookup failed', err);
+            }
+          }
+
+          if (!model) {
+            model = hasCustomModel ? customModel : (engine && engine !== 'auto' ? engine : GATEWAY_DEFAULT_MODEL);
+          }
+
+          const messagesPayload = [];
+          if (systemPrompt) {
+            messagesPayload.push({ role: 'system', content: systemPrompt });
+          }
+          messagesPayload.push({ role: 'user', content: userMessage });
+
+          const requestPayload = {
+            model,
+            messages: messagesPayload
+          };
+
+          const response = await API.aiChat(requestPayload);
+          if (routerInfo && !response.router) {
+            response.router = routerInfo;
+          }
+          response.mode = 'gateway';
+          response.request = {
+            model,
+            engine,
+            system: systemPrompt || undefined
+          };
+          showResult(output, response);
+        } else {
+          const payload = {
+            message: userMessage,
+            engine
+          };
+          if (systemPrompt) {
+            payload.system = systemPrompt;
+          }
+          const response = await API.chat(payload);
+          response.mode = 'delegated';
+          showResult(output, response);
+        }
       } catch (err) {
         showError(output, err);
       } finally {
@@ -91,6 +269,7 @@
     });
 
     main.appendChild(chatPanel);
+    message.focus();
   </script>
 </body>
 </html>
