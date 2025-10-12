@@ -5,11 +5,15 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const require = createRequire(import.meta.url);
+const { createPaulaRouter } = require('./paula/index.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,6 +25,12 @@ const execFileAsync = promisify(execFile);
 // Add middleware for better performance
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/paula', createPaulaRouter({
+  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
+  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
+  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
+}));
 
 // Add CORS headers for better performance
 app.use((req, res, next) => {

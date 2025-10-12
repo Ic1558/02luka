@@ -6,6 +6,8 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
+const { createPaulaRouter } = require('./src/paula/index.cjs');
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -25,6 +27,13 @@ const bossRoot = path.join(repoRoot, 'boss');
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Paula crawler endpoints (optimized HTTP client + caching)
+app.use('/api/paula', createPaulaRouter({
+  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
+  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
+  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
+}));
 
 // Rate limiting
 const rateLimitMap = new Map();
