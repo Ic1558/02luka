@@ -91,6 +91,143 @@
     });
 
     main.appendChild(chatPanel);
+
+    const routerPanel = createPanel('Agent Router', 'Manually route work to Lisa, Mary, or GG via the Agents Gateway.');
+    const routerDetails = document.createElement('details');
+    routerDetails.className = 'collapsible';
+    const routerSummary = document.createElement('summary');
+    routerSummary.textContent = 'Open agent router';
+    routerDetails.appendChild(routerSummary);
+
+    const routerStatus = document.createElement('p');
+    routerStatus.className = 'panel-subtitle';
+    routerStatus.textContent = 'Gateway status: not checked.';
+    routerDetails.appendChild(routerStatus);
+
+    const routerForm = document.createElement('form');
+    routerForm.className = 'form-grid';
+
+    const agentLabel = document.createElement('label');
+    agentLabel.textContent = 'Agent';
+    const agentSelect = document.createElement('select');
+    agentSelect.name = 'agent';
+    agentSelect.innerHTML = `
+      <option value="lisa">Lisa</option>
+      <option value="mary">Mary</option>
+      <option value="gg">GG</option>
+    `;
+    agentLabel.appendChild(agentSelect);
+    routerForm.appendChild(agentLabel);
+
+    const actionLabel = document.createElement('label');
+    actionLabel.textContent = 'Action';
+    const actionInput = document.createElement('input');
+    actionInput.name = 'action';
+    actionInput.type = 'text';
+    actionInput.placeholder = 'Describe the task (e.g. triage_ticket)';
+    actionInput.required = true;
+    actionLabel.appendChild(actionInput);
+    routerForm.appendChild(actionLabel);
+
+    const payloadLabel = document.createElement('label');
+    payloadLabel.textContent = 'JSON payload';
+    const payloadInput = document.createElement('textarea');
+    payloadInput.name = 'payload';
+    payloadInput.rows = 6;
+    payloadInput.placeholder = '{\n  "task": "details"\n}';
+    payloadInput.spellcheck = false;
+    payloadLabel.appendChild(payloadInput);
+    routerForm.appendChild(payloadLabel);
+
+    const routerActions = document.createElement('div');
+    routerActions.className = 'form-actions';
+    const routerSubmit = document.createElement('button');
+    routerSubmit.type = 'submit';
+    routerSubmit.textContent = 'Route task';
+    routerActions.appendChild(routerSubmit);
+    const routerReset = document.createElement('button');
+    routerReset.type = 'button';
+    routerReset.className = 'secondary';
+    routerReset.textContent = 'Reset';
+    routerActions.appendChild(routerReset);
+    routerForm.appendChild(routerActions);
+
+    routerDetails.appendChild(routerForm);
+
+    const routerOutput = document.createElement('pre');
+    routerOutput.className = 'output';
+    routerOutput.textContent = 'Agent responses will appear here.';
+    routerDetails.appendChild(routerOutput);
+
+    routerPanel.appendChild(routerDetails);
+    main.appendChild(routerPanel);
+
+    routerReset.addEventListener('click', () => {
+      actionInput.value = '';
+      payloadInput.value = '';
+      routerOutput.textContent = 'Agent responses will appear here.';
+      actionInput.focus();
+    });
+
+    routerDetails.addEventListener('toggle', async () => {
+      if (!routerDetails.open) {
+        return;
+      }
+      routerStatus.textContent = 'Gateway status: checking…';
+      try {
+        const health = await API.agentsHealth();
+        if (health && typeof health === 'object') {
+          const state = health.status || health.state || health.result || 'online';
+          routerStatus.textContent = `Gateway status: ${state}`;
+        } else if (typeof health === 'string' && health) {
+          routerStatus.textContent = `Gateway status: ${health}`;
+        } else {
+          routerStatus.textContent = 'Gateway status: online';
+        }
+      } catch (err) {
+        console.error('[boss-ui] Agents Gateway health check failed', err);
+        routerStatus.textContent = 'Gateway status: offline or unreachable.';
+      }
+    });
+
+    routerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const selectedAgent = agentSelect.value;
+      const actionValue = actionInput.value.trim();
+      if (!actionValue) {
+        showError(routerOutput, new Error('Action is required.'));
+        actionInput.focus();
+        return;
+      }
+      let parsedPayload = {};
+      const rawPayload = payloadInput.value.trim();
+      if (rawPayload) {
+        try {
+          parsedPayload = JSON.parse(rawPayload);
+        } catch (err) {
+          showError(routerOutput, new Error('Payload must be valid JSON.'));
+          payloadInput.focus();
+          return;
+        }
+      }
+      const requestBody = { agent: selectedAgent, action: actionValue };
+      if (rawPayload) {
+        requestBody.payload = parsedPayload;
+      }
+      routerSubmit.disabled = true;
+      routerOutput.textContent = 'Routing…';
+      try {
+        if (!rawPayload) {
+          requestBody.payload = {};
+        }
+        const response = await API.agentsRoute(requestBody);
+        showResult(routerOutput, response);
+      } catch (err) {
+        showError(routerOutput, err);
+      } finally {
+        routerSubmit.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
