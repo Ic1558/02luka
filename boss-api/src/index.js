@@ -14,6 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 4000;
 const defaultSotPath = path.resolve(__dirname, '..', '..');
 const SOT_PATH = process.env.SOT_PATH || defaultSotPath;
@@ -357,8 +358,24 @@ const paulaRateLimitMap = new Map();
 const PAULA_RATE_LIMIT_WINDOW = 60_000;
 const PAULA_RATE_LIMIT_MAX = 60;
 
+function getClientIp(req) {
+  if (Array.isArray(req.ips) && req.ips.length > 0) {
+    return req.ips[0];
+  }
+
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    const [first] = forwarded.split(',');
+    if (first) {
+      return first.trim();
+    }
+  }
+
+  return req.ip || req.connection?.remoteAddress || 'unknown';
+}
+
 function applyPaulaRateLimit(req, res, next) {
-  const key = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const key = getClientIp(req);
   const now = Date.now();
   const windowStart = now - PAULA_RATE_LIMIT_WINDOW;
 
