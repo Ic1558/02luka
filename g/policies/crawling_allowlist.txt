@@ -1,0 +1,3 @@
+# Domains that PaulaCrawler is allowed to visit. One domain per line.
+# Lines starting with # are treated as comments and ignored by the crawler.
+theedges.work
