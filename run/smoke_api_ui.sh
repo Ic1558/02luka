@@ -16,6 +16,42 @@ PASS=0
 FAIL=0
 WARN=0
 
+# Validate that the last response body contains specific JSON keys
+validate_response_keys() {
+  local name="$1"
+  shift
+  local keys=("$@")
+
+  echo -n "  → Validating $name keys (${keys[*]})... "
+
+  if python - "$@" <<'PY'
+import json
+import sys
+
+path = "/tmp/smoke_response.json"
+try:
+    with open(path, "r", encoding="utf-8") as fh:
+        payload = json.load(fh)
+except Exception as exc:  # pragma: no cover - smoke helper
+    print(f"error reading JSON: {exc}")
+    sys.exit(1)
+
+missing = [key for key in sys.argv[1:] if key not in payload]
+if missing:
+    print("missing keys: " + ", ".join(missing))
+    sys.exit(1)
+PY
+  then
+    echo "✅ PASS"
+    return 0
+  else
+    echo "❌ FAIL"
+    PASS=$((PASS - 1))
+    FAIL=$((FAIL + 1))
+    return 1
+  fi
+}
+
 # Helper function to test endpoints
 test_endpoint() {
   local name="$1"
@@ -84,6 +120,21 @@ test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":tr
 
 # Smoke endpoint
 test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" || true
+
+echo ""
+
+# Paula API checks
+echo "=== Paula Agent Smoke ==="
+
+test_endpoint "Paula Crawl (dry-run)" "POST" "http://127.0.0.1:4000/api/paula/crawl" '{"urls":["https://example.com"],"dryRun":true}' "202"
+
+if test_endpoint "Paula Corpus Stats" "GET" "http://127.0.0.1:4000/api/paula/corpus/stats" "" "200"; then
+  if ! validate_response_keys "Paula Corpus Stats" "docs" "domains"; then
+    exit 1
+  fi
+fi
+
+test_endpoint "Paula Auto-Train (dry-run)" "POST" "http://127.0.0.1:4000/api/paula/auto-train" '{"dryRun":true}' "202"
 
 echo ""
 

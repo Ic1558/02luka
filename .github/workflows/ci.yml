@@ -24,3 +24,38 @@ jobs:
         run: |
           make validate-zones
           make proof || true
+  paula-smoke:
+    name: Paula Smoke (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cache crawler dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-paula-crawler-${{ matrix.node }}-${{ hashFiles('**/paula/**/requirements*.txt', '**/crawler/**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-paula-crawler-${{ matrix.node }}-
+            ${{ runner.os }}-paula-crawler-
+      - name: Install crawler dependencies
+        run: |
+          set -euo pipefail
+          req_file=$(find . -maxdepth 6 -type f -name 'requirements*.txt' \( -path '*paula*' -o -path '*crawler*' \) | head -n 1 || true)
+          if [ -n "$req_file" ]; then
+            echo "Installing requirements from $req_file"
+            python -m pip install -r "$req_file"
+          else
+            echo "No Paula crawler requirements found; skipping install."
+          fi
+      - name: Run Paula smoke tests
+        run: bash run/smoke_api_ui.sh
