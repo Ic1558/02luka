@@ -89,6 +89,32 @@ function isJson(headers) {
   return contentType && contentType.includes('application/json');
 }
 
+const ABSOLUTE_URL_PATTERN = /^[a-zA-Z][a-zA-Z\d+\-.]*:/;
+
+function normalizeGatewayPath(rawPath) {
+  if (!rawPath || typeof rawPath !== 'string') {
+    throw Object.assign(new Error('path is required'), { status: 400 });
+  }
+
+  const trimmed = rawPath.trim();
+
+  if (!trimmed) {
+    throw Object.assign(new Error('path is required'), { status: 400 });
+  }
+
+  if (ABSOLUTE_URL_PATTERN.test(trimmed) || trimmed.startsWith('//')) {
+    throw Object.assign(new Error('path must be a relative URL'), { status: 400 });
+  }
+
+  return trimmed;
+}
+
+function assertSameOrigin(baseUrl, targetUrl) {
+  if (baseUrl.origin !== targetUrl.origin) {
+    throw Object.assign(new Error('path resolved to a different origin'), { status: 400 });
+  }
+}
+
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -117,12 +143,13 @@ app.post('/chat', async (req, res, next) => {
       timeoutMs = 90_000
     } = req.body || {};
 
-    if (!gatewayPath || typeof gatewayPath !== 'string') {
-      return res.status(400).json({ error: 'path is required' });
-    }
+    const normalizedPath = normalizeGatewayPath(gatewayPath);
 
     const { url: baseUrl, key } = resolveGateway(gateway);
-    const target = new URL(gatewayPath, baseUrl);
+    const base = new URL(baseUrl);
+    const target = new URL(normalizedPath, base);
+
+    assertSameOrigin(base, target);
 
     const upperMethod = method.toUpperCase();
     const controller = new AbortController();
