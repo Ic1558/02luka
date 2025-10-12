@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
@@ -17,6 +18,17 @@ const defaultSotPath = path.resolve(__dirname, '..', '..');
 const SOT_PATH = process.env.SOT_PATH || defaultSotPath;
 const pathResolverScript = path.resolve(__dirname, '..', '..', 'g', 'tools', 'path_resolver.sh');
 const execFileAsync = promisify(execFile);
+
+const configuredOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : [];
+const corsOrigins = configuredOrigins.length > 0 ? configuredOrigins : ['http://localhost:5173'];
+
+app.use(
+  cors({
+    origin: corsOrigins,
+  })
+);
 
 const allowedFolders = new Set([
   'inbox',

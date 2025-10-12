@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const API_BASE = 'http://localhost:4000';
 
@@ -66,7 +67,10 @@ export default function App() {
     }
   }
 
-  const renderedMarkdown = useMemo(() => marked.parse(content || defaultMarkdown), [content]);
+  const renderedMarkdown = useMemo(() => {
+    const parsed = marked.parse(content || defaultMarkdown);
+    return DOMPurify.sanitize(parsed);
+  }, [content]);
 
   return (
     <div className="app-shell">
