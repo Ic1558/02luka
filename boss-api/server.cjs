@@ -12,6 +12,12 @@ const openaiConnector = require('../g/connectors/mcp_openai');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || '';
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_KEY || '';
+const AGENTS_GATEWAY_URL = process.env.AGENTS_GATEWAY_URL || '';
+const AGENTS_GATEWAY_KEY = process.env.AGENTS_GATEWAY_KEY || '';
+const PUBLIC_API_BASE = process.env.PUBLIC_API_BASE || '';
+const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
 const bossUiRoot = path.join(repoRoot, 'boss-ui');
@@ -63,6 +69,7 @@ const MAX_DIFF_BYTES = 512 * 1024;
 const MAX_PATCH_COUNT = 20;
 const DEFAULT_AGENT_TIMEOUT = 90_000;
 const MAX_AGENT_STDOUT_PREVIEW = 64 * 1024;
+const MAX_AI_PAYLOAD_BYTES = 512 * 1024;
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -78,6 +85,243 @@ function writeJson(res, code, payload) {
 async function ensureDirectory(dirPath) {
   await fs.mkdir(dirPath, { recursive: true });
   return dirPath;
+}
+
+function resolvePublicApiBase() {
+  if (PUBLIC_API_BASE) {
+    return PUBLIC_API_BASE;
+  }
+  return `http://${HOST}:${PORT}`;
+}
+
+function resolvePublicAiBase() {
+  if (PUBLIC_AI_BASE) {
+    return PUBLIC_AI_BASE;
+  }
+  if (AI_GATEWAY_URL) {
+    return AI_GATEWAY_URL;
+  }
+  return resolvePublicApiBase();
+}
+
+function sanitizeBaseUrl(value) {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+  return value.trim().replace(/\/+$/, '');
+}
+
+function buildGatewayUrl(baseUrl, suffix = '') {
+  const sanitizedBase = sanitizeBaseUrl(baseUrl);
+  const cleanSuffix = typeof suffix === 'string' ? suffix.replace(/^\/+/, '') : '';
+  if (!cleanSuffix) {
+    return sanitizedBase;
+  }
+  if (!sanitizedBase) {
+    return cleanSuffix;
+  }
+  if (sanitizedBase.endsWith(`/${cleanSuffix}`)) {
+    return sanitizedBase;
+  }
+  return `${sanitizedBase}/${cleanSuffix}`;
+}
+
+async function performGatewayFetch(url, init = {}) {
+  let response;
+  try {
+    response = await fetch(url, init);
+  } catch (err) {
+    const error = new Error(err && err.message ? err.message : String(err));
+    error.code = 'FETCH_FAILED';
+    throw error;
+  }
+
+  let text = '';
+  try {
+    text = await response.text();
+  } catch (err) {
+    text = '';
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  const json = contentType.includes('application/json') ? safeParseJson(text) : null;
+
+  return { response, text, contentType, json };
+}
+
+async function handleAiGatewayRequest(req, res, endpoint) {
+  if (!AI_GATEWAY_URL || !AI_GATEWAY_KEY) {
+    return writeJson(res, 501, { error: 'AI gateway not configured' });
+  }
+
+  let payload;
+  try {
+    payload = await readJsonBody(req, MAX_AI_PAYLOAD_BYTES);
+  } catch (err) {
+    if (err.code === 'PAYLOAD_TOO_LARGE') {
+      return writeJson(res, 413, { error: 'Payload too large' });
+    }
+    if (err.code === 'INVALID_JSON') {
+      return writeJson(res, 400, { error: 'Invalid JSON payload' });
+    }
+    throw err;
+  }
+
+  const targetUrl = buildGatewayUrl(AI_GATEWAY_URL, endpoint);
+  if (!targetUrl) {
+    return writeJson(res, 500, { error: 'Invalid AI gateway endpoint configuration' });
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${AI_GATEWAY_KEY}`
+  };
+
+  let upstream;
+  try {
+    upstream = await performGatewayFetch(targetUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload || {})
+    });
+  } catch (err) {
+    if (err.code === 'FETCH_FAILED') {
+      console.error('[boss-api] AI gateway request failed', err.message);
+      return writeJson(res, 502, { error: 'AI gateway request failed', detail: err.message });
+    }
+    throw err;
+  }
+
+  const { response, text, json } = upstream;
+
+  if (!response.ok) {
+    return writeJson(res, response.status, {
+      error: 'AI gateway error',
+      status: response.status,
+      data: json,
+      raw: json ? undefined : (text ? text.slice(0, 2000) : '')
+    });
+  }
+
+  if (json !== null && json !== undefined) {
+    return writeJson(res, 200, json);
+  }
+
+  return writeJson(res, 200, { ok: true, raw: text });
+}
+
+async function handleAgentsRoute(req, res) {
+  if (!AGENTS_GATEWAY_URL || !AGENTS_GATEWAY_KEY) {
+    return writeJson(res, 501, { error: 'Agents gateway not configured' });
+  }
+
+  let payload;
+  try {
+    payload = await readJsonBody(req, MAX_AGENT_PAYLOAD_BYTES);
+  } catch (err) {
+    if (err.code === 'PAYLOAD_TOO_LARGE') {
+      return writeJson(res, 413, { error: 'Payload too large' });
+    }
+    if (err.code === 'INVALID_JSON') {
+      return writeJson(res, 400, { error: 'Invalid JSON payload' });
+    }
+    throw err;
+  }
+
+  const routePayload = payload && typeof payload === 'object' ? { ...payload } : {};
+  const requestIdCandidate = typeof routePayload.requestId === 'string' ? routePayload.requestId : '';
+  const requestId = ensureRunId(requestIdCandidate);
+  routePayload.requestId = requestId;
+
+  const targetUrl = buildGatewayUrl(AGENTS_GATEWAY_URL, 'route');
+  if (!targetUrl) {
+    return writeJson(res, 500, { error: 'Invalid agents gateway endpoint configuration' });
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${AGENTS_GATEWAY_KEY}`,
+    'X-Request-ID': requestId
+  };
+
+  let upstream;
+  try {
+    upstream = await performGatewayFetch(targetUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(routePayload)
+    });
+  } catch (err) {
+    if (err.code === 'FETCH_FAILED') {
+      console.error('[boss-api] Agents gateway route failed', err.message);
+      return writeJson(res, 502, { error: 'Agents gateway request failed', detail: err.message, requestId });
+    }
+    throw err;
+  }
+
+  const { response, text, json } = upstream;
+
+  if (!response.ok) {
+    return writeJson(res, response.status, {
+      error: 'Agents gateway error',
+      status: response.status,
+      requestId,
+      data: json,
+      raw: json ? undefined : (text ? text.slice(0, 2000) : '')
+    });
+  }
+
+  if (json !== null && json !== undefined) {
+    return writeJson(res, 200, { ...json, requestId });
+  }
+
+  return writeJson(res, 200, { ok: true, requestId, raw: text });
+}
+
+async function handleAgentsHealth(req, res) {
+  if (!AGENTS_GATEWAY_URL || !AGENTS_GATEWAY_KEY) {
+    return writeJson(res, 501, { error: 'Agents gateway not configured' });
+  }
+
+  const targetUrl = buildGatewayUrl(AGENTS_GATEWAY_URL, 'health');
+  if (!targetUrl) {
+    return writeJson(res, 500, { error: 'Invalid agents gateway endpoint configuration' });
+  }
+
+  const headers = {
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${AGENTS_GATEWAY_KEY}`
+  };
+
+  let upstream;
+  try {
+    upstream = await performGatewayFetch(targetUrl, { method: 'GET', headers });
+  } catch (err) {
+    if (err.code === 'FETCH_FAILED') {
+      console.error('[boss-api] Agents gateway health failed', err.message);
+      return writeJson(res, 502, { error: 'Agents gateway request failed', detail: err.message });
+    }
+    throw err;
+  }
+
+  const { response, text, json } = upstream;
+
+  if (!response.ok) {
+    return writeJson(res, response.status, {
+      error: 'Agents gateway error',
+      status: response.status,
+      data: json,
+      raw: json ? undefined : (text ? text.slice(0, 2000) : '')
+    });
+  }
+
+  if (json !== null && json !== undefined) {
+    return writeJson(res, 200, json);
+  }
+
+  return writeJson(res, 200, { ok: true, raw: text });
 }
 
 function ensureDirectorySync(dirPath) {
@@ -1611,6 +1855,29 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && url.pathname === '/healthz') {
       return writeJson(res, 200, { ok: true, status: 'ready', ts: new Date().toISOString() });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/config.json') {
+      return writeJson(res, 200, {
+        apiBase: resolvePublicApiBase(),
+        aiBase: resolvePublicAiBase()
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/complete') {
+      return handleAiGatewayRequest(req, res, 'completions');
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/chat') {
+      return handleAiGatewayRequest(req, res, 'chat/completions');
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/agents/route') {
+      return handleAgentsRoute(req, res);
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/agents/health') {
+      return handleAgentsHealth(req, res);
     }
 
     if (req.method === 'GET' && url.pathname === '/api/smoke') {

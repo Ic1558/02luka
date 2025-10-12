@@ -88,6 +88,12 @@ test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"patches":[
 # Smoke endpoint (health check - should always pass)
 test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "false" || true
 
+# AI gateway (optional)
+test_endpoint "AI Gateway Smoke" "POST" "http://127.0.0.1:4000/api/ai/complete" '{"prompt":"ping","model":"noop"}' "200" "true" || true
+
+# Agents gateway health (optional)
+test_endpoint "Agents Health" "GET" "http://127.0.0.1:4000/api/agents/health" "" "200" "true" || true
+
 echo ""
 
 # Summary
