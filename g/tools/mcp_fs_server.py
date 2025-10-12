@@ -20,7 +20,21 @@ def read_text(relpath: str) -> str:
     p = (ROOT / relpath).resolve()
     if not str(p).startswith(str(ROOT)):
         raise ValueError(f"Path outside root: {relpath}")
-    return p.read_text(encoding="utf-8")
+    if not p.is_file():
+        raise ValueError(f"Not a file: {relpath}")
+
+    data = p.read_bytes()
+    # Fast-path check for obvious binary content (NUL bytes) to provide
+    # a helpful error instead of a generic UnicodeDecodeError.
+    if b"\x00" in data:
+        raise ValueError("Binary files are not supported")
+
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        # Some text files may not be UTF-8 encoded; surface a clear error so
+        # the caller understands why the read failed.
+        raise ValueError("File is not valid UTF-8 text")
 
 @mcp.tool()
 def list_dir(relpath: str = ".") -> list:
