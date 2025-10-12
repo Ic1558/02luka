@@ -1,19 +1,14 @@
-// NOTE: explicit API base so UI (5173) can talk to API (4000)
-window.API_BASE = window.API_BASE || "http://127.0.0.1:4000";
+export const API_BASE = (window.LUKA_CONFIG?.API_BASE) || 'http://127.0.0.1:4000';
+export const AI_BASE = (window.LUKA_CONFIG?.AI_BASE) || (API_BASE + '/api/ai');
 
-export async function jfetch(path, opts = {}) {
-  const base = window.API_BASE || "http://127.0.0.1:4000";
-  const url = new URL(path, base);
-  const init = { headers: { 'Content-Type': 'application/json' }, ...(opts || {}) };
-  const res = await fetch(url.toString(), init);
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(`API ${res.status} ${res.statusText} @ ${url}: ${txt}`);
-  }
-  // try JSON first; fall back to text
-  const ct = res.headers.get('content-type') || '';
-  if (ct.includes('application/json')) return res.json();
-  return res.text();
+export async function jfetch(path, init = {}) {
+  const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+    ...init
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.headers.get('content-type')?.includes('application/json') ? res.json() : res.text();
 }
 
 // API helper object with convenience methods

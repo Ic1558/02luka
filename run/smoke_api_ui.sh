@@ -90,6 +90,12 @@ test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "fals
 
 echo ""
 
+echo "==> AI gateway smoke"
+curl -s -X POST http://127.0.0.1:4000/api/ai/complete \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"gpt-4o-mini","prompt":"ping","max_tokens":8}' | jq . > /dev/null || { echo "AI smoke: FAIL"; exit 1; }
+echo "AI smoke: OK"
+
 # Summary
 echo "=== Smoke Test Summary ==="
 echo "✅ PASS: $PASS"

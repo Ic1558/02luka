@@ -12,6 +12,9 @@ const openaiConnector = require('../g/connectors/mcp_openai');
 
 const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
+const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || '';
+const AI_GATEWAY_KEY = process.env.AI_GATEWAY_KEY || '';
+const AI_GATEWAY_BASE = AI_GATEWAY_URL.replace(/\/+$/, '');
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
 const bossUiRoot = path.join(repoRoot, 'boss-ui');
@@ -63,6 +66,12 @@ const MAX_DIFF_BYTES = 512 * 1024;
 const MAX_PATCH_COUNT = 20;
 const DEFAULT_AGENT_TIMEOUT = 90_000;
 const MAX_AGENT_STDOUT_PREVIEW = 64 * 1024;
+const AI_JSON_LIMIT_BYTES = 32 * 1024 * 1024;
+const AI_REQUEST_TIMEOUT_MS = 60_000;
+const AI_RATE_LIMIT_MAX = 30;
+const AI_RATE_LIMIT_WINDOW_MS = 60_000;
+
+const aiRateLimitBuckets = new Map();
 
 function writeJson(res, code, payload) {
   const body = JSON.stringify(payload);
@@ -218,6 +227,29 @@ function collectStatusLogs(stderr = '') {
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(-100);
+}
+
+function getClientAddress(req) {
+  const forwarded = req.headers['cf-connecting-ip']
+    || req.headers['x-real-ip']
+    || req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+function isAiRequestAllowed(req) {
+  const now = Date.now();
+  const key = getClientAddress(req);
+  const entry = aiRateLimitBuckets.get(key) || { count: 0, resetAt: now + AI_RATE_LIMIT_WINDOW_MS };
+  if (now >= entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + AI_RATE_LIMIT_WINDOW_MS;
+  }
+  entry.count += 1;
+  aiRateLimitBuckets.set(key, entry);
+  return entry.count <= AI_RATE_LIMIT_MAX;
 }
 
 function sanitizeRelativePath(value) {
@@ -1760,6 +1792,148 @@ const server = http.createServer(async (req, res) => {
           ocr: engines.ocr
         }
       });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/complete') {
+      if (!AI_GATEWAY_URL || !AI_GATEWAY_KEY) {
+        return writeJson(res, 503, { error: 'ai_gateway_unconfigured' });
+      }
+      if (!isAiRequestAllowed(req)) {
+        return writeJson(res, 429, { error: 'ai_gateway_rate_limited' });
+      }
+
+      let payload;
+      try {
+        payload = await readJsonBody(req, AI_JSON_LIMIT_BYTES);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const { model, prompt, temperature = 0.2, max_tokens = 2048 } = payload || {};
+      if (!model || !prompt) {
+        return writeJson(res, 400, { error: 'model_and_prompt_required' });
+      }
+
+      const body = JSON.stringify({ model, prompt, temperature, max_tokens });
+      const endpoint = `${AI_GATEWAY_BASE}/v1/completions`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${AI_GATEWAY_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body,
+          signal: controller.signal
+        });
+
+        const text = await response.text().catch(() => '');
+        let parsed;
+        try {
+          parsed = text ? JSON.parse(text) : null;
+        } catch (err) {
+          parsed = null;
+        }
+
+        if (parsed && typeof parsed === 'object') {
+          return writeJson(res, response.status, parsed);
+        }
+
+        res.writeHead(response.status, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(text || '');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return writeJson(res, 504, { error: 'ai_gateway_timeout' });
+        }
+        console.error('[boss-api] ai/complete failed', err);
+        return writeJson(res, 502, { error: 'ai_gateway_error' });
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/ai/chat') {
+      if (!AI_GATEWAY_URL || !AI_GATEWAY_KEY) {
+        return writeJson(res, 503, { error: 'ai_gateway_unconfigured' });
+      }
+      if (!isAiRequestAllowed(req)) {
+        return writeJson(res, 429, { error: 'ai_gateway_rate_limited' });
+      }
+
+      let payload;
+      try {
+        payload = await readJsonBody(req, AI_JSON_LIMIT_BYTES);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const { model, messages, temperature = 0.2, max_tokens = 2048 } = payload || {};
+      if (!model || !Array.isArray(messages)) {
+        return writeJson(res, 400, { error: 'model_and_messages_required' });
+      }
+
+      const body = JSON.stringify({ model, messages, temperature, max_tokens });
+      const endpoint = `${AI_GATEWAY_BASE}/v1/chat/completions`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${AI_GATEWAY_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body,
+          signal: controller.signal
+        });
+
+        const text = await response.text().catch(() => '');
+        let parsed;
+        try {
+          parsed = text ? JSON.parse(text) : null;
+        } catch (err) {
+          parsed = null;
+        }
+
+        if (parsed && typeof parsed === 'object') {
+          return writeJson(res, response.status, parsed);
+        }
+
+        res.writeHead(response.status, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(text || '');
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return writeJson(res, 504, { error: 'ai_gateway_timeout' });
+        }
+        console.error('[boss-api] ai/chat failed', err);
+        return writeJson(res, 502, { error: 'ai_gateway_error' });
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     if (req.method === 'POST' && url.pathname === '/api/plan') {
