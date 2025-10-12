@@ -9,8 +9,10 @@
 <body>
   <noscript>This workspace requires JavaScript.</noscript>
   <script type="module">
-    import { API } from '/shared/api.js';
+    import { API, loadConfig } from '/shared/api.js';
     import { mountAppShell, createPanel, hydrateStatus, showResult, showError } from '/shared/components.js';
+
+    await loadConfig();
 
     const { main, statusBar } = mountAppShell({
       active: 'chat',
@@ -91,6 +93,116 @@
     });
 
     main.appendChild(chatPanel);
+
+    const agentPanel = createPanel('Agent Router', 'Send agent/action payloads through the Agents Gateway.');
+    const agentForm = document.createElement('form');
+    agentForm.className = 'form-grid';
+
+    const agentInput = document.createElement('input');
+    agentInput.type = 'text';
+    agentInput.name = 'agent';
+    agentInput.placeholder = 'Agent name (e.g. lisa, mary, gg)';
+    agentInput.required = true;
+    agentForm.appendChild(agentInput);
+
+    const actionInput = document.createElement('input');
+    actionInput.type = 'text';
+    actionInput.name = 'action';
+    actionInput.placeholder = 'Action (default: route)';
+    agentForm.appendChild(actionInput);
+
+    const payloadInput = document.createElement('textarea');
+    payloadInput.name = 'payload';
+    payloadInput.placeholder = '{ "task": "Describe desired work" }';
+    payloadInput.rows = 6;
+    payloadInput.value = '{\n  "task": ""\n}';
+    agentForm.appendChild(payloadInput);
+
+    const agentControls = document.createElement('div');
+    agentControls.className = 'form-actions';
+
+    const agentSubmit = document.createElement('button');
+    agentSubmit.type = 'submit';
+    agentSubmit.textContent = 'Route agent request';
+    agentControls.appendChild(agentSubmit);
+
+    const agentClear = document.createElement('button');
+    agentClear.type = 'button';
+    agentClear.className = 'secondary';
+    agentClear.textContent = 'Clear';
+    agentControls.appendChild(agentClear);
+
+    const agentHealth = document.createElement('button');
+    agentHealth.type = 'button';
+    agentHealth.className = 'secondary';
+    agentHealth.textContent = 'Check Health';
+    agentControls.appendChild(agentHealth);
+
+    agentForm.appendChild(agentControls);
+    agentPanel.appendChild(agentForm);
+
+    const agentOutput = document.createElement('pre');
+    agentOutput.className = 'output';
+    agentOutput.textContent = 'Agent gateway responses will appear here.';
+    agentPanel.appendChild(agentOutput);
+
+    agentClear.addEventListener('click', () => {
+      agentInput.value = '';
+      actionInput.value = '';
+      payloadInput.value = '{\n  "task": ""\n}';
+      agentOutput.textContent = 'Agent gateway responses will appear here.';
+      agentInput.focus();
+    });
+
+    agentForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const agentName = agentInput.value.trim();
+      if (!agentName) {
+        agentInput.focus();
+        return;
+      }
+
+      let parsedPayload = {};
+      const payloadText = payloadInput.value.trim();
+      if (payloadText) {
+        try {
+          parsedPayload = JSON.parse(payloadText);
+        } catch (err) {
+          showError(agentOutput, new Error('Payload must be valid JSON.'));
+          return;
+        }
+      }
+
+      agentSubmit.disabled = true;
+      agentOutput.textContent = 'Routing agent request...';
+      try {
+        const response = await API.agentsRoute({
+          agent: agentName,
+          action: actionInput.value.trim() || 'route',
+          payload: parsedPayload
+        });
+        showResult(agentOutput, response);
+      } catch (err) {
+        showError(agentOutput, err);
+      } finally {
+        agentSubmit.disabled = false;
+      }
+    });
+
+    agentHealth.addEventListener('click', async () => {
+      agentHealth.disabled = true;
+      agentOutput.textContent = 'Checking agents gateway...';
+      try {
+        const response = await API.agentsHealth();
+        showResult(agentOutput, response);
+      } catch (err) {
+        showError(agentOutput, err);
+      } finally {
+        agentHealth.disabled = false;
+      }
+    });
+
+    main.appendChild(agentPanel);
   </script>
 </body>
 </html>
