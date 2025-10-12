@@ -9,14 +9,106 @@ const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Environment configuration
-const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || '';
-const AI_GATEWAY_KEY = process.env.AI_GATEWAY_KEY || '';
-const AI_GATEWAY_BASE = AI_GATEWAY_URL.replace(/\/+$/, '');
-const AGENTS_GATEWAY_URL = process.env.AGENTS_GATEWAY_URL || '';
-const AGENTS_GATEWAY_KEY = process.env.AGENTS_GATEWAY_KEY || '';
-const PUBLIC_API_BASE = process.env.PUBLIC_API_BASE || '';
-const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
+// Environment configuration helpers
+function resolveFirstEnv(keys = []) {
+  for (const key of keys) {
+    const raw = process.env[key];
+    if (typeof raw === 'string') {
+      const value = raw.trim();
+      if (value) {
+        return { value, source: key };
+      }
+    }
+  }
+  return { value: '', source: null };
+}
+
+function collectGatewayConfig(prefix) {
+  const upper = String(prefix || '').toUpperCase();
+  const urlInfo = resolveFirstEnv([
+    `${upper}_GATEWAY_URL`,
+    `${upper}_URL`,
+    `${upper}_BASE_URL`,
+    `${upper}_BASE`,
+    `${upper}_API_URL`,
+    `${upper}_API_BASE`
+  ]);
+  const keyInfo = resolveFirstEnv([
+    `${upper}_GATEWAY_KEY`,
+    `${upper}_KEY`,
+    `${upper}_API_KEY`,
+    `${upper}_TOKEN`,
+    `${upper}_AUTH_TOKEN`
+  ]);
+
+  if (!urlInfo.value && !keyInfo.value) {
+    return null;
+  }
+
+  return {
+    url: urlInfo.value || null,
+    urlSource: urlInfo.source,
+    keyConfigured: Boolean(keyInfo.value),
+    keySource: keyInfo.source
+  };
+}
+
+function buildRuntimeConfig() {
+  const internalApiBase = `http://127.0.0.1:${PORT}`;
+  const publicApiInfo = resolveFirstEnv(['PUBLIC_API_BASE', 'VITE_PUBLIC_API_BASE']);
+  const publicAiInfo = resolveFirstEnv(['PUBLIC_AI_BASE', 'VITE_PUBLIC_AI_BASE']);
+  const aiGateway = collectGatewayConfig('AI');
+  const agentsGateway = collectGatewayConfig('AGENTS');
+  const paulaGateway = collectGatewayConfig('PAULA');
+
+  const apiBase = publicApiInfo.value || internalApiBase;
+  const aiBase = publicAiInfo.value || (aiGateway && aiGateway.url) || apiBase;
+
+  const config = {
+    apiBase,
+    aiBase,
+    generatedAt: new Date().toISOString(),
+    sources: {
+      apiBase: publicApiInfo.source || 'internal',
+      aiBase: publicAiInfo.source || (aiGateway && aiGateway.urlSource) || 'apiBase'
+    },
+    gateways: {
+      api: {
+        internalUrl: internalApiBase,
+        publicUrl: publicApiInfo.value || null
+      }
+    }
+  };
+
+  if (aiGateway) {
+    config.gateways.ai = {
+      url: aiGateway.url,
+      source: aiGateway.urlSource,
+      keyConfigured: aiGateway.keyConfigured,
+      keySource: aiGateway.keySource
+    };
+  }
+
+  if (agentsGateway) {
+    config.gateways.agents = {
+      url: agentsGateway.url,
+      source: agentsGateway.urlSource,
+      keyConfigured: agentsGateway.keyConfigured,
+      keySource: agentsGateway.keySource
+    };
+  }
+
+  if (paulaGateway) {
+    config.gateways.paula = {
+      url: paulaGateway.url,
+      source: paulaGateway.urlSource,
+      keyConfigured: paulaGateway.keyConfigured,
+      keySource: paulaGateway.keySource
+    };
+  }
+
+  return config;
+}
 
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
@@ -65,6 +157,13 @@ function writeJson(res, code, payload) {
 // Health check endpoint
 app.get('/healthz', (req, res) => {
   writeJson(res, 200, { status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Runtime configuration endpoint
+app.get('/config.json', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const config = buildRuntimeConfig();
+  writeJson(res, 200, config);
 });
 
 // API capabilities endpoint
