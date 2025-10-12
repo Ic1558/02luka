@@ -31,7 +31,7 @@ npm install
 npm run dev
 ```
 
-The app expects the API to be available at `http://localhost:4000`. Update the constant in `src/App.jsx` if you are proxying the API through another host.
+The app reads its runtime configuration from `/config.json`, which the Boss API now serves dynamically. Adjust environment variables such as `API_BASE` before starting the API to point the UI at a different backend without rebuilding.
 
 ### Build for production
 
