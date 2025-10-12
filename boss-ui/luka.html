@@ -313,6 +313,7 @@
       optimizeStatus.textContent = 'Optimizing…';
       try {
         const res = await fetch(`${API_BASE}/api/optimize_prompt`, {
+          credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -353,6 +354,7 @@
       optimizeStatus.textContent = 'Dispatching chat…';
       try {
         const res = await fetch(`${API_BASE}/api/chat`, {
+          credentials: 'include',
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -387,7 +389,9 @@
     async function refreshConnectors() {
       connectorsList.textContent = 'Loading…';
       try {
-        const res = await fetch(`${API_BASE}/api/connectors/status`);
+        const res = await fetch(`${API_BASE}/api/connectors/status`, {
+          credentials: 'include'
+        });
         if (!res.ok) throw new Error('Failed to load connectors');
         const data = await res.json();
         connectorsList.innerHTML = '';
@@ -422,7 +426,10 @@
 
     async function loadCapabilities() {
       try {
-        const res = await fetch(`${API_BASE}/api/capabilities`, { cache: 'no-store' });
+        const res = await fetch(`${API_BASE}/api/capabilities`, {
+          cache: 'no-store',
+          credentials: 'include'
+        });
         if (!res.ok) {
           throw new Error(`capabilities request failed (${res.status})`);
         }
