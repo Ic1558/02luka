@@ -5,6 +5,7 @@ export const NAV_LINKS = [
   { id: 'chat', label: 'Chat', path: '/chat' },
   { id: 'plan', label: 'Plan', path: '/plan' },
   { id: 'build', label: 'Build', path: '/build' },
+  { id: 'signals', label: 'Signals', path: '/signals' },
   { id: 'ship', label: 'Ship', path: '/ship' }
 ];
 
