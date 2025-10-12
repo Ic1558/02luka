@@ -18,6 +18,106 @@ const SOT_PATH = process.env.SOT_PATH || defaultSotPath;
 const pathResolverScript = path.resolve(__dirname, '..', '..', 'g', 'tools', 'path_resolver.sh');
 const execFileAsync = promisify(execFile);
 
+function resolveFirstEnv(keys = []) {
+  for (const key of keys) {
+    const raw = process.env[key];
+    if (typeof raw === 'string') {
+      const value = raw.trim();
+      if (value) {
+        return { value, source: key };
+      }
+    }
+  }
+  return { value: '', source: null };
+}
+
+function collectGatewayConfig(prefix) {
+  const upper = String(prefix || '').toUpperCase();
+  const urlInfo = resolveFirstEnv([
+    `${upper}_GATEWAY_URL`,
+    `${upper}_URL`,
+    `${upper}_BASE_URL`,
+    `${upper}_BASE`,
+    `${upper}_API_URL`,
+    `${upper}_API_BASE`
+  ]);
+  const keyInfo = resolveFirstEnv([
+    `${upper}_GATEWAY_KEY`,
+    `${upper}_KEY`,
+    `${upper}_API_KEY`,
+    `${upper}_TOKEN`,
+    `${upper}_AUTH_TOKEN`
+  ]);
+
+  if (!urlInfo.value && !keyInfo.value) {
+    return null;
+  }
+
+  return {
+    url: urlInfo.value || null,
+    urlSource: urlInfo.source,
+    keyConfigured: Boolean(keyInfo.value),
+    keySource: keyInfo.source
+  };
+}
+
+function buildRuntimeConfig() {
+  const internalApiBase = `http://127.0.0.1:${PORT}`;
+  const publicApiInfo = resolveFirstEnv(['PUBLIC_API_BASE', 'VITE_PUBLIC_API_BASE']);
+  const publicAiInfo = resolveFirstEnv(['PUBLIC_AI_BASE', 'VITE_PUBLIC_AI_BASE']);
+  const aiGateway = collectGatewayConfig('AI');
+  const agentsGateway = collectGatewayConfig('AGENTS');
+  const paulaGateway = collectGatewayConfig('PAULA');
+
+  const apiBase = publicApiInfo.value || internalApiBase;
+  const aiBase = publicAiInfo.value || (aiGateway && aiGateway.url) || apiBase;
+
+  const config = {
+    apiBase,
+    aiBase,
+    generatedAt: new Date().toISOString(),
+    sources: {
+      apiBase: publicApiInfo.source || 'internal',
+      aiBase: publicAiInfo.source || (aiGateway && aiGateway.urlSource) || 'apiBase'
+    },
+    gateways: {
+      api: {
+        internalUrl: internalApiBase,
+        publicUrl: publicApiInfo.value || null
+      }
+    }
+  };
+
+  if (aiGateway) {
+    config.gateways.ai = {
+      url: aiGateway.url,
+      source: aiGateway.urlSource,
+      keyConfigured: aiGateway.keyConfigured,
+      keySource: aiGateway.keySource
+    };
+  }
+
+  if (agentsGateway) {
+    config.gateways.agents = {
+      url: agentsGateway.url,
+      source: agentsGateway.urlSource,
+      keyConfigured: agentsGateway.keyConfigured,
+      keySource: agentsGateway.keySource
+    };
+  }
+
+  if (paulaGateway) {
+    config.gateways.paula = {
+      url: paulaGateway.url,
+      source: paulaGateway.urlSource,
+      keyConfigured: paulaGateway.keyConfigured,
+      keySource: paulaGateway.keySource
+    };
+  }
+
+  return config;
+}
+
 // Add middleware for better performance
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -215,6 +315,11 @@ app.get('/api/file/:folder/:name', async (req, res) => {
     const code = error.code === 'ENOENT' ? 'file_not_found' : error.code || 'internal_error';
     res.status(status).json(buildError(error.message, code));
   }
+});
+
+app.get('/config.json', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(buildRuntimeConfig());
 });
 
 app.use((req, res) => {
