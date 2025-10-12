@@ -176,6 +176,65 @@ body.app-body {
   font-size: 14px;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.stat-card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.stat-meta {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.status-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-widget-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.status-widget-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.status-pill.inline {
+  align-self: flex-start;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -316,6 +375,144 @@ button:disabled {
   font-family: "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   white-space: pre-wrap;
   overflow-wrap: break-word;
+}
+
+.tiny-table {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.tiny-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+}
+
+.tiny-row:nth-child(odd):not(.tiny-header) {
+  background: #f8fafc;
+}
+
+.tiny-header {
+  background: #e2e8f0;
+  font-weight: 600;
+  color: #1f2937;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.tiny-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tiny-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.tiny-empty {
+  display: none;
+  padding: 18px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.tiny-table.is-empty .tiny-body {
+  display: none;
+}
+
+.tiny-table.is-empty .tiny-empty {
+  display: block;
+}
+
+.model-list {
+  display: grid;
+  gap: 14px;
+}
+
+.model-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+}
+
+.model-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.model-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.model-meta {
+  font-size: 13px;
+  color: #475569;
+}
+
+.model-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.model-metrics span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-metrics strong {
+  font-size: 16px;
+  color: #1f2937;
+}
+
+.model-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.model-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5f5;
+  color: #1d4ed8;
+}
+
+.model-actions a:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.panel-footer {
+  font-size: 12px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 @media (max-width: 720px) {
