@@ -22,6 +22,9 @@ const ragDbPath = path.join(dataRoot, 'rag.sqlite3');
 const sampleSqlitePath = path.join(dataRoot, 'sample.sqlite3');
 const embedScriptPath = path.join(repoRoot, 'g', 'tools', 'embed_text.py');
 const ocrScriptPath = path.join(repoRoot, 'g', 'tools', 'ocr_typhoon.py');
+const AGENTS_GATEWAY_URL = (process.env.AGENTS_GATEWAY_URL || '').trim();
+const AGENTS_GATEWAY_KEY = process.env.AGENTS_GATEWAY_KEY || '';
+const AGENT_ROUTER_TARGETS = new Set(['lisa', 'mary', 'gg']);
 const DEFAULT_OLLAMA_PORT = Number(process.env.OLLAMA_PORT || 11434);
 const localOllamaBaseUrl = `http://127.0.0.1:${DEFAULT_OLLAMA_PORT}`;
 const agentsRoot = path.join(repoRoot, 'agents', 'lukacode');
@@ -73,6 +76,29 @@ function writeJson(res, code, payload) {
     'Access-Control-Allow-Headers': 'Content-Type'
   });
   res.end(body);
+}
+
+async function proxyGatewayResponse(res, gatewayResponse) {
+  const status = gatewayResponse.status;
+  const contentType = gatewayResponse.headers.get('content-type') || '';
+  const text = await gatewayResponse.text();
+
+  if (contentType.includes('application/json')) {
+    try {
+      const data = text ? JSON.parse(text) : {};
+      return writeJson(res, status, data);
+    } catch (err) {
+      console.warn('[boss-api] Failed to parse Agents Gateway JSON response', err);
+    }
+  }
+
+  res.writeHead(status, {
+    'Content-Type': contentType || 'text/plain; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  });
+  res.end(text);
 }
 
 async function ensureDirectory(dirPath) {
@@ -1652,6 +1678,82 @@ const server = http.createServer(async (req, res) => {
         services,
         timestamp: new Date().toISOString()
       });
+    }
+
+    if (req.method === 'GET' && url.pathname === '/api/agents/health') {
+      if (!AGENTS_GATEWAY_URL || AGENTS_GATEWAY_URL === '/') {
+        return writeJson(res, 503, { error: 'agents_gateway_unconfigured' });
+      }
+
+      try {
+        const baseUrl = AGENTS_GATEWAY_URL.replace(/\/+$/, '');
+        const targetUrl = baseUrl || AGENTS_GATEWAY_URL;
+        const gatewayResponse = await fetch(`${targetUrl}/health`, {
+          headers: {
+            Authorization: `Bearer ${AGENTS_GATEWAY_KEY}`
+          }
+        });
+        return proxyGatewayResponse(res, gatewayResponse);
+      } catch (err) {
+        console.error('[boss-api] Agents Gateway health check failed', err);
+        return writeJson(res, 502, { error: 'agents_gateway_unreachable', detail: err.message || 'unknown error' });
+      }
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/agents/route') {
+      if (!AGENTS_GATEWAY_URL || AGENTS_GATEWAY_URL === '/') {
+        return writeJson(res, 503, { error: 'agents_gateway_unconfigured' });
+      }
+
+      let payload;
+      try {
+        payload = await readJsonBody(req);
+      } catch (err) {
+        if (err.code === 'PAYLOAD_TOO_LARGE') {
+          return writeJson(res, 413, { error: 'Payload too large' });
+        }
+        if (err.code === 'INVALID_JSON') {
+          return writeJson(res, 400, { error: 'Invalid JSON payload' });
+        }
+        throw err;
+      }
+
+      const agent = typeof payload.agent === 'string' ? payload.agent.trim().toLowerCase() : '';
+      if (!AGENT_ROUTER_TARGETS.has(agent)) {
+        return writeJson(res, 400, { error: 'invalid_agent', allowed: Array.from(AGENT_ROUTER_TARGETS) });
+      }
+
+      const action = typeof payload.action === 'string' ? payload.action.trim() : '';
+      if (!action) {
+        return writeJson(res, 400, { error: 'action_required' });
+      }
+
+      const forwardBody = { agent, action };
+      if ('payload' in payload) {
+        forwardBody.payload = payload.payload;
+      } else {
+        forwardBody.payload = {};
+      }
+      if (forwardBody.payload === undefined) {
+        forwardBody.payload = {};
+      }
+
+      try {
+        const baseUrl = AGENTS_GATEWAY_URL.replace(/\/+$/, '');
+        const targetUrl = baseUrl || AGENTS_GATEWAY_URL;
+        const gatewayResponse = await fetch(`${targetUrl}/route`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${AGENTS_GATEWAY_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(forwardBody)
+        });
+        return proxyGatewayResponse(res, gatewayResponse);
+      } catch (err) {
+        console.error('[boss-api] Agents Gateway route failed', err);
+        return writeJson(res, 502, { error: 'agents_gateway_unreachable', detail: err.message || 'unknown error' });
+      }
     }
 
     if (req.method === 'GET') {
