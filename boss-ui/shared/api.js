@@ -22,6 +22,8 @@ export const API = {
   patch: (payload) => jfetch('/api/patch', { method: 'POST', body: JSON.stringify(payload) }),
   smoke: (payload) => jfetch('/api/smoke', { method: 'POST', body: JSON.stringify(payload) }),
   chat: (payload) => jfetch('/api/chat', { method: 'POST', body: JSON.stringify(payload) }),
+  agentsRoute: (payload) => jfetch('/api/agents/route', { method: 'POST', body: JSON.stringify(payload) }),
+  agentsHealth: () => jfetch('/api/agents/health'),
   caps: () => jfetch('/api/capabilities'),
   health: () => jfetch('/healthz')
 };
