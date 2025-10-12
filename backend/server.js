@@ -236,7 +236,15 @@ async function handleGetFile(req, res) {
     return res.status(404).json({ error: `Unknown folder: ${folder}` });
   }
   try {
-    const filePath = path.join(BOSS_ROOT, folder, name);
+    if (!name || name.includes('/') || name.includes('\\')) {
+      return res.status(400).json({ error: 'Invalid file name' });
+    }
+    const folderRoot = path.join(BOSS_ROOT, folder);
+    const filePath = path.join(folderRoot, name);
+    const relative = path.relative(folderRoot, filePath);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
     const data = await fsp.readFile(filePath, 'utf8');
     res.type('text/plain').send(data);
   } catch (err) {
