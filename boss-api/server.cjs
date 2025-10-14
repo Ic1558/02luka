@@ -20,6 +20,8 @@ const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
 
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
+const reportsDir = path.join(repoRoot, 'g', 'reports');
+const reportsProofDir = path.join(reportsDir, 'proof');
 
 // Middleware
 app.use(cors());
@@ -60,6 +62,77 @@ const MAX_AI_PAYLOAD_BYTES = 512 * 1024;
 
 function writeJson(res, code, payload) {
   res.status(code).json(payload);
+}
+
+function evaluateReportStatus(latestReport) {
+  if (!latestReport) {
+    return { status: 'FAIL', message: 'No reports found in g/reports/' };
+  }
+
+  const modifiedTime = new Date(latestReport.modified).getTime();
+  if (!Number.isFinite(modifiedTime)) {
+    return { status: 'WARN', message: 'Unable to determine latest report timestamp' };
+  }
+
+  const ageHours = (Date.now() - modifiedTime) / (1000 * 60 * 60);
+  if (ageHours >= 48) {
+    return { status: 'FAIL', message: 'Latest report is older than 48 hours' };
+  }
+  if (ageHours >= 24) {
+    return { status: 'WARN', message: 'Latest report is older than 24 hours' };
+  }
+  return { status: 'OK', message: 'Reports are fresh' };
+}
+
+async function safeReadDir(targetDir) {
+  try {
+    return await fs.readdir(targetDir, { withFileTypes: true });
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      return [];
+    }
+    throw err;
+  }
+}
+
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
+async function collectFiles(dir, type) {
+  const entries = await safeReadDir(dir);
+  const files = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile())
+      .map(async (entry) => {
+        const absolutePath = path.join(dir, entry.name);
+        const stats = await fs.stat(absolutePath);
+        const relativePath = toPosixPath(path.relative(repoRoot, absolutePath));
+        return {
+          name: entry.name,
+          type,
+          size: stats.size,
+          modified: stats.mtime.toISOString(),
+          relativePath,
+          webPath: `/${relativePath}`,
+          absolutePath
+        };
+      })
+  );
+  files.sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime());
+  return files;
+}
+
+function sanitizeEntries(entries) {
+  return entries.map(({ absolutePath, ...rest }) => rest);
+}
+
+async function loadReportCatalog() {
+  const [reports, proof] = await Promise.all([
+    collectFiles(reportsDir, 'report'),
+    collectFiles(reportsProofDir, 'proof')
+  ]);
+  return { reports, proof };
 }
 
 // Health check endpoint
@@ -141,7 +214,7 @@ app.post('/api/plan', async (req, res) => {
 app.post('/api/patch', async (req, res) => {
   try {
     const { dryRun = false } = req.body;
-    
+
     // Call the patch agent
     const result = await execAsync(`node agents/lukacode/patch.cjs ${dryRun ? '--dry-run' : ''}`);
     writeJson(res, 200, { patch: result.stdout.trim() });
@@ -155,6 +228,65 @@ app.get('/api/smoke', async (req, res) => {
     // Call the smoke agent
     const result = await execAsync('node agents/lukacode/smoke.cjs');
     writeJson(res, 200, { smoke: result.stdout.trim() });
+  } catch (error) {
+    writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.get('/api/reports/list', async (req, res) => {
+  try {
+    const catalog = await loadReportCatalog();
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      reports: sanitizeEntries(catalog.reports.slice(0, 25)),
+      proof: sanitizeEntries(catalog.proof.slice(0, 25))
+    };
+    writeJson(res, 200, payload);
+  } catch (error) {
+    writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.get('/api/reports/latest', async (req, res) => {
+  try {
+    const catalog = await loadReportCatalog();
+    const latestMarkdown = catalog.reports.find((file) => file.name.toLowerCase().endsWith('.md')) || catalog.reports[0] || null;
+    const report = latestMarkdown
+      ? {
+          ...sanitizeEntries([latestMarkdown])[0],
+          content: await fs.readFile(latestMarkdown.absolutePath, 'utf8')
+        }
+      : null;
+
+    writeJson(res, 200, {
+      generatedAt: new Date().toISOString(),
+      report,
+      message: report ? 'Latest report loaded' : 'No reports available'
+    });
+  } catch (error) {
+    writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.get('/api/reports/summary', async (req, res) => {
+  try {
+    const catalog = await loadReportCatalog();
+    const latestReport = catalog.reports[0] || null;
+    const latestProof = catalog.proof[0] || null;
+    const statusInfo = evaluateReportStatus(latestReport);
+
+    writeJson(res, 200, {
+      generatedAt: new Date().toISOString(),
+      status: statusInfo.status,
+      message: statusInfo.message,
+      totals: {
+        reports: catalog.reports.length,
+        proof: catalog.proof.length,
+        combined: catalog.reports.length + catalog.proof.length
+      },
+      latestReport: latestReport ? sanitizeEntries([latestReport])[0] : null,
+      latestProof: latestProof ? sanitizeEntries([latestProof])[0] : null
+    });
   } catch (error) {
     writeJson(res, 500, { error: error.message });
   }

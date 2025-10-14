@@ -5,7 +5,8 @@ export const NAV_LINKS = [
   { id: 'chat', label: 'Chat', path: '/chat' },
   { id: 'plan', label: 'Plan', path: '/plan' },
   { id: 'build', label: 'Build', path: '/build' },
-  { id: 'ship', label: 'Ship', path: '/ship' }
+  { id: 'ship', label: 'Ship', path: '/ship' },
+  { id: 'reports', label: 'Reports', path: '/apps/reports.html' }
 ];
 
 export function mountAppShell(options = {}) {
