@@ -4,7 +4,9 @@ set -euo pipefail
 # Source universal path resolver
 source "$(dirname "$0")/repo_root_resolver.sh"
 
-PARENT="$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
+# Derive PARENT from REPO_ROOT (removes /02luka-repo suffix)
+# Example: .../My Drive/02luka/02luka-repo → .../My Drive/02luka
+PARENT="${REPO_ROOT%/02luka-repo}"
 REPO="$REPO_ROOT"
 LOGDIR="$HOME/Library/Logs/02luka"
 TS="$(date +%y%m%d_%H%M%S)"

@@ -6,8 +6,9 @@ set -euo pipefail
 # Source universal path resolver
 source "$(dirname "$0")/repo_root_resolver.sh"
 
-# Paths
-SOT_PATH="${SOT_PATH:-$HOME/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka}"
+# Derive SOT_PATH from REPO_ROOT (removes /02luka-repo suffix)
+# Example: .../My Drive/02luka/02luka-repo → .../My Drive/02luka
+SOT_PATH="${SOT_PATH:-${REPO_ROOT%/02luka-repo}}"
 HEALTH_PROXY_JS="$SOT_PATH/gateway/health_proxy.js"
 LOG_DIR="$HOME/Library/Logs/02luka"
 
