@@ -42,6 +42,22 @@ bash ./.codex/preflight.sh && bash ./run/dev_up_simple.sh && bash ./run/smoke_ap
 
 ---
 
+## 3a) Phase 4 – MCP Verification + Linear-lite UI
+
+- **Verification Trigger:** `curl -X POST http://127.0.0.1:4000/api/mcp/verify -d '{"providers":["fs","docker"]}'`.
+- **Verification Status Panel:** Luka dashboard → _Ops → MCP_ uses `/api/mcp/verify/status` to render freshness badges.
+- **Linear-lite Inbox:** New sidebar tile pulling `/api/linear-lite/cards` (active + triage states) every 90 seconds.
+- **Sync Command:** `curl -X POST http://127.0.0.1:4000/api/linear-lite/sync -H "Content-Type: application/json" -d '{"broadcast":true}'`.
+- **Reporting:** Automation drops receipts into `g/reports/mcp_verify/` and `g/reports/linear-lite/` with matching runIds.
+- **Guardrail:** Preflight now fails if MCP verification older than 15 minutes or Linear-lite cache stale (>30 minutes).
+
+**Operational Notes:**
+1. `run/smoke_api_ui.sh` now includes MCP verification + Linear-lite smoke stages (warnings only if upstream offline).
+2. LaunchAgents auto-refresh the Linear-lite cache hourly; manual `sync` only needed for urgent card refreshes.
+3. Boss UI now surfaces MCP drift alerts sourced from the verification endpoint.
+
+---
+
 ## 4) Runtime Path Rules (Important)
 - ✅ ใช้: `~/dev/02luka-repo` หรือ `/workspaces/02luka-repo`
 - ❌ ห้าม runtime บน CloudStorage (Stream/Mirror) เช่น `/Library/CloudStorage/GoogleDrive-*/My Drive/*`
@@ -93,10 +109,11 @@ launchctl kickstart -k gui/$UID/com.02luka.task.bus.bridge
 
 ## 7) Checkpoints & Tags
 
-**Latest:** v2025-10-06-mcp-autostart (MCP FS + Task Bus auto-start deployed)
+**Latest:** v2025-10-15-phase4-mcp-linear-lite (MCP verification + Linear-lite UI promoted)
 
 | Tag | Date | Description |
 |-----|------|-------------|
+| v2025-10-15-phase4-mcp-linear-lite | 2025-10-15 | Phase 4 verification + Linear-lite dashboard shipped |
 | v2025-10-05-cursor-ready | 2025-10-05 | DevContainer ready, preflight OK |
 | v2025-10-05-stabilized | 2025-10-05 | System stabilized, audit + boot guard |
 | v2025-10-05-docs-stable | 2025-10-05 | Dual Memory + docs unified |
@@ -204,8 +221,10 @@ make boss-refresh
 ### Reports
 - Dashboard deployment: `g/reports/deploy/dashboard_20251011_190534.md`
 - Domain migration: `g/reports/deploy/domain_migration_20251011_184500.md`
+- MCP verification receipts: `g/reports/mcp_verify/verify-20251015-*.json`
+- Linear-lite sync receipts: `g/reports/linear-lite/sync-20251015-*.json`
 
-**Tag:** v251011_1845_domain_migration
+**Tag:** v251011_1845_domain_migration → superseded by `v251015_phase4_release`
 
 ---
 
