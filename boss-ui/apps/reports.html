@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Reports · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+  <style>
+    .status-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .status-note {
+      margin: 0;
+      font-size: 14px;
+      color: #475569;
+    }
+    .status-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 13px;
+      color: #475569;
+    }
+    .status-metrics span {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .recent-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .recent-section h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .recent-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+    .recent-item {
+      padding: 12px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .recent-item strong {
+      font-size: 14px;
+      color: #1f2937;
+    }
+    .recent-item span {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .recent-item code {
+      font-size: 12px;
+      color: #0f172a;
+      background: rgba(15, 23, 42, 0.06);
+      border-radius: 6px;
+      padding: 2px 6px;
+      align-self: flex-start;
+    }
+    .recent-empty {
+      color: #94a3b8;
+      font-style: italic;
+      font-size: 13px;
+    }
+    .latest-meta {
+      font-size: 13px;
+      color: #475569;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { API } from '/shared/api.js';
+    import { mountAppShell, createPanel, hydrateStatus, renderStatusPill, showError } from '/shared/components.js';
+
+    const { main, statusBar } = mountAppShell({
+      active: 'reports',
+      title: 'Reports · Luka Workspace',
+      subtitle: 'Operational evidence and summaries'
+    });
+
+    hydrateStatus(statusBar);
+
+    const statusPanel = createPanel('Operational status', 'Live summary from /api/reports/summary.');
+    const statusStack = document.createElement('div');
+    statusStack.className = 'status-stack';
+    const statusPill = renderStatusPill('Reports', 'warn', 'loading…');
+    statusStack.appendChild(statusPill);
+    const statusNote = document.createElement('p');
+    statusNote.className = 'status-note';
+    statusNote.textContent = 'Fetching report status…';
+    statusStack.appendChild(statusNote);
+    const statusMetrics = document.createElement('div');
+    statusMetrics.className = 'status-metrics';
+    statusMetrics.innerHTML = '<span>reports: —</span><span>proof: —</span><span>combined: —</span>';
+    statusStack.appendChild(statusMetrics);
+    statusPanel.appendChild(statusStack);
+    main.appendChild(statusPanel);
+
+    const recentPanel = createPanel('Recent files', 'Latest artifacts collected from g/reports/.');
+    const recentReportsSection = document.createElement('div');
+    recentReportsSection.className = 'recent-section';
+    const recentReportsHeading = document.createElement('h3');
+    recentReportsHeading.textContent = 'Reports';
+    const recentReportsList = document.createElement('ul');
+    recentReportsList.className = 'recent-list';
+    recentReportsList.innerHTML = '<li class="recent-empty">Loading latest reports…</li>';
+    recentReportsSection.appendChild(recentReportsHeading);
+    recentReportsSection.appendChild(recentReportsList);
+
+    const recentProofSection = document.createElement('div');
+    recentProofSection.className = 'recent-section';
+    const recentProofHeading = document.createElement('h3');
+    recentProofHeading.textContent = 'Proof artifacts';
+    const recentProofList = document.createElement('ul');
+    recentProofList.className = 'recent-list';
+    recentProofList.innerHTML = '<li class="recent-empty">Loading proof artifacts…</li>';
+    recentProofSection.appendChild(recentProofHeading);
+    recentProofSection.appendChild(recentProofList);
+
+    recentPanel.appendChild(recentReportsSection);
+    recentPanel.appendChild(recentProofSection);
+    main.appendChild(recentPanel);
+
+    const latestPanel = createPanel('Latest markdown report', 'Rendered straight from /api/reports/latest.');
+    const latestMeta = document.createElement('p');
+    latestMeta.className = 'latest-meta';
+    latestMeta.textContent = 'Waiting for latest report…';
+    const latestOutput = document.createElement('pre');
+    latestOutput.className = 'output';
+    latestOutput.textContent = 'Latest report body will appear here.';
+    latestPanel.appendChild(latestMeta);
+    latestPanel.appendChild(latestOutput);
+    main.appendChild(latestPanel);
+
+    const summaryPanel = createPanel('Summary payload', 'Raw JSON response from /api/reports/summary for quick inspection.');
+    const summaryOutput = document.createElement('pre');
+    summaryOutput.className = 'output';
+    summaryOutput.textContent = 'Loading summary JSON…';
+    summaryPanel.appendChild(summaryOutput);
+    main.appendChild(summaryPanel);
+
+    function formatDate(value) {
+      if (!value) {
+        return '—';
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString();
+    }
+
+    function formatBytes(size) {
+      const num = Number(size);
+      if (!Number.isFinite(num) || num < 0) {
+        return '0 B';
+      }
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let value = num;
+      let unitIndex = 0;
+      while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+      }
+      const digits = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
+      return `${value.toFixed(digits)} ${units[unitIndex]}`;
+    }
+
+    function updateList(listEl, items) {
+      listEl.innerHTML = '';
+      if (!Array.isArray(items) || items.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'recent-empty';
+        empty.textContent = 'No files available.';
+        listEl.appendChild(empty);
+        return;
+      }
+      items.slice(0, 8).forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'recent-item';
+        const title = document.createElement('strong');
+        title.textContent = item.name || 'Unnamed';
+        const meta = document.createElement('span');
+        meta.textContent = `${(item.type || 'file').toUpperCase()} • ${formatDate(item.modified)} • ${formatBytes(item.size)}`;
+        li.appendChild(title);
+        li.appendChild(meta);
+        if (item.relativePath) {
+          const pathTag = document.createElement('code');
+          pathTag.textContent = item.relativePath;
+          li.appendChild(pathTag);
+        }
+        listEl.appendChild(li);
+      });
+    }
+
+    function applySummary(summary) {
+      if (!summary || typeof summary !== 'object') {
+        return;
+      }
+      summaryOutput.textContent = JSON.stringify(summary, null, 2);
+      const statusClass = (summary.status || 'OK').toLowerCase();
+      statusPill.className = `status-pill ${statusClass}`;
+      statusPill.querySelector('.status-detail').textContent = (summary.status || 'OK').toUpperCase();
+      statusNote.textContent = summary.message || 'Reports summary loaded.';
+      const reports = summary.totals?.reports ?? 0;
+      const proof = summary.totals?.proof ?? 0;
+      const combined = summary.totals?.combined ?? reports + proof;
+      statusMetrics.innerHTML = `
+        <span>reports: ${reports}</span>
+        <span>proof: ${proof}</span>
+        <span>combined: ${combined}</span>
+      `;
+      if (summary.latestReport) {
+        latestMeta.textContent = `${summary.latestReport.name} • ${formatDate(summary.latestReport.modified)} • ${formatBytes(summary.latestReport.size)}`;
+      }
+    }
+
+    async function loadReports() {
+      const [summaryResult, listResult, latestResult] = await Promise.allSettled([
+        API.reportsSummary(),
+        API.reportsList(),
+        API.reportsLatest()
+      ]);
+
+      if (summaryResult.status === 'fulfilled') {
+        applySummary(summaryResult.value);
+      } else {
+        showError(summaryOutput, summaryResult.reason);
+        statusNote.textContent = 'Failed to load report summary.';
+      }
+
+      if (listResult.status === 'fulfilled') {
+        updateList(recentReportsList, listResult.value?.reports || []);
+        updateList(recentProofList, listResult.value?.proof || []);
+      } else {
+        const err = listResult.reason;
+        const message = err && err.message ? err.message : String(err);
+        recentReportsList.innerHTML = `<li class="recent-empty">${message}</li>`;
+        recentProofList.innerHTML = `<li class="recent-empty">${message}</li>`;
+      }
+
+      if (latestResult.status === 'fulfilled') {
+        const reportPayload = latestResult.value;
+        const report = reportPayload?.report;
+        if (report && report.content) {
+          latestOutput.textContent = report.content;
+          latestMeta.textContent = `${report.name} • ${formatDate(report.modified)} • ${formatBytes(report.size)}`;
+        } else {
+          latestOutput.textContent = 'No markdown reports available.';
+          latestMeta.textContent = reportPayload?.message || 'No reports found.';
+        }
+      } else {
+        showError(latestOutput, latestResult.reason);
+        latestMeta.textContent = 'Failed to load latest report.';
+      }
+    }
+
+    loadReports().catch((err) => {
+      showError(summaryOutput, err);
+      showError(latestOutput, err);
+      recentReportsList.innerHTML = '<li class="recent-empty">Unable to load reports.</li>';
+      recentProofList.innerHTML = '<li class="recent-empty">Unable to load reports.</li>';
+      statusNote.textContent = 'Failed to load report data.';
+    });
+  </script>
+</body>
+</html>
