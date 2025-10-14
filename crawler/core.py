@@ -223,6 +223,7 @@ class HTMLNormalizer(HTMLParser):
 @dataclass
 class DomainState:
     queue: asyncio.Queue
+    limiter: RateLimiter
     scheduled: bool = False
 
 
@@ -278,7 +279,7 @@ class CrawlRuntime:
         self.pages_scheduled += 1
         state = self.domain_states.get(domain)
         if state is None:
-            state = DomainState(queue=asyncio.Queue())
+            state = DomainState(queue=asyncio.Queue(), limiter=RateLimiter(PER_DOMAIN_RATE_LIMIT))
             self.domain_states[domain] = state
         state.queue.put_nowait(canonical)
         if not state.scheduled:
@@ -286,7 +287,6 @@ class CrawlRuntime:
             self.ready_domains.put_nowait(domain)
 
     async def _worker(self):
-        domain_limiters: Dict[str, RateLimiter] = {}
         while True:
             domain = await self.ready_domains.get()
             if domain is None:
@@ -299,15 +299,12 @@ class CrawlRuntime:
             except asyncio.CancelledError:
                 break
             state.scheduled = False
-            limiter = domain_limiters.get(domain)
-            if limiter is None:
-                limiter = RateLimiter(PER_DOMAIN_RATE_LIMIT)
-                domain_limiters[domain] = limiter
             if self.max_pages and self.pages_completed >= self.max_pages:
                 state.queue.task_done()
+                self._flush_domain_queue(state)
                 self._check_idle()
                 continue
-            await limiter.acquire()
+            await state.limiter.acquire()
             await self.global_limiter.acquire()
             self.inflight += 1
             try:
@@ -316,15 +313,20 @@ class CrawlRuntime:
                 self.inflight -= 1
                 state.queue.task_done()
                 if self.max_pages and self.pages_completed >= self.max_pages:
-                    while not state.queue.empty():
-                        try:
-                            state.queue.get_nowait()
-                        except asyncio.QueueEmpty:
-                            break
+                    self._flush_domain_queue(state)
                 if not state.queue.empty():
                     state.scheduled = True
                     self.ready_domains.put_nowait(domain)
                 self._check_idle()
+
+    def _flush_domain_queue(self, state: DomainState):
+        while True:
+            try:
+                state.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+            else:
+                state.queue.task_done()
 
     async def _fetch_and_process(self, url: str):
         start = time.monotonic()
