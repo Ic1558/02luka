@@ -93,10 +93,13 @@ launchctl kickstart -k gui/$UID/com.02luka.task.bus.bridge
 
 ## 7) Checkpoints & Tags
 
-**Latest:** v2025-10-06-mcp-autostart (MCP FS + Task Bus auto-start deployed)
+**Latest:** v251015_0212_atomic_phase4 (Atomic Operations Phase 4 + Linear-lite UI)
 
 | Tag | Date | Description |
 |-----|------|-------------|
+| v251015_0212_atomic_phase4 | 2025-10-15 | Phase 4 MCP Verification + Linear-lite UI + stub mode |
+| v251011_1845_domain_migration | 2025-10-11 | Dashboard deployment to Cloudflare Pages |
+| v2025-10-06-mcp-autostart | 2025-10-06 | MCP FS + Task Bus auto-start deployed |
 | v2025-10-05-cursor-ready | 2025-10-05 | DevContainer ready, preflight OK |
 | v2025-10-05-stabilized | 2025-10-05 | System stabilized, audit + boot guard |
 | v2025-10-05-docs-stable | 2025-10-05 | Dual Memory + docs unified |
@@ -209,4 +212,49 @@ make boss-refresh
 
 ---
 
-Last Session: 251012_014952
+## 11) Latest Deployment (2025-10-15)
+
+**Atomic Operations Phase 4 + Linear-lite UI** ✅
+
+### Phase 4: MCP Verification Integration
+- **Script:** `run/ops_atomic.sh` now includes 4 phases (was 3)
+- **Automation:** Phase 4 extracts MCP test results from existing verification reports
+- **Fallback:** Live health check if no report available
+- **Metrics Tracked:** Container status, uptime, connectivity, tools, OAuth status
+- **Report Example:** `g/reports/OPS_ATOMIC_251015_021806.md`
+
+### Linear-lite UI Integration
+- **Multipage Serving:** boss-api now serves UI directly on port 4000
+- **Routes Added:** `/`, `/chat`, `/plan`, `/build`, `/ship`
+- **Static Assets:** `/shared/ui.css`, `/shared/api.js`, `/shared/components.js`
+- **Benefits:** Single-origin serving eliminates CORS issues
+- **Architecture:** Express static middleware + page routing
+
+### API Enhancements
+- **Stub Mode:** `/api/plan` supports fast health checks via `stub:true` or `X-Smoke: 1` header
+- **Reports API:** `/api/reports/list`, `/api/reports/latest`, `/api/reports/summary`
+- **Response Time:** Stub mode returns in <100ms for smoke tests
+- **Schema Fix:** `/api/plan` now correctly uses `goal` field (not `prompt`)
+
+### Smoke Testing Improvements
+- **Timeout Support:** All tests now have configurable timeouts (3-10s)
+- **Fast Testing:** Stub mode enables complete test suite in ~3 seconds
+- **Coverage:** 5 critical tests (API, UI, MCP) + 3 optional (agents, Paula)
+- **CI Ready:** No false failures, clear PASS/WARN/FAIL categorization
+
+### Key Commits
+- `[pending]` - Phase 4: MCP Verification integration
+- `[pending]` - Linear-lite UI routing in boss-api
+- `[pending]` - Stub mode for /api/plan
+- `[pending]` - Smoke test timeout fixes
+
+### Reports
+- Phase 4 integration: `g/reports/251015_0118_phase4_mcp_integration.md`
+- Atomic operations: `g/reports/OPS_ATOMIC_251015_021806.md`
+- Documentation updates: (this file)
+
+**Tag:** v251015_0212_atomic_phase4
+
+---
+
+Last Session: 251015_021237

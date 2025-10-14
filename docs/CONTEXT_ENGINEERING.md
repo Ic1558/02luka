@@ -1,6 +1,6 @@
 # 🧠 Context Engineering Guide
 > **Scope:** 02luka-repo local workspace
-> **Updated:** 2025-09-30T22:24:57Z
+> **Updated:** 2025-10-15T02:12:37Z
 
 ## System Architecture
 ```
@@ -11,14 +11,18 @@
 │  - f/ai_context/*.json         │
 └───────────────┬───────────────┘
                 │
-        ┌───────▼────────┐
-        │ Luka Frontend  │
-        │ (luka.html UI) │
-        └───────┬────────┘
+        ┌───────▼────────────────┐
+        │ Linear-lite UI (4000)  │
+        │ /, /chat, /plan,       │
+        │ /build, /ship          │
+        │ /shared/* (assets)     │
+        └───────┬────────────────┘
                 │
         ┌───────▼────────┐
         │ boss-api       │
-        │ /api/chat      │
+        │ /api/plan      │
+        │ /api/patch     │
+        │ /api/reports/* │
         └───────┬────────┘
                 │
 ┌───────────────▼──────────────┐
@@ -40,6 +44,10 @@
 - Update the mapping whenever new template families are added so downstream bots inherit the structure.
 
 ## Integration Checklist
+- [x] Linear-lite UI multipage routing (/, /chat, /plan, /build, /ship) on port 4000.
+- [x] UI static assets served via /shared/* (ui.css, api.js, components.js).
+- [x] Backend API endpoints: /api/plan, /api/patch, /api/reports/*.
+- [x] Stub mode for /api/plan enables fast smoke testing.
 - [x] Luka UI prompt library reads from `prompts/master_prompt.md`.
 - [x] Backend orchestration forwards prompt metadata through `/api/chat`.
 - [ ] Automate template freshness checks inside `verify_system.sh` (planned).
