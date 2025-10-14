@@ -49,3 +49,42 @@ bash ./run/smoke_api_ui.sh
 - Manual workflow triggers available
 - Smoke tests can be automated via GitHub Actions
 - See `.github/workflows/` for examples
+
+## 8) Duplicate Clone Prevention
+
+**Problem:** Multiple repository clones can cause confusion and stale code execution.
+
+**Check for duplicates before development:**
+```bash
+# Preflight automatically detects duplicates
+bash ./.codex/preflight.sh
+
+# Manual check
+bash ./scripts/repo_root_resolver.sh
+```
+
+**Common duplicate locations:**
+- `~/dev/02luka-repo` (legacy clone)
+- `~/local-repos/02luka-repo` (local testing)
+- `~/Desktop/02luka-repo` (temporary clone)
+- `~/Downloads/02luka-repo` (from archive)
+- `/workspaces/02luka-repo` (devcontainer)
+
+**Risks of duplicate clones:**
+- ⚠️ LaunchAgents may execute code from stale clone
+- ⚠️ Debugging shows different code than what's running
+- ⚠️ Changes sync back to wrong clone causing merge conflicts
+
+**Remediation:**
+```bash
+# Update outdated clone
+git -C ~/local-repos/02luka-repo pull
+
+# Or remove outdated clone
+rm -rf ~/local-repos/02luka-repo
+```
+
+**Prevention:**
+- Only maintain ONE active clone on your system
+- Use `bash ./.codex/preflight.sh` before each session
+- LaunchAgents use `scripts/repo_root_resolver.sh` to find canonical location
