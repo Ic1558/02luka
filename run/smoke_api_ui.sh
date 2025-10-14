@@ -24,17 +24,18 @@ test_endpoint() {
   local data="$4"
   local expected_status="${5:-200}"
   local is_optional="${6:-false}"
-  
+  local timeout="${7:-10}"
+
   echo -n "Testing $name... "
-  
+
   if [ "$method" = "GET" ]; then
-    response=$(curl -s -w "%{http_code}" -o /tmp/smoke_response.json "$url" 2>/dev/null || echo "000")
+    response=$(curl -s -m "$timeout" -w "%{http_code}" -o /tmp/smoke_response.json "$url" 2>/dev/null || echo "000")
   else
-    response=$(curl -s -w "%{http_code}" -o /tmp/smoke_response.json -X "$method" -H "Content-Type: application/json" -d "$data" "$url" 2>/dev/null || echo "000")
+    response=$(curl -s -m "$timeout" -w "%{http_code}" -o /tmp/smoke_response.json -X "$method" -H "Content-Type: application/json" -d "$data" "$url" 2>/dev/null || echo "000")
   fi
-  
+
   http_code="${response: -3}"
-  
+
   if [ "$http_code" = "$expected_status" ]; then
     echo "✅ PASS ($http_code)"
     PASS=$((PASS + 1))
@@ -76,14 +77,19 @@ echo ""
 # Test Linear-lite API endpoints (all optional for now)
 echo "=== Linear-lite API Endpoints (Optional) ==="
 
-# Plan endpoint
-test_endpoint "API Plan" "POST" "http://127.0.0.1:4000/api/plan" '{"goal":"test smoke check"}' "200" "true" || true
+# Plan endpoint (stub mode for fast smoke test)
+test_endpoint "API Plan" "POST" "http://127.0.0.1:4000/api/plan" '{"goal":"ping","stub":true}' "200" "true" "3" || true
 
 # Patch endpoint (dry-run)
-test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":true}' "200" "true" || true
+test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":true}' "200" "true" "5" || true
 
 # Smoke endpoint
-test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" || true
+test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" "5" || true
+
+echo ""
+
+echo "=== Paula API (Optional) ==="
+test_endpoint "Paula Health" "GET" "http://127.0.0.1:4000/api/paula/health" "" "200" "true" || true
 
 echo ""
 

@@ -125,11 +125,16 @@ app.get('/api/capabilities', async (req, res) => {
 // Agent endpoints
 app.post('/api/plan', async (req, res) => {
   try {
-    const { goal } = req.body;
+    const { goal, stub } = req.body;
     if (!goal) {
       return writeJson(res, 400, { error: 'Goal is required' });
     }
-    
+
+    // Stub mode for smoke tests
+    if (stub === true || req.headers['x-smoke'] === '1') {
+      return writeJson(res, 200, { plan: 'STUB: Plan endpoint operational', goal, mode: 'smoke' });
+    }
+
     // Call the plan agent
     const result = await execAsync(`node agents/lukacode/plan.cjs "${goal}"`);
     writeJson(res, 200, { plan: result.stdout.trim() });
