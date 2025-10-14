@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Session Closure Report - 2025-10-05
 
 ## Executive Summary

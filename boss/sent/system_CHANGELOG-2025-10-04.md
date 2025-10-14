@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Changelog — 2025-10-04
 
 ## v2025.10.04-drive-recovery

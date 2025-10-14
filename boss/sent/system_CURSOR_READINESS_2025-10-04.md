@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Cursor Readiness
 - API 4000 ✅
 - UI 5173 ✅

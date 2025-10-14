@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # .gitignore Improvement Report
 
 ## Change Summary

@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Plan - Critical Features Missing
 
 ## Current Status

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Chat · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { API } from '/shared/api.js';
+    import { mountAppShell, createPanel, hydrateStatus, showResult, showError } from '/shared/components.js';
+
+    const { main, statusBar } = mountAppShell({
+      active: 'chat',
+      title: 'Chat · Luka Workspace',
+      subtitle: 'Talk with Luka across any configured engines'
+    });
+
+    hydrateStatus(statusBar);
+
+    const chatPanel = createPanel('Live conversation', 'Send a message to Luka and receive a routed response.');
+
+    const form = document.createElement('form');
+    form.className = 'form-grid';
+
+    const message = document.createElement('textarea');
+    message.name = 'message';
+    message.placeholder = 'Ask Luka for help with a task or decision...';
+    message.required = true;
+    form.appendChild(message);
+
+    const controls = document.createElement('div');
+    controls.className = 'form-actions';
+
+    const engineSelect = document.createElement('select');
+    engineSelect.name = 'engine';
+    engineSelect.innerHTML = `
+      <option value="auto" selected>Auto</option>
+      <option value="local">Local</option>
+      <option value="anthropic">Anthropic (if configured)</option>
+      <option value="openai">OpenAI (if configured)</option>
+    `;
+    controls.appendChild(engineSelect);
+
+    const submit = document.createElement('button');
+    submit.type = 'submit';
+    submit.textContent = 'Send';
+    controls.appendChild(submit);
+
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'secondary';
+    clear.textContent = 'Clear';
+    controls.appendChild(clear);
+
+    form.appendChild(controls);
+    chatPanel.appendChild(form);
+
+    const output = document.createElement('pre');
+    output.className = 'output';
+    output.textContent = 'Output will appear here.';
+    chatPanel.appendChild(output);
+
+    clear.addEventListener('click', () => {
+      message.value = '';
+      output.textContent = 'Output will appear here.';
+      message.focus();
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!message.value.trim()) {
+        message.focus();
+        return;
+      }
+      submit.disabled = true;
+      output.textContent = 'Working...';
+      try {
+        const response = await API.chat({
+          message: message.value.trim(),
+          engine: engineSelect.value
+        });
+        showResult(output, response);
+      } catch (err) {
+        showError(output, err);
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    main.appendChild(chatPanel);
+
+    const routerPanel = createPanel('Agent Router', 'Send direct tasks to the Agents Gateway worker.');
+
+    const routerForm = document.createElement('form');
+    routerForm.className = 'form-grid';
+
+    const agentField = document.createElement('input');
+    agentField.type = 'text';
+    agentField.name = 'agent';
+    agentField.placeholder = 'agent id (e.g. boss)';
+    agentField.required = true;
+    routerForm.appendChild(agentField);
+
+    const actionField = document.createElement('input');
+    actionField.type = 'text';
+    actionField.name = 'action';
+    actionField.placeholder = 'action (e.g. plan)';
+    actionField.required = true;
+    routerForm.appendChild(actionField);
+
+    const payloadField = document.createElement('textarea');
+    payloadField.name = 'payload';
+    payloadField.placeholder = '{ "example": "payload" }';
+    payloadField.rows = 4;
+    routerForm.appendChild(payloadField);
+
+    const routerControls = document.createElement('div');
+    routerControls.className = 'form-actions';
+
+    const routeButton = document.createElement('button');
+    routeButton.type = 'submit';
+    routeButton.textContent = 'Send Route';
+    routerControls.appendChild(routeButton);
+
+    const healthButton = document.createElement('button');
+    healthButton.type = 'button';
+    healthButton.className = 'secondary';
+    healthButton.textContent = 'Check Health';
+    routerControls.appendChild(healthButton);
+
+    routerForm.appendChild(routerControls);
+    routerPanel.appendChild(routerForm);
+
+    const routerOutput = document.createElement('pre');
+    routerOutput.className = 'output';
+    routerOutput.textContent = 'Agent gateway responses will appear here.';
+    routerPanel.appendChild(routerOutput);
+
+    routerForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!agentField.value.trim() || !actionField.value.trim()) {
+        agentField.focus();
+        return;
+      }
+      routeButton.disabled = true;
+      routerOutput.textContent = 'Routing…';
+      try {
+        const payloadText = payloadField.value.trim();
+        let payload = {};
+        if (payloadText) {
+          try {
+            payload = JSON.parse(payloadText);
+          } catch (err) {
+            throw new Error(`Payload must be valid JSON: ${err.message}`);
+          }
+        }
+        const response = await API.agentRoute({
+          agent: agentField.value.trim(),
+          action: actionField.value.trim(),
+          payload
+        });
+        showResult(routerOutput, response);
+      } catch (err) {
+        showError(routerOutput, err);
+      } finally {
+        routeButton.disabled = false;
+      }
+    });
+
+    healthButton.addEventListener('click', async () => {
+      healthButton.disabled = true;
+      routerOutput.textContent = 'Checking gateway health…';
+      try {
+        const response = await API.agentHealth();
+        showResult(routerOutput, response);
+      } catch (err) {
+        showError(routerOutput, err);
+      } finally {
+        healthButton.disabled = false;
+      }
+    });
+
+    main.appendChild(routerPanel);
+  </script>
+</body>
+</html>

@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train — batch2 (continue) Sat Oct  4 21:36:20 UTC 2025
 
 ## Merge codex/add-prompt-library-tool-to-top-bar
@@ -16,7 +20,7 @@ Changes to be committed:
 
 Unmerged paths:
   (use "git add <file>..." to mark resolution)
-	both added:      .codex/templates/master_prompt.md
+	both added:      prompts/master_prompt.md
 	both added:      luka.html
 	both modified:   verify_system.sh
 

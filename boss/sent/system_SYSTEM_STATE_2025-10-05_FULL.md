@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # 🧾 SYSTEM STATE REPORT — 2025-10-05 (FULL)
 
 **Generated**: 2025-10-05 02:30 ICT  

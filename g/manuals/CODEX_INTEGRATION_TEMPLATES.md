@@ -6,19 +6,20 @@
 The Codex Integration Template system standardises how automation agents compose requests inside 02luka. Every task begins with a structured mission brief (`master_prompt.md`) that encodes goals, constraints, resources, validation, and follow-up expectations.
 
 ## 2. Components
-- `.codex/templates/master_prompt.md` — daily driver template for all Codex missions.
-- `.codex/templates/` — directory reserved for additional prompt archetypes (e.g., `golden_prompt.md`, review prompts).
+- `prompts/master_prompt.md` — daily driver template for all Codex missions.
+- `prompts/` — directory reserved for additional prompt archetypes (e.g., `golden_prompt.md`, review prompts).
 - `g/tools/install_master_prompt.sh` — installer/refresh utility with integrity checks and backup safeguards.
 - `luka.html` Prompt Library — front-end tool that fetches the master template and injects it into the composer.
 
 ## 3. Installation Workflow
 1. Run `bash g/tools/install_master_prompt.sh`.
 2. Script actions:
-   - Creates `.codex/templates/` if missing.
+   - Creates `prompts/` if missing.
    - Backs up existing templates (suffix `.bak-<timestamp>`).
    - Installs or refreshes `master_prompt.md` and companion files.
-   - Prints usage reminders (`Use .codex/templates/master_prompt.md with GOAL: <งานที่ต้องการ>`).
-3. Verify installation via `ls .codex/templates/` or by opening the Prompt Library inside `luka.html`.
+   - Prints usage reminders (`Use prompts/master_prompt.md with GOAL: <งานที่ต้องการ>`).
+   - Syncs copies into `boss-ui/public/prompts/` and `g/web/prompts/` for the Luka UI bundles.
+3. Verify installation via `ls prompts/` or by opening the Prompt Library inside `luka.html`.
 
 ## 4. Daily Usage
 - Start every Codex ask by copying the master template.
@@ -27,7 +28,7 @@ The Codex Integration Template system standardises how automation agents compose
 - Keep working notes beneath the sections; do not delete headers so automated checkers can parse them.
 
 ## 5. Customisation Guidelines
-- Add new templates to `.codex/templates/` with descriptive names (`golden_prompt.md`, `review_prompt.md`).
+- Add new templates to `prompts/` with descriptive names (`golden_prompt.md`, `review_prompt.md`).
 - Document each addition inside this manual and reference it from `f/ai_context/mapping.json` if it needs a logical key.
 - Avoid editing `master_prompt.md` directly; instead update the installer script so changes propagate uniformly.
 
@@ -40,7 +41,7 @@ The Codex Integration Template system standardises how automation agents compose
 | Symptom | Likely Cause | Resolution |
 |---------|--------------|------------|
 | Prompt Library shows "Unable to load master prompt" | HTTP server not serving repo root | Run `python3 -m http.server` from repo root, then reload. |
-| Installer warns about missing `.codex` | Directory deleted or moved | Recreate with `mkdir -p .codex/templates` before rerunning installer. |
+| Installer warns about missing `prompts/` | Directory deleted or moved | Recreate with `mkdir -p prompts` before rerunning installer. |
 | Template edits do not persist | Direct editing of generated file | Update source in installer or commit new template file under version control. |
 
 ## 8. Change Log

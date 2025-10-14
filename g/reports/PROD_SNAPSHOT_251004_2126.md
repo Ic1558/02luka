@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Production Snapshot — Sat Oct  4 21:26:04 UTC 2025
 ## Git
 ## codex-merge-train/20251004_2109...origin/main [ahead 9]

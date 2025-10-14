@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # 02LUKA Self-Healing Node Setup Report
 
 ## Date: $(date)

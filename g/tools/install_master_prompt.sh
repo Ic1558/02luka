@@ -12,9 +12,9 @@ if [[ -z "$PROJECT_ROOT" ]]; then
   fi
 fi
 
-TEMPLATE_DIR="$PROJECT_ROOT/.codex/templates"
+TEMPLATE_DIR="$PROJECT_ROOT/prompts"
 TARGET_FILE="$TEMPLATE_DIR/master_prompt.md"
-EXPECTED_SHA="d177684c8ce1bb2f4cf49df3107dd884babdf731c4a5d639ffcd44aa5ee64532"
+EXPECTED_SHA="74b48f28a92392cc05c1b11ef07f716df966249aff96b84d62eb1e7160da6aa0"
 EXPECTED_CONTENT="$(cat <<'TEMPLATE'
 # Master Prompt for Codex – 02luka System
 
@@ -46,7 +46,7 @@ Flow: dropbox → inbox/sent → deliverables
 - human:sent → boss/sent/
 - human:deliverables → boss/deliverables/
 - infra:clc_gate → g/tools/clc_gate.sh
-- codex:prompts → .codex/templates/
+- codex:prompts → prompts/
 
 ## Network Defaults
 - boss-api: http://127.0.0.1:4000
@@ -100,7 +100,7 @@ if [[ -f "$TARGET_FILE" ]]; then
   else
     echo "Master prompt template already installed."
     echo "ใช้เทมเพลตเดิมได้เลย: $TARGET_FILE"
-    echo "Use .codex/templates/master_prompt.md with GOAL: <งานที่ต้องการ>"
+    echo "Use prompts/master_prompt.md with GOAL: <งานที่ต้องการ>"
     exit 0
   fi
 else
@@ -109,16 +109,27 @@ fi
 
 printf '%s' "$EXPECTED_CONTENT" > "$TARGET_FILE"
 
+EXTRA_TARGET_DIRS=(
+  "$PROJECT_ROOT/boss-ui/public/prompts"
+  "$PROJECT_ROOT/g/web/prompts"
+)
+
+for extra_dir in "${EXTRA_TARGET_DIRS[@]}"; do
+  mkdir -p "$extra_dir"
+  cp -a "$TEMPLATE_DIR/." "$extra_dir/"
+  echo "Synced templates to $extra_dir/"
+done
+
 cat <<'MSG'
 ✅ Installation complete.
 
 How to use / วิธีใช้งาน:
-  1. Open .codex/templates/master_prompt.md
+  1. Open prompts/master_prompt.md
   2. Replace GOAL with the Thai description of the task (งานที่ต้องการ)
   3. Fill each section before running Codex
 
 Quick commands:
-  • ใช้เทมเพลต: Use .codex/templates/master_prompt.md with GOAL: <งานที่ต้องการ>
+  • ใช้เทมเพลต: Use prompts/master_prompt.md with GOAL: <งานที่ต้องการ>
   • ติดตั้งในโปรเจกต์นี้: g/tools/install_master_prompt.sh
-  • คัดลอกไปโปรเจกต์อื่น: cp '.codex/templates/master_prompt.md' /path/to/your/project/.codex/
+  • คัดลอกไปโปรเจกต์อื่น: cp 'prompts/master_prompt.md' /path/to/your/project/prompts/
 MSG

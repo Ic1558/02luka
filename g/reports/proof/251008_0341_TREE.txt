@@ -1,0 +1,133 @@
+.
+├── Makefile
+├── README.md
+├── a
+│   ├── memory
+│   ├── memory_center
+│   └── section
+├── backups
+│   └── map_snap
+├── boss
+│   ├── deliverables
+│   ├── dropbox
+│   ├── inbox
+│   ├── outbox
+│   └── sent
+├── boss-api
+│   ├── README.md
+│   ├── data
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── server.cjs
+│   ├── server.cjs.bak
+│   ├── server.cjs.bak.1759613674
+│   ├── server.cjs.bak.1759613680
+│   ├── server.cjs.bak.1759613750
+│   ├── server.cjs.bak.1759683840
+│   └── src
+├── boss-ui
+│   ├── README.md
+│   ├── index.html
+│   ├── luka.html
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public
+│   ├── src
+│   └── vite.config.js
+├── config
+│   ├── findability_queries.txt
+│   └── zones.txt
+├── contracts
+│   ├── chat.request.example.json
+│   ├── chat.response.example.json
+│   └── mcp-tools.schema.json
+├── docs
+│   ├── 02luka.md
+│   ├── AUTOSTART_CONFIG.md
+│   ├── CHAT_WINDOW_README.md
+│   ├── CODEx_INSTRUCTIONS.md
+│   ├── CONTEXT_ENGINEERING.md
+│   ├── DEPLOY.md
+│   ├── MCP_FINAL_CONFIG.md
+│   ├── MCP_SIMPLIFIED_CONFIG.md
+│   ├── REMOTE_ACCESS.md
+│   ├── TASK_BUS_SYSTEM.md
+│   ├── architecture.md
+│   ├── chatgpt_native_app.md
+│   └── persistent_change_workflow.md
+├── f
+│   ├── ai_context
+│   └── bridge
+├── g
+│   ├── DELEGATION_QUICK_REF.md
+│   ├── FILE_DISCOVERY_PROTOCOL.md
+│   ├── bridge
+│   ├── bridges
+│   ├── connectors
+│   ├── fixed_launchagents
+│   ├── manuals
+│   ├── reports
+│   ├── scripts
+│   ├── tests
+│   ├── tools
+│   └── web
+├── gateway
+│   └── health_proxy.js
+├── output
+│   └── reports
+├── package-lock.json
+├── package.json
+├── playwright.config.ts
+├── reports
+│   └── proof
+├── run
+│   ├── auto_context
+│   ├── change_units
+│   ├── daily_reports
+│   ├── deploy_self_healing_node.sh
+│   ├── dev_debug_suite.sh
+│   ├── dev_morning.sh
+│   ├── dev_up.sh
+│   ├── dev_up_final.sh
+│   ├── dev_up_simple.sh
+│   ├── dev_up_working.sh
+│   ├── install_auto_recovery_launchagent.sh
+│   ├── merge_discovery_20251006_043155.log
+│   ├── morning_auto_check_drive_recovery.sh
+│   ├── setup_self_healing_node.sh
+│   ├── smoke_api_ui.sh
+│   ├── smoke_api_ui.sh.bak.1759613701
+│   ├── smoke_api_ui.sh.bak.1759614275
+│   ├── smoke_api_ui.sh.bak.1759614298
+│   ├── smoke_api_ui.sh.bak.1759614303
+│   ├── status
+│   ├── system_discovery_20251006_043124.json
+│   ├── system_discovery_20251006_043124.log
+│   ├── system_discovery_20251007_015950.json
+│   ├── system_discovery_20251007_015950.log
+│   ├── system_discovery_20251007_025445.json
+│   ├── system_discovery_20251007_025445.log
+│   ├── system_discovery_20251007_025445_P2.json
+│   ├── system_status.v2.json
+│   ├── tickets
+│   └── worklog
+├── scripts
+│   ├── apply_moveplan.zsh
+│   ├── apply_wrapper.sh
+│   ├── auto_tunnel.zsh
+│   ├── cleanup_home_backups.sh
+│   ├── dev-setup.zsh
+│   ├── expose_gateways.sh
+│   ├── generate_moveplan.zsh
+│   ├── proof_harness.zsh
+│   ├── proof_harness_simple.sh
+│   ├── run_local.sh
+│   ├── setup_memory_merge_bridge.zsh
+│   ├── tunnel
+│   └── verify_system.sh
+├── setup
+│   └── post_setup.sh
+└── test-results
+    └── g-tests-ui-ui.smoke-Luka-U-e2c6f--html-and-shows-key-widgets-chromium
+
+52 directories, 79 files

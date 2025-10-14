@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.gg_local_llm</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>/Users/icmini/02luka/tools/gg_local_llm_worker.py</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>GG_AGENT</key><string>gglocal</string>
+    <key>GROUP</key><string>workers</string>
+    <key>CONSUMER</key><string>gglocal-1</string>
+    <key>MODEL</key><string>qwen2.5:7b</string>
+    <key>REDIS_HOST</key><string>127.0.0.1</string>
+    <key>REDIS_PORT</key><string>6379</string>
+    <key>REDIS_PASSWORD</key><string>gggclukaic</string>
+    <key>OLLAMA_NUM_GPU</key><string>1</string>
+    <key>OLLAMA_NUM_PARALLEL</key><string>1</string>
+    <key>OLLAMA_NUM_CTX</key><string>1024</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/gg_local_llm.out</string>
+  <key>StandardErrorPath</key><string>/tmp/gg_local_llm.err</string>
+</dict></plist>

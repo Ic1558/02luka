@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>GD_LINK</key>
+		<string>/Users/icmini/02luka/google_drive</string>
+		<key>LW_SHADOW_KEY</key>
+		<string>6aeb1bc163578cbae8444aae5835b97e</string>
+		<key>MODELS_DIR</key>
+		<string>/Volumes/lukadata</string>
+		<key>TEMP_DIR</key>
+		<string>/Users/icmini/02luka/temp</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.02luka.localworker.bg</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/icmini/02luka/services/local_worker_bg/run.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/services/local_worker_bg/logs/stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/services/local_worker_bg/logs/stdout.log</string>
+</dict>
+</plist>
