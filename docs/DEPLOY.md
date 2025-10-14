@@ -2,6 +2,15 @@
 
 ## Manual Deployment Steps
 
+### Ops Atomic Deployment Gate
+
+All merges now pass through an `ops-gate` job in CI. The job calls the Ops Atomic summary endpoint and blocks the workflow whenever the report lists any failures. Configure the following repository secrets so the check can authenticate without exposing credentials in the logs:
+
+- `OPS_ATOMIC_URL` – Base URL for the Ops Atomic service (for example, `https://ops.example.com`).
+- `OPS_ATOMIC_TOKEN` – API token authorized to read the summary endpoint.
+
+If the summary reports active failures, the job will exit with a non-zero status and the pull request cannot merge until the issues are resolved or acknowledged. When an urgent deploy must proceed despite failures, set the repository variable `OPS_GATE_OVERRIDE` to `1`, rerun the workflow, and remove the override immediately after the deployment window.
+
 ### 1. Create GitHub Repository
 1. Go to [github.com/new](https://github.com/new)
 2. Repository name: `02luka`

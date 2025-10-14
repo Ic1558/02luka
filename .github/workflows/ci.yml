@@ -24,3 +24,60 @@ jobs:
         run: |
           make validate-zones
           make proof || true
+  ops-gate:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Check ops atomic summary
+        env:
+          OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
+          OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
+          OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
+        run: |
+          if [ "${OPS_GATE_OVERRIDE}" = "1" ]; then
+            echo "Override active: skipping ops-gate check."
+            exit 0
+          fi
+
+          if [ -z "${OPS_ATOMIC_URL}" ]; then
+            echo "OPS_ATOMIC_URL secret is not configured." >&2
+            exit 1
+          fi
+
+          summary_url="${OPS_ATOMIC_URL%/}/api/reports/summary"
+          tmp_file="$(mktemp)"
+
+          cleanup() {
+            rm -f "$tmp_file"
+          }
+          trap cleanup EXIT
+
+          if [ -n "${OPS_ATOMIC_TOKEN}" ]; then
+            curl --silent --show-error --fail \
+              -H "Authorization: Bearer ${OPS_ATOMIC_TOKEN}" \
+              "$summary_url" >"$tmp_file"
+          else
+            curl --silent --show-error --fail "$summary_url" >"$tmp_file"
+          fi
+
+          python <<'PY' "$tmp_file"
+import json
+import sys
+from pathlib import Path
+
+summary_path = Path(sys.argv[1])
+data = json.loads(summary_path.read_text())
+fails = data.get("fails") or []
+
+if fails:
+    print(f"Ops gate blocked: {len(fails)} failure(s) reported.", file=sys.stderr)
+    for item in fails:
+        if isinstance(item, dict):
+            label = item.get("name") or item.get("title") or json.dumps(item)
+        else:
+            label = str(item)
+        print(f"- {label}", file=sys.stderr)
+    sys.exit(1)
+
+print("Ops gate clear: no failures reported.")
+PY
