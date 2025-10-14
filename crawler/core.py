@@ -212,12 +212,22 @@ class HTMLNormalizer(HTMLParser):
         text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
         return text
 
-    def should_nofollow(self) -> bool:
+    def _robots_directives(self) -> Set[str]:
+        directives: Set[str] = set()
         for entry in self.meta_robots:
-            tokens = {token.strip() for token in entry.replace(";", ",").split(",")}
-            if "nofollow" in tokens:
-                return True
-        return False
+            tokens = {
+                token.strip()
+                for token in entry.replace(";", ",").split(",")
+                if token.strip()
+            }
+            directives.update(tokens)
+        return directives
+
+    def should_nofollow(self) -> bool:
+        return "nofollow" in self._robots_directives()
+
+    def should_noindex(self) -> bool:
+        return "noindex" in self._robots_directives()
 
 
 @dataclass
@@ -252,6 +262,7 @@ class CrawlRuntime:
         self.domain_counts: Dict[str, int] = defaultdict(int)
         self.log_lock = asyncio.Lock()
         self.workers: List[asyncio.Task] = []
+        self.domain_limiters: Dict[str, RateLimiter] = {}
 
     async def run(self):
         for url in self.seeds:
@@ -286,7 +297,6 @@ class CrawlRuntime:
             self.ready_domains.put_nowait(domain)
 
     async def _worker(self):
-        domain_limiters: Dict[str, RateLimiter] = {}
         while True:
             domain = await self.ready_domains.get()
             if domain is None:
@@ -299,10 +309,10 @@ class CrawlRuntime:
             except asyncio.CancelledError:
                 break
             state.scheduled = False
-            limiter = domain_limiters.get(domain)
+            limiter = self.domain_limiters.get(domain)
             if limiter is None:
                 limiter = RateLimiter(PER_DOMAIN_RATE_LIMIT)
-                domain_limiters[domain] = limiter
+                self.domain_limiters[domain] = limiter
             if self.max_pages and self.pages_completed >= self.max_pages:
                 state.queue.task_done()
                 self._check_idle()
@@ -378,6 +388,18 @@ class CrawlRuntime:
             reason = "near_duplicate"
             await self._log_page(url, status, len(content), int((time.monotonic() - start) * 1000), dedup_state, reason)
             self.pages_completed += 1
+            return
+        if parser.should_noindex():
+            reason = "noindex"
+            await self._log_page(url, status, len(content), int((time.monotonic() - start) * 1000), dedup_state, reason)
+            self.pages_completed += 1
+            if not parser.should_nofollow():
+                base = url
+                for link in parser.links:
+                    absolute = urljoin(base, link)
+                    canonical = canonicalize_url(absolute)
+                    if canonical:
+                        self._enqueue_url(canonical)
             return
         title = parser.title
         h1 = parser.h1
