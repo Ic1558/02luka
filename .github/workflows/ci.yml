@@ -60,7 +60,7 @@ jobs:
             curl --silent --show-error --fail "$summary_url" >"$tmp_file"
           fi
 
-          python <<'PY' "$tmp_file"
+          python - "$tmp_file" <<'PY'
 import json
 import sys
 from pathlib import Path
