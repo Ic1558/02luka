@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luka - Minimal Working Version</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      border-bottom: 1px solid #262626;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-weight: bold;
+    }
+    .status {
+      flex: 1;
+      color: #a3a3a3;
+      font-size: 14px;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .message {
+      display: flex;
+      gap: 12px;
+      max-width: 600px;
+    }
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .avatar {
+      width: 32px; height: 32px;
+      background: #141414;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+    .message.user .avatar { background: #3b82f6; }
+    .content {
+      background: #141414;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .message.user .content { background: #3b82f6; }
+    .input-area {
+      padding: 16px;
+      border-top: 1px solid #262626;
+    }
+    .input-wrapper {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    #messageInput {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fafafa;
+      font-size: 14px;
+      resize: none;
+      min-height: 20px;
+      max-height: 100px;
+      font-family: inherit;
+    }
+    #sendButton {
+      width: 32px; height: 32px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: opacity 0.2s;
+    }
+    #sendButton:hover:not(:disabled) { opacity: 0.9; }
+    #sendButton:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    select {
+      background: #141414;
+      border: 1px solid #262626;
+      color: #fafafa;
+      padding: 6px 12px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">L</div>
+    <div class="status">Connected to 02luka</div>
+    <select id="gateway">
+      <option value="http://127.0.0.1:5012">MCP Docker (5012)</option>
+      <option value="http://127.0.0.1:8765">MCP FS (8765)</option>
+      <option value="http://localhost:11434">Ollama (11434)</option>
+    </select>
+  </header>
+
+  <div class="messages" id="messages">
+    <div class="message">
+      <div class="avatar">L</div>
+      <div class="content">Ready. Type a message and click Send or press Enter.</div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+      <button id="sendButton" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Get elements
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const messagesContainer = document.getElementById('messages');
+    const gatewaySelect = document.getElementById('gateway');
+
+    // Auto-resize textarea
+    messageInput.addEventListener('input', () => {
+      messageInput.style.height = 'auto';
+      messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
+      updateSendButton();
+    });
+
+    // Update send button state
+    function updateSendButton() {
+      const hasText = messageInput.value.trim().length > 0;
+      sendButton.disabled = !hasText;
+    }
+
+    // Send message
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      // Add user message
+      addMessage('user', text);
+
+      // Clear input
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+      updateSendButton();
+
+      // Add bot response
+      try {
+        const gateway = gatewaySelect.value;
+        const response = await fetch(gateway + '/health').catch(() => null);
+
+        if (response && response.ok) {
+          addMessage('bot', `Connected to ${gateway}. Gateway is healthy.`);
+        } else {
+          addMessage('bot', `Cannot connect to ${gateway}. Please check if the service is running.`);
+        }
+      } catch (err) {
+        addMessage('bot', 'Error: ' + err.message);
+      }
+    }
+
+    // Add message to UI
+    function addMessage(type, text) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message ' + (type === 'user' ? 'user' : '');
+
+      messageDiv.innerHTML = `
+        <div class="avatar">${type === 'user' ? 'U' : 'L'}</div>
+        <div class="content">${text}</div>
+      `;
+
+      messagesContainer.appendChild(messageDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Handle Enter key
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    // Handle button click
+    sendButton.addEventListener('click', sendMessage);
+
+    // Initial state
+    updateSendButton();
+    messageInput.focus();
+
+    // Log for debugging
+    console.log('Luka UI initialized. Elements found:', {
+      input: !!messageInput,
+      button: !!sendButton,
+      messages: !!messagesContainer
+    });
+  </script>
+</body>
+</html>

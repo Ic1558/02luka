@@ -92,6 +92,13 @@ test_endpoint "Paula Health" "GET" "http://127.0.0.1:4000/api/paula/health" "" "
 
 echo ""
 
+echo "=== Reports API (Optional) ==="
+test_endpoint "Reports List" "GET" "http://127.0.0.1:4000/api/reports/list" "" "200" "true" || true
+test_endpoint "Reports Summary" "GET" "http://127.0.0.1:4000/api/reports/summary" "" "200" "true" || true
+test_endpoint "Reports Latest" "GET" "http://127.0.0.1:4000/api/reports/latest" "" "200" "true" || true
+
+echo ""
+
 # Summary
 echo "=== Smoke Test Summary ==="
 echo "✅ PASS: $PASS"

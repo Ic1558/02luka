@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Luka Chat Launcher</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .launcher-container {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+    .logo {
+      width: 64px;
+      height: 64px;
+      background: #3b82f6;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      font-weight: bold;
+      font-size: 24px;
+      margin: 0 auto 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #a3a3a3;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .launcher-button {
+      background: #3b82f6;
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      margin: 8px;
+      min-width: 160px;
+    }
+    .launcher-button:hover {
+      opacity: 0.9;
+    }
+    .launcher-button.secondary {
+      background: #141414;
+      border: 1px solid #262626;
+    }
+    .launcher-button.secondary:hover {
+      border-color: #3b82f6;
+    }
+    .status {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #a3a3a3;
+    }
+  </style>
+</head>
+<body>
+  <div class="launcher-container">
+    <div class="logo">L</div>
+    <h1>Luka Chat</h1>
+    <p class="subtitle">AI Chat Interface</p>
+    
+    <button class="launcher-button" id="openChatBtn">Open Chat Window</button>
+    <button class="launcher-button secondary" id="openMainBtn">Open Main Interface</button>
+    
+    <div class="status" id="status">Ready to launch</div>
+  </div>
+
+  <script>
+    const openChatBtn = document.getElementById('openChatBtn');
+    const openMainBtn = document.getElementById('openMainBtn');
+    const status = document.getElementById('status');
+
+    openChatBtn.addEventListener('click', () => {
+      try {
+        const windowFeatures = 'width=800,height=600,resizable=yes,scrollbars=yes,status=yes,toolbar=no,menubar=no,location=no';
+        const chatWindow = window.open('./chat-window.html', 'luka-chat', windowFeatures);
+        
+        if (chatWindow) {
+          status.textContent = 'Chat window opened successfully';
+          status.style.color = '#4ade80';
+        } else {
+          status.textContent = 'Failed to open chat window (popup blocked?)';
+          status.style.color = '#f87171';
+        }
+      } catch (error) {
+        status.textContent = `Error: ${error.message}`;
+        status.style.color = '#f87171';
+      }
+    });
+
+    openMainBtn.addEventListener('click', () => {
+      try {
+        window.location.href = './luka.html';
+      } catch (error) {
+        status.textContent = `Error: ${error.message}`;
+        status.style.color = '#f87171';
+      }
+    });
+
+    // Auto-open chat window if URL parameter is present
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auto') === 'chat') {
+      setTimeout(() => {
+        openChatBtn.click();
+      }, 500);
+    }
+  </script>
+</body>
+</html>

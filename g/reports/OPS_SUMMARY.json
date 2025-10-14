@@ -1,0 +1,21 @@
+{
+  "generated_at": "2025-10-14T18:18:08.137Z",
+  "latest_file": "OPS_ATOMIC_251015_011806.md",
+  "timestamp": "20251015_011806",
+  "status": "unknown",
+  "services": {
+    "API": "UP",
+    "UI": "UP",
+    "MCP": "UP"
+  },
+  "fails": [],
+  "warns": [
+    "LIMITED (OAuth required)"
+  ],
+  "migration": {
+    "boss": 2382,
+    "g": 682,
+    "docs": 72
+  },
+  "git": {}
+}
