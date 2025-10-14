@@ -230,6 +230,10 @@ export async function crawlUrls(seedUrls, options) {
     const finalHost = getHostname(finalUrl) || currentHost;
     const finalAllowlisted = allowlistHasHost(finalHost, allowlist);
 
+    if (finalHost !== currentHost) {
+      perDomainCounts.set(currentHost, currentCount + 1);
+    }
+
     const finalCount = perDomainCounts.get(finalHost) || 0;
     if (finalCount >= perDomain) {
       perDomainCounts.set(finalHost, finalCount);
