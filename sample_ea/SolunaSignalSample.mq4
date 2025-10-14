@@ -13,14 +13,15 @@ SolunaSignalClient g_client;
 
 int OnInit()
   {
-   if(InpPollSeconds < 5)
+   int pollSeconds = InpPollSeconds;
+   if(pollSeconds < 5)
      {
       Print("[PaulaSample] Poll period too small. Using 5 seconds instead.");
-      InpPollSeconds = 5;
+      pollSeconds = 5;
      }
    g_client.Configure(InpApiBaseUrl, InpApiKey, 7000);
-   EventSetTimer(InpPollSeconds);
-   Print("[PaulaSample] Initialized. Polling every ", InpPollSeconds, " seconds.");
+   EventSetTimer(pollSeconds);
+   Print("[PaulaSample] Initialized. Polling every ", pollSeconds, " seconds.");
    return(INIT_SUCCEEDED);
   }
 
