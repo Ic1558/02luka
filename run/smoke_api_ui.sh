@@ -57,7 +57,13 @@ echo "=== Core Services ==="
 # API Capabilities
 test_endpoint "API Capabilities" "GET" "http://127.0.0.1:4000/api/capabilities" "" "200" || true
 
-# UI Accessibility  
+# Reports API
+echo "=== Reports API ==="
+test_endpoint "Reports List" "GET" "http://127.0.0.1:4000/api/reports/list" "" "200" || true
+test_endpoint "Reports Latest" "GET" "http://127.0.0.1:4000/api/reports/latest" "" "200" || true
+test_endpoint "Reports Summary" "GET" "http://127.0.0.1:4000/api/reports/summary" "" "200" || true
+
+# UI Accessibility
 test_endpoint "UI Index" "GET" "http://127.0.0.1:5173/" "" "200" || true
 test_endpoint "UI Luka" "GET" "http://127.0.0.1:5173/luka.html" "" "200" || true
 
