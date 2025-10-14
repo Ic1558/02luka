@@ -491,6 +491,8 @@
       chat: true
     };
 
+    let lastOptimization = null;
+
     const defaultMailboxOrder = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
     const mailboxState = {
       mailboxes: [],
@@ -525,6 +527,42 @@
       };
     }
 
+    function formatVariantBlock(variant, index) {
+      const headingParts = [`Variant ${index + 1}`];
+      if (variant?.title) {
+        headingParts.push(`— ${variant.title}`);
+      }
+      const lines = [`### ${headingParts.join(' ')}`];
+      if (typeof variant?.score === 'number') {
+        lines.push(`Score: ${Math.round(Math.max(0, Math.min(1, variant.score)) * 100)}%`);
+      }
+      if (variant?.source) {
+        lines.push(`Source: ${variant.source}`);
+      }
+      if (variant?.rationale) {
+        lines.push(`Rationale: ${variant.rationale}`);
+      }
+      lines.push('');
+      lines.push(variant?.prompt || '');
+      return lines.join('\n');
+    }
+
+    function renderOptimizationPreview(data) {
+      if (!data) {
+        optimizedPreview.textContent = '';
+        return;
+      }
+      const variants = Array.isArray(data.variants) ? data.variants : null;
+      if (variants && variants.length) {
+        const blocks = variants.map((variant, index) => formatVariantBlock(variant, index));
+        optimizedPreview.textContent = blocks.join('\n\n-----\n\n');
+      } else if (data.prompt) {
+        optimizedPreview.textContent = data.prompt;
+      } else {
+        optimizedPreview.textContent = '';
+      }
+    }
+
     async function optimizePrompt() {
       if (!isFeatureEnabled('optimize_prompt')) {
         optimizeStatus.textContent = 'Optimization is disabled by server capabilities.';
@@ -539,6 +577,7 @@
 
       optimizeButton.disabled = true;
       optimizeStatus.textContent = 'Optimizing…';
+      lastOptimization = null;
       try {
         const res = await fetch(`${API_BASE}/api/optimize_prompt`, {
           method: 'POST',
@@ -549,22 +588,30 @@
           throw new Error(`Request failed (${res.status})`);
         }
         const data = await res.json();
-        optimizedPreview.textContent = data.prompt || '';
+        lastOptimization = data;
+        renderOptimizationPreview(data);
         const routerMeta = extractRouterMeta(data);
         const effectiveEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
+        let statusMessage;
         if (engineMode === 'auto') {
-          optimizeStatus.textContent = data.ok
+          statusMessage = data.ok
             ? `Auto engine selected (${effectiveEngine}).`
             : 'No optimization generated.';
         } else if (data.engine && data.engine !== payload.engine) {
-          optimizeStatus.textContent = `Fallback to ${data.engine} engine.`;
+          statusMessage = `Fallback to ${data.engine} engine.`;
         } else {
-          optimizeStatus.textContent = data.ok ? `Optimized via ${effectiveEngine} engine.` : 'No optimization generated.';
+          statusMessage = data.ok ? `Optimized via ${effectiveEngine} engine.` : 'No optimization generated.';
         }
+        const warnings = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
+        if (warnings.length) {
+          statusMessage = `${statusMessage} Warning: ${warnings.join(' ')}`;
+        }
+        optimizeStatus.textContent = statusMessage;
         annotateStatusWithRouter(optimizeStatus, routerMeta);
       } catch (err) {
         console.error(err);
         optimizeStatus.textContent = 'Optimization failed. Check server logs.';
+        renderOptimizationPreview(null);
       } finally {
         optimizeButton.disabled = false;
         applyFeatureState();
@@ -578,7 +625,12 @@
       }
 
       const payload = getComposerPayload();
-      const message = payload.prompt;
+      let message = payload.prompt;
+      let usedOptimization = false;
+      if (lastOptimization?.variants?.length && lastOptimization.variants[0]?.prompt) {
+        message = lastOptimization.variants[0].prompt;
+        usedOptimization = true;
+      }
       if (!message) {
         optimizeStatus.textContent = 'Provide a prompt to send.';
         return;
@@ -606,9 +658,13 @@
           optimizedPreview.textContent = data.response;
           const chatEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
           if (engineMode === 'auto') {
-            optimizeStatus.textContent = `Auto chat engine (${chatEngine}).`;
+            optimizeStatus.textContent = usedOptimization
+              ? `Auto chat engine (${chatEngine}) with optimized prompt.`
+              : `Auto chat engine (${chatEngine}).`;
           } else {
-            optimizeStatus.textContent = `Chat response via ${chatEngine} engine.`;
+            optimizeStatus.textContent = usedOptimization
+              ? `Chat response via ${chatEngine} engine (optimized prompt).`
+              : `Chat response via ${chatEngine} engine.`;
           }
         } else if (data.best && data.best.text) {
           optimizedPreview.textContent = data.best.text;
@@ -746,7 +802,9 @@
     optimizeButton.addEventListener('click', optimizePrompt);
     sendChatButton.addEventListener('click', sendChat);
     copyButton.addEventListener('click', () => {
-      const text = optimizedPreview.textContent;
+      const text = (lastOptimization?.variants?.length && lastOptimization.variants[0]?.prompt)
+        ? lastOptimization.variants[0].prompt
+        : optimizedPreview.textContent;
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => {
         optimizeStatus.textContent = 'Copied optimized output to clipboard.';

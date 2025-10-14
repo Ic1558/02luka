@@ -35,6 +35,21 @@ python3 -m http.server 8080
 open http://localhost:8080
 ```
 
+## 🔮 OpenAI Responses Integration
+
+02LUKA now ships with native support for OpenAI's latest **Responses API** and reasoning models. Configure the following environment variables before launching `boss-api` to unlock prompt optimization and direct chat via `o4-mini` (default) or any compatible model:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+# Optional overrides
+export OPENAI_MODEL="o4-mini"
+export OPENAI_CHAT_MODEL="gpt-4.1-mini"
+export OPENAI_OPTIMIZE_MODEL="o4-mini"
+export OPENAI_REASONING_EFFORT="medium"  # low | medium | high
+```
+
+With a key in place the UI automatically enables the **Optimize** and **Chat** actions, surfaces reasoning traces, and reports token usage per request. When no key is configured the optimizer now falls back to a rule-based heuristic engine that still returns three structured prompt variants, so you never lose the workflow. See [`docs/api_endpoints.md`](docs/api_endpoints.md) for the new REST interfaces and connector status endpoint.
+
 ## 🌅 Morning Routine
 
 **One-liner to start your day:**

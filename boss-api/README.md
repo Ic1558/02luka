@@ -16,8 +16,8 @@
 - `POST /api/plan`
 - `POST /api/patch`
 - `POST /api/smoke`
-- `POST /api/optimize`
-- `POST /api/chat-with-nlu-router`
+- `POST /api/optimize_prompt`
+- `POST /api/chat`
 - `GET /api/list/:folder`
 - `GET /api/file/:folder/:name`
 
@@ -98,6 +98,106 @@ Runs smoke/self-tests through `agents/lukacode/smoke.*`.
 ```
 - `scope`/`checks` arrays are truncated to 20 items and stringified before dispatch.
 - Responses follow the same `{ ok, runId, smoke, status, statusLogs }` shape.
+
+## OpenAI Responses APIs
+
+The boss API integrates OpenAI's Responses API for prompt optimization and direct chat when `OPENAI_API_KEY` is configured.
+
+### `GET /api/connectors/status`
+
+Returns readiness information for Anthropic, OpenAI, and local heuristic services.
+
+```json
+{
+  "anthropic": { "ready": false, "reason": "ANTHROPIC_API_KEY not configured." },
+  "openai": { "ready": true, "model": "o4-mini" },
+  "local": { "ready": true, "optimize": { "source": "heuristic", "variants": 3 } }
+}
+```
+
+### `POST /api/optimize_prompt`
+
+Rewrites prompts using `o4-mini` (overridable via `OPENAI_OPTIMIZE_MODEL`). When an OpenAI key is absent or the Responses API call fails, the server automatically falls back to a rule-based heuristic engine that produces three ranked variants.
+
+**Request JSON**
+```json
+{
+  "prompt": "Draft a release announcement for version 1.2.",
+  "system": "You are a precise product marketer.",
+  "context": "Highlight the new automations tab.",
+  "model": "o4-mini"
+}
+```
+
+**Response JSON**
+```json
+{
+  "ok": true,
+  "prompt": "Announcement plan...",
+  "variants": [
+    {
+      "id": "openai:o4-mini",
+      "title": "OpenAI o4-mini",
+      "score": 0.92,
+      "source": "openai",
+      "prompt": "Announcement plan...",
+      "rationale": "Validated release notes before rewriting."
+    },
+    {
+      "id": "structured_blueprint",
+      "title": "Structured Execution Blueprint",
+      "score": 0.74,
+      "source": "heuristic",
+      "prompt": "# Role...",
+      "rationale": "Organizes the request into..."
+    }
+  ],
+  "best": "openai:o4-mini",
+  "engine": "openai:o4-mini",
+  "reasoning": "Validated release notes before rewriting.",
+  "usage": { "input_tokens": 280, "output_tokens": 160 },
+  "warnings": ["OpenAI request failed"],
+  "meta": {
+    "provider": "openai",
+    "model": "o4-mini",
+    "endpoint": "responses",
+    "status": "completed",
+    "response_id": "resp_abc123"
+  }
+}
+```
+
+When the heuristic engine is used exclusively the response mirrors the same shape but `engine` is set to `heuristic:rule_based`, `meta.provider` is `heuristic`, and `warnings` remains absent.
+
+### `POST /api/chat`
+
+Direct chat completion with optional system prompt. Uses `OPENAI_CHAT_MODEL` or falls back to `OPENAI_MODEL`.
+
+**Request JSON**
+```json
+{
+  "message": "Summarize today's incident report",
+  "system": "You are an SRE assistant",
+  "model": "o4-mini"
+}
+```
+
+**Response JSON**
+```json
+{
+  "ok": true,
+  "response": "Incident resolved after...",
+  "engine": "openai:o4-mini",
+  "reasoning": "Checked the postmortem summary.",
+  "usage": { "input_tokens": 210, "output_tokens": 120 },
+  "meta": {
+    "provider": "openai",
+    "model": "o4-mini",
+    "endpoint": "responses",
+    "response_id": "resp_def456"
+  }
+}
+```
 
 ## Workspace File APIs
 - `GET /api/list/:folder` – Lists visible files. Allowed folders: `inbox`, `sent`, `deliverables`, `dropbox`, `drafts`, `documents`.

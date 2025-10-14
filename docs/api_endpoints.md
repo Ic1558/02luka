@@ -69,6 +69,7 @@ Returns available features, connectors, and mailboxes.
   "features": {
     "goal": true,
     "optimize_prompt": true,
+    "optimize_prompt_sources": ["heuristic", "openai"],
     "chat": true,
     "rag": true,
     "sql": true,
@@ -83,6 +84,116 @@ Returns available features, connectors, and mailboxes.
 **Example:**
 ```bash
 curl http://127.0.0.1:4000/api/capabilities | jq .
+```
+
+---
+
+### GET /api/connectors/status
+
+Returns readiness details for Anthropic, OpenAI, and local heuristic services powering the optimizer.
+
+**Example:**
+```bash
+curl http://127.0.0.1:4000/api/connectors/status | jq .
+```
+
+**Response:**
+```json
+{
+  "anthropic": { "ready": false, "reason": "ANTHROPIC_API_KEY not configured." },
+  "openai": { "ready": true, "model": "o4-mini", "endpoint": "https://api.openai.com/v1/responses" },
+  "local": { "ready": true, "optimize": { "source": "heuristic", "variants": 3 } }
+}
+```
+
+---
+
+### POST /api/optimize_prompt
+
+Leverages the OpenAI Responses API (o4-mini by default) to rewrite prompts with structured, execution-ready guidance. When no OpenAI key is configured the endpoint automatically falls back to a rule-based heuristic engine that still returns three ranked variants.
+
+**Request Body:**
+```json
+{
+  "prompt": "Write an email reminding the team about the release.",
+  "system": "You are a meticulous project coordinator.",
+  "context": "Ship date is Friday; include testing status.",
+  "model": "o4-mini"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "prompt": "System reminder for the release...",
+  "variants": [
+    {
+      "id": "openai:o4-mini",
+      "title": "OpenAI o4-mini",
+      "score": 0.92,
+      "source": "openai",
+      "prompt": "System reminder for the release...",
+      "rationale": "Validated requirements before rewriting."
+    },
+    {
+      "id": "structured_blueprint",
+      "title": "Structured Execution Blueprint",
+      "score": 0.74,
+      "source": "heuristic",
+      "prompt": "# Role...",
+      "rationale": "Organizes the request into role, context, deliverables, and QA gates."
+    }
+  ],
+  "best": "openai:o4-mini",
+  "engine": "openai:o4-mini",
+  "reasoning": "Validated requirements before rewriting.",
+  "usage": {
+    "input_tokens": 312,
+    "output_tokens": 181
+  },
+  "meta": {
+    "provider": "openai",
+    "model": "o4-mini",
+    "endpoint": "responses",
+    "status": "completed",
+    "response_id": "resp_123"
+  }
+}
+```
+
+---
+
+### POST /api/chat
+
+Direct chat access to the OpenAI Responses API with reasoning support. Uses `OPENAI_CHAT_MODEL` if provided; otherwise falls back to `OPENAI_MODEL`.
+
+**Request Body:**
+```json
+{
+  "message": "Summarize the current deployment status.",
+  "system": "You are an operations assistant.",
+  "model": "o4-mini"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "response": "Deployment is on schedule...",
+  "engine": "openai:o4-mini",
+  "reasoning": "Reviewed runbook entries to confirm schedule.",
+  "usage": {
+    "input_tokens": 145,
+    "output_tokens": 102
+  },
+  "meta": {
+    "provider": "openai",
+    "model": "o4-mini",
+    "response_id": "resp_456"
+  }
+}
 ```
 
 ---
