@@ -1212,7 +1212,9 @@ const server = http.createServer(async (req, res) => {
 
           let applied = null;
           if (apply) {
-            applied = await runShell(`git apply "${tmpPath}" && git add -A`);
+            applied = await runShell(
+              `git apply --cached "${tmpPath}" && git apply "${tmpPath}"`
+            );
             if (!applied.ok) {
               return writeJson(res, 200, { ok: false, mode: 'apply', applied });
             }
