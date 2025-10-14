@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.startup</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/icmini/02luka/startup/smart_startup.sh</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/icmini/02luka</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+        <key>PROJECT_ROOT</key>
+        <string>/Users/icmini/02luka</string>
+    </dict>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <false/>
+    
+    <key>LaunchOnlyOnce</key>
+    <true/>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/launchd_out.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/launchd_err.log</string>
+    
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+</dict>
+</plist>

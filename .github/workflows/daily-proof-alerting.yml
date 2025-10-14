@@ -1,0 +1,46 @@
+name: Daily Proof Alerting
+
+on:
+  workflow_run:
+    workflows: ["Daily Proof (Option C)"]
+    types: [completed]
+
+jobs:
+  alert-on-failure:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Alert
+        if: env.SLACK_WEBHOOK_URL != ''
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#alerts'
+          text: |
+            🚨 Daily Proof Workflow Failed!
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Workflow: ${{ github.event.workflow_run.html_url }}
+            
+            Please check the workflow logs and fix any issues.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      
+      - name: Send Teams Alert (Alternative)
+        if: env.TEAMS_WEBHOOK_URL != ''
+        uses: skitionek/notify-microsoft-teams@master
+        with:
+          webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          message: |
+            🚨 Daily Proof Workflow Failed!
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Workflow: ${{ github.event.workflow_run.html_url }}
+            
+            Please check the workflow logs and fix any issues.
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}

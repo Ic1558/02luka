@@ -1,0 +1,48 @@
+- time: "2025-10-02T10:15:00+07:00"
+  change_id: CU-2025-10-02-smoke-docs
+  summary: "Extend smoke checks for upload/connectors and log docs/manifests"
+  files_touched:
+    - run/smoke_api_ui.sh
+    - run/change_units/CU-2025-10-02.yml
+    - run/daily_reports/REPORT_2025-10-02.md
+  tags: ["boss-ui","boss-api","resolver","preflight"]
+  tests_ran:
+    - smoke_api_ui: pending
+- time: "2025-10-02T06:17:52Z"
+  change_id: CU-2025-10-02-luka-upgrade  
+  summary: "CLC re-check: capabilities on, endpoints validated, smoke OK"
+  files_touched: [boss-api/server.cjs, boss-ui/luka.html, run/smoke_api_ui.sh]
+- time: "2025-10-02T08:33:14Z"
+  change_id: CU-2025-10-02-ports-4000-remote-access
+  summary: "Standardize API port to 4000, UI auto-switch domain, smoke updated, remote access manual added."
+  files_touched:
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+    - run/smoke_api_ui.sh
+    - docs/REMOTE_ACCESS.md
+    - .codex/TASK_RECIPES.md
+  tags: [boss-api, boss-ui, resolver, preflight]
+  tests_ran: [preflight:OK, drift_guard:OK, smoke_api_ui:OK]
+  guardrail_status: OK
+  followups: []
+- time: "2025-10-02T09:51:38Z"
+  change_id: CU-2025-10-02-context-v6
+  summary: "Enable context engine v6 header and add model router shim."
+  files_touched:
+    - g/tools/context_engine.sh
+    - g/tools/model_router.sh
+    - g/manuals/CODEX_INTEGRATION_TEMPLATES.md
+  tags: [resolver, preflight]
+  tests_ran: [preflight:OK, drift_guard:OK]
+  guardrail_status: OK
+  followups: []
+- time: "2025-10-02T10:08:16Z"
+  change_id: CU-2025-10-02-router-ui-toggle
+  summary: "Route boss-api chat/optimize through model_router and expose auto/manual engine toggle in UI."
+  files_touched:
+    - boss-api/server.cjs
+    - boss-ui/luka.html
+  tags: [boss-api, boss-ui, resolver]
+  tests_ran: [preflight:OK, drift_guard:OK]
+  guardrail_status: OK
+  followups: []

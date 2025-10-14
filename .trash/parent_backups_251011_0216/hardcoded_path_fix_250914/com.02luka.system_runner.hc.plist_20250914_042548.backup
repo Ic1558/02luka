@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.system_runner.hc</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>-lc</string><string>/Users/icmini/02luka/tools/system_runner_hc.sh</string></array>
+  <key>WorkingDirectory</key><string>/Users/icmini/02luka</string>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>900</integer>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/logs/system_runner.hc.log</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/logs/system_runner.hc.log</string>
+  <key>LimitLoadToSessionType</key><string>Aqua</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key><string>/Users/icmini</string>
+  </dict>
+</dict></plist>

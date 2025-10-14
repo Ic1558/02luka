@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.fastvlm.logrotate</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>/Users/icmini/02luka/tools/rotate_fastvlm_logs.sh</string>
+    </array>
+    
+    <key>StartInterval</key>
+    <integer>86400</integer>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/fastvlm/logrotate.out</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/fastvlm/logrotate.err</string>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/icmini/02luka</string>
+</dict>
+</plist>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.02luka.simple.index.updater</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/icmini/02luka/tools/simple_index_updater.sh</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>3600</integer>
+	<key>WorkingDirectory</key>
+	<string>/Users/icmini/02luka</string>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/logs/simple_index_updater.out</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/logs/simple_index_updater.err</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<false/>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+</dict>
+</plist>
