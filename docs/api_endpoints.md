@@ -244,6 +244,89 @@ Place a `patch.cjs` script in `agents/lukacode/` directory.
 
 ---
 
+### POST /api/optimize
+Optimizes a raw prompt using the configured Cloudflare AI Gateway. This powers the Luka prompt optimizer panel.
+
+**Request JSON**
+```json
+{
+  "prompt": "Refactor the onboarding workflow for the Luka repo.",
+  "model": "gpt-4o-mini"
+}
+```
+- `prompt` (string, required) – Free-form text to refine.
+- `model` (string, optional) – Overrides the `AI_GATEWAY_MODEL` environment variable (`gpt-4o-mini` by default).
+- `systemPrompt` / `maxTokens` (optional) – Advanced overrides for experimentation.
+
+**Response JSON**
+```json
+{
+  "ok": true,
+  "optimized": "You are Luka, an elite engineering agent...",
+  "raw": { "choices": [{ "message": { "content": "..." } }] }
+}
+```
+- `optimized` contains the trimmed assistant reply from the AI gateway.
+- `raw` mirrors the upstream OpenAI-style payload for debugging.
+
+**Error Codes**
+- `400` if `prompt` is missing or empty.
+- `503` when `AI_GATEWAY_URL` / `AI_GATEWAY_KEY` are not configured.
+- `502` if the upstream gateway rejects the request or returns malformed JSON.
+
+**Example**
+```bash
+curl -X POST http://127.0.0.1:4000/api/optimize \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Draft a release plan for Luka v2"}' | jq '.optimized'
+```
+
+### POST /api/chat
+Routes Luka missions through the Cloudflare Agents Gateway and returns the aggregated delegate output rendered in the chat UI.
+
+**Request JSON**
+```json
+{
+  "message": "Plan an onboarding playbook for Luka",
+  "target": "auto",
+  "metadata": { "runId": "demo" }
+}
+```
+- `message` (string, required) – Mission text supplied by the operator.
+- `target` (string, optional) – Explicit delegate selection (`auto`, `mcp`, `mcp_fs`, `ollama`, ...).
+- `metadata` / `context` (optional) – Forwarded to the Agents Gateway unchanged.
+
+**Response JSON**
+```json
+{
+  "ok": true,
+  "summary": "Lisa delivered the top plan.",
+  "best": {
+    "id": "lisa",
+    "name": "Lisa",
+    "text": "High-level roadmap..."
+  },
+  "results": [
+    { "id": "lisa", "status": "ok", "latencyMs": 842 },
+    { "id": "mary", "status": "error", "error": "timeout" }
+  ]
+}
+```
+- `summary` and `best` highlight the winning delegate output.
+- `results` enumerates every delegate response with latency/error metadata.
+
+**Error Codes**
+- `400` if `message` is empty.
+- `503` when `AGENTS_GATEWAY_URL` is not configured.
+- `502` for upstream gateway failures or non-JSON payloads.
+
+**Example**
+```bash
+curl -X POST http://127.0.0.1:4000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Summarize Luka system architecture"}' | jq '.summary'
+```
+
 ## Error Responses
 
 All endpoints return JSON error responses with appropriate HTTP status codes:

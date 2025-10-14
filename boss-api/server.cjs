@@ -6,6 +6,24 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
+const DEFAULT_OPTIMIZER_MODEL = process.env.AI_GATEWAY_MODEL || 'gpt-4o-mini';
+const AI_COMPLETIONS_PATH = process.env.AI_GATEWAY_COMPLETIONS_PATH || '/openai/v1/chat/completions';
+
+function requireGlobalFetch() {
+  if (typeof fetch === 'function') {
+    return fetch;
+  }
+
+  try {
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    return require('node-fetch');
+  } catch (error) {
+    throw new Error('Global fetch API is unavailable. Upgrade to Node 18+ or install node-fetch.');
+  }
+}
+
+const runtimeFetch = requireGlobalFetch();
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -17,6 +35,105 @@ const AGENTS_GATEWAY_URL = process.env.AGENTS_GATEWAY_URL || '';
 const AGENTS_GATEWAY_KEY = process.env.AGENTS_GATEWAY_KEY || '';
 const PUBLIC_API_BASE = process.env.PUBLIC_API_BASE || '';
 const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
+
+function stripTrailingSlash(value = '') {
+  return value.replace(/\/+$/, '');
+}
+
+const agentsGatewayBase = stripTrailingSlash(AGENTS_GATEWAY_URL || '');
+
+function buildGatewayHeaders(key, extraHeaders = {}) {
+  const headers = { ...extraHeaders };
+  if (key) {
+    headers.Authorization = `Bearer ${key}`;
+  }
+  return headers;
+}
+
+async function forwardJson(url, options = {}) {
+  const requestInit = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    body: JSON.stringify(options.body || {}),
+    signal: options.signal
+  };
+
+  const response = await runtimeFetch(url, requestInit);
+  const text = await response.text();
+
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (error) {
+    const parseError = new Error(`Upstream returned invalid JSON from ${url}`);
+    parseError.status = 502;
+    parseError.detail = text?.slice(0, 256);
+    throw parseError;
+  }
+
+  if (!response.ok) {
+    const error = new Error(payload?.detail || payload?.error || `Upstream error (${response.status})`);
+    error.status = response.status;
+    error.detail = payload;
+    throw error;
+  }
+
+  return payload;
+}
+
+async function dispatchAgentsGateway(requestBody) {
+  if (!agentsGatewayBase) {
+    const error = new Error('Agents gateway is not configured.');
+    error.status = 503;
+    error.detail = 'Set AGENTS_GATEWAY_URL (and optional AGENTS_GATEWAY_KEY) environment variables.';
+    throw error;
+  }
+
+  const url = `${agentsGatewayBase}/chat`;
+  const headers = buildGatewayHeaders(AGENTS_GATEWAY_KEY);
+
+  return forwardJson(url, {
+    body: requestBody,
+    headers
+  });
+}
+
+async function runPromptOptimizer(prompt, overrides = {}) {
+  const aiGatewayBase = stripTrailingSlash(AI_GATEWAY_BASE);
+  if (!aiGatewayBase) {
+    const error = new Error('AI gateway is not configured.');
+    error.status = 503;
+    error.detail = 'Set AI_GATEWAY_URL and AI_GATEWAY_KEY environment variables.';
+    throw error;
+  }
+
+  if (!AI_GATEWAY_KEY) {
+    const error = new Error('AI gateway key missing.');
+    error.status = 503;
+    error.detail = 'Set AI_GATEWAY_KEY to authenticate with the AI gateway.';
+    throw error;
+  }
+
+  const model = overrides.model || DEFAULT_OPTIMIZER_MODEL;
+  const promptText = String(prompt || '').trim();
+
+  const systemPrompt = overrides.systemPrompt || 'You are Luka, an elite prompt engineer. Refine user prompts into precise, structured instructions for autonomous coding agents. Preserve intent, add explicit success criteria, highlight constraints, and keep the response concise and actionable.';
+
+  const body = {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: promptText }
+    ],
+    temperature: 0.2,
+    max_tokens: overrides.maxTokens || 1024
+  };
+
+  const url = `${aiGatewayBase}${AI_COMPLETIONS_PATH}`;
+  const headers = buildGatewayHeaders(AI_GATEWAY_KEY);
+
+  return forwardJson(url, { body, headers });
+}
 
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
@@ -157,6 +274,58 @@ app.get('/api/smoke', async (req, res) => {
     writeJson(res, 200, { smoke: result.stdout.trim() });
   } catch (error) {
     writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.post('/api/chat', async (req, res) => {
+  const { message, target = 'auto', metadata = null, context = null } = req.body || {};
+
+  if (typeof message !== 'string' || message.trim().length === 0) {
+    return writeJson(res, 400, { error: 'message is required' });
+  }
+
+  const payload = {
+    message: message.trim(),
+    target,
+    metadata,
+    context,
+    client: 'luka'
+  };
+
+  try {
+    const data = await dispatchAgentsGateway(payload);
+    writeJson(res, 200, data);
+  } catch (error) {
+    const status = error.status || 502;
+    writeJson(res, status, {
+      error: error.message,
+      detail: error.detail || error.stack
+    });
+  }
+});
+
+app.post('/api/optimize', async (req, res) => {
+  const { prompt, model, systemPrompt, maxTokens } = req.body || {};
+
+  if (typeof prompt !== 'string' || prompt.trim().length === 0) {
+    return writeJson(res, 400, { error: 'prompt is required' });
+  }
+
+  try {
+    const response = await runPromptOptimizer(prompt, { model, systemPrompt, maxTokens });
+
+    const optimized = response?.choices?.[0]?.message?.content?.trim?.() || '';
+    writeJson(res, 200, {
+      ok: true,
+      optimized,
+      raw: response
+    });
+  } catch (error) {
+    const status = error.status || 502;
+    writeJson(res, status, {
+      error: error.message,
+      detail: error.detail || error.stack
+    });
   }
 });
 

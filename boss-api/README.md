@@ -17,7 +17,7 @@
 - `POST /api/patch`
 - `POST /api/smoke`
 - `POST /api/optimize`
-- `POST /api/chat-with-nlu-router`
+- `POST /api/chat`
 - `GET /api/list/:folder`
 - `GET /api/file/:folder/:name`
 
@@ -98,6 +98,39 @@ Runs smoke/self-tests through `agents/lukacode/smoke.*`.
 ```
 - `scope`/`checks` arrays are truncated to 20 items and stringified before dispatch.
 - Responses follow the same `{ ok, runId, smoke, status, statusLogs }` shape.
+
+### `POST /api/optimize`
+Connects Luka's prompt optimizer to the Cloudflare AI Gateway.
+
+- Requires `AI_GATEWAY_URL` and `AI_GATEWAY_KEY` environment variables.
+- Optional overrides: `AI_GATEWAY_MODEL` (default `gpt-4o-mini`) and `AI_GATEWAY_COMPLETIONS_PATH` (default `/openai/v1/chat/completions`).
+- Request body: `{ "prompt": "...", "model": "optional" }`.
+- Response: `{ ok: true, optimized: "...", raw: { choices: [...] } }`.
+- Returns `503` if the gateway credentials are missing, `502` when the upstream call fails.
+
+### `POST /api/chat`
+Routes mission prompts through the Cloudflare Agents Gateway and returns aggregated delegate output.
+
+- Requires `AGENTS_GATEWAY_URL` and optionally `AGENTS_GATEWAY_KEY`.
+- Request body: `{ "message": "...", "target": "auto", "metadata": {} }`.
+- Response mirrors the gateway payload (summary, best delegate, per-delegate results).
+- Emits `503` when no gateway URL is configured, `502` for upstream failures.
+
+## Cloudflare Gateway Configuration
+
+Export the following environment variables (e.g. via `.env` or your process manager) before launching `server.cjs`:
+
+```bash
+AI_GATEWAY_URL="https://gateway.ai.cloudflare.com/v1/<account>/luka-ai-gateway"
+AI_GATEWAY_KEY="<bearer-token>"
+AI_GATEWAY_MODEL="gpt-4o-mini"              # optional override
+AI_GATEWAY_COMPLETIONS_PATH="/openai/v1/chat/completions"  # optional override
+
+AGENTS_GATEWAY_URL="https://agents.theedges.work"
+AGENTS_GATEWAY_KEY="<bearer-token>"         # optional if gateway is public
+```
+
+Without these values, `/api/optimize` and `/api/chat` return `503` with configuration guidance so local development remains intuitive.
 
 ## Workspace File APIs
 - `GET /api/list/:folder` – Lists visible files. Allowed folders: `inbox`, `sent`, `deliverables`, `dropbox`, `drafts`, `documents`.
