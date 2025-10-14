@@ -1,0 +1,4 @@
+# Domains that Paula crawler is allowed to visit
+# Use bare domains (no protocol) and one per line.
+example.com
+127.0.0.1

@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { crawlUrls, allowlistHasHost, normalizeUrl } from './crawler.js';
 
 dotenv.config();
 
@@ -12,11 +13,26 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const HOST = process.env.HOST || '127.0.0.1';
 const PORT = process.env.PORT || 4000;
 const defaultSotPath = path.resolve(__dirname, '..', '..');
 const SOT_PATH = process.env.SOT_PATH || defaultSotPath;
 const pathResolverScript = path.resolve(__dirname, '..', '..', 'g', 'tools', 'path_resolver.sh');
 const execFileAsync = promisify(execFile);
+
+const DEFAULT_ALLOWLIST_RELATIVE = 'g/policies/crawling_allowlist.txt';
+const allowlistFileEnv = process.env.CRAWL_ALLOWLIST_FILE || DEFAULT_ALLOWLIST_RELATIVE;
+const CRAWL_ALLOWLIST_PATH = path.resolve(defaultSotPath, allowlistFileEnv);
+const CRAWL_ALLOWLIST_FILE = allowlistFileEnv;
+const CRAWL_MAX_PAGES = Number.parseInt(process.env.CRAWL_MAX_PAGES || '200', 10);
+const CRAWL_PER_DOMAIN = Number.parseInt(process.env.CRAWL_PER_DOMAIN || '20', 10);
+const CRAWL_USER_AGENT = process.env.CRAWL_USER_AGENT || '02LUKA-PaulaCrawler/1.0 (+ops@theedges.work)';
+const SCRUB_PII = String(process.env.SCRUB_PII || 'false').toLowerCase() === 'true';
+const ENABLE_EMBED = String(process.env.ENABLE_EMBED || 'false').toLowerCase() === 'true';
+const CONFIG_FILE_PATH = path.resolve(defaultSotPath, 'config.json');
+const DEFAULT_BASE = `http://${HOST}:${PORT}`;
+
+let cachedAllowlist = { domains: new Set(), mtimeMs: 0 };
 
 // Add middleware for better performance
 app.use(express.json({ limit: '10mb' }));
@@ -157,6 +173,95 @@ function ensureChildPath(parent, child) {
   return resolved;
 }
 
+async function loadAllowlist() {
+  try {
+    const stats = await fs.stat(CRAWL_ALLOWLIST_PATH);
+    if (cachedAllowlist.mtimeMs === stats.mtimeMs) {
+      return cachedAllowlist.domains;
+    }
+    const raw = await fs.readFile(CRAWL_ALLOWLIST_PATH, 'utf8');
+    const domains = new Set(
+      raw
+        .split(/\r?\n/)
+        .map((line) => line.trim().toLowerCase())
+        .filter((line) => line && !line.startsWith('#'))
+    );
+    cachedAllowlist = { domains, mtimeMs: stats.mtimeMs };
+    return domains;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      cachedAllowlist = { domains: new Set(), mtimeMs: 0 };
+      return cachedAllowlist.domains;
+    }
+    throw error;
+  }
+}
+
+async function loadRuntimeConfig() {
+  try {
+    const raw = await fs.readFile(CONFIG_FILE_PATH, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return {};
+    }
+    throw error;
+  }
+}
+
+function clampNumber(value, fallback, maxValue) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    if (Number.isFinite(maxValue) && maxValue > 0) {
+      return Math.min(parsed, maxValue);
+    }
+    return parsed;
+  }
+  return fallback;
+}
+
+function validateSeeds(rawSeeds, allowlist) {
+  if (!Array.isArray(rawSeeds) || rawSeeds.length === 0) {
+    const error = new Error('Seeds array is required');
+    error.status = 400;
+    error.code = 'seeds_required';
+    throw error;
+  }
+
+  const normalized = [];
+  const disallowed = new Set();
+
+  for (const rawSeed of rawSeeds) {
+    if (typeof rawSeed !== 'string') {
+      const error = new Error('Seed must be a string URL');
+      error.status = 400;
+      error.code = 'invalid_seed';
+      throw error;
+    }
+    const trimmed = rawSeed.trim();
+    if (!trimmed) {
+      const error = new Error('Seed URL cannot be empty');
+      error.status = 400;
+      error.code = 'invalid_seed';
+      throw error;
+    }
+    const normalizedSeed = normalizeUrl(trimmed);
+    if (!normalizedSeed) {
+      const error = new Error(`Invalid seed URL: ${rawSeed}`);
+      error.status = 400;
+      error.code = 'invalid_seed';
+      throw error;
+    }
+    normalized.push(normalizedSeed);
+    const host = new URL(normalizedSeed).hostname.toLowerCase();
+    if (!allowlistHasHost(host, allowlist)) {
+      disallowed.add(host);
+    }
+  }
+
+  return { normalized, disallowed: Array.from(disallowed) };
+}
+
 app.get('/api/list/:folder', async (req, res) => {
   try {
     const folderKey = req.params.folder;
@@ -214,6 +319,89 @@ app.get('/api/file/:folder/:name', async (req, res) => {
     const status = error.status || (error.code === 'ENOENT' ? 404 : 500);
     const code = error.code === 'ENOENT' ? 'file_not_found' : error.code || 'internal_error';
     res.status(status).json(buildError(error.message, code));
+  }
+});
+
+app.get('/config.json', async (req, res) => {
+  try {
+    const runtimeConfig = await loadRuntimeConfig();
+    const baseConfig = runtimeConfig && typeof runtimeConfig === 'object' ? runtimeConfig : {};
+    const agents = { ...(baseConfig.agents || {}) };
+    const gateways = { ...(baseConfig.gateways || {}) };
+
+    if (!agents.paula) {
+      agents.paula = {
+        url: 'http://127.0.0.1:5002',
+        name: '🤖 Paula Agent',
+        type: 'agent'
+      };
+    }
+
+    if (!gateways.paula && agents.paula) {
+      gateways.paula = agents.paula;
+    }
+
+    const config = {
+      ...baseConfig,
+      apiBase: baseConfig.apiBase || DEFAULT_BASE,
+      aiBase: baseConfig.aiBase || baseConfig.apiBase || DEFAULT_BASE,
+      agents,
+      gateways,
+      crawler: {
+        ...(baseConfig.crawler || {}),
+        allowlistFile: CRAWL_ALLOWLIST_FILE,
+        maxPages: CRAWL_MAX_PAGES,
+        perDomain: CRAWL_PER_DOMAIN,
+        userAgent: CRAWL_USER_AGENT,
+        scrubPII: SCRUB_PII,
+        enableEmbed: ENABLE_EMBED
+      }
+    };
+
+    res.json(config);
+  } catch (error) {
+    console.error('[config] load failed', error);
+    res.status(500).json(buildError('Failed to load runtime config', 'config_load_failed'));
+  }
+});
+
+app.post('/api/crawl', async (req, res) => {
+  try {
+    const allowlist = await loadAllowlist();
+    const { normalized, disallowed } = validateSeeds(req.body?.seeds, allowlist);
+
+    if (disallowed.length > 0) {
+      return res.status(400).json({ error: 'seed_domain_not_allowed', disallowed });
+    }
+
+    if (normalized.length === 0) {
+      return res.status(400).json(buildError('No seeds were allowlisted', 'no_allowlisted_seeds'));
+    }
+
+    const requestedMaxPages = clampNumber(req.body?.maxPages, CRAWL_MAX_PAGES, CRAWL_MAX_PAGES);
+    const requestedPerDomain = clampNumber(req.body?.perDomain, CRAWL_PER_DOMAIN, CRAWL_PER_DOMAIN);
+    const effectivePerDomain = Math.max(1, Math.min(requestedPerDomain, requestedMaxPages));
+
+    const crawlResults = await crawlUrls(normalized, {
+      maxPages: requestedMaxPages,
+      perDomain: effectivePerDomain,
+      allowlist,
+      userAgent: CRAWL_USER_AGENT,
+      scrubPII: SCRUB_PII
+    });
+
+    const body = crawlResults.map((record) => JSON.stringify(record)).join('\n');
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.status(200).send(body);
+  } catch (error) {
+    console.error('[crawl] failed', error);
+    const status = error.status || 500;
+    const payload = error.code
+      ? { error: error.code, message: error.message }
+      : buildError('Crawl failed', 'crawl_failed');
+    if (!res.headersSent) {
+      res.status(status).json(payload);
+    }
   }
 });
 
