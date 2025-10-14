@@ -98,9 +98,6 @@ function resolvePublicAiBase() {
   if (PUBLIC_AI_BASE) {
     return PUBLIC_AI_BASE;
   }
-  if (AI_GATEWAY_URL) {
-    return AI_GATEWAY_URL;
-  }
   return resolvePublicApiBase();
 }
 
