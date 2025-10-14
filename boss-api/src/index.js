@@ -1,10 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { createWriteStream, constants as fsConstants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 
 dotenv.config();
 
@@ -16,7 +18,47 @@ const PORT = process.env.PORT || 4000;
 const defaultSotPath = path.resolve(__dirname, '..', '..');
 const SOT_PATH = process.env.SOT_PATH || defaultSotPath;
 const pathResolverScript = path.resolve(__dirname, '..', '..', 'g', 'tools', 'path_resolver.sh');
+const crawlScriptPath = path.resolve(__dirname, '..', '..', 'run', 'crawl.sh');
+const ingestScriptPath = path.resolve(__dirname, '..', '..', 'crawler', 'ingest.py');
+const trainScriptPath = path.resolve(__dirname, '..', '..', 'run', 'auto_train.sh');
 const execFileAsync = promisify(execFile);
+
+const PROCESS_START_TIMEOUT_MS = 60_000;
+const MAX_LOG_LINES = 200;
+const MAX_PAULA_JSON_BYTES = 1 * 1024 * 1024;
+
+const CHILD_ENV_WHITELIST = new Set([
+  'HOME',
+  'LANG',
+  'LC_ALL',
+  'NODE_ENV',
+  'PATH',
+  'PYTHONPATH',
+  'SHELL',
+  'SOT_PATH',
+  'TMPDIR',
+  'PAULA_RUN_ID',
+  'PAULA_JOB_TYPE'
+]);
+
+const allowedSeedOrigins = new Set(
+  (process.env.PAULA_ALLOWED_SEEDS || 'https://theedges.work')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
+
+const secretValuePatterns = Object.entries(process.env)
+  .filter(([key, value]) => value && /KEY|SECRET|TOKEN|PASSWORD|API|ACCESS/i.test(key))
+  .map(([, value]) => value)
+  .filter((value) => typeof value === 'string' && value.length >= 4)
+  .map((value) => new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'));
+
+const jobTable = new Map();
+const jobLogDir = path.resolve(__dirname, '..', 'data', 'paula_logs');
+fs.mkdir(jobLogDir, { recursive: true }).catch((error) => {
+  console.error('Failed to ensure Paula log directory', error);
+});
 
 // Add middleware for better performance
 app.use(express.json({ limit: '10mb' }));
@@ -49,6 +91,160 @@ const allowedFolders = new Set([
   'drafts',
   'documents'
 ]);
+
+function buildChildEnv(additional = {}) {
+  const env = {};
+  for (const key of CHILD_ENV_WHITELIST) {
+    if (process.env[key]) {
+      env[key] = process.env[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(additional)) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (!CHILD_ENV_WHITELIST.has(key)) {
+      continue;
+    }
+    env[key] = value;
+  }
+
+  return env;
+}
+
+function redactSecrets(input) {
+  if (!input || secretValuePatterns.length === 0) {
+    return input;
+  }
+
+  let output = input;
+  for (const pattern of secretValuePatterns) {
+    output = output.replace(pattern, '***');
+  }
+  return output;
+}
+
+async function readLogTail(logPath) {
+  try {
+    const content = await fs.readFile(logPath, 'utf8');
+    const lines = content.split(/\r?\n/);
+    const tailLines = lines.slice(-MAX_LOG_LINES);
+    return redactSecrets(tailLines.join('\n'));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return '';
+    }
+    throw error;
+  }
+}
+
+function queuePaulaJob({ jobType, command, args = [], cwd, env: envOverrides = {} }) {
+  const runId = randomUUID();
+  const logPath = path.join(jobLogDir, `${runId}.log`);
+  const acceptedAt = new Date().toISOString();
+
+  const record = {
+    id: runId,
+    job_type: jobType,
+    status: 'queued',
+    accepted_at: acceptedAt,
+    started_at: null,
+    ended_at: null,
+    tail_log_path: logPath
+  };
+
+  jobTable.set(runId, record);
+
+  setImmediate(() => {
+    const childEnv = buildChildEnv({ ...envOverrides, PAULA_RUN_ID: runId, PAULA_JOB_TYPE: jobType });
+    const logStream = createWriteStream(logPath, { flags: 'a' });
+    logStream.on('error', (error) => {
+      console.error('Failed writing Paula log', error);
+    });
+
+    const timestamp = new Date().toISOString();
+    logStream.write(`[${timestamp}] Queued job ${jobType} (${runId})\n`);
+
+    let finished = false;
+    let spawnTimeout = null;
+
+    const finalize = (status, extra = {}) => {
+      if (finished) {
+        return;
+      }
+      finished = true;
+      if (spawnTimeout) {
+        clearTimeout(spawnTimeout);
+        spawnTimeout = null;
+      }
+      record.status = status;
+      record.ended_at = new Date().toISOString();
+      if (extra.exitCode !== undefined) {
+        record.exit_code = extra.exitCode;
+      }
+      if (extra.signal !== undefined) {
+        record.signal = extra.signal;
+      }
+      if (extra.error) {
+        const sanitizedError = redactSecrets(extra.error);
+        record.error = sanitizedError;
+        logStream.write(`${sanitizedError}\n`);
+      }
+      logStream.write(`[${record.ended_at}] Completed with status ${status}\n`);
+      logStream.end();
+    };
+
+    try {
+      const child = spawn(command, args, {
+        cwd,
+        env: childEnv,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      spawnTimeout = setTimeout(() => {
+        logStream.write('Process failed to start within timeout.\n');
+        child.kill('SIGKILL');
+        finalize('fail', { error: 'Process start timeout' });
+      }, PROCESS_START_TIMEOUT_MS);
+
+      child.once('spawn', () => {
+        if (spawnTimeout) {
+          clearTimeout(spawnTimeout);
+          spawnTimeout = null;
+        }
+        record.status = 'running';
+        record.started_at = new Date().toISOString();
+        logStream.write(`[${record.started_at}] Running command: ${command} ${args.join(' ')}\n`);
+      });
+
+      const writeChunk = (chunk) => {
+        const text = typeof chunk === 'string' ? chunk : chunk.toString();
+        if (!text) {
+          return;
+        }
+        logStream.write(redactSecrets(text));
+      };
+
+      child.stdout.on('data', writeChunk);
+      child.stderr.on('data', writeChunk);
+
+      child.once('error', (error) => {
+        finalize('fail', { error: error.message });
+      });
+
+      child.once('close', (code, signal) => {
+        const status = code === 0 ? 'success' : 'fail';
+        const error = code === 0 ? undefined : `Process exited with code ${code}${signal ? ` (signal ${signal})` : ''}`;
+        finalize(status, { exitCode: code, signal, error });
+      });
+    } catch (error) {
+      finalize('fail', { error: error.message });
+    }
+  });
+
+  return record;
+}
 
 function buildError(message, code = 'internal_error') {
   return { message, code };
@@ -156,6 +352,200 @@ function ensureChildPath(parent, child) {
   }
   return resolved;
 }
+
+const paulaRateLimitMap = new Map();
+const PAULA_RATE_LIMIT_WINDOW = 60_000;
+const PAULA_RATE_LIMIT_MAX = 60;
+
+function applyPaulaRateLimit(req, res, next) {
+  const key = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const now = Date.now();
+  const windowStart = now - PAULA_RATE_LIMIT_WINDOW;
+
+  if (!paulaRateLimitMap.has(key)) {
+    paulaRateLimitMap.set(key, []);
+  }
+
+  const timestamps = paulaRateLimitMap.get(key).filter((timestamp) => timestamp > windowStart);
+  if (timestamps.length >= PAULA_RATE_LIMIT_MAX) {
+    return res.status(429).json(buildError('Rate limit exceeded', 'rate_limited'));
+  }
+
+  timestamps.push(now);
+  paulaRateLimitMap.set(key, timestamps);
+  return next();
+}
+
+const paulaRouter = express.Router();
+
+paulaRouter.use(applyPaulaRateLimit);
+
+paulaRouter.use((req, res, next) => {
+  const contentLength = req.headers['content-length'];
+  if (contentLength && Number(contentLength) > MAX_PAULA_JSON_BYTES) {
+    return res.status(413).json(buildError('Payload too large', 'payload_too_large'));
+  }
+  return next();
+});
+
+paulaRouter.use((req, res, next) => {
+  try {
+    const payload = req.body ?? {};
+    const serialized = JSON.stringify(payload);
+    if (Buffer.byteLength(serialized || '', 'utf8') > MAX_PAULA_JSON_BYTES) {
+      return res.status(413).json(buildError('Payload too large', 'payload_too_large'));
+    }
+  } catch (error) {
+    return res.status(400).json(buildError('Invalid JSON body', 'invalid_json'));
+  }
+  return next();
+});
+
+paulaRouter.post('/crawl', async (req, res) => {
+  try {
+    const { seeds, max_pages, maxPages } = req.body || {};
+    if (!Array.isArray(seeds) || seeds.length === 0) {
+      return res.status(400).json(buildError('seeds array is required', 'invalid_payload'));
+    }
+
+    const normalizedSeeds = [];
+    for (const seed of seeds) {
+      if (typeof seed !== 'string') {
+        return res.status(400).json(buildError('Seed values must be strings', 'invalid_seed'));
+      }
+      let seedUrl;
+      try {
+        seedUrl = new URL(seed);
+      } catch (error) {
+        return res.status(400).json(buildError(`Invalid seed URL: ${seed}`, 'invalid_seed_url'));
+      }
+      const origin = `${seedUrl.protocol}//${seedUrl.host}`;
+      if (!allowedSeedOrigins.has(origin)) {
+        return res.status(400).json(buildError(`Seed origin not allowed: ${origin}`, 'seed_not_allowed'));
+      }
+      normalizedSeeds.push(seed);
+    }
+
+    const maxPagesValue = max_pages ?? maxPages;
+    if (maxPagesValue !== undefined) {
+      const numericMax = Number(maxPagesValue);
+      if (!Number.isFinite(numericMax) || numericMax <= 0) {
+        return res.status(400).json(buildError('max_pages must be a positive number', 'invalid_max_pages'));
+      }
+    }
+
+    await fs.access(crawlScriptPath, fsConstants.X_OK).catch(() => {
+      throw new Error('Crawler script unavailable');
+    });
+
+    const args = [crawlScriptPath];
+    for (const seed of normalizedSeeds) {
+      args.push('--seed', seed);
+    }
+    if (maxPagesValue !== undefined) {
+      args.push('--max-pages', String(Math.floor(Number(maxPagesValue))));
+    }
+
+    const job = queuePaulaJob({
+      jobType: 'crawl',
+      command: 'bash',
+      args,
+      cwd: path.dirname(crawlScriptPath)
+    });
+
+    return res.status(202).json({ accepted: true, run_id: job.id });
+  } catch (error) {
+    console.error('Failed to queue crawl job', error);
+    return res.status(500).json(buildError('Failed to start crawl job', 'crawl_failed'));
+  }
+});
+
+paulaRouter.post('/ingest', async (req, res) => {
+  try {
+    const payload = req.body || {};
+
+    await fs.access(ingestScriptPath, fsConstants.R_OK).catch(() => {
+      throw new Error('Ingest script unavailable');
+    });
+
+    const args = [ingestScriptPath, '--payload-base64', Buffer.from(JSON.stringify(payload || {}), 'utf8').toString('base64')];
+
+    const job = queuePaulaJob({
+      jobType: 'ingest',
+      command: 'python3',
+      args,
+      cwd: path.dirname(ingestScriptPath)
+    });
+
+    return res.status(202).json({ accepted: true, run_id: job.id });
+  } catch (error) {
+    console.error('Failed to queue ingest job', error);
+    return res.status(500).json(buildError('Failed to start ingest job', 'ingest_failed'));
+  }
+});
+
+paulaRouter.post('/auto-train', async (req, res) => {
+  try {
+    const { strategy } = req.body || {};
+    if (!strategy || typeof strategy !== 'string' || !strategy.trim()) {
+      return res.status(400).json(buildError('strategy is required', 'invalid_strategy'));
+    }
+
+    await fs.access(trainScriptPath, fsConstants.X_OK).catch(() => {
+      throw new Error('Training script unavailable');
+    });
+
+    const args = [trainScriptPath, '--strategy', strategy.trim()];
+
+    const job = queuePaulaJob({
+      jobType: 'auto-train',
+      command: 'bash',
+      args,
+      cwd: path.dirname(trainScriptPath)
+    });
+
+    return res.status(202).json({ accepted: true, run_id: job.id });
+  } catch (error) {
+    console.error('Failed to queue training job', error);
+    return res.status(500).json(buildError('Failed to start training job', 'train_failed'));
+  }
+});
+
+paulaRouter.get('/jobs/:id', async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const job = jobTable.get(jobId);
+    if (!job) {
+      return res.status(404).json(buildError('Job not found', 'job_not_found'));
+    }
+
+    let tailLog = '';
+    try {
+      tailLog = await readLogTail(job.tail_log_path);
+    } catch (error) {
+      console.error('Failed to read Paula job log', error);
+    }
+
+    return res.json({
+      id: job.id,
+      job_type: job.job_type,
+      status: job.status,
+      accepted_at: job.accepted_at,
+      started_at: job.started_at,
+      ended_at: job.ended_at,
+      exit_code: job.exit_code,
+      signal: job.signal,
+      error: job.error,
+      tail_log_path: job.tail_log_path,
+      tail_log: tailLog
+    });
+  } catch (error) {
+    console.error('Failed to read Paula job status', error);
+    return res.status(500).json(buildError('Failed to read job status', 'job_status_failed'));
+  }
+});
+
+app.use('/api/paula', paulaRouter);
 
 app.get('/api/list/:folder', async (req, res) => {
   try {
