@@ -1,0 +1,30 @@
+name: docs-smoke
+on: [workflow_dispatch]
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          cd boss-api
+          npm install
+      - name: Start boss-api
+        run: |
+          cd boss-api
+          nohup node server.cjs >/tmp/api.log 2>&1 &
+          for i in {1..20}; do curl -fsS http://127.0.0.1:4000/healthz && break || sleep 0.5; done
+      - name: Check /api/plan (stub)
+        run: |
+          code=$(curl -s -m 3 -w '%{http_code}' -o /dev/null \
+            -H 'Content-Type: application/json' \
+            -d '{"goal":"ping","stub":true}' \
+            http://127.0.0.1:4000/api/plan)
+          [ "$code" = "200" ] || (echo "plan stub failed: $code"; exit 1)
+      - name: Check reports summary
+        run: |
+          curl -fsS http://127.0.0.1:4000/api/reports/summary >/dev/null || exit 1
