@@ -42,14 +42,21 @@ fi
 
 echo "[02luka] preflight ready."
 
-# Check for duplicate clones (warn if they differ)
-if [ -d "$HOME/dev/02luka-repo/.git" ]; then
-  cur="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || true)"
-  old="$(git -C "$HOME/dev/02luka-repo" rev-parse --short HEAD 2>/dev/null || true)"
-  if [ -n "$old" ] && [ "$cur" != "$old" ]; then
-    echo "[warn] Another checkout at ~/dev/02luka-repo (commit $old) differs from current (commit $cur)."
-    echo "[warn] Consider updating or removing the old clone to avoid confusion."
-  fi
+# Check for duplicate clones using enhanced detection
+if [[ ${#DUPLICATE_CLONES[@]} -gt 0 ]]; then
+  echo ""
+  echo "⚠️  WARNING: Duplicate repository clones detected!"
+  echo "Current repo: $REPO_ROOT (commit: $CURRENT_COMMIT)"
+  echo ""
+  echo "Outdated clones found:"
+  for dup in "${DUPLICATE_CLONES[@]}"; do
+    echo "  - $dup"
+  done
+  echo ""
+  echo "Recommendation: Update or remove duplicate clones to avoid confusion."
+  echo "  git -C <path> pull  # Update"
+  echo "  rm -rf <path>       # Remove"
+  echo ""
 fi
 
 # Check master prompt presence
