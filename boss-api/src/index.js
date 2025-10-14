@@ -26,12 +26,6 @@ const execFileAsync = promisify(execFile);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use('/api/paula', createPaulaRouter({
-  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
-  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
-  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
-}));
-
 // Add CORS headers for better performance
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -44,6 +38,12 @@ app.use((req, res, next) => {
     next();
   }
 });
+
+app.use('/api/paula', createPaulaRouter({
+  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
+  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
+  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
+}));
 
 // Simple in-memory cache with size limits
 const cache = new Map();

@@ -28,13 +28,6 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Paula crawler endpoints (optimized HTTP client + caching)
-app.use('/api/paula', createPaulaRouter({
-  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
-  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
-  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
-}));
-
 // Rate limiting
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
@@ -62,6 +55,13 @@ function rateLimit(req, res, next) {
 }
 
 app.use(rateLimit);
+
+// Paula crawler endpoints (optimized HTTP client + caching)
+app.use('/api/paula', createPaulaRouter({
+  enableEmbeddings: process.env.PAULA_ENABLE_EMBEDDINGS === '1',
+  maxConcurrency: Number.parseInt(process.env.PAULA_MAX_CONCURRENCY || '4', 10),
+  embeddingBatchSize: Number.parseInt(process.env.PAULA_EMBED_BATCH || '64', 10)
+}));
 
 // AI Gateway integration
 const aiRateLimitBuckets = new Map();
