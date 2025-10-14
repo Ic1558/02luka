@@ -234,6 +234,68 @@ app.get('/api/smoke', async (req, res) => {
   }
 });
 
+// Reports endpoints
+const fssync = require('fs');
+const reportDir = path.join(repoRoot, 'g', 'reports');
+
+app.get('/api/reports/list', async (req, res) => {
+  try {
+    if (!fssync.existsSync(reportDir)) {
+      return writeJson(res, 200, { files: [] });
+    }
+    const files = fssync.readdirSync(reportDir)
+      .filter(f => /^OPS_ATOMIC_\d+_\d+\.md$/.test(f))
+      .sort()
+      .reverse()
+      .slice(0, 20);
+    writeJson(res, 200, { files });
+  } catch (error) {
+    console.error('[/api/reports/list]', error);
+    writeJson(res, 500, { error: 'list_failed' });
+  }
+});
+
+app.get('/api/reports/latest', async (req, res) => {
+  try {
+    if (!fssync.existsSync(reportDir)) {
+      return writeJson(res, 404, { error: 'reports_directory_not_found' });
+    }
+    const files = fssync.readdirSync(reportDir)
+      .filter(f => /^OPS_ATOMIC_\d+_\d+\.md$/.test(f))
+      .sort()
+      .reverse();
+
+    if (!files.length) {
+      return writeJson(res, 404, { error: 'no_reports' });
+    }
+
+    const md = fssync.readFileSync(path.join(reportDir, files[0]), 'utf8');
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.send(md);
+  } catch (error) {
+    console.error('[/api/reports/latest]', error);
+    writeJson(res, 500, { error: 'read_failed' });
+  }
+});
+
+app.get('/api/reports/summary', async (req, res) => {
+  try {
+    const sumPath = path.join(repoRoot, 'g', 'reports', 'OPS_SUMMARY.json');
+    if (!fssync.existsSync(sumPath)) {
+      return writeJson(res, 200, {
+        status: 'unknown',
+        note: 'summary_not_generated',
+        hint: 'Run: node agents/reportbot/index.cjs'
+      });
+    }
+    const json = JSON.parse(fssync.readFileSync(sumPath, 'utf8'));
+    writeJson(res, 200, json);
+  } catch (error) {
+    console.error('[/api/reports/summary]', error);
+    writeJson(res, 500, { error: 'summary_failed' });
+  }
+});
+
 // Paula proxy endpoints
 app.get('/api/paula/health', async (req, res) => {
   await proxyPaulaRequest(req, res, '/health', { method: 'GET' });
