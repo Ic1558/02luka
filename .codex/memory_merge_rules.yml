@@ -1,0 +1,14 @@
+mode: mirror-latest
+strategy:
+  - selective-merge
+priority:
+  - codex
+sections:
+  include:
+    - user_profile
+    - session_summary
+    - system_context
+  exclude:
+    - tmp_sessions
+    - deprecated
+    - autosave

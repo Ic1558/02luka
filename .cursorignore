@@ -1,0 +1,13 @@
+node_modules/
+boss-ui/node_modules/
+boss-api/node_modules/
+output/
+run/
+boss/
+f/
+g/
+*.log
+*.tmp
+*.cache
+.DS_Store
+Thumbs.db

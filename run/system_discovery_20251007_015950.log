@@ -1,0 +1,25 @@
+[0;34m[2025-10-07 01:59:50] === COMPREHENSIVE SYSTEM DISCOVERY SCANNER ===[0m
+[2025-10-07 01:59:50] Output: /Users/icmini/dev/02luka-repo/run/system_discovery_20251007_015950.json
+[2025-10-07 01:59:50] Log: /Users/icmini/dev/02luka-repo/run/system_discovery_20251007_015950.log
+[0;34m[2025-10-07 01:59:50] Step 1: Discovering LaunchAgents...[0m
+[2025-10-07 01:59:50] Scanning all LaunchAgent services...
+[2025-10-07 01:59:51] Found 50 LaunchAgents
+[0;34m[2025-10-07 01:59:51] Step 2: Discovering Docker containers...[0m
+[2025-10-07 01:59:51] Found 18 Docker containers
+[0;34m[2025-10-07 01:59:51] Step 3: Discovering network services...[0m
+[2025-10-07 02:00:06] Found 18 network services
+[0;34m[2025-10-07 02:00:06] Step 4: Discovering 02luka file services...[0m
+[2025-10-07 02:00:06] Found 24 file services
+[0;34m[2025-10-07 02:00:06] Step 5: Generating summary...[0m
+[0;32m[2025-10-07 02:00:06] === DISCOVERY COMPLETE ===[0m
+[0;32m[2025-10-07 02:00:06] Total discovered services: 110[0m
+[0;32m[2025-10-07 02:00:06]   LaunchAgents: 50 (active: 2)[0m
+[0;32m[2025-10-07 02:00:06]   Docker containers: 18 (running: 0)[0m
+[0;32m[2025-10-07 02:00:06]   Network services: 18[0m
+[0;32m[2025-10-07 02:00:06]   File services: 24[0m
+[0;34m[2025-10-07 02:00:06] Output saved to: /Users/icmini/dev/02luka-repo/run/system_discovery_20251007_015950.json[0m
+[0;34m[2025-10-07 02:00:06] Log saved to: /Users/icmini/dev/02luka-repo/run/system_discovery_20251007_015950.log[0m
+[1;33m[2025-10-07 02:00:06] Next steps:[0m
+[2025-10-07 02:00:06] 1. Review discovery results: jq '.' /Users/icmini/dev/02luka-repo/run/system_discovery_20251007_015950.json
+[2025-10-07 02:00:07] 2. Use data to rebuild comprehensive system map
+[2025-10-07 02:00:07] 3. Categorize services by function and create topology

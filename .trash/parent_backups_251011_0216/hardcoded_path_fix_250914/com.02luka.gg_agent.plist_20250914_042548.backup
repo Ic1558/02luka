@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.gg_agent</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/icmini/02luka/agents/gg/gg_agent_streams.py</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/icmini/02luka</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>/Users/icmini/02luka:/Users/icmini/02luka/core</string>
+        <key>PROJECT_ROOT</key>
+        <string>/Users/icmini/02luka</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/gg_agent_daemon.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/gg_agent_daemon.err</string>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

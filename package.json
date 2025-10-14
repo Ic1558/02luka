@@ -1,0 +1,30 @@
+{
+  "name": "02luka-repo",
+  "version": "1.0.0",
+  "description": "Local AI Agent Gateway UI — minimal, fast, deployable anywhere.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ic1558/02luka.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ic1558/02luka/issues"
+  },
+  "homepage": "https://github.com/Ic1558/02luka#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.55.1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}

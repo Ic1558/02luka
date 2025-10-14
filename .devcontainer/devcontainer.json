@@ -1,0 +1,9 @@
+{
+  "name": "02Luka Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "remoteUser": "root",
+  "postCreateCommand": "true",
+  "customizations": {
+    "vscode": { "extensions": ["openai.codex","ms-vscode-remote.remote-containers"] }
+  }
+}

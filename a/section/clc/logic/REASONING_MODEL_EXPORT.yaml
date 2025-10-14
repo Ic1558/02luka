@@ -1,0 +1,193 @@
+# 02LUKA — CLC Reasoning Model Export
+# Version: 1.1 (Enhanced)
+# Owner: CLC
+# Purpose: Share CLC's reasoning patterns with Cursor AI via hybrid memory.
+
+meta:
+  id: clc.reasoning.v1.1
+  updated_at: "{{ now }}"
+  owner: "CLC"
+  scope: ["code-gen","orchestration","verification"]
+  compatibility:
+    - cursor.hybrid_memory.v1
+    - codex.guardrails.v1
+
+principles:
+  - "Clarity over cleverness"
+  - "Safety first: verify before act"
+  - "Short context, deep links"
+  - "Prefer deterministic pipelines"
+  - "Small reversible steps; checkpoint often"
+
+pipelines:
+  - name: default_reasoning
+    steps:
+      - observe_context
+      - expand_constraints
+      - plan
+      - act_small
+      - self_check
+      - reflect_and_trim
+      - finalize_or_iterate
+    controls:
+      recursion_limit: 2
+      max_context_pages: 4
+      max_diff_lines: 500
+      require_acceptance_criteria: true
+
+validation:
+  preflight: true
+  mapping_guard: true
+  smoke_api_ui: true
+  file_safety:
+    deny_paths:
+      - "/Library/CloudStorage/GoogleDrive-*/My Drive/*/run/*"
+      - "/System/*"
+    prefer_paths:
+      - "~/dev/02luka-repo/*"
+      - "/workspaces/02luka-repo/*"
+
+# ---------- NEW: Rubric ----------
+rubric:
+  solution_fit:
+    description: "ตรงตาม GOAL/Acceptance Criteria/Constraints"
+    checks:
+      - "ผลลัพธ์ผ่าน preflight + mapping + smoke"
+      - "ไม่แตะ denied paths และไม่ผูกกับ placeholder ของ CloudStorage"
+      - "มี rollback plan หรือ atomic patch"
+  safety:
+    description: "ป้องกัน side-effects และข้อมูลเสียหาย"
+    checks:
+      - "สคริปต์ idempotent; ไม่รัน background task ยาว โดยไม่จำเป็น"
+      - "สำรองไฟล์ก่อนเขียนทับ (.bak / tag checkpoint)"
+  maintainability:
+    description: "อ่านง่าย แก้ง่าย อธิบายสั้น-ครบ"
+    checks:
+      - "มี README/REPORT อธิบายวิธีใช้และผลลัพธ์"
+      - "โค้ดแบ่งเป็นฟังก์ชัน/สคริปต์ย่อยชัดเจน"
+  observability:
+    description: "มี log/report ให้ตรวจย้อนหลัง"
+    checks:
+      - "เขียนรายงานลง g/reports/* พร้อม timestamp"
+      - "แสดง summary + next steps ชัดเจน"
+
+# ---------- NEW: Anti-Patterns ----------
+anti_patterns:
+  - name: "Duct Taper"
+    smell: "แก้ปลายเหตุด้วยสคริปต์เฉพาะกิจ แทนแก้ที่สาเหตุ"
+    avoid_by:
+      - "ย้าย logic ถาวรเข้าระบบ/registry"
+      - "เพิ่ม test & guard แทน cron เฉพาะกิจ"
+  - name: "Box Ticker"
+    smell: "ทำเพื่อให้ผ่าน checklist แต่ไม่เกิดคุณค่า"
+    avoid_by:
+      - "ผูกกับ acceptance ที่ตรวจได้จริง (smoke/preflight)"
+      - "ลบงานที่ไม่สร้างค่า แม้ผ่าน checklist"
+  - name: "Goons/Flunkies"
+    smell: "งาน/agent/รายงานที่มีไว้ให้ดูเท่ ไม่ใช้งานจริง"
+    avoid_by:
+      - "วัดผลด้วยการใช้งานจริง/การแจ้งเตือนจริง ไม่ใช่เอกสาร"
+  - name: "Path Confusion"
+    smell: "ใช้ path ยาว/มีช่องว่าง/อยู่ใน CloudStorage runtime"
+    avoid_by:
+      - "ใช้สั้นและแน่นอน: ~/dev/02luka-repo, /workspaces/02luka-repo"
+      - "ห้ามรัน runtime บน Drive stream/mirror"
+
+# ---------- NEW: Failure Modes & Recovery ----------
+failure_modes:
+  - code: FM-API-4000
+    symptom: "API not responding; nohup failed to run 'node'"
+    recover:
+      - "ตรวจ Node: nvm use --lts; which node"
+      - "รีสตาร์ต dev: bash ./run/dev_up_simple.sh"
+      - "ตรวจ /tmp/api.log"
+  - code: FM-UI-5173
+    symptom: "UI online แต่หา luka.html ไม่เจอ"
+    recover:
+      - "วาง luka.html ใน boss-ui/public/"
+      - "รีสตาร์ต dev_up_simple.sh"
+  - code: FM-PERM-SHEBANG
+    symptom: "/usr/bin/env: bad interpreter / Permission denied"
+    recover:
+      - "chmod +x g/tools/*.sh && git add -A"
+      - "ตรวจ shebang เป็น #!/usr/bin/env bash"
+  - code: FM-DRIVE-PLACEHOLDER
+    symptom: "ไฟล์เป็น placeholder (stream) ทำให้ git/status/rsync ค้าง"
+    recover:
+      - "ตั้ง Available offline เฉพาะโฟลเดอร์ที่ต้องใช้"
+      - "ย้าย runtime ไป path สั้น; หลีกเลี่ยง Drive ใน ProgramArguments"
+
+# ---------- NEW: Recovery Playbooks ----------
+playbooks:
+  - id: PB-morning-routine
+    steps:
+      - "bash ./.codex/preflight.sh"
+      - "bash ./run/dev_up_simple.sh"
+      - "bash ./run/smoke_api_ui.sh"
+  - id: PB-fix-launchagents
+    steps:
+      - "bash g/runbooks/agent_value_audit.sh"
+      - "แก้ log paths → ~/Library/Logs/02luka/"
+      - "boot_guard_enforce.sh เพื่อกันซอมบี้กลับ"
+  - id: PB-codex-cursor-sync
+    steps:
+      - "ตรวจ .codex/memory_merge_bridge.sh + rules.yml"
+      - "commit → autosave memory → ตรวจ g/reports/MEMORY_MERGE_LOG_*"
+
+# ---------- NEW: Evaluation Checklist ----------
+evaluation_checklist:
+  - "[ ] Preflight OK"
+  - "[ ] Mapping guard OK"
+  - "[ ] Smoke API/UI OK"
+  - "[ ] No denied paths"
+  - "[ ] Report generated in g/reports/"
+  - "[ ] Rollback/Tag created"
+
+# ---------- NEW: Metrics ----------
+metrics:
+  - key: "gate_pass_rate"
+    target: ">= 0.95"
+    source: "pre-push hook logs"
+  - key: "mean_recovery_time_min"
+    target: "<= 10"
+    source: "playbook timestamps"
+  - key: "context_budget_usage_pct"
+    target: "<= 70"
+    source: "agent UI telemetry"
+
+# ---------- NEW: Prompt Templates ----------
+prompt_templates:
+  - id: pt-small-safe-change
+    text: |
+      Make the smallest reversible change to achieve GOAL.
+      Produce an atomic heredoc patch, include rollback note, and run preflight.
+  - id: pt-audit-and-fix
+    text: |
+      Audit system, list findings, propose fixes ranked by risk, then apply
+      fixes with logs to g/reports/ and verify with smoke tests.
+
+memory_contract:
+  import_to:
+    cursor_hybrid: ".codex/hybrid_memory_system.md"
+  sections:
+    - user_profile
+    - session_summary
+    - system_context
+    - reasoning_model
+
+scoring:
+  solution_fit:    {weight: 0.4, pass: "meets acceptance criteria"}
+  safety:          {weight: 0.3, pass: "no denied paths; backups exist"}
+  maintainability: {weight: 0.2, pass: "docs updated; scripts idempotent"}
+  latency:         {weight: 0.1, pass: "no heavy background tasks"}
+
+action_policy:
+  - "Prefer heredoc atomic patches"
+  - "Use git hooks gates; never bypass"
+  - "If ambiguity, produce safe default with clear TODO"
+
+examples:
+  - id: fix-bad-log-paths
+    before: "LaunchAgent logs → GoogleDrive path"
+    after:  "LaunchAgent logs → ~/Library/Logs/02luka/"
+    check:  "agent_value_audit bad_log_paths == 0"

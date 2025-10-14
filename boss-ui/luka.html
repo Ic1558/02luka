@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luka Control Surface</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f9fafb;
+      color: #111827;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f3f4f6;
+      color: inherit;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .title-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .app {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 24px;
+      padding: 24px;
+    }
+    section,
+    aside {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+    }
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #111827;
+    }
+    label {
+      font-size: 13px;
+      color: #4b5563;
+    }
+    textarea,
+    select,
+    button,
+    input {
+      font: inherit;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      border-radius: 12px;
+      border: 1px solid #d1d5db;
+      padding: 12px;
+      background: #ffffff;
+      color: inherit;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    textarea:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.25);
+      outline-offset: 2px;
+    }
+    select,
+    button {
+      appearance: none;
+      border-radius: 10px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: inherit;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, opacity 0.2s;
+    }
+    button.primary {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #f3f4f6;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .composer-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .composer-controls select {
+      min-width: 140px;
+    }
+    .engine-toggle {
+      min-width: 120px;
+    }
+    .engine-toggle.auto {
+      border-color: rgba(148, 163, 184, 0.35);
+      color: #e5e7eb;
+    }
+    .engine-toggle.manual {
+      border-color: rgba(34, 211, 238, 0.5);
+      color: #a5f3fc;
+    }
+    select:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    label.disabled-label {
+      opacity: 0.6;
+    }
+    .output-area {
+      flex: 1;
+      background: #f9fafb;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 16px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      min-height: 200px;
+    }
+    .status-line {
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .sidebar {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      gap: 20px;
+    }
+    .sidebar h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .mailbox-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mailbox-button {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: #f3f4f6;
+      color: inherit;
+      font-weight: 500;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .mailbox-button[data-active="true"] {
+      background: #e0e7ff;
+      border-color: rgba(37, 99, 235, 0.45);
+      color: #1d4ed8;
+    }
+    .mailbox-button span {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .sidebar-actions small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .mailbox-panel {
+      grid-column: 2 / span 2;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .mailbox-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .mailbox-toolbar h2 {
+      font-size: 18px;
+    }
+    .mailbox-content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 20px;
+      flex: 1;
+      min-height: 280px;
+    }
+    .mailbox-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    .mailbox-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .mailbox-item:hover {
+      border-color: rgba(37, 99, 235, 0.35);
+    }
+    .mailbox-item[data-active="true"] {
+      border-color: rgba(37, 99, 235, 0.55);
+      background: #eef2ff;
+    }
+    .mailbox-item strong {
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mailbox-item span {
+      font-size: 12px;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .mailbox-preview {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .mailbox-preview pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .composer-section {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    .output-section {
+      grid-column: 3;
+      grid-row: 2;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal {
+      width: min(420px, calc(100% - 48px));
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.18);
+    }
+    .modal h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .connector-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+    .connector-row[data-ready="true"] {
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+    .connector-row[data-ready="false"] {
+      border-color: rgba(248, 113, 113, 0.45);
+    }
+    .connector-row strong {
+      font-size: 14px;
+    }
+    .hint {
+      color: #f87171;
+      font-size: 12px;
+    }
+    @media (max-width: 1080px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      .sidebar {
+        grid-row: auto;
+      }
+      .mailbox-panel,
+      .composer-section,
+      .output-section {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div class="title-badge">L</div>
+      Luka Prompt Console
+    </div>
+    <div class="toolbar">
+      <button id="newGoalButton" class="primary" type="button">New Goal</button>
+      <button id="connectorsButton" class="secondary" type="button">Connectors</button>
+    </div>
+  </header>
+  <div class="app">
+    <aside class="sidebar">
+      <h2>Mailboxes</h2>
+      <nav class="mailbox-nav" id="mailboxNav"></nav>
+      <div class="sidebar-actions">
+        <label for="goalTargetSelect">New goal target</label>
+        <select id="goalTargetSelect">
+          <option value="outbox">Outbox (default)</option>
+          <option value="drafts">Drafts</option>
+        </select>
+        <small>Goals post to the selected mailbox then move along Outbox → Sent.</small>
+      </div>
+    </aside>
+    <section class="mailbox-panel">
+      <div class="mailbox-toolbar">
+        <div>
+          <h2 id="mailboxTitle">Mailbox</h2>
+          <p class="status-line" id="mailboxStatus">Select a mailbox to load files.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="refreshMailboxButton" class="secondary" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="mailbox-content">
+        <div class="mailbox-items" id="mailboxItems">
+          <p class="status-line">Choose a mailbox from the left.</p>
+        </div>
+        <div class="mailbox-preview" id="mailboxPreview">
+          <h3 id="previewTitle">Preview</h3>
+          <pre id="previewBody">No file selected.</pre>
+        </div>
+      </div>
+    </section>
+    <section class="composer-section">
+      <div>
+        <h2>Prompt Composer</h2>
+        <p class="status-line">Craft and optimize prompts before dispatching to delegates.</p>
+      </div>
+      <div class="composer-controls">
+        <button id="engineModeToggle" type="button" class="secondary engine-toggle auto">Engine: Auto</button>
+        <label for="engineSelect" id="engineSelectLabel" class="disabled-label">Manual Engine</label>
+        <select id="engineSelect" disabled>
+          <option value="local">Local</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="openai">OpenAI</option>
+        </select>
+        <button id="optimizeButton" class="primary" type="button">Optimize Prompt</button>
+      </div>
+      <div>
+        <label for="systemInput">System Directive</label>
+        <textarea id="systemInput" placeholder="e.g. You are a specialist operations planner"></textarea>
+      </div>
+      <div>
+        <label for="contextInput">Context</label>
+        <textarea id="contextInput" placeholder="Relevant background, constraints, or notes"></textarea>
+      </div>
+      <div>
+        <label for="promptInput">Prompt</label>
+        <textarea id="promptInput" placeholder="What should the assistants accomplish?"></textarea>
+      </div>
+    </section>
+    <section class="output-section">
+      <div>
+        <h2>Optimized Output</h2>
+        <p class="status-line" id="optimizeStatus">Waiting for input…</p>
+      </div>
+      <div class="output-area" id="optimizedPreview"></div>
+      <div class="composer-controls">
+        <button id="copyButton" type="button" class="secondary">Copy</button>
+        <button id="sendChatButton" type="button" class="primary">Send to Chat</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="connectorsModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>Connectors</h3>
+        <button id="closeModalButton" class="secondary" type="button">Close</button>
+      </div>
+      <div id="connectorsList"></div>
+      <p class="status-line">Connector readiness reflects server environment configuration.</p>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.location.hostname && window.location.hostname.endsWith('theedges.work'))
+      ? 'https://api.theedges.work'
+      : 'http://127.0.0.1:4000';
+
+    const engineModeToggle = document.getElementById('engineModeToggle');
+    const engineSelectLabel = document.getElementById('engineSelectLabel');
+    const engineSelect = document.getElementById('engineSelect');
+    const optimizeButton = document.getElementById('optimizeButton');
+    const copyButton = document.getElementById('copyButton');
+    const sendChatButton = document.getElementById('sendChatButton');
+    const optimizedPreview = document.getElementById('optimizedPreview');
+    const optimizeStatus = document.getElementById('optimizeStatus');
+    const connectorsButton = document.getElementById('connectorsButton');
+    const connectorsModal = document.getElementById('connectorsModal');
+    const closeModalButton = document.getElementById('closeModalButton');
+    const connectorsList = document.getElementById('connectorsList');
+    const mailboxNav = document.getElementById('mailboxNav');
+    const mailboxItems = document.getElementById('mailboxItems');
+    const mailboxTitle = document.getElementById('mailboxTitle');
+    const mailboxStatus = document.getElementById('mailboxStatus');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewBody = document.getElementById('previewBody');
+    const refreshMailboxButton = document.getElementById('refreshMailboxButton');
+    const goalTargetSelect = document.getElementById('goalTargetSelect');
+    const newGoalButton = document.getElementById('newGoalButton');
+
+    let engineMode = 'auto';
+
+    const featureState = {
+      optimize_prompt: true,
+      chat: true
+    };
+
+    const defaultMailboxOrder = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
+    const mailboxState = {
+      mailboxes: [],
+      metaById: new Map(),
+      flow: defaultMailboxOrder.slice(),
+      aliases: new Map(),
+      selected: null,
+      items: [],
+      activeItem: null
+    };
+
+    function isFeatureEnabled(name) {
+      return featureState[name] !== false;
+    }
+
+    function applyFeatureState() {
+      optimizeButton.disabled = !isFeatureEnabled('optimize_prompt');
+      sendChatButton.disabled = !isFeatureEnabled('chat');
+    }
+
+      }
+    }
+
+    function getComposerPayload() {
+      const engine = engineMode === 'manual' ? engineSelect.value : 'auto';
+      return {
+        system: document.getElementById('systemInput').value.trim(),
+        context: document.getElementById('contextInput').value.trim(),
+        prompt: document.getElementById('promptInput').value.trim(),
+        engine,
+        strategy: engineMode
+      };
+    }
+
+    async function optimizePrompt() {
+      if (!isFeatureEnabled('optimize_prompt')) {
+        optimizeStatus.textContent = 'Optimization is disabled by server capabilities.';
+        return;
+      }
+
+      const payload = getComposerPayload();
+      if (!payload.prompt) {
+        optimizeStatus.textContent = 'Provide a prompt to optimize.';
+        return;
+      }
+
+      optimizeButton.disabled = true;
+      optimizeStatus.textContent = 'Optimizing…';
+      try {
+        const res = await fetch(`${API_BASE}/api/optimize_prompt`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          throw new Error(`Request failed (${res.status})`);
+        }
+        const data = await res.json();
+        optimizedPreview.textContent = data.prompt || '';
+        const routerMeta = extractRouterMeta(data);
+        const effectiveEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
+        if (engineMode === 'auto') {
+          optimizeStatus.textContent = data.ok
+            ? `Auto engine selected (${effectiveEngine}).`
+            : 'No optimization generated.';
+        } else if (data.engine && data.engine !== payload.engine) {
+          optimizeStatus.textContent = `Fallback to ${data.engine} engine.`;
+        } else {
+          optimizeStatus.textContent = data.ok ? `Optimized via ${effectiveEngine} engine.` : 'No optimization generated.';
+        }
+        annotateStatusWithRouter(optimizeStatus, routerMeta);
+      } catch (err) {
+        console.error(err);
+        optimizeStatus.textContent = 'Optimization failed. Check server logs.';
+      } finally {
+        optimizeButton.disabled = false;
+        applyFeatureState();
+      }
+    }
+
+    async function sendChat() {
+      if (!isFeatureEnabled('chat')) {
+        optimizeStatus.textContent = 'Chat is disabled by server capabilities.';
+        return;
+      }
+
+      const payload = getComposerPayload();
+      const message = payload.prompt;
+      if (!message) {
+        optimizeStatus.textContent = 'Provide a prompt to send.';
+        return;
+      }
+
+      sendChatButton.disabled = true;
+      optimizeStatus.textContent = 'Dispatching chat…';
+      try {
+        const res = await fetch(`${API_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            system: payload.system,
+            engine: payload.engine,
+            strategy: payload.strategy
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Chat failed (${res.status})`);
+        }
+        const data = await res.json();
+        const routerMeta = extractRouterMeta(data);
+        if (data.response) {
+          optimizedPreview.textContent = data.response;
+          const chatEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
+          if (engineMode === 'auto') {
+            optimizeStatus.textContent = `Auto chat engine (${chatEngine}).`;
+          } else {
+            optimizeStatus.textContent = `Chat response via ${chatEngine} engine.`;
+          }
+        } else if (data.best && data.best.text) {
+          optimizedPreview.textContent = data.best.text;
+          if (engineMode === 'auto') {
+            const bestLabel = data.best.meta?.model || data.best.name || 'router';
+            optimizeStatus.textContent = `Auto router selected ${bestLabel}.`;
+          } else {
+            optimizeStatus.textContent = data.summary || 'NLU router response received.';
+          }
+        } else {
+          optimizedPreview.textContent = '';
+          optimizeStatus.textContent = 'No response received.';
+        }
+        annotateStatusWithRouter(optimizeStatus, routerMeta);
+      } catch (err) {
+        console.error(err);
+        optimizeStatus.textContent = 'Chat dispatch failed. Check server logs.';
+      } finally {
+        sendChatButton.disabled = false;
+        applyFeatureState();
+      }
+    }
+
+    async function refreshConnectors() {
+      connectorsList.textContent = 'Loading…';
+      try {
+        const res = await fetch(`${API_BASE}/api/connectors/status`);
+        if (!res.ok) throw new Error('Failed to load connectors');
+        const data = await res.json();
+        connectorsList.innerHTML = '';
+        const entries = [
+          ['Anthropic', data.anthropic?.ready],
+          ['OpenAI', data.openai?.ready],
+          ['Local Ensemble', data.local?.ready]
+        ];
+        entries.forEach(([label, ready]) => {
+          const row = document.createElement('div');
+          row.className = 'connector-row';
+          row.dataset.ready = ready ? 'true' : 'false';
+          const title = document.createElement('strong');
+          title.textContent = label;
+          const status = document.createElement('span');
+          status.textContent = ready ? 'Ready' : 'Not ready';
+          row.appendChild(title);
+          row.appendChild(status);
+          connectorsList.appendChild(row);
+          if (!ready) {
+            const hint = document.createElement('div');
+            hint.className = 'hint';
+            hint.textContent = 'Set env on server';
+            connectorsList.appendChild(hint);
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        connectorsList.textContent = 'Unable to load connectors status.';
+      }
+    }
+
+    async function loadCapabilities() {
+      try {
+        const res = await fetch(`${API_BASE}/api/capabilities`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error(`capabilities request failed (${res.status})`);
+        }
+        const data = await res.json();
+        featureState.optimize_prompt = data?.features?.optimize_prompt !== false;
+        featureState.chat = data?.features?.chat !== false;
+        if (Array.isArray(data?.mailboxes?.list) && data.mailboxes.list.length) {
+          mailboxState.mailboxes = data.mailboxes.list.map((entry) => Object.assign({}, entry));
+          mailboxState.metaById.clear();
+          mailboxState.mailboxes.forEach((entry) => {
+            mailboxState.metaById.set(entry.id, entry);
+          });
+        } else {
+          mailboxState.mailboxes = defaultMailboxOrder.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+          mailboxState.metaById.clear();
+          mailboxState.mailboxes.forEach((entry) => mailboxState.metaById.set(entry.id, entry));
+        }
+
+        if (Array.isArray(data?.mailboxes?.flow) && data.mailboxes.flow.length) {
+          mailboxState.flow = data.mailboxes.flow.slice();
+        } else {
+          mailboxState.flow = defaultMailboxOrder.slice();
+        }
+
+        mailboxState.aliases = new Map(Array.isArray(data?.mailboxes?.aliases)
+          ? data.mailboxes.aliases.map(({ alias, target }) => [alias, target])
+          : []);
+
+        updateGoalTargetOptions();
+        renderMailboxNav();
+        const initialMailbox = mailboxState.flow[0] || (mailboxState.mailboxes[0] && mailboxState.mailboxes[0].id) || defaultMailboxOrder[0];
+        if (initialMailbox) {
+          await selectMailbox(initialMailbox, { force: true });
+        }
+      } catch (err) {
+        console.warn('Failed to load capabilities; defaulting to enabled features.', err);
+        featureState.optimize_prompt = true;
+        featureState.chat = true;
+        mailboxState.mailboxes = defaultMailboxOrder.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1) }));
+        mailboxState.metaById.clear();
+        mailboxState.mailboxes.forEach((entry) => mailboxState.metaById.set(entry.id, entry));
+        mailboxState.flow = defaultMailboxOrder.slice();
+        updateGoalTargetOptions();
+        renderMailboxNav();
+        const initialMailbox = mailboxState.flow[0];
+        if (initialMailbox) {
+          await selectMailbox(initialMailbox, { force: true });
+        }
+      } finally {
+        applyFeatureState();
+      }
+    }
+
+    function openConnectorsModal() {
+      connectorsModal.classList.add('open');
+      connectorsModal.setAttribute('aria-hidden', 'false');
+      refreshConnectors();
+    }
+
+    function closeConnectorsModal() {
+      connectorsModal.classList.remove('open');
+      connectorsModal.setAttribute('aria-hidden', 'true');
+    }
+
+    connectorsButton.addEventListener('click', openConnectorsModal);
+    closeModalButton.addEventListener('click', closeConnectorsModal);
+    connectorsModal.addEventListener('click', (event) => {
+      if (event.target === connectorsModal) {
+        closeConnectorsModal();
+      }
+    });
+
+    optimizeButton.addEventListener('click', optimizePrompt);
+    sendChatButton.addEventListener('click', sendChat);
+    copyButton.addEventListener('click', () => {
+      const text = optimizedPreview.textContent;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        optimizeStatus.textContent = 'Copied optimized output to clipboard.';
+      }).catch(() => {
+        optimizeStatus.textContent = 'Copy failed. Use manual copy.';
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      applyFeatureState();
+      loadCapabilities();
+      updateEngineModeUI();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+version: 1
+mode: mirror-latest
+selective_merge:
+  include: [user_profile, session_summary, system_context]
+  exclude: [tmp_sessions, deprecated]
+conflict:
+  strategy: newest
+  prefer_run_id: newest
+autosave:
+  enabled: true
+  dedupe: true

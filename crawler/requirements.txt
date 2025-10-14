@@ -1,0 +1,5 @@
+requests
+trafilatura
+beautifulsoup4
+aiohttp
+sqlite-utils
