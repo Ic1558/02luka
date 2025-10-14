@@ -1,0 +1,189 @@
+{
+  "timestamp": "2025-10-11T19:00:25Z",
+  "tasks": [
+    {
+      "ts": "2025-10-06T02:48:22+07:00",
+      "id": "WO-251006-024822-$",
+      "agent": "clc",
+      "action": "test_deployment",
+      "status": "started",
+      "context": "task bus test"
+    },
+    {
+      "ts": "2025-10-06T02:48:37+07:00",
+      "id": "WO-251006-024837-$",
+      "agent": "clc",
+      "action": "mcp_deployment",
+      "status": "started",
+      "context": "installing task bus"
+    },
+    {
+      "ts": "2025-10-06T02:48:37+07:00",
+      "id": "WO-251006-024837-$",
+      "agent": "clc",
+      "action": "mcp_deployment",
+      "status": "done",
+      "context": "task bus ready"
+    },
+    {
+      "ts": "2025-10-06T02:54:20+07:00",
+      "id": "WO-251006-025420-$",
+      "agent": "clc",
+      "action": "verification_test",
+      "status": "started",
+      "context": "comprehensive test suite"
+    },
+    {
+      "ts": "2025-10-06T02:54:20+07:00",
+      "id": "WO-251006-025420-$",
+      "agent": "clc",
+      "action": "file_operations",
+      "status": "started",
+      "context": "testing file sync"
+    },
+    {
+      "ts": "2025-10-06T02:54:21+07:00",
+      "id": "WO-251006-025421-$",
+      "agent": "clc",
+      "action": "file_operations",
+      "status": "done",
+      "context": "sync verified"
+    },
+    {
+      "ts": "2025-10-06T02:54:58+07:00",
+      "id": "WO-251006-025458-$",
+      "agent": "clc",
+      "action": "redis_test",
+      "status": "started",
+      "context": "testing redis pubsub"
+    },
+    {
+      "ts": "2025-10-06T02:55:43+07:00",
+      "id": "WO-251006-025543-$",
+      "agent": "clc",
+      "action": "wrap_test",
+      "status": "started",
+      "context": "wrapper test"
+    },
+    {
+      "ts": "2025-10-06T02:55:43+07:00",
+      "id": "WO-251006-025543-$",
+      "agent": "clc",
+      "action": "wrap_test",
+      "status": "done",
+      "context": "wrapper test"
+    },
+    {
+      "ts": "2025-10-06T02:55:43+07:00",
+      "id": "WO-251006-025543-$",
+      "agent": "clc",
+      "action": "integration_test",
+      "status": "started",
+      "context": "e2e verification"
+    },
+    {
+      "ts": "2025-10-06T02:56:25+07:00",
+      "id": "WO-251006-025625-$",
+      "agent": "clc",
+      "action": "verification_test",
+      "status": "done",
+      "context": "all tests passed"
+    },
+    {
+      "ts": "2025-10-06T03:13:31+07:00",
+      "id": "WO-251006-031331-$",
+      "agent": "clc",
+      "action": "autostart_verification",
+      "status": "started",
+      "context": "testing full auto-start of both components"
+    },
+    {
+      "ts": "2025-10-06T03:32:27+07:00",
+      "id": "WO-251006-033227-$",
+      "agent": "clc",
+      "action": "verification_test",
+      "status": "started",
+      "context": "testing auto-start deployment claims"
+    },
+    {
+      "ts": "2025-10-12T02:00:15+07:00",
+      "id": "WO-251012-020015-$",
+      "agent": "clc",
+      "action": "dashboard_deployment",
+      "status": "done",
+      "context": "Boss-UI deployed to Cloudflare Pages (theedges-dashboard.pages.dev)"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "domain_migration",
+      "status": "done",
+      "context": "Migrated dashboard.theedges.work to Pages, n8n to subdomain"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "api_documentation",
+      "status": "done",
+      "context": "Complete API docs with /api/smoke endpoint"
+    },
+    {
+      "ts": "2025-10-12T02:00:25+07:00",
+      "id": "WO-251012-020025-$",
+      "agent": "clc",
+      "action": "tracking_workflow",
+      "status": "started",
+      "context": "Implementing proper todo/pending tracking system"
+    },
+    {
+      "ts": "2025-10-06T02:48:37+07:00",
+      "id": "WO-251006-024837-$",
+      "agent": "cursor",
+      "action": "mcp_config",
+      "status": "done",
+      "context": "simplified config"
+    },
+    {
+      "ts": "2025-10-06T02:54:21+07:00",
+      "id": "WO-251006-025421-$",
+      "agent": "cursor",
+      "action": "ui_refactor",
+      "status": "started",
+      "context": "optimizing components"
+    },
+    {
+      "ts": "2025-10-06T02:54:22+07:00",
+      "id": "WO-251006-025422-$",
+      "agent": "cursor",
+      "action": "mcp_integration",
+      "status": "started",
+      "context": "testing MCP access"
+    },
+    {
+      "ts": "2025-10-06T02:54:59+07:00",
+      "id": "WO-251006-025459-$",
+      "agent": "cursor",
+      "action": "clc",
+      "status": "started",
+      "context": ""
+    },
+    {
+      "ts": "2025-10-06T02:54:59+07:00",
+      "id": "WO-251006-025459-$",
+      "agent": "cursor",
+      "action": "clc",
+      "status": "failed",
+      "context": ""
+    },
+    {
+      "ts": "2025-10-06T02:55:44+07:00",
+      "id": "WO-251006-025544-$",
+      "agent": "cursor",
+      "action": "response_to_clc",
+      "status": "started",
+      "context": "saw your integration test"
+    }
+  ]
+}

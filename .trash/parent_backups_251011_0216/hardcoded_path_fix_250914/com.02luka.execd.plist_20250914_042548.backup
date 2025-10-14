@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.execd</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/icmini/02luka/.venv_fastvlm311/bin/python</string>
+    <string>-m</string>
+    <string>uvicorn</string>
+    <string>execd:app</string>
+    <string>--app-dir</string><string>/Users/icmini/02luka/agents/execd</string>
+    <string>--host</string><string>127.0.0.1</string>
+    <string>--port</string><string>8787</string>
+    <string>--timeout-keep-alive</string><string>30</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/icmini/02luka/agents/execd</string>
+  <key>EnvironmentVariables</key><dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key><string>/Users/icmini</string>
+    <key>PYTHONUNBUFFERED</key><string>1</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/logs/execd/execd.out</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/logs/execd/execd.err</string>
+</dict></plist>

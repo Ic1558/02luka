@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Priority System Fixes - 100% Operational Health Achieved
 
 **Report ID**: PRIORITY_FIXES_251005_042000

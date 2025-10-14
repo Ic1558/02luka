@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="${SOT_PATH:-$(pwd)}"
+
+# Source universal path resolver
+source "$(dirname "$0")/../scripts/repo_root_resolver.sh"
+ROOT="${SOT_PATH:-$REPO_ROOT}"
 
 # 1) Generate latest system map (best-effort)
 python3 "$ROOT/g/tools/render_system_map.py" 2>/dev/null || true
@@ -38,6 +41,16 @@ if [ -d "$REPORT_SRC" ]; then
 fi
 
 echo "[02luka] preflight ready."
+
+# Check for duplicate clones (warn if they differ)
+if [ -d "$HOME/dev/02luka-repo/.git" ]; then
+  cur="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || true)"
+  old="$(git -C "$HOME/dev/02luka-repo" rev-parse --short HEAD 2>/dev/null || true)"
+  if [ -n "$old" ] && [ "$cur" != "$old" ]; then
+    echo "[warn] Another checkout at ~/dev/02luka-repo (commit $old) differs from current (commit $cur)."
+    echo "[warn] Consider updating or removing the old clone to avoid confusion."
+  fi
+fi
 
 # Check master prompt presence
 if [ ! -s ".codex/templates/master_prompt.md" ]; then

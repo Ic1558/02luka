@@ -35,7 +35,7 @@ Once Luka is embedded, make sure every automation or delegated task can resolve 
   - `.codex/CONTEXT_SEED.md`
   - `.codex/GUARDRAILS.md`
   - `.codex/TASK_RECIPES.md`
-- **Prompt Templates:** `.codex/templates/master_prompt.md` (and companions).
+- **Prompt Templates:** `prompts/master_prompt.md` (and companions).
 - **Mapping Resolver:** `f/ai_context/mapping.json` enumerates logical namespaces.
 - **Path Helper:** `g/tools/path_resolver.sh` translates keys such as `human:inbox` into concrete repo paths.
 
@@ -49,7 +49,7 @@ Inside Luka (and therefore inside ChatGPT), rely on the repo’s existing utilit
 bash g/tools/path_resolver.sh human:inbox
 
 # Inspect current templates
-ls .codex/templates
+ls prompts
 
 # Search the repo without full recursion
 rg "CHANGE_ID" -n
@@ -58,17 +58,17 @@ rg "CHANGE_ID" -n
 These commands run in the workspace that Luka serves, so every response stays aligned with the repository layout that ChatGPT sees.
 
 ## 6. Delegation Workflow
-1. **Start with the Master Prompt** – Insert the contents of `.codex/templates/master_prompt.md` via Luka’s prompt library.
+1. **Start with the Master Prompt** – Insert the contents of `prompts/master_prompt.md` via Luka’s prompt library.
 2. **Confirm the GOAL** – Describe the task, affected files, and validation plan inside ChatGPT before editing.
 3. **Use Luka for File Operations** – When ChatGPT needs a file, fetch it with Luka’s built-in file viewer or by issuing `cat`/`sed` commands from the prompt.
 4. **Validate** – Run `.codex/preflight.sh` and any required scripts (`verify_system.sh`, `run/smoke_api_ui.sh`) directly from the Luka shell before committing.
-5. **Commit & Summarise** – Follow the commit conventions in `.codex/templates/master_prompt.md` and mirror the summary back into ChatGPT.
+5. **Commit & Summarise** – Follow the commit conventions in `prompts/master_prompt.md` and mirror the summary back into ChatGPT.
 
 ## 7. Troubleshooting
 | Symptom | Fix |
 |---------|-----|
 | ChatGPT cannot load `localhost` | Enable local network access in the app settings or expose Luka via `./tunnel`. |
 | Luka loads but cannot reach gateways | Start the services (MCP Docker, FS MCP, Ollama) or update the gateway URLs in `index.html` if you are on non-default ports. |
-| Prompt library shows "Unable to load" | Confirm you are serving the repo root (not a subdirectory) so `.codex/templates/master_prompt.md` is accessible. |
+| Prompt library shows "Unable to load" | Confirm you are serving the repo root (not a subdirectory) so `prompts/master_prompt.md` is accessible. |
 
 Once the setup above is in place, every Luka prompt executed inside ChatGPT has access to the same local information as when running Luka in a standalone browser.

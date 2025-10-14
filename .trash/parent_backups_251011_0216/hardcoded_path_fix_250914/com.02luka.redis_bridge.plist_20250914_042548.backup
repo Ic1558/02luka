@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/icmini</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+		<key>PYTHONPATH</key>
+		<string>/Users/icmini/02luka</string>
+		<key>REDIS_URL</key>
+		<string>redis://default:changeme-02luka@127.0.0.1:6379/0</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.02luka.redis_bridge</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/icmini/02luka/launchd/run_redis_bridge.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/logs/launchd/com.02luka.redis_bridge.err.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/logs/launchd/com.02luka.redis_bridge.out.log</string>
+	<key>WorkingDirectory</key>
+	<string>/Users/icmini/02luka</string>
+</dict>
+</plist>

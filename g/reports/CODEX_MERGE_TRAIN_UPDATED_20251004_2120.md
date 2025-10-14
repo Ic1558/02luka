@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train - Updated Summary
 
 ## Date: $(date)
@@ -26,7 +30,7 @@
 
 ## Skipped Branches (Conflicts)
 - ❌ codex/add-drag-and-drop-upload-feature (conflict in boss-ui/luka.html)
-- ❌ codex/add-prompt-optimizer-tool-to-toolbar (conflict in .codex/templates/master_prompt.md)
+- ❌ codex/add-prompt-optimizer-tool-to-toolbar (conflict in prompts/master_prompt.md)
 
 ## Concurrency-Safe Autosave System
 - ✅ Flock-locked autosave (prevents race conditions)

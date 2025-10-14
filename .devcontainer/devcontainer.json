@@ -1,5 +1,9 @@
 {
-  "name": "02luka-dev",
+  "name": "02Luka Dev Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "postCreateCommand": "bash ./.codex/autosave_memory.sh && echo Memory Loaded && sleep 1"
+  "remoteUser": "root",
+  "postCreateCommand": "true",
+  "customizations": {
+    "vscode": { "extensions": ["openai.codex","ms-vscode-remote.remote-containers"] }
+  }
 }

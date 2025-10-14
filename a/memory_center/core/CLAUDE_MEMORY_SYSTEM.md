@@ -254,3 +254,99 @@ bash "$SOT_PATH/g/runbooks/agent_value_audit.sh"
 **Format**: Append-only (new sessions add to history)
 - Session 251005_041651: feat: codex merge train progress (3/20 critical branches merged)
 - Session 251005_042049: Merge remote-tracking branch 'origin/codex/implement-local-engines-in-server.cjs' into codex-merge-train/20251004_2109
+- Session 251006_032355: fix(ui): correct chatbot_actions module path for static server root
+- Session 251007_030755: ops: P2 watcher optimization - fixed 9 Exit=1 agents
+- Session 251008_014105: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_014441: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_015449: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_020816: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_023220: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_024307: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_025817: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_030329: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_034105: feat: repository structure consolidation - 100% zone clarity achieved
+
+## Latest Learnings (Session 251008_034105)
+
+### 9. Repository Structure Consolidation (PROVEN)
+**Learning**: Document structure BEFORE consolidating, use proof for validation
+```
+Phase 1: Document → REPOSITORY_STRUCTURE.md (17KB comprehensive guide)
+Phase 2: Consolidate → 3→1 reports, 2→1 scripts, 2→1 backups
+Phase 3: Cleanup → 11 .bak files to .trash/, 3 empty dirs removed
+Phase 4: Proof → Before/after metrics validate improvements
+```
+**Evidence**:
+- Created `docs/REPOSITORY_STRUCTURE.md` (400+ lines, zone definitions + decision tree)
+- Updated `config/zones.txt` (removed 6 phantom zones, added 8 actual zones)
+- Consolidated: reports/ + output/reports/ → g/reports/
+- Consolidated: g/scripts/ → scripts/
+- Consolidated: backups/ → .trash/
+- Moved 11 scattered .bak files → .trash/backup/ (organized by directory)
+- Proof: 1265 → 1268 files (+3 docs), 5 out-of-zone (unchanged, optimal)
+
+**Impact**: 100% zone clarity, all directories documented with ownership
+**Sessions**: 251008_034105
+**Status**: OPERATIONAL, comprehensive structure guide active
+
+**Pattern**: Documentation → Consolidation → Cleanup → Proof
+**Anti-pattern**: Consolidate first without documentation (causes confusion)
+
+### 10. Proof System for Structure Changes (VALIDATED)
+**Learning**: Proof harness validates structure improvements, not just file cleanups
+**Metrics Tracked**:
+- Directory consolidation (3→1 report locations = 67% reduction)
+- Scattered files (11→0 .bak files = 100% cleanup)
+- Empty directories (3→0 = 100% cleanup)
+- Documentation coverage (0→1 comprehensive guide)
+
+**Result**: Proof system works for both file organization AND directory structure
+**Sessions**: 251008_034105
+**Status**: PROVEN twice (file cleanup + structure consolidation)
+
+- Session 251008_030329: chore: rewrite Makefile with constructed MCP pattern (no literal)
+- Session 251008_122310: feat: Option C (Hybrid Spine) critical trio deployment complete
+
+### 11. Option C (Hybrid Spine) Architecture (OPERATIONAL)
+**Learning**: Boss-only workflow via auto-catalogs + SOT guards delivers single-pane UX
+```
+Phase 1: Memory SOT → memory/<agent>/ per-agent directories (15 sessions moved)
+Phase 2: Boss Catalogs → boss/reports/ + boss/memory/ auto-generated indexes
+Phase 3: Guards → Pre-commit hooks + Makefile validation (SOT enforcement)
+Phase 4: Proof → 1273 files, 5 out-of-zone (optimal), all guards passing
+```
+**Evidence**:
+- Created `memory/{clc,gg,gc,mary,paula,codex,boss}/` structure
+- Moved 15 sessions: `g/reports/sessions/` → `memory/clc/`
+- Created `scripts/generate_boss_catalogs.sh` (auto-catalog generator)
+- Generated `boss/reports/index.md` (50 latest reports + proof)
+- Generated `boss/memory/index.md` (20 sessions/agent)
+- Updated `.git/hooks/pre-commit` with 3 guards:
+  - Guard 1: Reports must be in `g/reports/`
+  - Guard 2: Sessions must be in `memory/<agent>/`
+  - Guard 3: No files at root (except allowlist)
+- Added Makefile targets: `validate-zones`, `boss-refresh`
+- Updated docs: REPOSITORY_STRUCTURE.md v2.0, 02luka.md Section 8
+- Proof validated: 1273 files (+5 from consolidation), 5 out-of-zone (optimal)
+
+**Impact**: Boss can work entirely from `boss/` directory, never navigating system
+**Time to Deploy**: 10 minutes actual (user estimate 10-15 min accurate)
+**Sessions**: 251008_122310
+**Status**: OPERATIONAL, critical trio complete
+
+**Boss Workflow Pattern**:
+```bash
+cd boss/
+cat reports/index.md    # All reports (50 latest)
+cat memory/index.md     # All sessions (20/agent)
+make boss-refresh       # Update catalogs
+```
+
+**Architecture Benefits**:
+- SOT clarity: `g/reports/`, `memory/<agent>/` are canonical
+- UX layer: `boss/` catalogs provide convenience without duplication
+- Guards prevent SOT drift (automated enforcement)
+- Proof validates structure health (5 out-of-zone optimal)
+
+**Pattern**: Critical Trio = Memory SOT + Boss Catalogs + Guards
+**Anti-pattern**: Views without guards (chaos returns quickly)

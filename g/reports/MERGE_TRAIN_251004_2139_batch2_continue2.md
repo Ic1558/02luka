@@ -1,3 +1,7 @@
+---
+project: general
+tags: [legacy]
+---
 # Codex Merge Train — batch2 (continue-2) Sat Oct  4 21:39:52 UTC 2025
 
 ## Merge codex/add-function-to-enhance-chatbot-actions

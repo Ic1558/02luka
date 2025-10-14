@@ -1,77 +1,38 @@
 #!/usr/bin/env bash
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+API_PORT="${PORT:-4000}"
+UI_PORT="${UI_PORT:-5173}"
+cd "$ROOT_DIR"
+kill_on_port(){ local p="$1"; lsof -ti tcp:"$p" >/dev/null 2>&1 && lsof -ti tcp:"$p" | xargs -r kill -9 || true; }
+kill_on_port "$API_PORT"; kill_on_port "$UI_PORT"
+mkdir -p "$ROOT_DIR/boss-api/data"
+nohup node "$ROOT_DIR/boss-api/server.cjs" >/tmp/boss-api.out 2>/tmp/boss-api.err &
+UI_ROOT="$ROOT_DIR/boss-ui"
+if [ ! -d "$UI_ROOT" ]; then echo "[dev-up] ERROR: UI root not found: $UI_ROOT" >&2; exit 1; fi
+(
+  cd "$UI_ROOT"
+export API_BASE="http://127.0.0.1:4000"
+  nohup python3 -m http.server "$UI_PORT" --bind 127.0.0.1 >/tmp/boss-ui.out 2>/tmp/boss-ui.err &
+)
+check_agent_endpoint(){
+  local label="$1"
+  local endpoint="$2"
+  local body="$3"
+  local status
+  status=$(curl -s -m 5 -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$API_PORT${endpoint}" -H 'Content-Type: application/json' -d "${body}") || status="ERR"
+  if [ "${status}" = "200" ]; then
+    echo "${label}:UP"
+  else
+    echo "${label}:DOWN(${status})"
+  fi
+}
 
-# Simple 02luka Development Startup
-echo "🚀 02luka Development Startup"
-echo "================================"
-
-# Kill existing services
-echo "🧹 Cleaning up existing services..."
-lsof -ti :4000 | xargs -r kill -9 2>/dev/null || true
-lsof -ti :5173 | xargs -r kill -9 2>/dev/null || true
 sleep 1
-
-# Start API
-echo "🔧 Starting API on port 4000..."
-cd /workspaces/02luka-repo/boss-api
-export HOST=127.0.0.1
-export PORT=4000
-nohup node server.cjs > /tmp/api.log 2>&1 &
-API_PID=$!
-echo "API started (PID: $API_PID)"
-
-# Start UI
-echo "🎨 Starting UI on port 5173..."
-cd /workspaces/02luka-repo/boss-ui
-nohup python3 -m http.server 5173 > /tmp/ui.log 2>&1 &
-UI_PID=$!
-echo "UI started (PID: $UI_PID)"
-
-# Wait
-echo "⏳ Waiting for services to initialize..."
-sleep 3
-
-# Health checks
-echo "🔍 Running health checks..."
-
-# API health
-if curl -fsS "http://127.0.0.1:4000/api/capabilities" >/dev/null 2>&1; then
-  echo "✅ API: Online"
-else
-  echo "❌ API: Failed to respond"
-  echo "API logs:"
-  tail -5 /tmp/api.log
-  exit 1
-fi
-
-# UI health
-if curl -fsS "http://localhost:5173/luka.html" >/dev/null 2>&1; then
-  echo "✅ UI: Online"
-else
-  echo "⚠️  UI: Responding but luka.html not found"
-fi
-
-# Run smoke tests
-echo "🧪 Running smoke tests..."
-cd /workspaces/02luka-repo
-if bash run/smoke_api_ui.sh; then
-  echo "✅ Smoke tests: PASSED"
-else
-  echo "⚠️  Smoke tests: Some failures (check logs)"
-fi
-
-# Summary
-echo ""
-echo "📊 Service Summary"
-echo "=================="
-echo "API:  http://127.0.0.1:4000"
-echo "UI:   http://localhost:5173/luka.html"
-echo "Logs: /tmp/api.log, /tmp/ui.log"
-echo ""
-echo "🎯 Ready for development!"
-
-
-
-
-
-
-
+curl -fsS http://127.0.0.1:$API_PORT/api/capabilities >/dev/null && echo "API:UP" || echo "API:DOWN"
+check_agent_endpoint "PLAN" "/api/plan" '{"runId":"dev-up","prompt":"health check","files":[]}'
+check_agent_endpoint "PATCH" "/api/patch" '{"runId":"dev-up","dryRun":true,"summary":"health check","patches":[{"path":"README.md","diff":"diff --git a/README.md b/README.md\\n"}]}'
+check_agent_endpoint "SMOKE" "/api/smoke" '{"runId":"dev-up","mode":"health-check","scope":["api"],"checks":[]}'
+curl -fsSI http://127.0.0.1:$UI_PORT/apps/landing.html >/dev/null && echo "UI Landing:UP" || echo "UI Landing:DOWN"
+curl -fsSI http://127.0.0.1:$UI_PORT/luka.html >/dev/null && echo "UI Legacy:UP" || echo "UI Legacy:DOWN"
+echo "Open: http://127.0.0.1:$UI_PORT/apps/landing.html"

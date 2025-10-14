@@ -1,0 +1,61 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: L
+      - text: Luka Prompt Console
+    - generic [ref=e5]:
+      - button "New Goal" [ref=e6] [cursor=pointer]
+      - button "Connectors" [ref=e7] [cursor=pointer]
+  - generic [ref=e8]:
+    - complementary [ref=e9]:
+      - heading "Mailboxes" [level=2] [ref=e10]
+      - navigation
+      - generic [ref=e11]:
+        - generic [ref=e12]: New goal target
+        - combobox "New goal target" [ref=e13] [cursor=pointer]:
+          - option "Outbox (default)" [selected]
+          - option "Drafts"
+        - generic [ref=e14]: Goals post to the selected mailbox then move along Outbox → Sent.
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Mailbox" [level=2] [ref=e18]
+          - paragraph [ref=e19]: Select a mailbox to load files.
+        - button "Refresh" [ref=e21] [cursor=pointer]
+      - generic [ref=e22]:
+        - paragraph [ref=e24]: Choose a mailbox from the left.
+        - generic [ref=e25]:
+          - heading "Preview" [level=3] [ref=e26]
+          - generic [ref=e27]: No file selected.
+    - generic [ref=e28]:
+      - generic [ref=e29]:
+        - heading "Prompt Composer" [level=2] [ref=e30]
+        - paragraph [ref=e31]: Craft and optimize prompts before dispatching to delegates.
+      - generic [ref=e32]:
+        - 'button "Engine: Auto" [ref=e33] [cursor=pointer]'
+        - generic [ref=e34]: Manual Engine
+        - combobox "Manual Engine" [disabled] [ref=e35]:
+          - option "Local" [selected]
+          - option "Anthropic"
+          - option "OpenAI"
+        - button "Optimize Prompt" [ref=e36] [cursor=pointer]
+      - generic [ref=e37]:
+        - generic [ref=e38]: System Directive
+        - textbox "System Directive" [ref=e39]
+      - generic [ref=e40]:
+        - generic [ref=e41]: Context
+        - textbox "Context" [ref=e42]
+      - generic [ref=e43]:
+        - generic [ref=e44]: Prompt
+        - textbox "Prompt" [ref=e45]
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - heading "Optimized Output" [level=2] [ref=e48]
+        - paragraph [ref=e49]: Waiting for input…
+      - generic [ref=e51]:
+        - button "Copy" [ref=e52] [cursor=pointer]
+        - button "Send to Chat" [ref=e53] [cursor=pointer]
+```
