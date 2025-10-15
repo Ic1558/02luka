@@ -74,3 +74,26 @@ jobs:
           fi
 
           echo "Ops gate clear: no failures reported."
+  docs-links:
+    name: docs cross-link check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure both docs exist
+        run: |
+          test -f docs/CODEX_MASTER_READINESS.md
+          test -f docs/CODEX_DEV_RUNBOOK.md
+      - name: Check cross-links (master → runbook)
+        run: |
+          grep -Ei 'CODEX[_ -]DEV[_ -]RUNBOOK' docs/CODEX_MASTER_READINESS.md
+      - name: Check cross-links (runbook → readiness)
+        run: |
+          grep -Ei 'CODEX[_ -]MASTER[_ -]READINESS' docs/CODEX_DEV_RUNBOOK.md
+      - name: Fail if either link section is empty
+        run: |
+          for f in docs/CODEX_MASTER_READINESS.md docs/CODEX_DEV_RUNBOOK.md; do
+            refs=$(grep -Eo '\(.*CODEX_.*\.MD.*\)|\[.*CODEX_.*\]' -i "$f" | wc -l | tr -d ' ')
+            if [ "$refs" -lt 1 ]; then
+              echo "Missing cross-link in $f"; exit 1
+            fi
+          done
