@@ -5,6 +5,7 @@ const fs = require('fs').promises;
 const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
+const { postDiscordWebhook } = require('../agents/discord/webhook_relay.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -27,6 +28,27 @@ const PUBLIC_AI_BASE = process.env.PUBLIC_AI_BASE || '';
 const PAULA_BASE = (process.env.PAULA_BASE || 'http://127.0.0.1:5000').replace(/\/+$/, '');
 const PAULA_TIMEOUT_MS = 30_000;
 const PAULA_MAX_BODY_BYTES = 5 * 1024 * 1024;
+const DISCORD_WEBHOOK_DEFAULT = process.env.DISCORD_WEBHOOK_DEFAULT || '';
+const DISCORD_WEBHOOK_MAP = process.env.DISCORD_WEBHOOK_MAP || '';
+
+let discordWebhookMap = {};
+if (DISCORD_WEBHOOK_MAP) {
+  try {
+    const parsed = JSON.parse(DISCORD_WEBHOOK_MAP);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      discordWebhookMap = Object.entries(parsed).reduce((acc, [key, value]) => {
+        if (typeof value === 'string' && value.trim()) {
+          acc[key] = value.trim();
+        }
+        return acc;
+      }, {});
+    } else {
+      console.warn('DISCORD_WEBHOOK_MAP must be a JSON object. Ignoring value.');
+    }
+  } catch (error) {
+    console.warn('DISCORD_WEBHOOK_MAP is not valid JSON and will be ignored.');
+  }
+}
 
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
@@ -70,6 +92,48 @@ const MAX_AI_PAYLOAD_BYTES = 512 * 1024;
 
 function writeJson(res, code, payload) {
   res.status(code).json(payload);
+}
+
+function normalizeLevel(rawLevel) {
+  const normalized = typeof rawLevel === 'string' ? rawLevel.trim().toLowerCase() : '';
+  if (normalized === 'warn' || normalized === 'warning') {
+    return 'warn';
+  }
+  if (normalized === 'error' || normalized === 'err' || normalized === 'fatal') {
+    return 'error';
+  }
+  return 'info';
+}
+
+function resolveDiscordWebhook(channelName) {
+  const normalized = typeof channelName === 'string' && channelName.trim() ? channelName.trim() : 'default';
+
+  if (discordWebhookMap[normalized]) {
+    return discordWebhookMap[normalized];
+  }
+
+  if (normalized !== 'default' && discordWebhookMap.default) {
+    return discordWebhookMap.default;
+  }
+
+  return DISCORD_WEBHOOK_DEFAULT;
+}
+
+function formatDiscordPayload(level, content) {
+  const trimmedContent = typeof content === 'string' ? content.trim() : '';
+  const levelEmojis = {
+    info: 'ℹ️',
+    warn: '⚠️',
+    error: '🚨'
+  };
+
+  const prefix = levelEmojis[level] || '';
+  const finalContent = prefix ? `${prefix} ${trimmedContent}` : trimmedContent;
+
+  return {
+    content: finalContent,
+    allowed_mentions: { parse: [] }
+  };
 }
 
 async function proxyPaulaRequest(req, res, targetPath, options = {}) {
@@ -193,6 +257,38 @@ app.get('/api/capabilities', async (req, res) => {
     writeJson(res, 200, capabilities);
   } catch (error) {
     writeJson(res, 500, { error: error.message });
+  }
+});
+
+app.post('/api/discord/notify', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const rawContent = body.content;
+    if (!rawContent || typeof rawContent !== 'string' || !rawContent.trim()) {
+      return writeJson(res, 400, { error: 'content is required' });
+    }
+
+    const level = normalizeLevel(body.level);
+    const channel = typeof body.channel === 'string' ? body.channel.trim() : 'default';
+    const webhookUrl = resolveDiscordWebhook(channel);
+
+    if (!webhookUrl) {
+      return writeJson(res, 503, { error: 'Discord webhook is not configured' });
+    }
+
+    const payload = formatDiscordPayload(level, rawContent);
+
+    try {
+      await postDiscordWebhook(webhookUrl, payload);
+    } catch (error) {
+      const statusSuffix = error && error.statusCode ? ` (status ${error.statusCode})` : '';
+      console.error(`Failed to deliver Discord notification${statusSuffix}:`, error.message);
+      return writeJson(res, 502, { error: 'Failed to send Discord notification' });
+    }
+
+    return writeJson(res, 200, { ok: true });
+  } catch (error) {
+    return writeJson(res, 500, { error: 'Unexpected error while processing request' });
   }
 });
 

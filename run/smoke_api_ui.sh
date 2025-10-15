@@ -85,3 +85,24 @@ test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":tr
 
 # Smoke endpoint
 test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" "5" || true
+
+echo ""
+echo "=== Discord Integration (Optional) ==="
+if [ -n "${DISCORD_WEBHOOK_DEFAULT:-}" ]; then
+  echo -n "Discord Notify... "
+  payload='{"content":"02LUKA smoke check","level":"info","channel":"default"}'
+  response=$(curl -s -m "5" -w "%{http_code}" -o /tmp/smoke_response.json -X "POST" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "http://127.0.0.1:4000/api/discord/notify" 2>/dev/null || echo "000")
+  http_code="${response: -3}"
+  if [ "$http_code" = "200" ]; then
+    echo "✅ PASS ($http_code)"
+    PASS=$((PASS + 1))
+  else
+    echo "❌ FAIL ($http_code, expected 200)"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  echo "Discord Notify... SKIP (webhook not configured)"
+fi
