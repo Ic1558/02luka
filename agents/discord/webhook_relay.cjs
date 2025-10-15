@@ -1,84 +1,90 @@
+#!/usr/bin/env node
+/**
+ * Discord Webhook Relay
+ * Lightweight webhook client using Node.js native https module (zero dependencies)
+ *
+ * Usage:
+ *   const { postDiscordWebhook } = require('./webhook_relay.cjs');
+ *   await postDiscordWebhook('https://discord.com/api/webhooks/...', { content: 'Hello' });
+ */
+
 const https = require('https');
-const { URL } = require('url');
 
-const DEFAULT_TIMEOUT_MS = 10_000;
-
-function normalizeUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== 'string') {
-    throw new Error('Discord webhook URL is required');
-  }
-
-  let parsed;
-  try {
-    parsed = new URL(rawUrl);
-  } catch (error) {
-    throw new Error('Invalid Discord webhook URL');
-  }
-
-  if (parsed.protocol !== 'https:') {
-    throw new Error('Discord webhook URL must use https');
-  }
-
-  return parsed;
-}
-
-function buildRequestOptions(parsedUrl, serializedPayload) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'Content-Length': Buffer.byteLength(serializedPayload)
-  };
-
-  const options = {
-    method: 'POST',
-    hostname: parsedUrl.hostname,
-    path: `${parsedUrl.pathname}${parsedUrl.search}`,
-    headers
-  };
-
-  if (parsedUrl.port) {
-    options.port = parsedUrl.port;
-  }
-
-  return options;
-}
-
-function postDiscordWebhook(webhookUrl, payload = {}) {
-  const parsedUrl = normalizeUrl(webhookUrl);
-  const serialized = JSON.stringify(payload || {});
-  const options = buildRequestOptions(parsedUrl, serialized);
-
+/**
+ * Post a message to a Discord webhook
+ * @param {string} url - Discord webhook URL
+ * @param {object} payload - Discord webhook payload (at minimum: { content: string })
+ * @returns {Promise<{ok: boolean}>} - Resolves if successful (2xx status)
+ * @throws {Error} - Rejects with error.statusCode if Discord returns non-2xx
+ */
+function postDiscordWebhook(url, payload) {
   return new Promise((resolve, reject) => {
-    const request = https.request(options, response => {
-      const statusCode = response.statusCode || 0;
-      const chunks = [];
+    if (!url || typeof url !== 'string') {
+      return reject(new Error('Invalid webhook URL'));
+    }
 
-      response.on('data', chunk => chunks.push(chunk));
-      response.on('end', () => {
-        const bodyBuffer = Buffer.concat(chunks);
-        const bodyText = bodyBuffer.toString('utf8');
+    if (!payload || typeof payload !== 'object') {
+      return reject(new Error('Invalid payload (must be object)'));
+    }
 
-        if (statusCode >= 200 && statusCode < 300) {
-          resolve({ statusCode, body: bodyText });
+    if (!payload.content || typeof payload.content !== 'string') {
+      return reject(new Error('Payload must contain "content" string'));
+    }
+
+    const data = JSON.stringify(payload);
+    let parsedUrl;
+
+    try {
+      parsedUrl = new URL(url);
+    } catch (err) {
+      return reject(new Error(`Invalid URL: ${err.message}`));
+    }
+
+    const options = {
+      hostname: parsedUrl.hostname,
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+        'User-Agent': '02luka-webhook-relay/1.0'
+      },
+      timeout: 10000 // 10 second timeout
+    };
+
+    const req = https.request(options, (res) => {
+      let body = '';
+
+      res.on('data', (chunk) => {
+        body += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve({ ok: true });
         } else {
-          const error = new Error('Discord webhook returned a non-success status');
-          error.statusCode = statusCode;
-          error.body = bodyText;
+          const error = new Error(
+            `Discord webhook returned ${res.statusCode}: ${body.substring(0, 200)}`
+          );
+          error.statusCode = res.statusCode;
+          error.responseBody = body;
           reject(error);
         }
       });
     });
 
-    request.setTimeout(DEFAULT_TIMEOUT_MS, () => {
-      request.destroy(new Error('Discord webhook request timed out'));
+    req.on('error', (err) => {
+      reject(new Error(`Network error: ${err.message}`));
     });
 
-    request.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout (10s)'));
+    });
 
-    request.write(serialized);
-    request.end();
+    req.write(data);
+    req.end();
   });
 }
 
-module.exports = {
-  postDiscordWebhook
-};
+module.exports = { postDiscordWebhook };
