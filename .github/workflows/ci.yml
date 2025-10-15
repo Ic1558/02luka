@@ -29,6 +29,9 @@ jobs:
     needs: validate
     steps:
       - name: Check ops atomic summary
+        # Note: OPS_ATOMIC_URL and OPS_ATOMIC_TOKEN must be configured as repository secrets
+        # OPS_GATE_OVERRIDE should be set as a repository variable (set to "1" to skip gate)
+        # The script below handles missing/empty values gracefully
         env:
           OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
           OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
