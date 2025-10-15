@@ -1,0 +1,66 @@
+name: auto-update-branch
+on:
+  push:
+    branches: [ main ]          # เมื่อ main อัปเดต ให้ลองอัปเดตทุก PR ที่เปิดอยู่
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write               # ให้ GITHUB_TOKEN push โค้ดกลับได้
+  pull-requests: write
+
+jobs:
+  update:
+    if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get PRs (when main pushed)
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v7
+        id: prs
+        with:
+          script: |
+            const { data } = await github.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            return { heads: data
+              .filter(pr => pr.head.repo.full_name === context.repo.owner + '/' + context.repo.repo)
+              .map(pr => pr.head.ref) };
+
+      - name: Update each PR branch (from main push)
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const ref of ${{ steps.prs.outputs.heads }}.split(',')) {
+              core.info(`::group::Updating ${ref}`);
+              await exec.exec('bash', ['-lc', `
+                git init -q
+                git remote add origin https://github.com/${process.env.GITHUB_REPOSITORY}.git
+                git fetch origin ${ref} main --depth=1
+                git checkout -q -B ${ref} origin/${ref}
+                git merge --no-edit origin/main || git rebase origin/main
+                git push --force-with-lease origin ${ref}
+              `]);
+              core.info('::endgroup::');
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # เมื่อ event คือ pull_request ให้รีเบสเฉพาะ branch ของ PR นั้นๆ
+      - name: Checkout PR branch
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Rebase/merge main into PR
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git fetch origin main --depth=1
+          (git rebase origin/main || git merge --no-edit origin/main)
+          git push --force-with-lease
+
+
