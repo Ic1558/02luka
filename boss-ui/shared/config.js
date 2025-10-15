@@ -11,6 +11,8 @@ const DEFAULT_CONFIG = Object.freeze({
 });
 
 let cachedConfig = null;
+let configReady = false;
+let pendingLoader = null;
 
 function normalizeGateway(entry, fallback = DEFAULT_GATEWAYS.ai) {
   if (typeof entry === 'string') {
@@ -84,29 +86,38 @@ function readWindowConfig() {
 }
 
 export function ensureConfigReady() {
-  if (cachedConfig) {
+  if (configReady && cachedConfig) {
     return Promise.resolve(cachedConfig);
   }
 
   if (typeof window === 'undefined') {
     cachedConfig = DEFAULT_CONFIG;
+    configReady = true;
     return Promise.resolve(cachedConfig);
   }
 
   const loader = window.__lukaConfigPromise;
   if (loader && typeof loader.then === 'function') {
-    return loader
-      .catch((err) => {
-        console.warn('[luka] runtime config load failed', err);
-        return readWindowConfig();
-      })
-      .then(() => {
-        cachedConfig = readWindowConfig();
-        return cachedConfig;
-      });
+    if (!pendingLoader) {
+      pendingLoader = loader
+        .catch((err) => {
+          console.warn('[luka] runtime config load failed', err);
+          return readWindowConfig();
+        })
+        .then(() => {
+          cachedConfig = readWindowConfig();
+          configReady = true;
+          return cachedConfig;
+        })
+        .finally(() => {
+          pendingLoader = null;
+        });
+    }
+    return pendingLoader;
   }
 
   cachedConfig = readWindowConfig();
+  configReady = true;
   return Promise.resolve(cachedConfig);
 }
 
@@ -146,4 +157,6 @@ export function isGatewayConfigured(name) {
 
 export function resetCachedConfig() {
   cachedConfig = null;
+  configReady = false;
+  pendingLoader = null;
 }
