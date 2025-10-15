@@ -380,18 +380,52 @@ app.get('/api/reports/latest', async (req, res) => {
 app.get('/api/reports/summary', async (req, res) => {
   try {
     const sumPath = path.join(repoRoot, 'g', 'reports', 'OPS_SUMMARY.json');
+
+    // Tolerant: missing file → return unknown status
     if (!fssync.existsSync(sumPath)) {
       return writeJson(res, 200, {
         status: 'unknown',
         note: 'summary_not_generated',
-        hint: 'Run: node agents/reportbot/index.cjs'
+        hint: 'Run: node agents/reportbot/index.cjs /tmp/ops_summary.json'
       });
     }
-    const json = JSON.parse(fssync.readFileSync(sumPath, 'utf8'));
+
+    // Tolerant: unreadable file → return unknown status
+    let content;
+    try {
+      content = fssync.readFileSync(sumPath, 'utf8');
+    } catch (readError) {
+      console.warn('[/api/reports/summary] File unreadable:', readError.message);
+      return writeJson(res, 200, {
+        status: 'unknown',
+        note: 'summary_unreadable',
+        hint: 'Check file permissions on g/reports/OPS_SUMMARY.json'
+      });
+    }
+
+    // Tolerant: invalid JSON → return unknown status
+    let json;
+    try {
+      json = JSON.parse(content);
+    } catch (parseError) {
+      console.warn('[/api/reports/summary] Invalid JSON:', parseError.message);
+      return writeJson(res, 200, {
+        status: 'unknown',
+        note: 'summary_invalid_json',
+        hint: 'OPS_SUMMARY.json contains invalid JSON'
+      });
+    }
+
+    // Success: return parsed JSON
     writeJson(res, 200, json);
   } catch (error) {
-    console.error('[/api/reports/summary]', error);
-    writeJson(res, 500, { error: 'summary_failed' });
+    // Unexpected errors → still return 200 with unknown status
+    console.error('[/api/reports/summary] Unexpected error:', error);
+    writeJson(res, 200, {
+      status: 'unknown',
+      note: 'summary_error',
+      error: error.message
+    });
   }
 });
 

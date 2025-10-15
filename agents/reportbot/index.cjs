@@ -11,6 +11,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const https = require('https');
 
 const execAsync = promisify(exec);
 
@@ -99,21 +100,67 @@ class AlertNotifier {
     const webhookUrl = process.env.ALERT_WEBHOOK_URL;
     if (webhookUrl && (alert.level === 'FAIL' || alert.level === 'CRITICAL')) {
       try {
-        const fetch = (await import('node-fetch')).default;
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: `🚨 ${alert.level}: ${alert.message}`,
-            timestamp: alert.timestamp,
-            context: alert.context
-          })
+        await this.postWebhook(webhookUrl, {
+          text: `🚨 ${alert.level}: ${alert.message}`,
+          timestamp: alert.timestamp,
+          context: alert.context
         });
         console.log(`Alert sent to webhook: ${alert.id}`);
       } catch (error) {
         console.error('Failed to send webhook alert:', error.message);
       }
     }
+  }
+
+  /**
+   * Post to webhook using native https (zero dependencies)
+   */
+  postWebhook(url, payload) {
+    return new Promise((resolve, reject) => {
+      const data = JSON.stringify(payload);
+      let parsedUrl;
+
+      try {
+        parsedUrl = new URL(url);
+      } catch (err) {
+        return reject(new Error(`Invalid webhook URL: ${err.message}`));
+      }
+
+      const options = {
+        hostname: parsedUrl.hostname,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+          'User-Agent': '02luka-reportbot/1.0'
+        },
+        timeout: 10000 // 10 second timeout
+      };
+
+      const req = https.request(options, (res) => {
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({ ok: true });
+          } else {
+            const error = new Error(`Webhook returned ${res.statusCode}: ${body.substring(0, 200)}`);
+            error.statusCode = res.statusCode;
+            reject(error);
+          }
+        });
+      });
+
+      req.on('error', (err) => reject(new Error(`Network error: ${err.message}`)));
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Request timeout (10s)'));
+      });
+
+      req.write(data);
+      req.end();
+    });
   }
 
   /**
@@ -188,40 +235,64 @@ class SystemMonitor {
 
     for (const service of services) {
       try {
-        const fetch = (await import('node-fetch')).default;
-        const response = await fetch(service.url, { 
-          method: 'GET',
-          timeout: 5000 
-        });
-        
-        if (!response.ok) {
-          await this.notifier.notify(ALERT_LEVELS.WARN, 
-            `Service ${service.name} returned ${response.status}`, 
-            { url: service.url, status: response.status }
+        const statusCode = await this.checkUrl(service.url);
+
+        if (statusCode < 200 || statusCode >= 300) {
+          await this.notifier.notify(ALERT_LEVELS.WARN,
+            `Service ${service.name} returned ${statusCode}`,
+            { url: service.url, status: statusCode }
           );
         }
       } catch (error) {
-        await this.notifier.notify(ALERT_LEVELS.FAIL, 
-          `Service ${service.name} is unreachable`, 
+        await this.notifier.notify(ALERT_LEVELS.FAIL,
+          `Service ${service.name} is unreachable`,
           { url: service.url, error: error.message }
         );
       }
     }
+  }
+
+  /**
+   * Check URL health using native http/https
+   */
+  checkUrl(urlString) {
+    return new Promise((resolve, reject) => {
+      const parsedUrl = new URL(urlString);
+      const httpModule = parsedUrl.protocol === 'https:' ? https : require('http');
+
+      const req = httpModule.request({
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: parsedUrl.pathname + parsedUrl.search,
+        method: 'GET',
+        timeout: 5000
+      }, (res) => {
+        res.resume(); // Consume response data
+        resolve(res.statusCode);
+      });
+
+      req.on('error', reject);
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Timeout'));
+      });
+      req.end();
+    });
   }
 }
 
 // Main execution
 async function main() {
   console.log('🤖 Reportbot Agent starting...');
-  
+
   const notifier = new AlertNotifier();
   const monitor = new SystemMonitor(notifier);
-  
+
   try {
     // Run system checks
     await monitor.checkServiceHealth();
     await monitor.checkSmokeTests();
-    
+
     // Show recent alerts
     const recentAlerts = notifier.getRecentAlerts(5);
     if (recentAlerts.length > 0) {
@@ -230,17 +301,76 @@ async function main() {
         console.log(`  [${alert.level}] ${alert.message}`);
       });
     }
-    
+
+    // Generate OPS_SUMMARY.json if output path specified
+    const outputPath = process.argv[2];
+    if (outputPath) {
+      await generateOpsSummary(notifier, outputPath);
+    } else {
+      // Default: write to g/reports/OPS_SUMMARY.json
+      const defaultPath = path.join(REPO_ROOT, 'g', 'reports', 'OPS_SUMMARY.json');
+      await generateOpsSummary(notifier, defaultPath);
+    }
+
     console.log('\n✅ Reportbot Agent completed successfully');
-    
+
   } catch (error) {
-    await notifier.notify(ALERT_LEVELS.CRITICAL, 
-      'Reportbot Agent execution failed', 
+    await notifier.notify(ALERT_LEVELS.CRITICAL,
+      'Reportbot Agent execution failed',
       { error: error.message, stack: error.stack }
     );
     console.error('❌ Reportbot Agent failed:', error.message);
     process.exit(1);
   }
+}
+
+/**
+ * Generate OPS_SUMMARY.json for badge/status display
+ */
+async function generateOpsSummary(notifier, outputPath) {
+  const recentAlerts = notifier.getRecentAlerts(10);
+
+  // Determine overall status based on recent alerts
+  let status = 'ok';
+  let level = 'info';
+
+  for (const alert of recentAlerts) {
+    if (alert.level === 'CRITICAL' || alert.level === 'FAIL') {
+      status = 'fail';
+      level = 'error';
+      break;
+    } else if (alert.level === 'WARN') {
+      status = 'warn';
+      level = 'warn';
+    }
+  }
+
+  const summary = {
+    status,
+    level,
+    timestamp: new Date().toISOString(),
+    alerts: {
+      total: recentAlerts.length,
+      critical: recentAlerts.filter(a => a.level === 'CRITICAL').length,
+      fail: recentAlerts.filter(a => a.level === 'FAIL').length,
+      warn: recentAlerts.filter(a => a.level === 'WARN').length,
+      info: recentAlerts.filter(a => a.level === 'INFO').length
+    },
+    recent: recentAlerts.slice(0, 3).map(a => ({
+      level: a.level,
+      message: a.message,
+      timestamp: a.timestamp
+    }))
+  };
+
+  // Ensure output directory exists
+  const outputDir = path.dirname(outputPath);
+  await fs.mkdir(outputDir, { recursive: true });
+
+  // Write summary file
+  await fs.writeFile(outputPath, JSON.stringify(summary, null, 2));
+  console.log(`📝 OPS summary written to: ${outputPath}`);
+  console.log(`   Status: ${status} | Alerts: ${summary.alerts.total} (${summary.alerts.fail} FAIL, ${summary.alerts.warn} WARN)`);
 }
 
 // Run if called directly
