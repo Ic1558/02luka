@@ -27,7 +27,14 @@ jobs:
   gateways:
     name: Preview gateway smoke tests
     runs-on: ubuntu-latest
-    if: ${{ (!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository) && secrets.PREVIEW_AGENTS_GATEWAY_URL != '' && secrets.PREVIEW_AI_GATEWAY_URL != '' && secrets.CLOUDFLARE_AI_GATEWAY_TOKEN != '' }}
+    if: >-
+      ${{
+        (github.event_name != 'pull_request' ||
+         github.event.pull_request.head.repo.full_name == github.repository) &&
+        secrets.PREVIEW_AGENTS_GATEWAY_URL != '' &&
+        secrets.PREVIEW_AI_GATEWAY_URL != '' &&
+        secrets.CLOUDFLARE_AI_GATEWAY_TOKEN != ''
+      }}
     env:
       AGENTS_GATEWAY_URL: ${{ secrets.PREVIEW_AGENTS_GATEWAY_URL }}
       AI_GATEWAY_URL: ${{ secrets.PREVIEW_AI_GATEWAY_URL }}
