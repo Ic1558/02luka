@@ -5,7 +5,8 @@ export const NAV_LINKS = [
   { id: 'chat', label: 'Chat', path: '/chat' },
   { id: 'plan', label: 'Plan', path: '/plan' },
   { id: 'build', label: 'Build', path: '/build' },
-  { id: 'ship', label: 'Ship', path: '/ship' }
+  { id: 'ship', label: 'Ship', path: '/ship' },
+  { id: 'signals', label: 'Signals', path: '/signals' }
 ];
 
 export function mountAppShell(options = {}) {
@@ -101,6 +102,77 @@ export function renderStatusPill(label, state = 'ok', detail = '') {
   pill.appendChild(detailSpan);
 
   return pill;
+}
+
+export function createStatusWidget({ label, value = '—', state = 'ok', detail = '', pillLabel = label, pillDetail = detail } = {}) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'status-widget';
+
+  const header = document.createElement('div');
+  header.className = 'status-widget-header';
+  header.textContent = label || '';
+  wrapper.appendChild(header);
+
+  const metric = document.createElement('div');
+  metric.className = 'status-widget-value';
+  metric.textContent = value;
+  wrapper.appendChild(metric);
+
+  if (pillLabel) {
+    const pill = renderStatusPill(pillLabel, state, pillDetail);
+    pill.classList.add('inline');
+    wrapper.appendChild(pill);
+  }
+
+  return wrapper;
+}
+
+export function createTinyTable(columns = [], { empty = 'No data.' } = {}) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tiny-table';
+
+  const headerRow = document.createElement('div');
+  headerRow.className = 'tiny-row tiny-header';
+  columns.forEach((column) => {
+    const cell = document.createElement('div');
+    cell.className = 'tiny-cell';
+    cell.textContent = column;
+    headerRow.appendChild(cell);
+  });
+  wrapper.appendChild(headerRow);
+
+  const body = document.createElement('div');
+  body.className = 'tiny-body';
+  wrapper.appendChild(body);
+
+  const emptyState = document.createElement('div');
+  emptyState.className = 'tiny-empty';
+  emptyState.textContent = empty;
+  wrapper.appendChild(emptyState);
+
+  function setRows(rows = []) {
+    body.innerHTML = '';
+    if (!Array.isArray(rows) || rows.length === 0) {
+      wrapper.classList.add('is-empty');
+      return;
+    }
+    wrapper.classList.remove('is-empty');
+    rows.forEach((row) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'tiny-row';
+      row.forEach((value) => {
+        const cell = document.createElement('div');
+        cell.className = 'tiny-cell';
+        cell.textContent = value;
+        rowEl.appendChild(cell);
+      });
+      body.appendChild(rowEl);
+    });
+  }
+
+  setRows();
+
+  return { element: wrapper, setRows };
 }
 
 export async function hydrateStatus(statusBar) {
