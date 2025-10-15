@@ -25,16 +25,22 @@ jobs:
               repo: context.repo.repo,
               state: 'open'
             });
-            return { heads: data
+            return data
               .filter(pr => pr.head.repo.full_name === context.repo.owner + '/' + context.repo.repo)
-              .map(pr => pr.head.ref) };
+              .map(pr => pr.head.ref)
+              .join(',');
 
       - name: Update each PR branch (from main push)
         if: ${{ github.event_name == 'push' }}
         uses: actions/github-script@v7
         with:
           script: |
-            for (const ref of ${{ steps.prs.outputs.heads }}.split(',')) {
+            const refs = '${{ steps.prs.outputs.result }}';
+            if (!refs) {
+              core.info('No PRs to update');
+              return;
+            }
+            for (const ref of refs.split(',')) {
               core.info(`::group::Updating ${ref}`);
               await exec.exec('bash', ['-lc', `
                 git init -q
