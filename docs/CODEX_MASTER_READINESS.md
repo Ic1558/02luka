@@ -1,5 +1,9 @@
 # CODEX Master Readiness – Phase 4 Snapshot
 
+> 💡 **Developer Note:**
+> For day-to-day workflow, smoke tests, and gateway setup,
+> see [CODEX_DEV_RUNBOOK.md](./CODEX_DEV_RUNBOOK.md).
+
 > **Updated:** 2025-10-15
 > **Owner:** Codex Operations (boss ↔ codex)
 
