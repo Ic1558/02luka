@@ -391,6 +391,81 @@ Place a `patch.cjs` script in `agents/lukacode/` directory.
 
 ---
 
+## Integrations
+
+### POST /api/discord/notify
+
+Send a notification message to Discord via webhook.
+
+**Request Body:**
+```json
+{
+  "content": "Build completed successfully",
+  "level": "info",
+  "channel": "default"
+}
+```
+
+**Required Fields:**
+- `content` (string) - Message text to send
+
+**Optional Fields:**
+- `level` (string) - Message severity: `info` (default), `warn`, or `error`
+- `channel` (string) - Channel name for webhook routing (default: `default`)
+
+**Response (Success):**
+```json
+{
+  "ok": true
+}
+```
+
+**Response (Error):**
+```json
+{
+  "error": "content is required"
+}
+```
+
+```json
+{
+  "error": "Discord webhook is not configured"
+}
+```
+
+```json
+{
+  "error": "Failed to send Discord notification"
+}
+```
+
+**Example:**
+```bash
+curl -X POST http://127.0.0.1:4000/api/discord/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Deployment complete",
+    "level": "info",
+    "channel": "ops"
+  }'
+```
+
+**Configuration:**
+- Set `DISCORD_WEBHOOK_DEFAULT` environment variable with webhook URL
+- Optionally set `DISCORD_WEBHOOK_MAP` for multi-channel routing (JSON object)
+
+**Level Emojis:**
+- `info` → ℹ️
+- `warn` → ⚠️
+- `error` → 🚨
+
+**See Also:**
+- Full documentation: [`docs/integrations/discord.md`](../integrations/discord.md)
+- Test script: [`run/discord_notify_example.sh`](../../run/discord_notify_example.sh)
+- Implementation: [`agents/discord/webhook_relay.cjs`](../../agents/discord/webhook_relay.cjs)
+
+---
+
 ## Error Responses
 
 All endpoints return JSON error responses with appropriate HTTP status codes:
@@ -439,6 +514,11 @@ curl "http://127.0.0.1:4000/api/linear-lite/cards?state=active" | jq '.cards | l
 curl -X POST http://127.0.0.1:4000/api/plan \
   -H "Content-Type: application/json" \
   -d '{"prompt":"test"}' | jq .
+
+# Discord notification (requires DISCORD_WEBHOOK_DEFAULT)
+curl -X POST http://127.0.0.1:4000/api/discord/notify \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Test notification","level":"info"}' | jq .
 ```
 
 ### Run All Tests
