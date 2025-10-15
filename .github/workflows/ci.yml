@@ -34,6 +34,8 @@ jobs:
           OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
           OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
         run: |
+          set -euo pipefail
+
           if [ "${OPS_GATE_OVERRIDE}" = "1" ]; then
             echo "Override active: skipping ops-gate check."
             exit 0
@@ -52,32 +54,23 @@ jobs:
           }
           trap cleanup EXIT
 
+          curl_args=(--silent --show-error --fail "$summary_url")
           if [ -n "${OPS_ATOMIC_TOKEN}" ]; then
-            curl --silent --show-error --fail \
+            curl_args=(--silent --show-error --fail \
               -H "Authorization: Bearer ${OPS_ATOMIC_TOKEN}" \
-              "$summary_url" >"$tmp_file"
-          else
-            curl --silent --show-error --fail "$summary_url" >"$tmp_file"
+              "$summary_url")
           fi
 
-          python - "$tmp_file" <<'PY'
-import json
-import sys
-from pathlib import Path
+          curl "${curl_args[@]}" >"$tmp_file"
 
-summary_path = Path(sys.argv[1])
-data = json.loads(summary_path.read_text())
-fails = data.get("fails") or []
+          fails_count=$(jq '(.fails // []) | length' "$tmp_file")
 
-if fails:
-    print(f"Ops gate blocked: {len(fails)} failure(s) reported.", file=sys.stderr)
-    for item in fails:
-        if isinstance(item, dict):
-            label = item.get("name") or item.get("title") or json.dumps(item)
-        else:
-            label = str(item)
-        print(f"- {label}", file=sys.stderr)
-    sys.exit(1)
+          if [ "$fails_count" -gt 0 ]; then
+            echo "Ops gate blocked: ${fails_count} failure(s) reported." >&2
+            jq -r '(.fails // [])[] | \
+              if type == "object" then (.name // .title // .id // tostring)
+              else tostring end | "- \(.)"' "$tmp_file" >&2
+            exit 1
+          fi
 
-print("Ops gate clear: no failures reported.")
-PY
+          echo "Ops gate clear: no failures reported."
