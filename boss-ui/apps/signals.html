@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Signals · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+  <style>
+    .tab-list {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+    }
+
+    .tab-button {
+      border: none;
+      background: transparent;
+      padding: 10px 16px;
+      border-radius: 12px 12px 0 0;
+      font-weight: 600;
+      color: #475569;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .tab-button:hover {
+      background: rgba(37, 99, 235, 0.12);
+      color: #1d4ed8;
+    }
+
+    .tab-button.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .status-text {
+      margin: 0;
+      font-size: 13px;
+      color: #475569;
+    }
+
+    .status-text.error {
+      color: #b91c1c;
+    }
+
+    .status-text.success {
+      color: #166534;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+    }
+
+    .data-table thead {
+      background: #f8fafc;
+    }
+
+    .data-table th,
+    .data-table td {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .metric-card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .metric-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { mountAppShell, createPanel, hydrateStatus } from '/shared/components.js';
+    import { jfetch, getBases } from '/shared/api.js';
+
+    const { main, statusBar } = mountAppShell({
+      active: 'signals',
+      title: 'Signals · Luka Workspace',
+      subtitle: 'Monitor crawl data and automated training runs'
+    });
+
+    hydrateStatus(statusBar);
+
+    const panel = createPanel('Signals control room', 'Launch crawls, inspect domain coverage, and review auto-training performance.');
+
+    const tabList = document.createElement('div');
+    tabList.className = 'tab-list';
+    tabList.setAttribute('role', 'tablist');
+
+    const tabs = [
+      { id: 'data', label: 'Data' },
+      { id: 'auto-train', label: 'Auto-Train' }
+    ];
+
+    const tabButtons = new Map();
+    const tabPanels = new Map();
+
+    function activateTab(targetId) {
+      tabButtons.forEach((button, id) => {
+        const isActive = id === targetId;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      tabPanels.forEach((panelEl, id) => {
+        panelEl.classList.toggle('active', id === targetId);
+      });
+    }
+
+    tabs.forEach(({ id, label }, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'tab-button';
+      button.textContent = label;
+      button.dataset.tab = id;
+      button.id = `${id}-tab`;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', `${id}-panel`);
+      if (index === 0) {
+        button.classList.add('active');
+        button.setAttribute('aria-selected', 'true');
+      } else {
+        button.setAttribute('aria-selected', 'false');
+      }
+      button.addEventListener('click', () => activateTab(id));
+      tabButtons.set(id, button);
+      tabList.appendChild(button);
+    });
+
+    panel.appendChild(tabList);
+
+    function createTabPanel(id) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'tab-panel';
+      wrapper.id = `${id}-panel`;
+      wrapper.setAttribute('role', 'tabpanel');
+      wrapper.setAttribute('aria-labelledby', `${id}-tab`);
+      if (id === 'data') {
+        wrapper.classList.add('active');
+      }
+      tabPanels.set(id, wrapper);
+      panel.appendChild(wrapper);
+      return wrapper;
+    }
+
+    const dataPanel = createTabPanel('data');
+    const autoTrainPanel = createTabPanel('auto-train');
+
+    // Data tab content
+    const crawlForm = document.createElement('form');
+    crawlForm.className = 'form-grid';
+
+    const seedsLabel = document.createElement('label');
+    seedsLabel.textContent = 'Seed URLs (one per line)';
+
+    const seedsField = document.createElement('textarea');
+    seedsField.name = 'seeds';
+    seedsField.rows = 4;
+    seedsField.placeholder = 'https://example.com\nhttps://another-site.com';
+    seedsLabel.appendChild(seedsField);
+
+    crawlForm.appendChild(seedsLabel);
+
+    const crawlActions = document.createElement('div');
+    crawlActions.className = 'form-actions';
+
+    const crawlButton = document.createElement('button');
+    crawlButton.type = 'submit';
+    crawlButton.textContent = 'Crawl now';
+    crawlActions.appendChild(crawlButton);
+
+    const refreshButton = document.createElement('button');
+    refreshButton.type = 'button';
+    refreshButton.className = 'secondary';
+    refreshButton.textContent = 'Refresh status';
+    crawlActions.appendChild(refreshButton);
+
+    crawlButton.disabled = true;
+    refreshButton.disabled = true;
+
+    crawlForm.appendChild(crawlActions);
+
+    const crawlStatus = document.createElement('p');
+    crawlStatus.className = 'status-text';
+    crawlStatus.textContent = 'Waiting to schedule a crawl.';
+
+    const domainsTable = document.createElement('table');
+    domainsTable.className = 'data-table';
+    domainsTable.innerHTML = `
+      <thead>
+        <tr>
+          <th scope="col">Domain</th>
+          <th scope="col">Last run</th>
+          <th scope="col">Size</th>
+          <th scope="col">Errors</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const domainsBody = domainsTable.querySelector('tbody');
+
+    const lastRunSummary = document.createElement('p');
+    lastRunSummary.className = 'muted';
+    lastRunSummary.textContent = 'No crawl history yet.';
+
+    dataPanel.appendChild(crawlForm);
+    dataPanel.appendChild(crawlStatus);
+    dataPanel.appendChild(domainsTable);
+    dataPanel.appendChild(lastRunSummary);
+
+    // Auto-Train tab content
+    const trainForm = document.createElement('div');
+    trainForm.className = 'form-grid';
+
+    const strategyLabel = document.createElement('label');
+    strategyLabel.textContent = 'Strategy';
+
+    const strategySelect = document.createElement('select');
+    strategySelect.innerHTML = `
+      <option value="daily">Daily</option>
+      <option value="all">All</option>
+      <option value="new">New</option>
+    `;
+    strategyLabel.appendChild(strategySelect);
+
+    const trainActions = document.createElement('div');
+    trainActions.className = 'form-actions';
+
+    const trainButton = document.createElement('button');
+    trainButton.type = 'button';
+    trainButton.textContent = 'Run training';
+    trainActions.appendChild(trainButton);
+
+    trainButton.disabled = true;
+    strategySelect.disabled = true;
+
+    const trainingStatus = document.createElement('p');
+    trainingStatus.className = 'status-text';
+    trainingStatus.textContent = 'No training runs yet.';
+
+    const metricsGrid = document.createElement('div');
+    metricsGrid.className = 'metrics-grid';
+
+    function createMetricCard(label, unit = '') {
+      const card = document.createElement('div');
+      card.className = 'metric-card';
+      const heading = document.createElement('h3');
+      heading.textContent = label;
+      const value = document.createElement('div');
+      value.className = 'metric-value';
+      value.textContent = '—';
+      card.appendChild(heading);
+      card.appendChild(value);
+      if (unit) {
+        const detail = document.createElement('span');
+        detail.className = 'muted';
+        detail.textContent = unit;
+        card.appendChild(detail);
+      }
+      metricsGrid.appendChild(card);
+      return value;
+    }
+
+    const accuracyValue = createMetricCard('Accuracy', 'Last evaluation');
+    const sharpeValue = createMetricCard('Sharpe', 'Risk-adjusted return');
+    const winRateValue = createMetricCard('Win rate', 'Profitable trades');
+
+    const trainingMeta = document.createElement('p');
+    trainingMeta.className = 'muted';
+    trainingMeta.textContent = 'Training metrics will appear here after a run completes.';
+
+    trainForm.appendChild(strategyLabel);
+    trainForm.appendChild(trainActions);
+    trainForm.appendChild(trainingStatus);
+    trainForm.appendChild(metricsGrid);
+    trainForm.appendChild(trainingMeta);
+
+    autoTrainPanel.appendChild(trainForm);
+
+    const state = {
+      apiBase: null,
+      loading: false,
+      training: false
+    };
+
+    function formatDateTime(value) {
+      if (!value) {
+        return '—';
+      }
+      try {
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return String(value);
+        }
+        return new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        }).format(date);
+      } catch (err) {
+        return String(value);
+      }
+    }
+
+    function formatNumber(value) {
+      if (typeof value !== 'number' || Number.isNaN(value)) {
+        return '—';
+      }
+      return new Intl.NumberFormat().format(value);
+    }
+
+    function formatBytes(value) {
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        return value ? String(value) : '—';
+      }
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let size = value;
+      let unitIndex = 0;
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
+      }
+      return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+    }
+
+    async function loadApiBase() {
+      if (state.apiBase) {
+        return state.apiBase;
+      }
+      const bases = await getBases();
+      state.apiBase = bases.apiBase;
+      return state.apiBase;
+    }
+
+    async function loadCrawlerStatus() {
+      try {
+        const base = await loadApiBase();
+        const response = await jfetch(`${base}/api/signals/crawl/status`, { cache: 'no-store' });
+        const domains = Array.isArray(response?.topDomains) ? response.topDomains : [];
+        domainsBody.innerHTML = '';
+        if (domains.length === 0) {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+          cell.colSpan = 4;
+          cell.className = 'muted';
+          cell.textContent = 'No crawl results yet. Launch a crawl to populate domains.';
+          row.appendChild(cell);
+          domainsBody.appendChild(row);
+        } else {
+          domains.forEach((item) => {
+            const row = document.createElement('tr');
+            const domainCell = document.createElement('td');
+            domainCell.textContent = item?.domain || '—';
+            const lastRunCell = document.createElement('td');
+            lastRunCell.textContent = formatDateTime(item?.lastRunAt || item?.lastRun);
+            const sizeCell = document.createElement('td');
+            const sizeValue = typeof item?.size === 'number' ? item.size : item?.documents;
+            sizeCell.textContent = typeof sizeValue === 'number' ? formatBytes(sizeValue) : String(sizeValue || '—');
+            const errorsCell = document.createElement('td');
+            const errorsValue = typeof item?.errors === 'number' ? item.errors : (Array.isArray(item?.errors) ? item.errors.length : item?.errorCount);
+            errorsCell.textContent = typeof errorsValue === 'number' ? formatNumber(errorsValue) : String(errorsValue || '—');
+            row.append(domainCell, lastRunCell, sizeCell, errorsCell);
+            domainsBody.appendChild(row);
+          });
+        }
+
+        const lastRun = response?.lastRunAt || response?.lastRun || (domains[0] && (domains[0].lastRunAt || domains[0].lastRun));
+        const errors = response?.errors;
+        const summaryParts = [];
+        if (lastRun) {
+          summaryParts.push(`Last crawl: ${formatDateTime(lastRun)}`);
+        }
+        if (typeof response?.documents === 'number') {
+          summaryParts.push(`Documents: ${formatNumber(response.documents)}`);
+        }
+        if (typeof response?.bytes === 'number') {
+          summaryParts.push(`Size: ${formatBytes(response.bytes)}`);
+        }
+        if (Array.isArray(errors) && errors.length > 0) {
+          summaryParts.push(`${errors.length} recent error${errors.length === 1 ? '' : 's'}`);
+        }
+        lastRunSummary.textContent = summaryParts.length > 0 ? summaryParts.join(' · ') : 'No crawl history yet.';
+        crawlStatus.textContent = response?.message ? String(response.message) : 'Crawl status loaded.';
+        crawlStatus.classList.remove('error', 'success');
+      } catch (err) {
+        console.error('Failed to load crawl status', err);
+        crawlStatus.textContent = `Error loading crawl status: ${err.message}`;
+        crawlStatus.classList.add('error');
+      }
+    }
+
+    async function loadTrainingStatus() {
+      try {
+        const base = await loadApiBase();
+        const response = await jfetch(`${base}/api/signals/training/status`, { cache: 'no-store' });
+        const metrics = response?.metrics || response || {};
+        const accuracy = metrics.accuracy ?? metrics?.lastAccuracy;
+        const sharpe = metrics.sharpe ?? metrics?.lastSharpe;
+        const winRate = metrics.winrate ?? metrics.winRate ?? metrics?.lastWinRate;
+        accuracyValue.textContent = typeof accuracy === 'number' ? `${(accuracy * 100).toFixed(1)}%` : String(accuracy ?? '—');
+        sharpeValue.textContent = typeof sharpe === 'number' ? sharpe.toFixed(2) : String(sharpe ?? '—');
+        winRateValue.textContent = typeof winRate === 'number' ? `${(winRate * 100).toFixed(1)}%` : String(winRate ?? '—');
+
+        const updatedAt = response?.updatedAt || response?.lastRunAt || metrics?.timestamp;
+        const details = [];
+        if (updatedAt) {
+          details.push(`Last run: ${formatDateTime(updatedAt)}`);
+        }
+        if (typeof response?.samples === 'number') {
+          details.push(`Samples: ${formatNumber(response.samples)}`);
+        }
+        if (typeof response?.durationSeconds === 'number') {
+          details.push(`Duration: ${formatNumber(response.durationSeconds)}s`);
+        }
+        trainingMeta.textContent = details.length > 0 ? details.join(' · ') : 'Training metrics will appear here after a run completes.';
+        trainingStatus.textContent = response?.message ? String(response.message) : 'Training metrics loaded.';
+        trainingStatus.classList.remove('error', 'success');
+      } catch (err) {
+        console.error('Failed to load training metrics', err);
+        trainingStatus.textContent = `Error loading metrics: ${err.message}`;
+        trainingStatus.classList.add('error');
+      }
+    }
+
+    crawlForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const seeds = seedsField.value
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      crawlStatus.classList.remove('error', 'success');
+      crawlStatus.textContent = 'Scheduling crawl…';
+      crawlButton.disabled = true;
+      refreshButton.disabled = true;
+      try {
+        const base = await loadApiBase();
+        const response = await jfetch(`${base}/api/signals/crawl`, {
+          method: 'POST',
+          body: JSON.stringify({ seeds })
+        });
+        crawlStatus.textContent = response?.message ? String(response.message) : 'Crawl scheduled.';
+        crawlStatus.classList.add('success');
+        seedsField.value = '';
+        await loadCrawlerStatus();
+      } catch (err) {
+        crawlStatus.textContent = `Crawl failed: ${err.message}`;
+        crawlStatus.classList.add('error');
+      } finally {
+        crawlButton.disabled = false;
+        refreshButton.disabled = false;
+      }
+    });
+
+    refreshButton.addEventListener('click', async () => {
+      refreshButton.disabled = true;
+      crawlStatus.classList.remove('error', 'success');
+      crawlStatus.textContent = 'Refreshing crawl data…';
+      try {
+        await loadCrawlerStatus();
+        crawlStatus.classList.add('success');
+      } finally {
+        refreshButton.disabled = false;
+      }
+    });
+
+    trainButton.addEventListener('click', async () => {
+      trainingStatus.classList.remove('error', 'success');
+      trainingStatus.textContent = 'Starting training…';
+      trainButton.disabled = true;
+      strategySelect.disabled = true;
+      try {
+        const base = await loadApiBase();
+        const response = await jfetch(`${base}/api/signals/train`, {
+          method: 'POST',
+          body: JSON.stringify({ strategy: strategySelect.value })
+        });
+        trainingStatus.textContent = response?.message ? String(response.message) : 'Training job started.';
+        trainingStatus.classList.add('success');
+        await loadTrainingStatus();
+      } catch (err) {
+        trainingStatus.textContent = `Training failed: ${err.message}`;
+        trainingStatus.classList.add('error');
+      } finally {
+        trainButton.disabled = false;
+        strategySelect.disabled = false;
+      }
+    });
+
+    getBases()
+      .then((bases) => {
+        state.apiBase = bases.apiBase;
+        crawlButton.disabled = false;
+        refreshButton.disabled = false;
+        trainButton.disabled = false;
+        strategySelect.disabled = false;
+        return Promise.all([loadCrawlerStatus(), loadTrainingStatus()]);
+      })
+      .catch((err) => {
+        crawlStatus.textContent = `Unable to resolve API base: ${err.message}`;
+        crawlStatus.classList.add('error');
+        trainingStatus.textContent = `Unable to resolve API base: ${err.message}`;
+        trainingStatus.classList.add('error');
+      });
+
+    main.appendChild(panel);
+  </script>
+</body>
+</html>
