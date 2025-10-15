@@ -438,12 +438,13 @@ paulaRouter.post('/crawl', async (req, res) => {
       throw new Error('Crawler script unavailable');
     });
 
-    const args = [crawlScriptPath];
-    for (const seed of normalizedSeeds) {
-      args.push('--seed', seed);
-    }
+    const args = [
+      crawlScriptPath,
+      normalizedSeeds.join(','),
+    ];
+
     if (maxPagesValue !== undefined) {
-      args.push('--max-pages', String(Math.floor(Number(maxPagesValue))));
+      args.push(String(Math.floor(Number(maxPagesValue))));
     }
 
     const job = queuePaulaJob({
@@ -468,7 +469,11 @@ paulaRouter.post('/ingest', async (req, res) => {
       throw new Error('Ingest script unavailable');
     });
 
-    const args = [ingestScriptPath, '--payload-base64', Buffer.from(JSON.stringify(payload || {}), 'utf8').toString('base64')];
+    const args = [
+      ingestScriptPath,
+      '--payload-base64',
+      Buffer.from(JSON.stringify(payload || {}), 'utf8').toString('base64')
+    ];
 
     const job = queuePaulaJob({
       jobType: 'ingest',

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import importlib
 import json
 from dataclasses import dataclass
@@ -129,14 +131,30 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         default=None,
         help="Optional module:function hook returning embeddings",
     )
+    parser.add_argument(
+        "--payload-base64",
+        default=None,
+        help="Optional base64 encoded JSON payload overriding CLI arguments",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
-    corpus_dir = Path(args.corpus_dir)
-    database_path = Path(args.database)
-    hook = load_embedding_hook(args.embedding_hook)
+    payload = {}
+    if args.payload_base64:
+        try:
+            decoded = base64.b64decode(args.payload_base64)
+            payload = json.loads(decoded.decode("utf-8"))
+        except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SystemExit(f"Invalid payload data: {exc}")
+        if not isinstance(payload, dict):
+            raise SystemExit("Decoded payload must be a JSON object")
+
+    corpus_dir = Path(payload.get("corpus_dir", args.corpus_dir))
+    database_path = Path(payload.get("database", args.database))
+    embedding_hook = payload.get("embedding_hook", args.embedding_hook)
+    hook = load_embedding_hook(embedding_hook)
     ndjson_files = find_ndjson_files(corpus_dir)
     ingest(ndjson_files, database_path, hook)
     return 0
