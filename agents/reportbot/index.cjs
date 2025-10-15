@@ -1,381 +1,353 @@
 #!/usr/bin/env node
-
 /**
- * Reportbot Agent - Alert Notifications for WARN/FAIL
- * 
- * This agent monitors system status and sends alert notifications
- * for WARN and FAIL conditions detected in the 02LUKA system.
+ * Reportbot – daily ops summary aggregator
+ *
+ * Combines API (/api/reports/summary) data with local report files under g/reports
+ * and emits a structured summary that downstream tooling (Discord notifier, schedulers)
+ * can consume. Supports optional overrides for live runs via --counts/--status.
  */
 
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
-const { promisify } = require('util');
+const http = require('http');
 const https = require('https');
+const { URL } = require('url');
 
-const execAsync = promisify(exec);
+const repoRoot = path.resolve(__dirname, '..', '..');
+const reportsDir = path.join(repoRoot, 'g', 'reports');
+const latestMarkerPath = path.join(reportsDir, 'latest');
+const summaryPath = path.join(reportsDir, 'OPS_SUMMARY.json');
+const DEFAULT_API_URL = process.env.REPORTBOT_API_URL || 'http://127.0.0.1:4000/api/reports/summary';
 
-// Configuration
-const REPO_ROOT = path.resolve(__dirname, '../..');
-const BOSS_ROOT = path.join(REPO_ROOT, 'boss');
-const REPORTS_DIR = path.join(BOSS_ROOT, 'reports');
-const ALERTS_DIR = path.join(BOSS_ROOT, 'alerts');
-
-// Alert levels
-const ALERT_LEVELS = {
-  INFO: 'info',
-  WARN: 'warn', 
-  FAIL: 'fail',
-  CRITICAL: 'critical'
+const args = process.argv.slice(2);
+const options = {
+  write: false,
+  text: false,
+  noApi: false,
+  counts: null,
+  status: null,
+  latest: null,
+  channel: process.env.REPORT_CHANNEL || 'reports'
 };
 
-// Alert notification methods
-class AlertNotifier {
-  constructor() {
-    this.alertHistory = [];
-    this.maxHistorySize = 100;
-  }
-
-  /**
-   * Send alert notification
-   * @param {string} level - Alert level (WARN, FAIL, etc.)
-   * @param {string} message - Alert message
-   * @param {Object} context - Additional context data
-   */
-  async notify(level, message, context = {}) {
-    const alert = {
-      timestamp: new Date().toISOString(),
-      level: level.toUpperCase(),
-      message,
-      context,
-      id: this.generateAlertId()
-    };
-
-    // Add to history
-    this.alertHistory.unshift(alert);
-    if (this.alertHistory.length > this.maxHistorySize) {
-      this.alertHistory = this.alertHistory.slice(0, this.maxHistorySize);
-    }
-
-    // Log alert
-    console.log(`[${alert.level}] ${alert.timestamp}: ${message}`);
-    if (Object.keys(context).length > 0) {
-      console.log('Context:', JSON.stringify(context, null, 2));
-    }
-
-    // Save to alerts directory
-    await this.saveAlert(alert);
-
-    // Send to external systems if configured
-    await this.sendExternalAlert(alert);
-
-    return alert;
-  }
-
-  /**
-   * Generate unique alert ID
-   */
-  generateAlertId() {
-    return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Save alert to file system
-   */
-  async saveAlert(alert) {
-    try {
-      await fs.mkdir(ALERTS_DIR, { recursive: true });
-      const alertFile = path.join(ALERTS_DIR, `${alert.id}.json`);
-      await fs.writeFile(alertFile, JSON.stringify(alert, null, 2));
-    } catch (error) {
-      console.error('Failed to save alert:', error.message);
-    }
-  }
-
-  /**
-   * Send alert to external systems (webhooks, Slack, etc.)
-   */
-  async sendExternalAlert(alert) {
-    // Check for webhook configuration
-    const webhookUrl = process.env.ALERT_WEBHOOK_URL;
-    if (webhookUrl && (alert.level === 'FAIL' || alert.level === 'CRITICAL')) {
-      try {
-        await this.postWebhook(webhookUrl, {
-          text: `🚨 ${alert.level}: ${alert.message}`,
-          timestamp: alert.timestamp,
-          context: alert.context
-        });
-        console.log(`Alert sent to webhook: ${alert.id}`);
-      } catch (error) {
-        console.error('Failed to send webhook alert:', error.message);
-      }
-    }
-  }
-
-  /**
-   * Post to webhook using native https (zero dependencies)
-   */
-  postWebhook(url, payload) {
-    return new Promise((resolve, reject) => {
-      const data = JSON.stringify(payload);
-      let parsedUrl;
-
-      try {
-        parsedUrl = new URL(url);
-      } catch (err) {
-        return reject(new Error(`Invalid webhook URL: ${err.message}`));
-      }
-
-      const options = {
-        hostname: parsedUrl.hostname,
-        path: parsedUrl.pathname + parsedUrl.search,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(data),
-          'User-Agent': '02luka-reportbot/1.0'
-        },
-        timeout: 10000 // 10 second timeout
-      };
-
-      const req = https.request(options, (res) => {
-        let body = '';
-        res.on('data', (chunk) => { body += chunk; });
-        res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve({ ok: true });
-          } else {
-            const error = new Error(`Webhook returned ${res.statusCode}: ${body.substring(0, 200)}`);
-            error.statusCode = res.statusCode;
-            reject(error);
-          }
-        });
-      });
-
-      req.on('error', (err) => reject(new Error(`Network error: ${err.message}`)));
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('Request timeout (10s)'));
-      });
-
-      req.write(data);
-      req.end();
-    });
-  }
-
-  /**
-   * Get recent alerts
-   */
-  getRecentAlerts(limit = 10) {
-    return this.alertHistory.slice(0, limit);
-  }
+function printUsage() {
+  console.log(`Usage: node agents/reportbot/index.cjs [options]\n\n` +
+    `Options:\n` +
+    `  --write             Persist summary to g/reports/OPS_SUMMARY.json\n` +
+    `  --text              Output human readable text instead of JSON\n` +
+    `  --no-api            Skip API fetch (filesystem only)\n` +
+    `  --counts a,b,c      Override pass,warn,fail counts (e.g. 3,1,0 or pass=3,warn=1,fail=0)\n` +
+    `  --status value      Override overall status (pass|warn|fail|unknown)\n` +
+    `  --latest path       Provide path to latest report (absolute or relative)\n` +
+    `  --channel name      Override target channel (default: ${options.channel})\n` +
+    `  --help              Show this message`);
 }
 
-// System monitoring functions
-class SystemMonitor {
-  constructor(notifier) {
-    this.notifier = notifier;
-  }
-
-  /**
-   * Check smoke test results
-   */
-  async checkSmokeTests() {
-    try {
-      const { stdout } = await execAsync('bash ./run/smoke_api_ui.sh', { 
-        cwd: REPO_ROOT,
-        timeout: 30000 
-      });
-      
-      // Parse smoke test output for WARN/FAIL
-      const lines = stdout.split('\n');
-      let hasWarnings = false;
-      let hasFailures = false;
-      
-      for (const line of lines) {
-        if (line.includes('❌ FAIL')) {
-          hasFailures = true;
-          await this.notifier.notify(ALERT_LEVELS.FAIL, 
-            'Smoke test failure detected', 
-            { line: line.trim() }
-          );
-        } else if (line.includes('⚠️  WARN')) {
-          hasWarnings = true;
-          await this.notifier.notify(ALERT_LEVELS.WARN, 
-            'Smoke test warning detected', 
-            { line: line.trim() }
-          );
-        }
-      }
-      
-      if (!hasFailures && !hasWarnings) {
-        await this.notifier.notify(ALERT_LEVELS.INFO, 
-          'All smoke tests passed', 
-          { testOutput: stdout }
-        );
-      }
-      
-    } catch (error) {
-      await this.notifier.notify(ALERT_LEVELS.FAIL, 
-        'Smoke test execution failed', 
-        { error: error.message }
-      );
-    }
-  }
-
-  /**
-   * Check service health
-   */
-  async checkServiceHealth() {
-    const services = [
-      { name: 'API', url: 'http://127.0.0.1:4000/api/capabilities' },
-      { name: 'UI', url: 'http://127.0.0.1:5173' },
-      { name: 'MCP FS', url: 'http://127.0.0.1:8765/health' }
-    ];
-
-    for (const service of services) {
-      try {
-        const statusCode = await this.checkUrl(service.url);
-
-        if (statusCode < 200 || statusCode >= 300) {
-          await this.notifier.notify(ALERT_LEVELS.WARN,
-            `Service ${service.name} returned ${statusCode}`,
-            { url: service.url, status: statusCode }
-          );
-        }
-      } catch (error) {
-        await this.notifier.notify(ALERT_LEVELS.FAIL,
-          `Service ${service.name} is unreachable`,
-          { url: service.url, error: error.message }
-        );
-      }
-    }
-  }
-
-  /**
-   * Check URL health using native http/https
-   */
-  checkUrl(urlString) {
-    return new Promise((resolve, reject) => {
-      const parsedUrl = new URL(urlString);
-      const httpModule = parsedUrl.protocol === 'https:' ? https : require('http');
-
-      const req = httpModule.request({
-        hostname: parsedUrl.hostname,
-        port: parsedUrl.port,
-        path: parsedUrl.pathname + parsedUrl.search,
-        method: 'GET',
-        timeout: 5000
-      }, (res) => {
-        res.resume(); // Consume response data
-        resolve(res.statusCode);
-      });
-
-      req.on('error', reject);
-      req.on('timeout', () => {
-        req.destroy();
-        reject(new Error('Timeout'));
-      });
-      req.end();
-    });
-  }
-}
-
-// Main execution
-async function main() {
-  console.log('🤖 Reportbot Agent starting...');
-
-  const notifier = new AlertNotifier();
-  const monitor = new SystemMonitor(notifier);
-
-  try {
-    // Run system checks
-    await monitor.checkServiceHealth();
-    await monitor.checkSmokeTests();
-
-    // Show recent alerts
-    const recentAlerts = notifier.getRecentAlerts(5);
-    if (recentAlerts.length > 0) {
-      console.log('\n📊 Recent alerts:');
-      recentAlerts.forEach(alert => {
-        console.log(`  [${alert.level}] ${alert.message}`);
-      });
-    }
-
-    // Generate OPS_SUMMARY.json if output path specified
-    const outputPath = process.argv[2];
-    if (outputPath) {
-      await generateOpsSummary(notifier, outputPath);
-    } else {
-      // Default: write to g/reports/OPS_SUMMARY.json
-      const defaultPath = path.join(REPO_ROOT, 'g', 'reports', 'OPS_SUMMARY.json');
-      await generateOpsSummary(notifier, defaultPath);
-    }
-
-    console.log('\n✅ Reportbot Agent completed successfully');
-
-  } catch (error) {
-    await notifier.notify(ALERT_LEVELS.CRITICAL,
-      'Reportbot Agent execution failed',
-      { error: error.message, stack: error.stack }
-    );
-    console.error('❌ Reportbot Agent failed:', error.message);
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg === '--write') {
+    options.write = true;
+  } else if (arg === '--text') {
+    options.text = true;
+  } else if (arg === '--json') {
+    options.text = false;
+  } else if (arg === '--no-api') {
+    options.noApi = true;
+  } else if (arg === '--counts') {
+    options.counts = args[i + 1];
+    i += 1;
+  } else if (arg.startsWith('--counts=')) {
+    options.counts = arg.slice('--counts='.length);
+  } else if (arg === '--status') {
+    options.status = args[i + 1];
+    i += 1;
+  } else if (arg.startsWith('--status=')) {
+    options.status = arg.slice('--status='.length);
+  } else if (arg === '--latest') {
+    options.latest = args[i + 1];
+    i += 1;
+  } else if (arg.startsWith('--latest=')) {
+    options.latest = arg.slice('--latest='.length);
+  } else if (arg === '--channel') {
+    options.channel = args[i + 1];
+    i += 1;
+  } else if (arg.startsWith('--channel=')) {
+    options.channel = arg.slice('--channel='.length);
+  } else if (arg === '--help' || arg === '-h') {
+    printUsage();
+    process.exit(0);
+  } else {
+    console.error(`Unknown option: ${arg}`);
+    printUsage();
     process.exit(1);
   }
 }
 
-/**
- * Generate OPS_SUMMARY.json for badge/status display
- */
-async function generateOpsSummary(notifier, outputPath) {
-  const recentAlerts = notifier.getRecentAlerts(10);
+function parseCounts(input) {
+  if (!input) return null;
+  const counts = { pass: 0, warn: 0, fail: 0 };
+  const normalized = input.replace(/\s+/g, '');
+  if (!normalized) return counts;
+  if (/^[0-9]+,[0-9]+,[0-9]+$/.test(normalized)) {
+    const [p, w, f] = normalized.split(',').map(v => Number.parseInt(v, 10) || 0);
+    counts.pass = p;
+    counts.warn = w;
+    counts.fail = f;
+    return counts;
+  }
+  normalized.split(',').forEach(part => {
+    if (!part) return;
+    const [key, value] = part.split('=');
+    const lower = (key || '').toLowerCase();
+    const num = Number.parseInt(value, 10) || 0;
+    if (lower.startsWith('pass')) counts.pass = num;
+    if (lower.startsWith('warn')) counts.warn = num;
+    if (lower.startsWith('fail')) counts.fail = num;
+  });
+  return counts;
+}
 
-  // Determine overall status based on recent alerts
-  let status = 'ok';
-  let level = 'info';
+function normalizeStatus(value) {
+  const lower = (value || '').toString().toLowerCase();
+  if (['pass', 'ok', 'success'].includes(lower)) return 'pass';
+  if (['warn', 'warning'].includes(lower)) return 'warn';
+  if (['fail', 'failed', 'error'].includes(lower)) return 'fail';
+  return 'unknown';
+}
 
-  for (const alert of recentAlerts) {
-    if (alert.level === 'CRITICAL' || alert.level === 'FAIL') {
-      status = 'fail';
-      level = 'error';
-      break;
-    } else if (alert.level === 'WARN') {
-      status = 'warn';
-      level = 'warn';
+function fetchApiSummary(urlString) {
+  return new Promise(resolve => {
+    let parsed;
+    try {
+      parsed = new URL(urlString);
+    } catch (error) {
+      return resolve(null);
+    }
+    const requester = parsed.protocol === 'https:' ? https : http;
+    const request = requester.request(
+      parsed,
+      {
+        method: 'GET',
+        timeout: 4500,
+        headers: { Accept: 'application/json' }
+      },
+      res => {
+        const chunks = [];
+        res.on('data', chunk => chunks.push(chunk));
+        res.on('end', () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            const body = Buffer.concat(chunks).toString('utf8');
+            try {
+              resolve(JSON.parse(body));
+            } catch (error) {
+              resolve(null);
+            }
+          } else {
+            resolve(null);
+          }
+        });
+      }
+    );
+    request.on('timeout', () => {
+      request.destroy();
+      resolve(null);
+    });
+    request.on('error', () => resolve(null));
+    request.end();
+  });
+}
+
+function readLatestMarker() {
+  try {
+    if (fs.existsSync(latestMarkerPath)) {
+      const raw = fs.readFileSync(latestMarkerPath, 'utf8').trim();
+      if (raw) {
+        if (path.isAbsolute(raw)) {
+          return raw;
+        }
+        return path.join(reportsDir, raw);
+      }
+    }
+  } catch (error) {
+    // ignore marker errors
+  }
+  return null;
+}
+
+function findLatestReport() {
+  if (!fs.existsSync(reportsDir)) return null;
+  const files = fs
+    .readdirSync(reportsDir)
+    .filter(f => /^OPS_ATOMIC_\d{6}_\d{6}\.md$/.test(f))
+    .sort()
+    .reverse();
+  if (!files.length) return null;
+  return path.join(reportsDir, files[0]);
+}
+
+function parseReportMarkdown(content) {
+  if (!content) return null;
+  const pass = (content.match(/\bPASS\b/g) || []).length;
+  const warn = (content.match(/\bWARN\b/g) || []).length;
+  const fail = (content.match(/\bFAIL\b/g) || []).length;
+  let summary = '';
+  const summaryMatch = content.match(/## Summary[\s\S]*?(?=\n## |$)/i);
+  if (summaryMatch) {
+    summary = summaryMatch[0].split('\n').slice(1).join('\n').trim();
+  }
+  if (!summary) {
+    summary = `PASS=${pass} WARN=${warn} FAIL=${fail}`;
+  }
+  return { pass, warn, fail, summary };
+}
+
+function buildReportLink(fileName) {
+  const base = process.env.REPORTBOT_REPORT_BASE_URL;
+  if (!base || !fileName) return null;
+  try {
+    const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+    const url = new URL(fileName, normalizedBase);
+    return url.toString();
+  } catch (error) {
+    return null;
+  }
+}
+
+function determineStatus(counts) {
+  if (counts.fail > 0) return 'fail';
+  if (counts.warn > 0) return 'warn';
+  if (counts.pass > 0) return 'pass';
+  return 'unknown';
+}
+
+async function collectSummary() {
+  const summary = {
+    generatedAt: new Date().toISOString(),
+    status: 'unknown',
+    pass: 0,
+    warn: 0,
+    fail: 0,
+    channel: options.channel,
+    source: 'filesystem',
+    summary: '',
+    report: {
+      file: null,
+      path: null,
+      link: null
+    }
+  };
+
+  if (options.counts) {
+    const overrides = parseCounts(options.counts);
+    if (overrides) {
+      summary.pass = overrides.pass;
+      summary.warn = overrides.warn;
+      summary.fail = overrides.fail;
     }
   }
 
-  const summary = {
-    status,
-    level,
-    timestamp: new Date().toISOString(),
-    alerts: {
-      total: recentAlerts.length,
-      critical: recentAlerts.filter(a => a.level === 'CRITICAL').length,
-      fail: recentAlerts.filter(a => a.level === 'FAIL').length,
-      warn: recentAlerts.filter(a => a.level === 'WARN').length,
-      info: recentAlerts.filter(a => a.level === 'INFO').length
-    },
-    recent: recentAlerts.slice(0, 3).map(a => ({
-      level: a.level,
-      message: a.message,
-      timestamp: a.timestamp
-    }))
-  };
+  if (options.status) {
+    summary.status = normalizeStatus(options.status);
+  }
 
-  // Ensure output directory exists
-  const outputDir = path.dirname(outputPath);
-  await fs.mkdir(outputDir, { recursive: true });
+  let latestPath = null;
+  if (options.latest) {
+    latestPath = path.isAbsolute(options.latest)
+      ? options.latest
+      : path.join(repoRoot, options.latest);
+  }
+  if (!latestPath) {
+    latestPath = readLatestMarker() || findLatestReport();
+  }
 
-  // Write summary file
-  await fs.writeFile(outputPath, JSON.stringify(summary, null, 2));
-  console.log(`📝 OPS summary written to: ${outputPath}`);
-  console.log(`   Status: ${status} | Alerts: ${summary.alerts.total} (${summary.alerts.fail} FAIL, ${summary.alerts.warn} WARN)`);
+  if (latestPath && fs.existsSync(latestPath)) {
+    summary.report.path = latestPath;
+    summary.report.file = path.basename(latestPath);
+    summary.report.link = buildReportLink(summary.report.file);
+    try {
+      const content = fs.readFileSync(latestPath, 'utf8');
+      const parsed = parseReportMarkdown(content);
+      if (parsed) {
+        if (!options.counts) {
+          summary.pass = parsed.pass;
+          summary.warn = parsed.warn;
+          summary.fail = parsed.fail;
+        }
+        if (!summary.summary) {
+          summary.summary = parsed.summary;
+        }
+      }
+    } catch (error) {
+      // ignore parse errors
+    }
+  }
+
+  if (!options.noApi) {
+    const apiData = await fetchApiSummary(DEFAULT_API_URL);
+    if (apiData && typeof apiData === 'object') {
+      summary.source = 'api';
+      if (!options.counts) {
+        if (typeof apiData.pass === 'number') summary.pass = apiData.pass;
+        if (typeof apiData.warn === 'number') summary.warn = apiData.warn;
+        if (typeof apiData.fail === 'number') summary.fail = apiData.fail;
+      }
+      if (!options.status && apiData.status) {
+        summary.status = normalizeStatus(apiData.status);
+      }
+      if (!summary.summary && apiData.summary) {
+        summary.summary = String(apiData.summary).trim();
+      }
+      if (apiData.latestReport) {
+        if (apiData.latestReport.file) {
+          summary.report.file = apiData.latestReport.file;
+        }
+        if (apiData.latestReport.path) {
+          summary.report.path = path.isAbsolute(apiData.latestReport.path)
+            ? apiData.latestReport.path
+            : path.join(repoRoot, apiData.latestReport.path);
+        }
+        if (apiData.latestReport.link) {
+          summary.report.link = apiData.latestReport.link;
+        }
+      }
+    }
+  }
+
+  if (!summary.summary || Boolean(options.counts)) {
+    summary.summary = `PASS=${summary.pass} WARN=${summary.warn} FAIL=${summary.fail}`;
+  }
+
+  if (summary.status === 'unknown') {
+    summary.status = determineStatus(summary);
+  }
+
+  return summary;
 }
 
-// Run if called directly
-if (require.main === module) {
-  main().catch(console.error);
+function formatSummaryText(summary) {
+  const overall = summary.status.toUpperCase();
+  const countsText = `PASS=${summary.pass} WARN=${summary.warn} FAIL=${summary.fail}`;
+  const latest = summary.report.file ? summary.report.file : 'none';
+  return `${overall} — ${countsText} | Latest: ${latest}`;
 }
 
-module.exports = { AlertNotifier, SystemMonitor, ALERT_LEVELS };
+(async () => {
+  const summary = await collectSummary();
+  if (options.write) {
+    try {
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir, { recursive: true });
+      }
+      fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    } catch (error) {
+      console.error(`Failed to write ${summaryPath}:`, error.message);
+      process.exit(1);
+    }
+  }
+
+  if (options.text) {
+    console.log(formatSummaryText(summary));
+  } else {
+    console.log(JSON.stringify(summary, null, 2));
+  }
+})();
