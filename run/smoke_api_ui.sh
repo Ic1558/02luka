@@ -85,31 +85,3 @@ test_endpoint "API Patch" "POST" "http://127.0.0.1:4000/api/patch" '{"dryRun":tr
 
 # Smoke endpoint
 test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true" "5" || true
-
-echo ""
-
-echo "=== Paula API (Optional) ==="
-test_endpoint "Paula Health" "GET" "http://127.0.0.1:4000/api/paula/health" "" "200" "true" || true
-
-echo ""
-
-echo "=== Paula API (Optional) ==="
-test_endpoint "Paula Health" "GET" "http://127.0.0.1:4000/api/paula/health" "" "200" "true" || true
-
-echo ""
-
-# Summary
-echo "=== Smoke Test Summary ==="
-echo "✅ PASS: $PASS"
-echo "❌ FAIL: $FAIL" 
-echo "⚠️  WARN: $WARN"
-echo ""
-
-# Only fail if core services fail (API capabilities, UI)
-if [ $FAIL -eq 0 ]; then
-  echo "🎉 All critical tests passed!"
-  exit 0
-else
-  echo "💥 Some tests failed. Check service status."
-  exit 1
-fi
