@@ -1,0 +1,10 @@
+{
+  "id": "task-012",
+  "title": "Add healthcheck",
+  "description": "Expose /health endpoint returning status.",
+  "expected_outcome": "Endpoint returns 200",
+  "tags": [
+    "backend",
+    "ops"
+  ]
+}
