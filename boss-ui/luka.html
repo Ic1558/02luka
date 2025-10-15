@@ -470,6 +470,9 @@
     const sendChatButton = document.getElementById('sendChatButton');
     const optimizedPreview = document.getElementById('optimizedPreview');
     const optimizeStatus = document.getElementById('optimizeStatus');
+    const systemInput = document.getElementById('systemInput');
+    const contextInput = document.getElementById('contextInput');
+    const promptInput = document.getElementById('promptInput');
     const connectorsButton = document.getElementById('connectorsButton');
     const connectorsModal = document.getElementById('connectorsModal');
     const closeModalButton = document.getElementById('closeModalButton');
@@ -492,6 +495,7 @@
     };
 
     let lastOptimization = null;
+    let lastOptimizationSourcePrompt = null;
 
     const defaultMailboxOrder = ['inbox', 'outbox', 'drafts', 'sent', 'deliverables'];
     const mailboxState = {
@@ -513,15 +517,25 @@
       sendChatButton.disabled = !isFeatureEnabled('chat');
     }
 
+    function invalidateOptimizationIfPromptChanged() {
+      if (lastOptimizationSourcePrompt === null) {
+        return;
+      }
+      if (promptInput.value.trim() !== lastOptimizationSourcePrompt) {
+        lastOptimization = null;
+        lastOptimizationSourcePrompt = null;
+      }
+    }
+
       }
     }
 
     function getComposerPayload() {
       const engine = engineMode === 'manual' ? engineSelect.value : 'auto';
       return {
-        system: document.getElementById('systemInput').value.trim(),
-        context: document.getElementById('contextInput').value.trim(),
-        prompt: document.getElementById('promptInput').value.trim(),
+        system: systemInput.value.trim(),
+        context: contextInput.value.trim(),
+        prompt: promptInput.value.trim(),
         engine,
         strategy: engineMode
       };
@@ -578,6 +592,7 @@
       optimizeButton.disabled = true;
       optimizeStatus.textContent = 'Optimizing…';
       lastOptimization = null;
+      lastOptimizationSourcePrompt = null;
       try {
         const res = await fetch(`${API_BASE}/api/optimize_prompt`, {
           method: 'POST',
@@ -589,6 +604,7 @@
         }
         const data = await res.json();
         lastOptimization = data;
+        lastOptimizationSourcePrompt = payload.prompt;
         renderOptimizationPreview(data);
         const routerMeta = extractRouterMeta(data);
         const effectiveEngine = data.engine || (routerMeta?.model ? `ollama:${routerMeta.model}` : 'local');
@@ -627,7 +643,11 @@
       const payload = getComposerPayload();
       let message = payload.prompt;
       let usedOptimization = false;
-      if (lastOptimization?.variants?.length && lastOptimization.variants[0]?.prompt) {
+      if (
+        lastOptimization?.variants?.length &&
+        lastOptimization.variants[0]?.prompt &&
+        payload.prompt === lastOptimizationSourcePrompt
+      ) {
         message = lastOptimization.variants[0].prompt;
         usedOptimization = true;
       }
@@ -812,6 +832,8 @@
         optimizeStatus.textContent = 'Copy failed. Use manual copy.';
       });
     });
+
+    promptInput.addEventListener('input', invalidateOptimizationIfPromptChanged);
 
     document.addEventListener('DOMContentLoaded', () => {
       applyFeatureState();
