@@ -6,7 +6,7 @@ const { execFile } = require('child_process');
 const anthropicConnector = require('../g/connectors/mcp_anthropic');
 const openaiConnector = require('../g/connectors/mcp_openai');
 
-const HOST = '127.0.0.1';
+const HOST = process.env.HOST || '127.0.0.1';
 const PORT = Number(process.env.PORT || 4000);
 const repoRoot = path.resolve(__dirname, '..'); // 02luka-repo root
 const bossRoot = path.join(repoRoot, 'boss');
