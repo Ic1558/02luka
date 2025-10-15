@@ -678,7 +678,7 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    if (req.method === 'POST' && url.pathname === '/api/chat') {
+    if (req.method === 'POST' && url.pathname === '/api/chat/stub') {
       let payload;
       try {
         payload = await readJsonBody(req);
