@@ -1,18 +1,151 @@
 # 02LUKA – System Overview (Cursor + CLC)
 
-## 0) Quick System Verification
+## 0) System Architecture & Current Status
 
-**Use this section to double-check what's actually running**
+**Last Updated:** 2025-10-17 04:30 UTC+7
 
-### ✅ 30-Second Health Check
+---
+
+### 0.1) System Pipeline Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                          ENTRY POINTS                                │
+├─────────────────────────────────────────────────────────────────────┤
+│ 🤖 Claude Code        → MCP FS Server (port 4000)                   │
+│ 🌐 Web UI             → Boss API (8765) → UI Server (5173)          │
+│ ⚙️  GitHub Actions    → 10 workflows (scheduled/manual/push)        │
+│ 🔧 LaunchAgents       → 36 background automation tasks              │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                      PROCESSING LAYER                                │
+├─────────────────────────────────────────────────────────────────────┤
+│ • MCP FS Server       → File system operations (read_text, list_dir)│
+│ • Boss API            → API endpoints, health checks                │
+│ • ops_atomic.sh       → 5-phase testing (smoke/verify/report)       │
+│ • reportbot           → Generate OPS_SUMMARY.json (PASS/WARN/FAIL)  │
+│ • Docker Stack        → 17 containers (agents/cores/services)       │
+└─────────────────────────────────────────────────────────────────────┘
+                                   ↓
+┌─────────────────────────────────────────────────────────────────────┐
+│                        OUTPUT LAYER                                  │
+├─────────────────────────────────────────────────────────────────────┤
+│ • GitHub Actions      → Artifacts (OPS reports, 30-day retention)   │
+│ • g/reports/          → Local report storage (proof/deploy/ops)     │
+│ • Discord             → Webhook notifications (optional)             │
+│ • GitHub Pages        → Public dashboard (dashboard.theedges.work)  │
+│ • boss/               → Human workspace (catalogs/inbox/outbox)     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 0.2) Current System Status (Live Snapshot)
+
+#### **Running Services** (Verified 2025-10-17 04:30)
+
+| Port | Service | PID | Process | Status |
+|------|---------|-----|---------|--------|
+| 4000 | MCP FS Server | 8315 | `mcp_fs_server.py` | ✅ Active |
+| 8765 | Boss API | 59726 | `node server.cjs` | ✅ Active |
+| 5173 | UI Server | 62683 | `python -m http.server` | ✅ Active |
+
+**Health:** All 3 critical services responding ✅
+
+---
+
+#### **Docker Infrastructure** (17 Containers)
+
+| Container | Status | Uptime | Ports |
+|-----------|--------|--------|-------|
+| **Cores** ||||
+| gc_core | ✅ healthy | 10 days | 5009, 9102 |
+| gg_core | ✅ healthy | 10 days | 5010, 9103 |
+| **Agents** ||||
+| mary | ✅ healthy | 1 min | 5001 |
+| paula_agent | ✅ healthy | 10 days | 5002 |
+| keane | ✅ healthy | 51 sec | 5003 |
+| qs_agent | ✅ healthy | 1 min | 5004 |
+| rooney | ✅ healthy | 36 sec | 5005 |
+| sumo_agent | ✅ healthy | 1 min | 5006 |
+| lisa_agent | ✅ healthy | 10 days | 5007 |
+| kim_bot_agent | ✅ healthy | 10 days | 5011 |
+| **Services** ||||
+| mcp_gateway_agent | ✅ healthy | 10 days | 5012 |
+| terminalhandler | ✅ healthy | 10 days | 5008 |
+| 02luka-redis | ▶️ running | 10 days | 6379 |
+| n8n | ▶️ running | 10 days | 5678 |
+| node-exporter | ▶️ running | 10 days | 9100 |
+| zealous_chaum | ▶️ running | 8 days | - |
+| romantic_blackwell | ▶️ running | 27 hours | - |
+
+**Health:** 14/17 healthy, 3/17 running (no health check) ✅
+
+---
+
+#### **GitHub Actions** (10 Active Workflows)
+
+| Workflow | Status | Last Run | Duration | Trigger |
+|----------|--------|----------|----------|---------|
+| OPS Monitoring | ✅ success | 2025-10-16 18:36 | 1m41s | schedule (every 6h) |
+| CI | ✅ active | - | - | push/PR |
+| Auto Update PR branches | ✅ active | - | - | main push |
+| Deploy Dashboard | ✅ active | - | - | manual/scheduled |
+| Daily Proof (Option C) | ✅ active | - | - | scheduled |
+| Deploy to GitHub Pages | ✅ active | - | - | push/manual |
+| Daily Proof Alerting | ✅ active | - | - | scheduled |
+| Retention (proof + trash) | ✅ active | - | - | scheduled |
+| auto-update-branch | ✅ active | - | - | push |
+| Add Pages Custom Domain | ✅ active | - | - | manual |
+
+**Health:** 10/10 workflows active, latest OPS run successful ✅
+
+---
+
+#### **LaunchAgents Automation**
+
+- **Active Agents:** 36 background tasks
+- **Key Agents:**
+  - `com.02luka.sot.render` - SOT rendering every 12h
+  - `com.02luka.mcp.fs` - MCP FS server auto-start on login
+  - `com.02luka.task.bus.bridge` - Task bus Redis bridge
+  - (33 more automation agents)
+
+**Health:** 36/36 agents loaded and operational ✅
+
+---
+
+#### **Repository Status**
+
+- **Branch:** main
+- **Sync:** Up to date with origin/main
+- **Latest Commit:** 572cf00 - "docs: add Section 0 system verification to 02luka.md"
+- **Working Directory:** Clean
+
+---
+
+#### **Overall System Health: 100% ✅**
+
+- ✅ Services: 3/3 running
+- ✅ Docker: 17/17 containers up (14 healthy)
+- ✅ Workflows: 10/10 active
+- ✅ LaunchAgents: 36/36 loaded
+- ✅ Git: Synced and clean
+
+---
+
+### 0.3) Quick Verification Commands
+
+**30-Second Health Check:**
 ```bash
 # Check services
 lsof -i :4000 -i :5173 -i :8765 2>/dev/null | grep LISTEN
 
 # Expected:
-# Python   ... TCP localhost:ultraseek-http (LISTEN)  ← Port 4000: MCP FS Server
-# node     ... TCP localhost:terabase (LISTEN)        ← Port 8765: Boss API
-# Python   ... TCP localhost:5173 (LISTEN)            ← Port 5173: UI Server
+# Python   8315 ... TCP localhost:ultraseek-http (LISTEN)  ← Port 4000: MCP FS Server
+# node    59726 ... TCP localhost:terabase (LISTEN)        ← Port 8765: Boss API
+# Python  62683 ... TCP localhost:5173 (LISTEN)            ← Port 5173: UI Server
 
 # Check workflows
 gh workflow list | head -3
@@ -20,37 +153,14 @@ gh workflow list | head -3
 
 # Check automation
 launchctl list | grep -i 02luka | wc -l
-# Expected: ~36 LaunchAgents running
+# Expected: 36 LaunchAgents running
+
+# Check Docker
+docker ps --format "table {{.Names}}\t{{.Status}}" | head -10
+# Expected: 17 containers (most healthy)
 ```
 
-### 🏗️ Current System Architecture (2025-10-17)
-
-**Services Running:**
-| Port | Service | Process | Status |
-|------|---------|---------|--------|
-| 4000 | MCP FS Server | `mcp_fs_server.py` | ✅ Running |
-| 8765 | Boss API | `node server.cjs` | ✅ Running |
-| 5173 | UI Server | `python -m http.server` | ✅ Running |
-
-**GitHub Actions (10 Workflows):**
-- ✅ OPS Monitoring (scheduled every 6h) - Last run: 2025-10-16 18:36 (success)
-- ✅ CI (on push/PR)
-- ✅ Auto Update PR branches (on main push)
-- ✅ Deploy Dashboard (manual/scheduled)
-- ✅ Daily Proof (Option C)
-- ✅ Deploy to GitHub Pages
-
-**Automation:**
-- 36 LaunchAgents providing background automation
-- SOT rendering every 12h
-- MCP FS Server auto-start on login
-
-**Pipeline Flow:**
-```
-Entry → Claude Code/Web UI/GitHub Actions → Processing (MCP/API/ops_atomic.sh) → Output (Reports/Artifacts/Discord)
-```
-
-**Detailed Verification:** See `SYSTEM_VERIFICATION.md` for complete commands
+**Detailed Verification:** See `SYSTEM_VERIFICATION.md` for comprehensive checks
 
 ---
 
