@@ -1,5 +1,59 @@
 # 02LUKA – System Overview (Cursor + CLC)
 
+## 0) Quick System Verification
+
+**Use this section to double-check what's actually running**
+
+### ✅ 30-Second Health Check
+```bash
+# Check services
+lsof -i :4000 -i :5173 -i :8765 2>/dev/null | grep LISTEN
+
+# Expected:
+# Python   ... TCP localhost:ultraseek-http (LISTEN)  ← Port 4000: MCP FS Server
+# node     ... TCP localhost:terabase (LISTEN)        ← Port 8765: Boss API
+# Python   ... TCP localhost:5173 (LISTEN)            ← Port 5173: UI Server
+
+# Check workflows
+gh workflow list | head -3
+# Expected: 10 active workflows including "OPS Monitoring"
+
+# Check automation
+launchctl list | grep -i 02luka | wc -l
+# Expected: ~36 LaunchAgents running
+```
+
+### 🏗️ Current System Architecture (2025-10-17)
+
+**Services Running:**
+| Port | Service | Process | Status |
+|------|---------|---------|--------|
+| 4000 | MCP FS Server | `mcp_fs_server.py` | ✅ Running |
+| 8765 | Boss API | `node server.cjs` | ✅ Running |
+| 5173 | UI Server | `python -m http.server` | ✅ Running |
+
+**GitHub Actions (10 Workflows):**
+- ✅ OPS Monitoring (scheduled every 6h) - Last run: 2025-10-16 18:36 (success)
+- ✅ CI (on push/PR)
+- ✅ Auto Update PR branches (on main push)
+- ✅ Deploy Dashboard (manual/scheduled)
+- ✅ Daily Proof (Option C)
+- ✅ Deploy to GitHub Pages
+
+**Automation:**
+- 36 LaunchAgents providing background automation
+- SOT rendering every 12h
+- MCP FS Server auto-start on login
+
+**Pipeline Flow:**
+```
+Entry → Claude Code/Web UI/GitHub Actions → Processing (MCP/API/ops_atomic.sh) → Output (Reports/Artifacts/Discord)
+```
+
+**Detailed Verification:** See `SYSTEM_VERIFICATION.md` for complete commands
+
+---
+
 ## 1) Dual Memory System (Cursor ↔ CLC)
 - **Cursor AI Memory**: `.codex/hybrid_memory_system.md`  
 - **CLC Memory (SOT)**: `a/section/clc/memory/`  
