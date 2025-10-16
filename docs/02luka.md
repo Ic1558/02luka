@@ -228,4 +228,41 @@ make boss-refresh
 
 ---
 
-Last Session: 251012_014952
+## 11) Latest Deployment (2025-10-17)
+
+**GitHub Actions CI/CD Integration** ✅
+
+### Automated OPS Monitoring
+- **Workflow**: `.github/workflows/ops-monitoring.yml`
+- **Schedule**: Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
+- **Manual Trigger**: workflow_dispatch enabled
+- **Timeout**: 15 minutes
+- **Artifacts**: 30-day retention (OPS_ATOMIC_*.md, OPS_SUMMARY.json)
+
+### Critical Bug Fixes
+- Fixed TypeError in `.github/workflows/auto-update-pr.yml` (line 24)
+- Fixed TypeError in `.github/workflows/auto-update-branch.yml` (line 23)
+- Root cause: github-script v7 API change (`github.pulls.list` → `github.rest.pulls.list`)
+
+### Documentation
+- Manual: `g/manuals/ops_monitoring_cicd.md` (439 lines)
+- Deployment report: `g/reports/DEPLOYMENT_GITHUB_ACTIONS_251017.md`
+
+### Key Features
+- ✅ Mock API server provisioning for CI health checks
+- ✅ PASS/WARN/FAIL status parsing from OPS_SUMMARY.json
+- ✅ Workflow fails if OPS status is "fail"
+- ✅ Optional Discord notifications (requires DISCORD_WEBHOOK_DEFAULT secret)
+- ✅ Auto-update workflows now operational (PR branch sync restored)
+
+### Key Commits
+- `4661cea` - OPS monitoring workflow + manual
+- `13232e4` - Fixed github-script API compatibility
+
+**Verification:** Run #7 succeeded with status: "completed", conclusion: "success"
+
+**Tag:** (pending) v251017_cicd_ops_monitoring
+
+---
+
+Last Session: 251017_0429
