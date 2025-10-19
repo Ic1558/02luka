@@ -7,6 +7,9 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 const { postDiscordWebhook } = require('../agents/discord/webhook_relay.cjs');
 
+// Load environment variables from .env file
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -426,6 +429,73 @@ app.get('/api/reports/summary', async (req, res) => {
       note: 'summary_error',
       error: error.message
     });
+  }
+});
+
+// Memory system endpoints
+const memoryModule = require(path.join(repoRoot, 'memory', 'index.cjs'));
+
+app.get('/api/memory/recall', async (req, res) => {
+  try {
+    const { q, kind, topK } = req.query;
+
+    if (!q || typeof q !== 'string' || !q.trim()) {
+      return writeJson(res, 400, { error: 'Query parameter "q" is required' });
+    }
+
+    const options = {
+      query: q.trim(),
+      topK: topK ? parseInt(topK, 10) : 5
+    };
+
+    if (kind && typeof kind === 'string' && kind.trim()) {
+      options.kind = kind.trim();
+    }
+
+    const results = memoryModule.recall(options);
+    writeJson(res, 200, { results, count: results.length });
+  } catch (error) {
+    console.error('[/api/memory/recall]', error);
+    writeJson(res, 500, { error: error.message || 'Failed to recall memories' });
+  }
+});
+
+app.post('/api/memory/remember', async (req, res) => {
+  try {
+    const { kind, text, meta } = req.body;
+
+    if (!kind || typeof kind !== 'string' || !kind.trim()) {
+      return writeJson(res, 400, { error: 'Field "kind" is required' });
+    }
+
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return writeJson(res, 400, { error: 'Field "text" is required' });
+    }
+
+    const options = {
+      kind: kind.trim(),
+      text: text.trim()
+    };
+
+    if (meta && typeof meta === 'object' && !Array.isArray(meta)) {
+      options.meta = meta;
+    }
+
+    const result = memoryModule.remember(options);
+    writeJson(res, 200, { ok: true, memory: result });
+  } catch (error) {
+    console.error('[/api/memory/remember]', error);
+    writeJson(res, 500, { error: error.message || 'Failed to store memory' });
+  }
+});
+
+app.get('/api/memory/stats', async (req, res) => {
+  try {
+    const stats = memoryModule.stats();
+    writeJson(res, 200, stats);
+  } catch (error) {
+    console.error('[/api/memory/stats]', error);
+    writeJson(res, 500, { error: error.message || 'Failed to get memory stats' });
   }
 });
 
