@@ -11,6 +11,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export REPO_ROOT
 
+# Capture start time for telemetry (milliseconds since epoch)
+START_TIME=$(($(date +%s) * 1000))
+
 PASS=0
 WARN=0
 FAIL=0
@@ -298,4 +301,26 @@ echo "Overall status: ${overall_final_status^^}"
 echo "Totals: PASS=$PASS WARN=$WARN FAIL=$FAIL"
 if [[ -n "$LATEST_REPORT_PATH" ]]; then
   echo "Latest report: $LATEST_REPORT_PATH"
+fi
+
+# Record telemetry
+END_TIME=$(($(date +%s) * 1000))
+DURATION=$((END_TIME - START_TIME))
+
+if command -v node >/dev/null 2>&1; then
+  node "$REPO_ROOT/boss-api/telemetry.cjs" \
+    --task ops_atomic \
+    --pass "$PASS" \
+    --warn "$WARN" \
+    --fail "$FAIL" \
+    --duration "$DURATION" >/dev/null 2>&1 || true
+fi
+
+# Exit with appropriate status
+if [[ "$overall_final_status" == "fail" ]]; then
+  exit 1
+elif [[ "$overall_final_status" == "warn" ]]; then
+  exit 0  # Warnings don't fail the build
+else
+  exit 0
 fi

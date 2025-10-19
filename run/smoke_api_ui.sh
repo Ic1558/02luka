@@ -6,6 +6,9 @@ set -euo pipefail
 # Source universal path resolver
 source "$(dirname "$0")/../scripts/repo_root_resolver.sh"
 
+# Capture start time for telemetry (milliseconds since epoch)
+START_TIME=$(($(date +%s) * 1000))
+
 echo "=== 02LUKA Smoke Test ==="
 echo "Repository: $REPO_ROOT"
 echo "Timestamp: $(date)"
@@ -109,4 +112,30 @@ elif [ -n "${DISCORD_WEBHOOK_DEFAULT:-}" ] || [ -n "${DISCORD_WEBHOOK_MAP:-}" ];
   fi
 else
   echo "Discord Notify... SKIP (webhook not configured)"
+fi
+
+echo ""
+echo "=== Summary ==="
+echo "PASS: $PASS"
+echo "WARN: $WARN"
+echo "FAIL: $FAIL"
+
+# Record telemetry
+END_TIME=$(($(date +%s) * 1000))
+DURATION=$((END_TIME - START_TIME))
+
+if command -v node >/dev/null 2>&1; then
+  node "$REPO_ROOT/boss-api/telemetry.cjs" \
+    --task smoke_api_ui \
+    --pass "$PASS" \
+    --warn "$WARN" \
+    --fail "$FAIL" \
+    --duration "$DURATION" >/dev/null 2>&1 || true
+fi
+
+# Exit with appropriate code
+if [ "$FAIL" -gt 0 ]; then
+  exit 1
+else
+  exit 0
 fi
