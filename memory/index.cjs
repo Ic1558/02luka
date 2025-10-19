@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 /**
- * Minimal Vector Memo System
+ * Minimal Vector Memo System (Phase 6 + 6.5-A)
  *
  * Provides semantic memory storage and retrieval using TF-IDF vectors
  * and cosine similarity for lightweight, file-backed vector search.
  *
  * Functions:
- * - remember({kind, text, meta}) - Store a memory with semantic embedding
+ * - remember({kind, text, meta, importance}) - Store a memory with semantic embedding
  * - recall({query, kind, topK}) - Retrieve similar memories
+ * - stats() - Get memory statistics
+ * - cleanup({maxAgeDays, minImportance}) - Remove old/low-importance memories
+ * - clear() - Clear all memories
+ *
+ * Features (Phase 6.5-A):
+ * - Automatic importance scoring based on kind and metadata
+ * - Smart cleanup that preserves recent or important memories
  *
  * Storage: g/memory/vector_index.json
  */
@@ -179,6 +186,33 @@ function rebuildVectors(memories, idf) {
 }
 
 // ============================================================================
+// Importance Scoring (Phase 6.5-A)
+// ============================================================================
+
+/**
+ * Calculate importance score for a memory
+ *
+ * @param {string} kind - Memory type (plan, solution, error, insight, config)
+ * @param {Object} meta - Metadata with optional successRate, reuseCount
+ * @param {number} userImportance - User-provided base importance (0.0-1.0)
+ * @returns {number} Importance score (0.0-1.0)
+ */
+function calculateImportance(kind, meta = {}, userImportance = 0.5) {
+  let score = userImportance;
+
+  // Kind-based importance
+  if (kind === 'error') score += 0.2;
+  if (kind === 'insight') score += 0.15;
+
+  // Metadata-based importance
+  if (meta.successRate && meta.successRate > 0.9) score += 0.1;
+  if (meta.reuseCount && meta.reuseCount > 5) score += 0.1;
+
+  // Cap at 1.0
+  return Math.min(1.0, score);
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 
@@ -189,14 +223,19 @@ function rebuildVectors(memories, idf) {
  * @param {string} options.kind - Memory type (e.g., 'plan', 'solution', 'error')
  * @param {string} options.text - Memory content
  * @param {Object} options.meta - Additional metadata
+ * @param {number} options.importance - User-provided importance (0.0-1.0, optional)
  * @returns {Object} Stored memory object
  */
-function remember({ kind, text, meta = {} }) {
+function remember({ kind, text, meta = {}, importance = null }) {
   if (!kind || !text) {
     throw new Error('remember() requires kind and text');
   }
 
   const index = loadIndex();
+
+  // Calculate importance score
+  const baseImportance = importance !== null ? importance : 0.5;
+  const importanceScore = calculateImportance(kind, meta, baseImportance);
 
   // Create new memory
   const tokens = tokenize(text);
@@ -205,6 +244,7 @@ function remember({ kind, text, meta = {} }) {
     kind,
     text,
     meta,
+    importance: importanceScore,
     tokens,
     vector: {},
     timestamp: new Date().toISOString()
@@ -223,6 +263,7 @@ function remember({ kind, text, meta = {} }) {
   return {
     id: memory.id,
     kind: memory.kind,
+    importance: memory.importance,
     timestamp: memory.timestamp
   };
 }
@@ -294,6 +335,50 @@ function stats() {
 }
 
 /**
+ * Clean up old or low-importance memories
+ *
+ * @param {Object} options
+ * @param {number} options.maxAgeDays - Keep memories newer than this (default: 90)
+ * @param {number} options.minImportance - Keep memories with importance >= this (default: 0.3)
+ * @returns {Object} Cleanup results
+ */
+function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
+  const index = loadIndex();
+  const before = index.memories.length;
+
+  const now = Date.now();
+  const cutoff = now - maxAgeDays * 86400000; // Convert days to milliseconds
+
+  // Keep memories that are either:
+  // 1. Recent (within maxAgeDays)
+  // 2. Important (importance >= minImportance)
+  index.memories = index.memories.filter(m => {
+    const ts = new Date(m.timestamp).getTime();
+    const imp = m.importance ?? 0.5; // Default to 0.5 if no importance field
+
+    return ts >= cutoff || imp >= minImportance;
+  });
+
+  const after = index.memories.length;
+  const removed = before - after;
+
+  // Rebuild IDF and vectors after cleanup
+  if (removed > 0) {
+    index.idf = rebuildIdf(index.memories);
+    rebuildVectors(index.memories, index.idf);
+  }
+
+  saveIndex(index);
+
+  return {
+    before,
+    after,
+    removed,
+    kept: after
+  };
+}
+
+/**
  * Clear all memories (use with caution)
  */
 function clear() {
@@ -313,8 +398,26 @@ if (require.main === module) {
   try {
     if (command === '--remember') {
       const kind = args[1];
-      const text = args.slice(2).join(' ');
-      const result = remember({ kind, text });
+
+      // Check for --meta flag
+      let metaIndex = args.indexOf('--meta');
+      let meta = {};
+      let textArgs = args.slice(2);
+
+      if (metaIndex !== -1 && metaIndex >= 2) {
+        // Extract meta JSON
+        const metaStr = args[metaIndex + 1];
+        try {
+          meta = JSON.parse(metaStr);
+        } catch (e) {
+          throw new Error('Invalid JSON for --meta: ' + e.message);
+        }
+        // Remove --meta and its value from text args
+        textArgs = args.slice(2, metaIndex);
+      }
+
+      const text = textArgs.join(' ');
+      const result = remember({ kind, text, meta });
       console.log(JSON.stringify(result, null, 2));
     }
     else if (command === '--recall') {
@@ -332,17 +435,44 @@ if (require.main === module) {
       const result = stats();
       console.log(JSON.stringify(result, null, 2));
     }
+    else if (command === '--cleanup') {
+      // Parse optional parameters
+      let maxAgeDays = 90;
+      let minImportance = 0.3;
+
+      const maxAgeIndex = args.indexOf('--maxAge');
+      if (maxAgeIndex !== -1) {
+        maxAgeDays = parseInt(args[maxAgeIndex + 1], 10);
+      }
+
+      const minImpIndex = args.indexOf('--minImportance');
+      if (minImpIndex !== -1) {
+        minImportance = parseFloat(args[minImpIndex + 1]);
+      }
+
+      const result = cleanup({ maxAgeDays, minImportance });
+      console.log(`🧹 Cleanup complete:`);
+      console.log(`   Before: ${result.before} memories`);
+      console.log(`   Removed: ${result.removed} memories`);
+      console.log(`   After: ${result.after} memories`);
+      console.log(JSON.stringify(result, null, 2));
+    }
     else if (command === '--clear') {
       const result = clear();
       console.log(JSON.stringify(result, null, 2));
     }
     else {
       console.log('Usage:');
-      console.log('  node memory/index.cjs --remember <kind> <text>');
+      console.log('  node memory/index.cjs --remember <kind> <text> [--meta <json>]');
       console.log('  node memory/index.cjs --recall <query>');
       console.log('  node memory/index.cjs --recall-kind <kind> <query>');
       console.log('  node memory/index.cjs --stats');
+      console.log('  node memory/index.cjs --cleanup [--maxAge <days>] [--minImportance <score>]');
       console.log('  node memory/index.cjs --clear');
+      console.log('');
+      console.log('Examples:');
+      console.log('  node memory/index.cjs --remember plan "Deploy fix" --meta \'{"successRate":0.95}\'');
+      console.log('  node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3');
       process.exit(1);
     }
   } catch (err) {
@@ -359,5 +489,6 @@ module.exports = {
   remember,
   recall,
   stats,
+  cleanup,
   clear
 };
