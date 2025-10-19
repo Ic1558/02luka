@@ -185,6 +185,214 @@ function summary(options = {}) {
 }
 
 /**
+ * Read telemetry for a specific time range (N days back from endDate)
+ *
+ * Phase 7.1: Enhanced helper for self-review engine
+ *
+ * @param {object} options - Range options
+ * @param {number} [options.days=7] - Number of days to look back
+ * @param {Date} [options.endDate] - End date (defaults to now)
+ * @returns {Array} Array of telemetry entries
+ */
+function readRange({ days = 7, endDate = new Date() } = {}) {
+  const until = endDate;
+  const since = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+  return read({ since, until });
+}
+
+/**
+ * Calculate percentile from sorted array
+ *
+ * @param {Array<number>} sorted - Sorted array of numbers
+ * @param {number} percentile - Percentile (0-100)
+ * @returns {number} Percentile value
+ */
+function calculatePercentile(sorted, percentile) {
+  if (sorted.length === 0) return 0;
+  const index = Math.ceil((percentile / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, index)];
+}
+
+/**
+ * Advanced analytics for telemetry entries
+ *
+ * Phase 7.1: Computes success rate, p95, flakiness, top failures, etc.
+ *
+ * @param {Array} entries - Telemetry entries to analyze
+ * @returns {object} Advanced analytics results
+ */
+function analyze(entries) {
+  if (!entries || entries.length === 0) {
+    return {
+      totalRuns: 0,
+      successRate: 0,
+      failRate: 0,
+      warnRate: 0,
+      avgDuration: 0,
+      p95Duration: 0,
+      p99Duration: 0,
+      totalTests: 0,
+      topFailures: [],
+      slowTasks: [],
+      flakiness: 0,
+      byTask: {}
+    };
+  }
+
+  const totalRuns = entries.length;
+  const totalTests = entries.reduce((sum, e) => sum + e.pass + e.warn + e.fail, 0);
+  const totalPass = entries.reduce((sum, e) => sum + e.pass, 0);
+  const totalWarn = entries.reduce((sum, e) => sum + e.warn, 0);
+  const totalFail = entries.reduce((sum, e) => sum + e.fail, 0);
+
+  const successRate = totalTests > 0 ? totalPass / totalTests : 0;
+  const failRate = totalTests > 0 ? totalFail / totalTests : 0;
+  const warnRate = totalTests > 0 ? totalWarn / totalTests : 0;
+
+  // Duration metrics
+  const durations = entries.map(e => e.duration_ms).filter(d => d > 0).sort((a, b) => a - b);
+  const avgDuration = durations.length > 0
+    ? durations.reduce((a, b) => a + b, 0) / durations.length
+    : 0;
+  const p95Duration = calculatePercentile(durations, 95);
+  const p99Duration = calculatePercentile(durations, 99);
+
+  // Top failures (tasks with most fails)
+  const failuresByTask = {};
+  entries.forEach(e => {
+    if (e.fail > 0) {
+      if (!failuresByTask[e.task]) {
+        failuresByTask[e.task] = { task: e.task, count: 0, totalFails: 0 };
+      }
+      failuresByTask[e.task].count++;
+      failuresByTask[e.task].totalFails += e.fail;
+    }
+  });
+
+  const topFailures = Object.values(failuresByTask)
+    .sort((a, b) => b.totalFails - a.totalFails)
+    .slice(0, 5);
+
+  // Slow tasks (p95 duration by task)
+  const byTask = {};
+  entries.forEach(e => {
+    if (!byTask[e.task]) {
+      byTask[e.task] = {
+        runs: 0,
+        pass: 0,
+        warn: 0,
+        fail: 0,
+        durations: []
+      };
+    }
+    byTask[e.task].runs++;
+    byTask[e.task].pass += e.pass;
+    byTask[e.task].warn += e.warn;
+    byTask[e.task].fail += e.fail;
+    if (e.duration_ms > 0) {
+      byTask[e.task].durations.push(e.duration_ms);
+    }
+  });
+
+  const slowTasks = Object.entries(byTask)
+    .map(([task, data]) => {
+      const sorted = data.durations.sort((a, b) => a - b);
+      return {
+        task,
+        runs: data.runs,
+        p95: calculatePercentile(sorted, 95),
+        avg: sorted.length > 0 ? sorted.reduce((a, b) => a + b, 0) / sorted.length : 0
+      };
+    })
+    .filter(t => t.p95 > 0)
+    .sort((a, b) => b.p95 - a.p95)
+    .slice(0, 5);
+
+  // Flakiness: tasks that sometimes pass, sometimes fail
+  const flakinessScores = Object.entries(byTask)
+    .filter(([_, data]) => data.runs > 1 && data.fail > 0 && data.pass > 0)
+    .map(([task, data]) => {
+      const failureRate = data.fail / (data.pass + data.warn + data.fail);
+      return { task, failureRate, runs: data.runs };
+    });
+
+  const flakiness = flakinessScores.length > 0
+    ? flakinessScores.reduce((sum, s) => sum + s.failureRate, 0) / flakinessScores.length
+    : 0;
+
+  // Compute final byTask summary with success rates
+  const byTaskSummary = {};
+  Object.entries(byTask).forEach(([task, data]) => {
+    const total = data.pass + data.warn + data.fail;
+    byTaskSummary[task] = {
+      runs: data.runs,
+      pass: data.pass,
+      warn: data.warn,
+      fail: data.fail,
+      successRate: total > 0 ? data.pass / total : 0,
+      avgDuration: data.durations.length > 0
+        ? data.durations.reduce((a, b) => a + b, 0) / data.durations.length
+        : 0
+    };
+  });
+
+  return {
+    totalRuns,
+    successRate,
+    failRate,
+    warnRate,
+    avgDuration,
+    p95Duration,
+    p99Duration,
+    totalTests,
+    topFailures,
+    slowTasks,
+    flakiness,
+    flakyTasks: flakinessScores,
+    byTask: byTaskSummary
+  };
+}
+
+/**
+ * Compare two analysis results to detect trends
+ *
+ * Phase 7.1: Trend detection for self-review
+ *
+ * @param {object} current - Current period analysis
+ * @param {object} previous - Previous period analysis
+ * @returns {object} Trend comparison
+ */
+function compareTrends(current, previous) {
+  if (!previous || previous.totalRuns === 0) {
+    return {
+      trending: 'insufficient_data',
+      successRateDelta: 0,
+      p95DurationDelta: 0,
+      failRateDelta: 0
+    };
+  }
+
+  const successRateDelta = current.successRate - previous.successRate;
+  const p95DurationDelta = current.p95Duration - previous.p95Duration;
+  const failRateDelta = current.failRate - previous.failRate;
+
+  let trending = 'stable';
+  if (successRateDelta > 0.05) trending = 'improving';
+  else if (successRateDelta < -0.05) trending = 'declining';
+
+  return {
+    trending,
+    successRateDelta,
+    p95DurationDelta,
+    failRateDelta,
+    p95DurationPct: previous.p95Duration > 0
+      ? ((current.p95Duration - previous.p95Duration) / previous.p95Duration) * 100
+      : 0
+  };
+}
+
+/**
  * Clean up old telemetry logs
  *
  * @param {number} daysToKeep - Number of days to retain (default: 30)
@@ -285,5 +493,9 @@ module.exports = {
   record,
   read,
   summary,
-  cleanup
+  cleanup,
+  // Phase 7.1: Advanced analytics
+  readRange,
+  analyze,
+  compareTrends
 };
