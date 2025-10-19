@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Signals · Luka Workspace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/shared/ui.css">
+</head>
+<body>
+  <noscript>This workspace requires JavaScript.</noscript>
+  <script type="module">
+    import { jfetch } from '/shared/api.js';
+    import {
+      mountAppShell,
+      createPanel,
+      hydrateStatus,
+      renderStatusPill,
+      createTinyTable
+    } from '/shared/components.js';
+
+    const POLL_INTERVAL = 5000;
+    const OVERVIEW_INTERVAL = 10000;
+    const MODELS_INTERVAL = 15000;
+
+    const { main, statusBar } = mountAppShell({
+      active: 'signals',
+      title: 'Paula Signals · Luka Workspace',
+      subtitle: 'Live intelligence from Paula signal orchestration'
+    });
+
+    hydrateStatus(statusBar);
+
+    function createStatCard(title) {
+      const card = document.createElement('div');
+      card.className = 'stat-card';
+      const heading = document.createElement('h3');
+      heading.textContent = title;
+      card.appendChild(heading);
+      return card;
+    }
+
+    function formatTimestamp(value) {
+      if (!value) {
+        return null;
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toLocaleString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        day: '2-digit',
+        month: 'short'
+      });
+    }
+
+    function formatRelative(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return 'unknown';
+      }
+      const diff = Date.now() - date.getTime();
+      if (diff < 0) {
+        return 'just now';
+      }
+      const seconds = Math.floor(diff / 1000);
+      if (seconds < 5) return 'just now';
+      if (seconds < 60) return `${seconds}s ago`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    function formatConfidence(value) {
+      if (value === null || value === undefined || value === '') {
+        return '—';
+      }
+      const num = Number(value);
+      if (Number.isNaN(num)) {
+        return String(value);
+      }
+      if (num <= 1 && num >= 0) {
+        return `${Math.round(num * 100)}%`;
+      }
+      return `${Math.round(num)}%`;
+    }
+
+    function formatLatency(value) {
+      if (value === null || value === undefined || value === '') {
+        return '—';
+      }
+      const num = Number(value);
+      if (Number.isNaN(num)) {
+        return String(value);
+      }
+      if (num >= 1000) {
+        return `${(num / 1000).toFixed(2)} s`;
+      }
+      return `${Math.round(num)} ms`;
+    }
+
+    const overviewPanel = createPanel('Overview', 'Core telemetry from the Paula signal service.');
+    const overviewGrid = document.createElement('div');
+    overviewGrid.className = 'overview-grid';
+
+    // Service status card
+    const serviceCard = createStatCard('Service Status');
+    const serviceValue = document.createElement('div');
+    serviceValue.className = 'stat-value';
+    serviceValue.textContent = '—';
+    let serviceStatus = renderStatusPill('Service', 'warn', 'checking…');
+    const serviceMeta = document.createElement('div');
+    serviceMeta.className = 'stat-meta';
+    serviceMeta.textContent = 'Last update pending';
+    serviceCard.appendChild(serviceValue);
+    serviceCard.appendChild(serviceStatus);
+    serviceCard.appendChild(serviceMeta);
+
+    // Latest signal card
+    const latestCard = createStatCard('Latest Signal');
+    const latestValue = document.createElement('div');
+    latestValue.className = 'stat-value';
+    latestValue.textContent = '—';
+    const latestMeta = document.createElement('div');
+    latestMeta.className = 'stat-meta';
+    latestMeta.textContent = 'Awaiting signal feed';
+    latestCard.appendChild(latestValue);
+    latestCard.appendChild(latestMeta);
+
+    // Latency card
+    const latencyCard = createStatCard('Streaming Latency');
+    const latencyValue = document.createElement('div');
+    latencyValue.className = 'stat-value';
+    latencyValue.textContent = '—';
+    const latencyMeta = document.createElement('div');
+    latencyMeta.className = 'stat-meta';
+    latencyMeta.textContent = 'No samples yet';
+    latencyCard.appendChild(latencyValue);
+    latencyCard.appendChild(latencyMeta);
+
+    overviewGrid.append(serviceCard, latestCard, latencyCard);
+    overviewPanel.appendChild(overviewGrid);
+
+    const overviewFooter = document.createElement('div');
+    overviewFooter.className = 'panel-footer';
+    overviewFooter.textContent = 'Auto-refresh every 10 seconds';
+    overviewPanel.appendChild(overviewFooter);
+
+    main.appendChild(overviewPanel);
+
+    // Live signals panel
+    const livePanel = createPanel('Live Signals', 'Streaming Paula output. Updated every 5 seconds.');
+    const { element: signalsTable, setRows: setSignalRows } = createTinyTable(
+      ['Time', 'Symbol', 'Action', 'Confidence', 'Source'],
+      { empty: 'No live signals yet.' }
+    );
+    livePanel.appendChild(signalsTable);
+
+    const liveFooter = document.createElement('div');
+    liveFooter.className = 'panel-footer';
+    liveFooter.textContent = 'Latest 20 signals';
+    livePanel.appendChild(liveFooter);
+    main.appendChild(livePanel);
+
+    // Training form panel
+    const trainingPanel = createPanel('Train Paula', 'Submit datasets and hyperparameters to schedule new training jobs.');
+    const trainForm = document.createElement('form');
+    trainForm.className = 'form-grid';
+
+    const datasetField = document.createElement('div');
+    const datasetLabel = document.createElement('label');
+    datasetLabel.textContent = 'Training dataset (CSV)';
+    datasetLabel.style.display = 'block';
+    datasetLabel.style.marginBottom = '6px';
+    const datasetInput = document.createElement('input');
+    datasetInput.type = 'file';
+    datasetInput.accept = '.csv,text/csv';
+    datasetInput.required = true;
+    datasetField.append(datasetLabel, datasetInput);
+    trainForm.appendChild(datasetField);
+
+    const indicatorField = document.createElement('div');
+    const indicatorLabel = document.createElement('label');
+    indicatorLabel.textContent = 'Indicators';
+    indicatorLabel.style.display = 'block';
+    indicatorLabel.style.marginBottom = '6px';
+    indicatorField.appendChild(indicatorLabel);
+    const indicators = [
+      { value: 'ema', label: 'EMA' },
+      { value: 'macd', label: 'MACD' },
+      { value: 'rsi', label: 'RSI' },
+      { value: 'bbands', label: 'Bollinger Bands' },
+      { value: 'volume', label: 'Volume Flow' }
+    ];
+    const indicatorGroup = document.createElement('div');
+    indicatorGroup.style.display = 'flex';
+    indicatorGroup.style.flexWrap = 'wrap';
+    indicatorGroup.style.gap = '10px';
+    const indicatorInputs = [];
+    indicators.forEach(({ value, label }) => {
+      const wrap = document.createElement('label');
+      wrap.style.display = 'flex';
+      wrap.style.alignItems = 'center';
+      wrap.style.gap = '6px';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'indicator';
+      checkbox.value = value;
+      indicatorInputs.push(checkbox);
+      wrap.append(checkbox, document.createTextNode(label));
+      indicatorGroup.appendChild(wrap);
+    });
+    indicatorField.appendChild(indicatorGroup);
+    trainForm.appendChild(indicatorField);
+
+    const paramsField = document.createElement('div');
+    const paramsLabel = document.createElement('label');
+    paramsLabel.textContent = 'Hyperparameters';
+    paramsLabel.style.display = 'block';
+    paramsLabel.style.marginBottom = '6px';
+    paramsField.appendChild(paramsLabel);
+
+    const paramsGrid = document.createElement('div');
+    paramsGrid.style.display = 'grid';
+    paramsGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(160px, 1fr))';
+    paramsGrid.style.gap = '12px';
+
+    const horizonInput = document.createElement('input');
+    horizonInput.type = 'number';
+    horizonInput.name = 'horizon';
+    horizonInput.min = '1';
+    horizonInput.value = '30';
+    horizonInput.placeholder = 'Prediction horizon (minutes)';
+    paramsGrid.appendChild(horizonInput);
+
+    const learningRateInput = document.createElement('input');
+    learningRateInput.type = 'number';
+    learningRateInput.name = 'learningRate';
+    learningRateInput.step = '0.0001';
+    learningRateInput.min = '0';
+    learningRateInput.max = '1';
+    learningRateInput.value = '0.0005';
+    learningRateInput.placeholder = 'Learning rate';
+    paramsGrid.appendChild(learningRateInput);
+
+    const epochsInput = document.createElement('input');
+    epochsInput.type = 'number';
+    epochsInput.name = 'epochs';
+    epochsInput.min = '1';
+    epochsInput.value = '25';
+    epochsInput.placeholder = 'Epochs';
+    paramsGrid.appendChild(epochsInput);
+
+    paramsField.appendChild(paramsGrid);
+    trainForm.appendChild(paramsField);
+
+    const actions = document.createElement('div');
+    actions.className = 'form-actions';
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.textContent = 'Launch Training';
+    const resetButton = document.createElement('button');
+    resetButton.type = 'button';
+    resetButton.className = 'secondary';
+    resetButton.textContent = 'Reset';
+    actions.append(submitButton, resetButton);
+    trainForm.appendChild(actions);
+
+    const trainOutput = document.createElement('pre');
+    trainOutput.className = 'output';
+    trainOutput.textContent = 'Training responses will appear here.';
+
+    trainingPanel.append(trainForm, trainOutput);
+    main.appendChild(trainingPanel);
+
+    resetButton.addEventListener('click', () => {
+      datasetInput.value = '';
+      indicatorInputs.forEach((input) => {
+        input.checked = false;
+      });
+      horizonInput.value = '30';
+      learningRateInput.value = '0.0005';
+      epochsInput.value = '25';
+      trainOutput.textContent = 'Training responses will appear here.';
+    });
+
+    trainForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!datasetInput.files || datasetInput.files.length === 0) {
+        datasetInput.focus();
+        return;
+      }
+      submitButton.disabled = true;
+      trainOutput.textContent = 'Submitting training job...';
+      try {
+        const formData = new FormData();
+        formData.append('dataset', datasetInput.files[0]);
+        const selectedIndicators = indicatorInputs.filter((input) => input.checked).map((input) => input.value);
+        formData.append('indicators', JSON.stringify(selectedIndicators));
+        formData.append('horizon', horizonInput.value);
+        formData.append('learningRate', learningRateInput.value);
+        formData.append('epochs', epochsInput.value);
+        const response = await jfetch('/api/paula/train', { method: 'POST', body: formData });
+        trainOutput.textContent = typeof response === 'string' ? response : JSON.stringify(response, null, 2);
+      } catch (err) {
+        trainOutput.textContent = `Training failed: ${err && err.message ? err.message : err}`;
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    // Models panel
+    const modelsPanel = createPanel('Models', 'Current Paula model artifacts and performance metrics.');
+    const modelList = document.createElement('div');
+    modelList.className = 'model-list';
+    const modelsEmpty = document.createElement('div');
+    modelsEmpty.className = 'stat-meta';
+    modelsEmpty.textContent = 'Loading models...';
+    modelsEmpty.style.display = 'block';
+    modelsPanel.append(modelList, modelsEmpty);
+    const modelsFooter = document.createElement('div');
+    modelsFooter.className = 'panel-footer';
+    modelsFooter.textContent = 'Auto-refresh every 15 seconds';
+    modelsPanel.appendChild(modelsFooter);
+    main.appendChild(modelsPanel);
+
+    function mapServiceState(status) {
+      const normalized = typeof status === 'string' ? status.toLowerCase() : '';
+      if (normalized === 'online' || normalized === 'ok' || normalized === 'ready') {
+        return { state: 'ok', label: 'online' };
+      }
+      if (normalized === 'degraded' || normalized === 'partial') {
+        return { state: 'warn', label: normalized };
+      }
+      if (normalized === 'offline' || normalized === 'failed') {
+        return { state: 'fail', label: normalized };
+      }
+      return { state: 'warn', label: normalized || 'unknown' };
+    }
+
+    async function refreshOverview() {
+      try {
+        const data = await jfetch('/api/paula/overview');
+        const statusInfo = mapServiceState(data && data.status);
+        const statusText = data && data.status ? String(data.status) : 'Unknown';
+        serviceValue.textContent = statusText.toUpperCase();
+        const detail = statusInfo.label ? statusInfo.label : 'unknown';
+        const updatedPill = renderStatusPill('Service', statusInfo.state, detail);
+        serviceStatus.replaceWith(updatedPill);
+        serviceStatus = updatedPill;
+        const updatedAt = data && (data.updatedAt || data.timestamp || data.checkedAt);
+        if (updatedAt) {
+          const relative = formatRelative(updatedAt);
+          const absolute = formatTimestamp(updatedAt);
+          const pieces = [`Last update ${relative}`];
+          if (absolute) {
+            pieces.push(absolute);
+          }
+          serviceMeta.textContent = pieces.join(' · ');
+        } else {
+          serviceMeta.textContent = 'Awaiting update';
+        }
+
+        const latest = data && (data.latest || data.lastSignal);
+        if (latest) {
+          const parts = [];
+          const direction = (latest.direction || latest.action || latest.type || '').toString().toUpperCase();
+          const symbol = latest.symbol || latest.pair || latest.asset;
+          if (direction) parts.push(direction);
+          if (symbol) parts.push(symbol.toUpperCase ? symbol.toUpperCase() : symbol);
+          latestValue.textContent = parts.length ? parts.join(' · ') : 'Signal';
+          const details = [];
+          if (latest.confidence !== undefined) {
+            details.push(`Confidence ${formatConfidence(latest.confidence)}`);
+          }
+          if (latest.strength !== undefined && latest.confidence === undefined) {
+            details.push(`Strength ${formatConfidence(latest.strength)}`);
+          }
+          const ts = latest.timestamp || latest.createdAt || latest.detectedAt;
+          if (ts) {
+            details.push(formatRelative(ts));
+          }
+          latestMeta.textContent = details.length ? details.join(' · ') : 'Updated';
+        } else {
+          latestValue.textContent = '—';
+          latestMeta.textContent = 'Awaiting signal feed';
+        }
+
+        let latencyValueMs;
+        let latencySource = '';
+        if (data && typeof data.latencyMs === 'number') {
+          latencyValueMs = data.latencyMs;
+          latencySource = 'latencyMs';
+        } else if (data && typeof data.latency === 'number') {
+          latencyValueMs = data.latency;
+          latencySource = 'latency';
+        } else if (data && data.latency && typeof data.latency === 'object') {
+          const latencyObj = data.latency;
+          const keys = ['p50', 'median', 'avg', 'mean'];
+          for (const key of keys) {
+            if (typeof latencyObj[key] === 'number') {
+              latencyValueMs = latencyObj[key];
+              latencySource = key;
+              break;
+            }
+          }
+        }
+        if (latencyValueMs !== undefined) {
+          latencyValue.textContent = formatLatency(latencyValueMs);
+          const samples = (data && (data.latencySamples || data.samples)) || (data && data.latency && data.latency.samples);
+          const pieces = [];
+          if (latencySource) {
+            const label = String(latencySource)
+              .replace(/Ms$/i, ' (ms)')
+              .replace(/([A-Z])/g, ' $1')
+              .replace(/^./, (s) => s.toUpperCase());
+            pieces.push(label);
+          }
+          if (samples) {
+            pieces.push(`${samples} samples`);
+          }
+          latencyMeta.textContent = pieces.length ? pieces.join(' · ') : 'Latest measurement';
+        } else {
+          latencyValue.textContent = '—';
+          latencyMeta.textContent = 'No samples yet';
+        }
+      } catch (err) {
+        serviceValue.textContent = 'ERROR';
+        serviceMeta.textContent = err && err.message ? err.message : 'Overview unavailable';
+        latestValue.textContent = '—';
+        latestMeta.textContent = 'Unable to load signals';
+        latencyValue.textContent = '—';
+        latencyMeta.textContent = 'Unable to load latency';
+        const fallback = renderStatusPill('Service', 'fail', 'error');
+        serviceStatus.replaceWith(fallback);
+        serviceStatus = fallback;
+      }
+    }
+
+    async function refreshSignals() {
+      try {
+        const data = await jfetch('/api/paula/signals?limit=20');
+        const items = Array.isArray(data && data.items) ? data.items : Array.isArray(data) ? data : [];
+        const rows = items.map((item) => {
+          const ts = item.timestamp || item.createdAt || item.detectedAt;
+          const formattedTime = formatTimestamp(ts) || '—';
+          const symbol = item.symbol || item.pair || item.asset || '—';
+          const action = (item.direction || item.action || item.type || '—').toString().toUpperCase();
+          const confidence = item.confidence !== undefined ? formatConfidence(item.confidence) : item.strength !== undefined ? formatConfidence(item.strength) : '—';
+          const source = item.source || item.model || '—';
+          return [formattedTime, symbol, action, confidence, source];
+        });
+        setSignalRows(rows);
+        liveFooter.textContent = 'Latest 20 signals';
+      } catch (err) {
+        setSignalRows([]);
+        liveFooter.textContent = `Feed error: ${err && err.message ? err.message : err}`;
+      }
+    }
+
+    async function refreshModels() {
+      try {
+        const data = await jfetch('/api/paula/models');
+        const models = Array.isArray(data && data.models) ? data.models : Array.isArray(data) ? data : [];
+        modelList.innerHTML = '';
+        if (!models.length) {
+          modelsEmpty.style.display = 'block';
+          modelsEmpty.textContent = 'No trained models available yet.';
+          return;
+        }
+        modelsEmpty.style.display = 'none';
+        models.forEach((model) => {
+          const card = document.createElement('div');
+          card.className = 'model-card';
+
+          const header = document.createElement('div');
+          header.className = 'model-card-header';
+          const title = document.createElement('h3');
+          title.textContent = model.name || model.id || 'Model';
+          const version = document.createElement('span');
+          version.className = 'model-meta';
+          const trainedAt = model.trainedAt || model.updatedAt || model.createdAt;
+          version.textContent = trainedAt ? `Trained ${formatRelative(trainedAt)}` : 'Timing unknown';
+          header.append(title, version);
+          card.appendChild(header);
+
+          const metrics = document.createElement('div');
+          metrics.className = 'model-metrics';
+          const metricEntries = model.metrics && typeof model.metrics === 'object' ? Object.entries(model.metrics) : [];
+          const knownOrder = ['accuracy', 'f1', 'precision', 'recall', 'latencyMs'];
+          const sorted = metricEntries.sort((a, b) => {
+            const indexA = knownOrder.indexOf(a[0]);
+            const indexB = knownOrder.indexOf(b[0]);
+            if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0]);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+          if (sorted.length) {
+            sorted.forEach(([key, value]) => {
+              const metric = document.createElement('span');
+              const label = document.createElement('span');
+              label.className = 'model-meta';
+              label.textContent = key.replace(/Ms$/i, ' (ms)').replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+              const val = document.createElement('strong');
+              if (key.toLowerCase().includes('latency')) {
+                val.textContent = formatLatency(value);
+              } else {
+                val.textContent = formatConfidence(value);
+              }
+              metric.append(label, val);
+              metrics.appendChild(metric);
+            });
+            card.appendChild(metrics);
+          }
+
+          const actionsRow = document.createElement('div');
+          actionsRow.className = 'model-actions';
+          const downloadUrl = model.downloadUrl || model.url || (model.artifact && model.artifact.url);
+          if (downloadUrl) {
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.textContent = 'Download artifact';
+            link.target = '_blank';
+            link.rel = 'noopener';
+            actionsRow.appendChild(link);
+          }
+          if (model.previewUrl || model.dashboardUrl) {
+            const link = document.createElement('a');
+            link.href = model.previewUrl || model.dashboardUrl;
+            link.textContent = 'View dashboard';
+            link.target = '_blank';
+            link.rel = 'noopener';
+            actionsRow.appendChild(link);
+          }
+          if (actionsRow.children.length) {
+            card.appendChild(actionsRow);
+          }
+
+          modelList.appendChild(card);
+        });
+      } catch (err) {
+        modelList.innerHTML = '';
+        modelsEmpty.style.display = 'block';
+        modelsEmpty.textContent = `Models unavailable: ${err && err.message ? err.message : err}`;
+      }
+    }
+
+    refreshOverview();
+    refreshSignals();
+    refreshModels();
+
+    setInterval(refreshOverview, OVERVIEW_INTERVAL);
+    setInterval(refreshSignals, POLL_INTERVAL);
+    setInterval(refreshModels, MODELS_INTERVAL);
+  </script>
+</body>
+</html>
