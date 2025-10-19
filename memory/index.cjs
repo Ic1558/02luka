@@ -1,20 +1,30 @@
 #!/usr/bin/env node
 /**
- * Minimal Vector Memo System (Phase 6 + 6.5-A)
+ * Minimal Vector Memo System (Phase 6 + 6.5-A + 6.5-B)
  *
  * Provides semantic memory storage and retrieval using TF-IDF vectors
  * and cosine similarity for lightweight, file-backed vector search.
  *
  * Functions:
  * - remember({kind, text, meta, importance}) - Store a memory with semantic embedding
- * - recall({query, kind, topK}) - Retrieve similar memories
+ * - recall({query, kind, topK}) - Retrieve similar memories (auto-updates lastAccess + queryCount)
  * - stats() - Get memory statistics
- * - cleanup({maxAgeDays, minImportance}) - Remove old/low-importance memories
+ * - cleanup({maxAgeDays, minImportance}) - Remove old/low-importance memories (with analytics)
+ * - decay({halfLifeDays}) - Apply time-based decay to importance scores
+ * - discoverPatterns({n, minOccurrences, topK}) - Find common n-grams across memories
  * - clear() - Clear all memories
  *
  * Features (Phase 6.5-A):
  * - Automatic importance scoring based on kind and metadata
  * - Smart cleanup that preserves recent or important memories
+ *
+ * Features (Phase 6.5-B):
+ * - lastAccess tracking (updated on recall)
+ * - queryCount tracking (incremented on recall)
+ * - Query frequency boost (frequently recalled memories get +0.05-0.15 importance)
+ * - Time-based decay (half-life formula reduces importance of unaccessed memories)
+ * - Pattern discovery (bigram/trigram detection with occurrence counts)
+ * - Cleanup analytics (detailed reporting of what was removed and why)
  *
  * Storage: g/memory/vector_index.json
  */
@@ -186,7 +196,7 @@ function rebuildVectors(memories, idf) {
 }
 
 // ============================================================================
-// Importance Scoring (Phase 6.5-A)
+// Importance Scoring (Phase 6.5-A + 6.5-B)
 // ============================================================================
 
 /**
@@ -195,9 +205,10 @@ function rebuildVectors(memories, idf) {
  * @param {string} kind - Memory type (plan, solution, error, insight, config)
  * @param {Object} meta - Metadata with optional successRate, reuseCount
  * @param {number} userImportance - User-provided base importance (0.0-1.0)
+ * @param {number} queryCount - Number of times memory has been recalled (Phase 6.5-B)
  * @returns {number} Importance score (0.0-1.0)
  */
-function calculateImportance(kind, meta = {}, userImportance = 0.5) {
+function calculateImportance(kind, meta = {}, userImportance = 0.5, queryCount = 0) {
   let score = userImportance;
 
   // Kind-based importance
@@ -208,8 +219,113 @@ function calculateImportance(kind, meta = {}, userImportance = 0.5) {
   if (meta.successRate && meta.successRate > 0.9) score += 0.1;
   if (meta.reuseCount && meta.reuseCount > 5) score += 0.1;
 
+  // Phase 6.5-B: Query frequency boost (frequently recalled = more valuable)
+  if (queryCount > 10) score += 0.15;
+  else if (queryCount > 5) score += 0.1;
+  else if (queryCount > 2) score += 0.05;
+
   // Cap at 1.0
   return Math.min(1.0, score);
+}
+
+// ============================================================================
+// Memory Decay & Pattern Discovery (Phase 6.5-B)
+// ============================================================================
+
+/**
+ * Apply time-based decay to memory importance
+ *
+ * Reduces importance of old, unaccessed memories using half-life decay.
+ *
+ * @param {Object} options
+ * @param {number} options.halfLifeDays - Days for importance to decay to half (default: 60)
+ * @returns {Object} Decay results
+ */
+function decay({ halfLifeDays = 60 } = {}) {
+  const index = loadIndex();
+  const now = Date.now();
+  const halfLifeMs = halfLifeDays * 86400000;
+
+  let decayedCount = 0;
+  const avgImportanceBefore = index.memories.reduce((sum, m) => sum + (m.importance || 0.5), 0) / (index.memories.length || 1);
+
+  for (const memory of index.memories) {
+    const lastAccess = memory.lastAccess ? new Date(memory.lastAccess).getTime() : new Date(memory.timestamp).getTime();
+    const age = now - lastAccess;
+
+    if (age > 0) {
+      // Calculate decay factor using half-life formula: newValue = oldValue * (0.5)^(age/halfLife)
+      const halfLives = age / halfLifeMs;
+      const decayFactor = Math.pow(0.5, halfLives);
+      const oldImportance = memory.importance || 0.5;
+      const newImportance = oldImportance * decayFactor;
+
+      // Only update if significance change (> 0.01)
+      if (Math.abs(oldImportance - newImportance) > 0.01) {
+        memory.importance = Math.max(0.1, newImportance); // Minimum 0.1 to avoid complete obsolescence
+        decayedCount++;
+      }
+    }
+  }
+
+  const avgImportanceAfter = index.memories.reduce((sum, m) => sum + (m.importance || 0.5), 0) / (index.memories.length || 1);
+
+  saveIndex(index);
+
+  return {
+    processed: index.memories.length,
+    decayed: decayedCount,
+    avgImportanceBefore: avgImportanceBefore.toFixed(3),
+    avgImportanceAfter: avgImportanceAfter.toFixed(3)
+  };
+}
+
+/**
+ * Discover common patterns (bigrams/trigrams) in memories
+ *
+ * @param {Object} options
+ * @param {number} options.n - N-gram size (2=bigrams, 3=trigrams)
+ * @param {number} options.minOccurrences - Minimum occurrences to report (default: 3)
+ * @param {number} options.topK - Number of top patterns to return (default: 10)
+ * @returns {Array} Top patterns with counts and example memories
+ */
+function discoverPatterns({ n = 2, minOccurrences = 3, topK = 10 } = {}) {
+  const index = loadIndex();
+  const ngramCounts = {};
+  const ngramMemories = {}; // Track which memories contain each n-gram
+
+  // Extract n-grams from all memories
+  for (const memory of index.memories) {
+    const tokens = memory.tokens;
+    for (let i = 0; i <= tokens.length - n; i++) {
+      const ngram = tokens.slice(i, i + n).join(' ');
+      ngramCounts[ngram] = (ngramCounts[ngram] || 0) + 1;
+
+      if (!ngramMemories[ngram]) {
+        ngramMemories[ngram] = [];
+      }
+      if (!ngramMemories[ngram].find(m => m.id === memory.id)) {
+        ngramMemories[ngram].push({
+          id: memory.id,
+          kind: memory.kind,
+          text: memory.text.slice(0, 100)
+        });
+      }
+    }
+  }
+
+  // Filter by minimum occurrences and sort by frequency
+  const patterns = Object.entries(ngramCounts)
+    .filter(([_, count]) => count >= minOccurrences)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topK)
+    .map(([ngram, count]) => ({
+      pattern: ngram,
+      count,
+      memories: ngramMemories[ngram].slice(0, 3) // Show up to 3 example memories
+    }));
+
+  return patterns;
 }
 
 // ============================================================================
@@ -239,15 +355,18 @@ function remember({ kind, text, meta = {}, importance = null }) {
 
   // Create new memory
   const tokens = tokenize(text);
+  const now = new Date().toISOString();
   const memory = {
     id: `${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     kind,
     text,
     meta,
     importance: importanceScore,
+    queryCount: 0,        // Phase 6.5-B: Track recall frequency
+    lastAccess: now,      // Phase 6.5-B: Track when last accessed
     tokens,
     vector: {},
-    timestamp: new Date().toISOString()
+    timestamp: now
   };
 
   // Add to index
@@ -312,6 +431,23 @@ function recall({ query, kind = null, topK = 5 }) {
   results.sort((a, b) => b.similarity - a.similarity);
   results = results.slice(0, topK);
 
+  // Phase 6.5-B: Update lastAccess and queryCount for recalled memories
+  const now = new Date().toISOString();
+  let indexModified = false;
+  for (const result of results) {
+    const memory = index.memories.find(m => m.id === result.id);
+    if (memory) {
+      memory.lastAccess = now;
+      memory.queryCount = (memory.queryCount || 0) + 1;
+      indexModified = true;
+    }
+  }
+
+  // Save updated access stats
+  if (indexModified) {
+    saveIndex(index);
+  }
+
   return results;
 }
 
@@ -335,32 +471,67 @@ function stats() {
 }
 
 /**
- * Clean up old or low-importance memories
+ * Clean up old or low-importance memories (Phase 6.5-A + 6.5-B Analytics)
  *
  * @param {Object} options
  * @param {number} options.maxAgeDays - Keep memories newer than this (default: 90)
  * @param {number} options.minImportance - Keep memories with importance >= this (default: 0.3)
- * @returns {Object} Cleanup results
+ * @returns {Object} Cleanup results with detailed analytics
  */
 function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
   const index = loadIndex();
   const before = index.memories.length;
 
+  // Calculate analytics before cleanup
+  const avgImportanceBefore = index.memories.reduce((sum, m) => sum + (m.importance || 0.5), 0) / (before || 1);
+  const kindCountsBefore = {};
+  for (const memory of index.memories) {
+    kindCountsBefore[memory.kind] = (kindCountsBefore[memory.kind] || 0) + 1;
+  }
+
   const now = Date.now();
   const cutoff = now - maxAgeDays * 86400000; // Convert days to milliseconds
+
+  // Track what's being removed (for analytics)
+  const removedByReason = { age: 0, importance: 0, both: 0 };
+  const removedByKind = {};
 
   // Keep memories that are either:
   // 1. Recent (within maxAgeDays)
   // 2. Important (importance >= minImportance)
-  index.memories = index.memories.filter(m => {
+  const keptMemories = [];
+  const removedMemories = [];
+
+  for (const m of index.memories) {
     const ts = new Date(m.timestamp).getTime();
-    const imp = m.importance ?? 0.5; // Default to 0.5 if no importance field
+    const imp = m.importance ?? 0.5;
+    const isRecent = ts >= cutoff;
+    const isImportant = imp >= minImportance;
 
-    return ts >= cutoff || imp >= minImportance;
-  });
+    if (isRecent || isImportant) {
+      keptMemories.push(m);
+    } else {
+      removedMemories.push(m);
+      // Track removal reason
+      if (!isRecent && !isImportant) removedByReason.both++;
+      else if (!isRecent) removedByReason.age++;
+      else removedByReason.importance++;
 
+      // Track by kind
+      removedByKind[m.kind] = (removedByKind[m.kind] || 0) + 1;
+    }
+  }
+
+  index.memories = keptMemories;
   const after = index.memories.length;
   const removed = before - after;
+
+  // Calculate analytics after cleanup
+  const avgImportanceAfter = index.memories.reduce((sum, m) => sum + (m.importance || 0.5), 0) / (after || 1);
+  const kindCountsAfter = {};
+  for (const memory of index.memories) {
+    kindCountsAfter[memory.kind] = (kindCountsAfter[memory.kind] || 0) + 1;
+  }
 
   // Rebuild IDF and vectors after cleanup
   if (removed > 0) {
@@ -374,7 +545,14 @@ function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
     before,
     after,
     removed,
-    kept: after
+    kept: after,
+    percentRemoved: before > 0 ? ((removed / before) * 100).toFixed(1) : '0.0',
+    avgImportanceBefore: avgImportanceBefore.toFixed(3),
+    avgImportanceAfter: avgImportanceAfter.toFixed(3),
+    removedByReason,
+    removedByKind,
+    kindCountsBefore,
+    kindCountsAfter
   };
 }
 
@@ -457,6 +635,38 @@ if (require.main === module) {
       console.log(`   After: ${result.after} memories`);
       console.log(JSON.stringify(result, null, 2));
     }
+    else if (command === '--decay') {
+      let halfLifeDays = 60;
+      const halfLifeIndex = args.indexOf('--halfLife');
+      if (halfLifeIndex !== -1) {
+        halfLifeDays = parseInt(args[halfLifeIndex + 1], 10);
+      }
+
+      const result = decay({ halfLifeDays });
+      console.log(`⏳ Decay complete:`);
+      console.log(`   Processed: ${result.processed} memories`);
+      console.log(`   Decayed: ${result.decayed} memories`);
+      console.log(`   Avg importance: ${result.avgImportanceBefore} → ${result.avgImportanceAfter}`);
+      console.log(JSON.stringify(result, null, 2));
+    }
+    else if (command === '--discover') {
+      let n = 2;
+      let minOccurrences = 3;
+
+      const nIndex = args.indexOf('--n');
+      if (nIndex !== -1) {
+        n = parseInt(args[nIndex + 1], 10);
+      }
+
+      const minIndex = args.indexOf('--min');
+      if (minIndex !== -1) {
+        minOccurrences = parseInt(args[minIndex + 1], 10);
+      }
+
+      const patterns = discoverPatterns({ n, minOccurrences, topK: 10 });
+      console.log(`🔍 Discovered ${patterns.length} patterns (${n}-grams, min ${minOccurrences} occurrences):`);
+      console.log(JSON.stringify(patterns, null, 2));
+    }
     else if (command === '--clear') {
       const result = clear();
       console.log(JSON.stringify(result, null, 2));
@@ -468,11 +678,15 @@ if (require.main === module) {
       console.log('  node memory/index.cjs --recall-kind <kind> <query>');
       console.log('  node memory/index.cjs --stats');
       console.log('  node memory/index.cjs --cleanup [--maxAge <days>] [--minImportance <score>]');
+      console.log('  node memory/index.cjs --decay [--halfLife <days>]');
+      console.log('  node memory/index.cjs --discover [--n <size>] [--min <occurrences>]');
       console.log('  node memory/index.cjs --clear');
       console.log('');
       console.log('Examples:');
       console.log('  node memory/index.cjs --remember plan "Deploy fix" --meta \'{"successRate":0.95}\'');
       console.log('  node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3');
+      console.log('  node memory/index.cjs --decay --halfLife 60');
+      console.log('  node memory/index.cjs --discover --n 2 --min 3');
       process.exit(1);
     }
   } catch (err) {
@@ -490,5 +704,7 @@ module.exports = {
   recall,
   stats,
   cleanup,
+  decay,
+  discoverPatterns,
   clear
 };

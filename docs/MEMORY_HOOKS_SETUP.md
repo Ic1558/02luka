@@ -390,3 +390,155 @@ tail -f ~/Library/02luka/logs/memory_cleanup.log
 
 **Last Updated:** 2025-10-20
 **Status:** Active (Phase 6 + 6.5-A)
+
+---
+
+## Phase 6.5-B: Advanced Features (Decay + Patterns + Frequency Tracking)
+
+### Query Frequency Boost
+
+**Automatically increases importance for frequently accessed memories:**
+
+```javascript
+// Importance boost based on recall count
+if (queryCount > 10) score += 0.15;  // Very frequently used
+else if (queryCount > 5) score += 0.1;   // Frequently used  
+else if (queryCount > 2) score += 0.05;  // Moderately used
+```
+
+**How it works:**
+- Every `recall()` increments `queryCount` for returned memories
+- Updates `lastAccess` timestamp
+- Next cleanup/decay considers frequency
+- More frequently recalled memories resist decay
+
+### Time-Based Decay
+
+**Gradually reduces importance of unaccessed memories:**
+
+```bash
+# Apply decay with 60-day half-life (default)
+node memory/index.cjs --decay --halfLife 60
+
+# More aggressive (30-day half-life)
+node memory/index.cjs --decay --halfLife 30
+```
+
+**Decay formula:**
+```
+newImportance = oldImportance * (0.5)^(daysSinceLastAccess / halfLifeDays)
+```
+
+**Example:**
+```
+Memory importance: 0.8
+Last access: 60 days ago
+Half-life: 60 days
+New importance: 0.8 * 0.5 = 0.4  (halved after one half-life)
+```
+
+**Safeguards:**
+- Minimum importance: 0.1 (never fully forgotten)
+- Uses `lastAccess` if available, otherwise `timestamp`
+- Only updates if change > 0.01 (avoids micro-changes)
+
+### Pattern Discovery
+
+**Find common phrases/patterns across memories:**
+
+```bash
+# Find bigrams (2-word patterns) appearing 3+ times
+node memory/index.cjs --discover --n 2 --min 3
+
+# Find trigrams (3-word patterns) appearing 2+ times
+node memory/index.cjs --discover --n 3 --min 2
+```
+
+**Output example:**
+```json
+[
+  {
+    "pattern": "deploy feature",
+    "count": 3,
+    "memories": [
+      {"id": "...", "kind": "plan", "text": "Deploy feature X..."},
+      {"id": "...", "kind": "plan", "text": "Deploy feature Y..."},
+      {"id": "...", "kind": "plan", "text": "Deploy feature Z..."}
+    ]
+  }
+]
+```
+
+**Use cases:**
+- Identify recurring work patterns
+- Find frequently discussed topics
+- Detect common solutions/approaches
+- Generate "best practices" from patterns
+
+### Cleanup Analytics (Enhanced)
+
+**Detailed reporting of what was removed:**
+
+```bash
+node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3
+```
+
+**Output includes:**
+```json
+{
+  "before": 100,
+  "after": 85,
+  "removed": 15,
+  "percentRemoved": "15.0",
+  "avgImportanceBefore": "0.520",
+  "avgImportanceAfter": "0.580",
+  "removedByReason": {
+    "age": 5,        // Old but not low-importance
+    "importance": 3, // Low-importance but not old
+    "both": 7        // Old AND low-importance
+  },
+  "removedByKind": {
+    "plan": 8,
+    "solution": 5,
+    "insight": 2
+  },
+  "kindCountsBefore": {"plan": 40, "solution": 35, "insight": 25},
+  "kindCountsAfter": {"plan": 32, "solution": 30, "insight": 23}
+}
+```
+
+**Analytics help you:**
+- Understand cleanup impact
+- Tune thresholds (maxAge, minImportance)
+- Verify important memories preserved
+- Track memory health over time
+
+### Recommended Workflow
+
+**Weekly maintenance:**
+```bash
+# 1. Apply decay (reduce unaccessed memories)
+node memory/index.cjs --decay --halfLife 60
+
+# 2. Cleanup old/low-importance
+node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3
+
+# 3. Check patterns (insights)
+node memory/index.cjs --discover --n 2 --min 3
+
+# 4. Review stats
+node memory/index.cjs --stats
+```
+
+**Scheduled automation:**
+```bash
+# In scripts/cleanup_memory.sh or LaunchAgent
+# Run decay before cleanup for best results
+node memory/index.cjs --decay --halfLife 60
+node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3
+```
+
+---
+
+**Last Updated:** 2025-10-20  
+**Status:** Active (Phase 6 + 6.5-A + 6.5-B)
