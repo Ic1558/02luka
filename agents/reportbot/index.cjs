@@ -124,13 +124,19 @@ function fetchApiSummary(urlString) {
       return resolve(null);
     }
     const requester = parsed.protocol === 'https:' ? https : http;
+    const requestOptions = {
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port ? Number(parsed.port) : undefined,
+      path: `${parsed.pathname || '/'}${parsed.search || ''}`,
+      method: 'GET',
+      headers: { Accept: 'application/json' }
+    };
+    if (parsed.username || parsed.password) {
+      requestOptions.auth = `${parsed.username || ''}:${parsed.password || ''}`;
+    }
     const request = requester.request(
-      parsed,
-      {
-        method: 'GET',
-        timeout: 4500,
-        headers: { Accept: 'application/json' }
-      },
+      requestOptions,
       res => {
         const chunks = [];
         res.on('data', chunk => chunks.push(chunk));
@@ -148,7 +154,7 @@ function fetchApiSummary(urlString) {
         });
       }
     );
-    request.on('timeout', () => {
+    request.setTimeout(4500, () => {
       request.destroy();
       resolve(null);
     });
