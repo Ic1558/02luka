@@ -123,14 +123,21 @@ function fetchApiSummary(urlString) {
     } catch (error) {
       return resolve(null);
     }
-    const requester = parsed.protocol === 'https:' ? https : http;
+    const isHttps = parsed.protocol === 'https:';
+    const requester = isHttps ? https : http;
+    const requestOptions = {
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: `${parsed.pathname || '/'}${parsed.search || ''}`,
+      method: 'GET',
+      timeout: 4500,
+      headers: { Accept: 'application/json' }
+    };
+    if (parsed.username || parsed.password) {
+      requestOptions.auth = `${parsed.username || ''}:${parsed.password || ''}`;
+    }
     const request = requester.request(
-      parsed,
-      {
-        method: 'GET',
-        timeout: 4500,
-        headers: { Accept: 'application/json' }
-      },
+      requestOptions,
       res => {
         const chunks = [];
         res.on('data', chunk => chunks.push(chunk));
