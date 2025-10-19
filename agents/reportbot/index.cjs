@@ -115,23 +115,31 @@ function normalizeStatus(value) {
   return 'unknown';
 }
 
-function fetchApiSummary(urlString) {
-  return new Promise(resolve => {
-    let parsed;
-    try {
-      parsed = new URL(urlString);
-    } catch (error) {
-      return resolve(null);
-    }
-    const requester = parsed.protocol === 'https:' ? https : http;
-    const request = requester.request(
-      parsed,
-      {
+  function fetchApiSummary(urlString) {
+    return new Promise(resolve => {
+      let parsed;
+      try {
+        parsed = new URL(urlString);
+      } catch (error) {
+        return resolve(null);
+      }
+
+      const isHttps = parsed.protocol === 'https:';
+      const requester = isHttps ? https : http;
+      const requestOptions = {
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: `${parsed.pathname}${parsed.search}`,
         method: 'GET',
-        timeout: 4500,
         headers: { Accept: 'application/json' }
-      },
-      res => {
+      };
+
+      if (parsed.username || parsed.password) {
+        requestOptions.auth = `${parsed.username || ''}:${parsed.password || ''}`;
+      }
+
+      const request = requester.request(requestOptions, res => {
         const chunks = [];
         res.on('data', chunk => chunks.push(chunk));
         res.on('end', () => {
@@ -146,16 +154,17 @@ function fetchApiSummary(urlString) {
             resolve(null);
           }
         });
-      }
-    );
-    request.on('timeout', () => {
-      request.destroy();
-      resolve(null);
+      });
+
+      request.setTimeout?.(4500);
+      request.on('timeout', () => {
+        request.destroy();
+        resolve(null);
+      });
+      request.on('error', () => resolve(null));
+      request.end();
     });
-    request.on('error', () => resolve(null));
-    request.end();
-  });
-}
+  }
 
 function readLatestMarker() {
   try {
