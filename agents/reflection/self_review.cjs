@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Self-Reflection Engine (Phase 7 MVP Scaffold)
+ * Self-Reflection Engine (Phase 7.1 Full Implementation)
  *
  * Analyzes recent telemetry and memory to generate insights about
  * system performance, patterns, and areas for improvement.
@@ -10,9 +10,10 @@
  *
  * Output:
  *   - Generates markdown report in g/reports/self_review_[timestamp].md
- *   - Records insights as memory entries
+ *   - Records insights as memory entries (kind: 'insight', importance >= 0.65)
  *
- * Status: SCAFFOLD (Phase 7 MVP) - Basic structure only
+ * Phase 7.1: Full implementation with real telemetry parsing, trend detection,
+ * p95 metrics, failure analysis, and actionable recommendations.
  */
 
 const fs = require('fs');
@@ -25,192 +26,475 @@ const TELEMETRY_DIR = path.join(REPO_ROOT, 'g', 'telemetry');
 
 // Load dependencies
 const memoryModule = require(path.join(REPO_ROOT, 'memory', 'index.cjs'));
+const telemetryModule = require(path.join(REPO_ROOT, 'boss-api', 'telemetry.cjs'));
 
 // ============================================================================
-// Core Reflection Functions (SCAFFOLD)
+// Core Reflection Functions (FULL IMPLEMENTATION)
 // ============================================================================
 
 /**
  * Analyze recent telemetry runs
  *
- * TODO (Phase 7 full implementation):
- * - Parse telemetry log files
- * - Extract success/fail patterns
- * - Calculate trend metrics (improving/declining)
- * - Identify anomalies
+ * Phase 7.1: Full implementation - parses real telemetry, computes metrics,
+ * detects trends, identifies top failures and slow tasks.
  *
  * @param {number} days - Number of days to analyze
  * @returns {Object} Telemetry analysis summary
  */
 function analyzeTelemetry(days = 7) {
-  console.log(`[SCAFFOLD] Analyzing telemetry for last ${days} days...`);
+  console.log(`📊 Analyzing telemetry for last ${days} days...`);
 
-  // SCAFFOLD: Placeholder implementation
-  return {
-    totalRuns: 0,
-    successRate: 0,
-    commonErrors: [],
-    trends: {
-      improving: false,
-      stable: true,
-      declining: false
-    },
-    recommendations: []
-  };
+  try {
+    // Read current period
+    const currentEntries = telemetryModule.readRange({ days });
+    const currentAnalysis = telemetryModule.analyze(currentEntries);
 
-  // TODO: Actual implementation
-  // - Read telemetry/*.log files
-  // - Parse NDJSON format
-  // - Aggregate by task, status, time period
-  // - Detect patterns and trends
+    // Read previous period (for trend comparison)
+    const endDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const previousEntries = telemetryModule.readRange({ days, endDate });
+    const previousAnalysis = telemetryModule.analyze(previousEntries);
+
+    // Compare trends
+    const trends = telemetryModule.compareTrends(currentAnalysis, previousAnalysis);
+
+    // Compute additional insights
+    const lowSampleSize = currentAnalysis.totalRuns < 3;
+    const recommendations = generateTelemetryRecommendations(currentAnalysis, trends);
+
+    return {
+      days,
+      lowSampleSize,
+      current: currentAnalysis,
+      previous: previousAnalysis,
+      trends,
+      recommendations
+    };
+  } catch (error) {
+    console.error('⚠️  Telemetry analysis failed:', error.message);
+    return {
+      days,
+      lowSampleSize: true,
+      current: {
+        totalRuns: 0,
+        successRate: 0,
+        failRate: 0,
+        avgDuration: 0,
+        p95Duration: 0,
+        topFailures: [],
+        slowTasks: []
+      },
+      previous: null,
+      trends: { trending: 'insufficient_data' },
+      recommendations: ['Unable to analyze telemetry - check logs exist']
+    };
+  }
+}
+
+/**
+ * Generate telemetry-based recommendations
+ *
+ * @param {Object} analysis - Current telemetry analysis
+ * @param {Object} trends - Trend comparison
+ * @returns {Array<string>} Recommendations
+ */
+function generateTelemetryRecommendations(analysis, trends) {
+  const recs = [];
+
+  // Success rate recommendations
+  if (analysis.successRate < 0.8) {
+    recs.push(`Success rate is low (${(analysis.successRate * 100).toFixed(1)}%) - investigate top failures`);
+  } else if (trends.successRateDelta < -0.1) {
+    recs.push(`Success rate declining (${(trends.successRateDelta * 100).toFixed(1)}% drop) - check recent changes`);
+  }
+
+  // Duration recommendations
+  if (trends.p95DurationPct > 20) {
+    recs.push(`p95 duration up ${trends.p95DurationPct.toFixed(0)}% - performance degradation detected`);
+  }
+
+  // Flakiness recommendations
+  if (analysis.flakiness > 0.2) {
+    recs.push(`High flakiness detected (${(analysis.flakiness * 100).toFixed(0)}%) - stabilize flaky tasks`);
+  }
+
+  // Top failures
+  if (analysis.topFailures.length > 0) {
+    const topFailure = analysis.topFailures[0];
+    recs.push(`Top failure: '${topFailure.task}' (${topFailure.totalFails} fails) - prioritize fix`);
+  }
+
+  // Slow tasks
+  if (analysis.slowTasks.length > 0) {
+    const slowest = analysis.slowTasks[0];
+    if (slowest.p95 > 5000) {
+      recs.push(`Slow task: '${slowest.task}' (p95=${Math.round(slowest.p95)}ms) - consider optimization`);
+    }
+  }
+
+  // Default if all good
+  if (recs.length === 0) {
+    recs.push('System performance is stable - continue monitoring');
+  }
+
+  return recs;
 }
 
 /**
  * Query memory for similar past experiences
  *
- * TODO (Phase 7 full implementation):
- * - Query memory with context from telemetry
- * - Find similar successes and failures
- * - Extract lessons learned
- * - Identify recurring patterns
+ * Phase 7.1: Query memories related to system performance, failures, optimizations
  *
  * @param {Object} context - Analysis context from telemetry
  * @returns {Array} Relevant memories
  */
 function queryRelevantMemories(context) {
-  console.log(`[SCAFFOLD] Querying memories for context...`);
+  console.log(`🧠 Querying memories for context...`);
 
-  // SCAFFOLD: Placeholder implementation
   try {
-    const memories = memoryModule.recall({
-      query: 'system performance improvement',
-      topK: 5
+    const { analysis, recommendations } = context;
+
+    // Build semantic query from current state
+    let query = 'system performance';
+    if (analysis && analysis.current) {
+      if (analysis.current.topFailures.length > 0) {
+        const topTask = analysis.current.topFailures[0].task;
+        query = `${topTask} failure optimization`;
+      } else if (analysis.current.successRate < 0.9) {
+        query = 'improve success rate reliability';
+      } else if (analysis.current.p95Duration > 3000) {
+        query = 'reduce duration optimize performance';
+      }
+    }
+
+    // Query memory for relevant solutions and insights
+    const solutionMemories = memoryModule.recall({
+      query,
+      kind: 'solution',
+      topK: 3
     });
 
-    return memories.map(m => ({
+    const insightMemories = memoryModule.recall({
+      query,
+      kind: 'insight',
+      topK: 2
+    });
+
+    const allMemories = [...solutionMemories, ...insightMemories]
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 5);
+
+    return allMemories.map(m => ({
       id: m.id,
       kind: m.kind,
       text: m.text,
-      similarity: m.similarity
+      similarity: m.similarity,
+      importance: m.importance
     }));
-  } catch (err) {
-    console.error('Memory query failed:', err.message);
+  } catch (error) {
+    console.error('⚠️  Memory query failed:', error.message);
     return [];
   }
-
-  // TODO: Actual implementation
-  // - Build query from telemetry context
-  // - Filter by kind (error, solution, insight)
-  // - Rank by relevance and recency
-  // - Extract actionable insights
 }
 
 /**
  * Generate insights from analysis
  *
- * TODO (Phase 7 full implementation):
- * - Compare current state to past performance
- * - Identify improvements and regressions
- * - Suggest specific actions
- * - Prioritize by impact
+ * Phase 7.1: Create data-driven insights with confidence scores
  *
  * @param {Object} telemetryAnalysis - Telemetry analysis results
  * @param {Array} memories - Relevant memories
  * @returns {Array} Generated insights
  */
 function generateInsights(telemetryAnalysis, memories) {
-  console.log(`[SCAFFOLD] Generating insights...`);
+  console.log(`💡 Generating insights...`);
 
-  // SCAFFOLD: Placeholder implementation
-  return [
-    {
-      type: 'observation',
-      text: 'System is operating normally (placeholder)',
-      confidence: 0.8,
-      actionable: false
-    },
-    {
-      type: 'suggestion',
-      text: 'Consider running cleanup to optimize memory usage (placeholder)',
-      confidence: 0.6,
-      actionable: true,
-      action: 'node memory/index.cjs --cleanup'
+  const insights = [];
+  const { current, trends, lowSampleSize } = telemetryAnalysis;
+
+  // Insight 1: Overall health assessment
+  if (!lowSampleSize) {
+    const healthScore = current.successRate;
+    let healthText = '';
+    let confidence = 0.8;
+
+    if (healthScore >= 0.95) {
+      healthText = `System health excellent (${(healthScore * 100).toFixed(1)}% success rate over ${telemetryAnalysis.days}d)`;
+      confidence = 0.9;
+    } else if (healthScore >= 0.85) {
+      healthText = `System health good (${(healthScore * 100).toFixed(1)}% success rate over ${telemetryAnalysis.days}d)`;
+      confidence = 0.85;
+    } else if (healthScore >= 0.7) {
+      healthText = `System health fair (${(healthScore * 100).toFixed(1)}% success rate over ${telemetryAnalysis.days}d) - improvement needed`;
+      confidence = 0.75;
+    } else {
+      healthText = `System health poor (${(healthScore * 100).toFixed(1)}% success rate over ${telemetryAnalysis.days}d) - urgent attention required`;
+      confidence = 0.9;
     }
-  ];
 
-  // TODO: Actual implementation
-  // - Analyze trend patterns
-  // - Compare to historical data
-  // - Generate specific, actionable insights
-  // - Assign confidence scores
-  // - Prioritize recommendations
+    insights.push({
+      type: 'observation',
+      text: healthText,
+      confidence,
+      actionable: healthScore < 0.85,
+      meta: {
+        successRate: healthScore,
+        totalRuns: current.totalRuns,
+        windowDays: telemetryAnalysis.days
+      }
+    });
+  }
+
+  // Insight 2: Trend detection
+  if (trends && trends.trending !== 'insufficient_data') {
+    let trendText = '';
+    let confidence = 0.75;
+    let actionable = false;
+
+    if (trends.trending === 'improving') {
+      trendText = `Positive trend detected (success rate ${trends.successRateDelta > 0 ? '+' : ''}${(trends.successRateDelta * 100).toFixed(1)}% vs previous period)`;
+      confidence = 0.8;
+    } else if (trends.trending === 'declining') {
+      trendText = `Declining trend detected (success rate ${(trends.successRateDelta * 100).toFixed(1)}% vs previous period)`;
+      confidence = 0.85;
+      actionable = true;
+    } else {
+      trendText = 'Performance stable compared to previous period';
+      confidence = 0.7;
+    }
+
+    // Add p95 duration context
+    if (trends.p95DurationPct && Math.abs(trends.p95DurationPct) > 10) {
+      trendText += `. p95 duration ${trends.p95DurationPct > 0 ? '+' : ''}${trends.p95DurationPct.toFixed(0)}%`;
+      if (trends.p95DurationPct > 15) {
+        actionable = true;
+        confidence = Math.max(confidence, 0.8);
+      }
+    }
+
+    insights.push({
+      type: 'trend',
+      text: trendText,
+      confidence,
+      actionable,
+      meta: {
+        trending: trends.trending,
+        successRateDelta: trends.successRateDelta,
+        p95DurationDelta: trends.p95DurationDelta,
+        p95DurationPct: trends.p95DurationPct
+      }
+    });
+  }
+
+  // Insight 3: Failure pattern
+  if (current.topFailures && current.topFailures.length > 0) {
+    const topFailure = current.topFailures[0];
+    const failureText = `Top failure: '${topFailure.task}' failed ${topFailure.totalFails} times (${topFailure.count} runs)`;
+
+    insights.push({
+      type: 'failure_pattern',
+      text: failureText,
+      confidence: 0.9,
+      actionable: true,
+      action: `Investigate '${topFailure.task}' failures and add retry logic or fix root cause`,
+      meta: {
+        task: topFailure.task,
+        failCount: topFailure.totalFails,
+        runCount: topFailure.count
+      }
+    });
+  }
+
+  // Insight 4: Performance bottleneck
+  if (current.slowTasks && current.slowTasks.length > 0) {
+    const slowest = current.slowTasks[0];
+    if (slowest.p95 > 3000) {
+      const perfText = `Performance bottleneck: '${slowest.task}' (p95=${Math.round(slowest.p95)}ms, avg=${Math.round(slowest.avg)}ms)`;
+
+      insights.push({
+        type: 'performance',
+        text: perfText,
+        confidence: 0.8,
+        actionable: slowest.p95 > 5000,
+        action: slowest.p95 > 5000 ? `Optimize '${slowest.task}' - consider caching, parallelization, or timeout adjustments` : undefined,
+        meta: {
+          task: slowest.task,
+          p95: slowest.p95,
+          avg: slowest.avg
+        }
+      });
+    }
+  }
+
+  // Insight 5: Low sample size warning
+  if (lowSampleSize) {
+    insights.push({
+      type: 'warning',
+      text: `Low sample size (${current.totalRuns} runs in ${telemetryAnalysis.days}d) - increase test frequency for better insights`,
+      confidence: 0.95,
+      actionable: true,
+      action: 'Schedule more frequent telemetry runs for accurate trend detection',
+      meta: {
+        totalRuns: current.totalRuns,
+        windowDays: telemetryAnalysis.days
+      }
+    });
+  }
+
+  return insights;
 }
 
 /**
  * Generate markdown report
  *
+ * Phase 7.1: Enhanced report with all metrics and recommendations
+ *
  * @param {Object} analysis - Complete analysis results
- * @returns {string} Markdown-formatted report
+ * @returns {Object} Report content and timestamp
  */
 function generateReport(analysis) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const now = new Date().toISOString();
+
+  const { telemetry, memories, insights, days } = analysis;
+  const { current, previous, trends, lowSampleSize, recommendations } = telemetry;
+
+  // Helper to format duration
+  const formatDuration = (ms) => {
+    if (ms < 1000) return `${Math.round(ms)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
+  };
+
+  // Helper to format percentage
+  const formatPct = (decimal) => `${(decimal * 100).toFixed(1)}%`;
+
+  // Helper to format delta
+  const formatDelta = (delta) => {
+    const sign = delta >= 0 ? '+' : '';
+    return `${sign}${(delta * 100).toFixed(1)}%`;
+  };
+
   const report = `# Self-Review Report
 
-**Generated:** ${new Date().toISOString()}
-**Period:** Last ${analysis.days} days
-**Status:** SCAFFOLD (Phase 7 MVP)
+**Generated:** ${now}
+**Period:** Last ${days} days
+**Status:** ${lowSampleSize ? 'LOW SAMPLE SIZE ⚠️' : 'COMPLETE ✅'}
 
 ---
 
-## Telemetry Analysis
+## Summary
 
-**Total Runs:** ${analysis.telemetry.totalRuns}
-**Success Rate:** ${(analysis.telemetry.successRate * 100).toFixed(1)}%
+**Total Runs:** ${current.totalRuns}
+**Success Rate:** ${formatPct(current.successRate)}
+**Fail Rate:** ${formatPct(current.failRate)}
+**Warn Rate:** ${formatPct(current.warnRate)}
+**Total Tests:** ${current.totalTests}
 
-**Trends:**
-- Improving: ${analysis.telemetry.trends.improving ? '✅' : '❌'}
-- Stable: ${analysis.telemetry.trends.stable ? '✅' : '❌'}
-- Declining: ${analysis.telemetry.trends.declining ? '⚠️' : '✅'}
+**Performance:**
+- Average Duration: ${formatDuration(current.avgDuration)}
+- p95 Duration: ${formatDuration(current.p95Duration)}
+- p99 Duration: ${formatDuration(current.p99Duration)}
+
+${current.flakiness > 0 ? `**Flakiness Score:** ${formatPct(current.flakiness)}` : ''}
+
+---
+
+## Trends
+
+${trends.trending !== 'insufficient_data' ? `
+**Status:** ${trends.trending === 'improving' ? '📈 IMPROVING' : trends.trending === 'declining' ? '📉 DECLINING' : '➡️  STABLE'}
+
+**Comparison with Previous ${days}d:**
+- Success Rate: ${formatDelta(trends.successRateDelta)} (was ${formatPct(previous.successRate)})
+- Fail Rate: ${formatDelta(trends.failRateDelta)} (was ${formatPct(previous.failRate)})
+- p95 Duration: ${formatDelta(trends.p95DurationPct / 100)} (${formatDuration(previous.p95Duration)} → ${formatDuration(current.p95Duration)})
+` : `
+**Status:** ⚠️  INSUFFICIENT DATA
+
+Not enough data in previous period for trend comparison.
+Run more telemetry tasks to enable trend detection.
+`}
+
+---
+
+## Top Failures
+
+${current.topFailures.length > 0 ? current.topFailures.map((f, i) =>
+  `${i + 1}. **${f.task}**
+   - Total Failures: ${f.totalFails}
+   - Failed Runs: ${f.count}
+   - Failure Rate: ${formatPct(f.totalFails / (current.byTask[f.task]?.pass + current.byTask[f.task]?.warn + current.byTask[f.task]?.fail || 1))}`
+).join('\n\n') : '_No failures detected ✅_'}
+
+---
+
+## Slow Tasks (p95 Duration)
+
+${current.slowTasks.length > 0 ? current.slowTasks.map((t, i) =>
+  `${i + 1}. **${t.task}**
+   - p95: ${formatDuration(t.p95)}
+   - Average: ${formatDuration(t.avg)}
+   - Runs: ${t.runs}`
+).join('\n\n') : '_All tasks performing well ✅_'}
+
+${current.flakyTasks && current.flakyTasks.length > 0 ? `
+---
+
+## Flaky Tasks
+
+${current.flakyTasks.map((f, i) =>
+  `${i + 1}. **${f.task}**
+   - Failure Rate: ${formatPct(f.failureRate)}
+   - Runs: ${f.runs}`
+).join('\n\n')}
+` : ''}
 
 ---
 
 ## Relevant Memories
 
-Found ${analysis.memories.length} relevant memories:
+${memories.length > 0 ? `Found ${memories.length} relevant memories:
 
-${analysis.memories.map((m, i) =>
-  `${i + 1}. **[${m.kind}]** ${m.text.slice(0, 100)}... (similarity: ${m.similarity.toFixed(3)})`
-).join('\n')}
+${memories.map((m, i) =>
+  `${i + 1}. **[${m.kind || 'memory'}]** ${m.text.slice(0, 120)}${m.text.length > 120 ? '...' : ''}
+   - Similarity: ${(m.similarity || 0).toFixed(3)}
+   - Importance: ${(m.importance || 0.5).toFixed(2)}`
+).join('\n\n')}` : '_No relevant memories found_'}
 
 ---
 
 ## Insights
 
-${analysis.insights.map((insight, i) =>
+${insights.map((insight, i) =>
   `### ${i + 1}. ${insight.type.toUpperCase()}: ${insight.text}
 
 - **Confidence:** ${(insight.confidence * 100).toFixed(0)}%
-- **Actionable:** ${insight.actionable ? 'Yes' : 'No'}
-${insight.action ? `- **Action:** \`${insight.action}\`` : ''}
-`
+- **Actionable:** ${insight.actionable ? 'Yes ⚡' : 'No'}
+${insight.action ? `- **Action:** ${insight.action}` : ''}`
+).join('\n\n')}
+
+---
+
+## Recommended Actions
+
+${recommendations.map((rec, i) => `${i + 1}. ${rec}`).join('\n')}
+
+---
+
+## Task Breakdown
+
+${Object.entries(current.byTask).length > 0 ? `
+| Task | Runs | Pass | Warn | Fail | Success % | Avg Duration |
+|------|------|------|------|------|-----------|--------------|
+${Object.entries(current.byTask).map(([task, stats]) =>
+  `| ${task} | ${stats.runs} | ${stats.pass} | ${stats.warn} | ${stats.fail} | ${formatPct(stats.successRate)} | ${formatDuration(stats.avgDuration)} |`
 ).join('\n')}
+` : '_No task data available_'}
 
 ---
 
-## Next Steps
-
-**For Phase 7 Full Implementation:**
-- [ ] Parse actual telemetry data
-- [ ] Implement trend analysis
-- [ ] Generate data-driven insights
-- [ ] Record insights as memories
-- [ ] Add confidence scoring
-- [ ] Implement actionable recommendations
-
----
-
-**Status:** This is a SCAFFOLD version (Phase 7 MVP).
-Full implementation will analyze real data and generate actionable insights.
+**Report Generated:** ${now}
+**Next Review:** Recommended in 7 days
+**Automation:** Run \`bash scripts/run_self_review.sh --days 7\` weekly
 `;
 
   return { content: report, timestamp };
@@ -219,13 +503,16 @@ Full implementation will analyze real data and generate actionable insights.
 /**
  * Record insights as memories
  *
+ * Phase 7.1: Record high-confidence insights (>= 0.65) as memories
+ *
  * @param {Array} insights - Generated insights
  */
 function recordInsights(insights) {
-  console.log(`[SCAFFOLD] Recording ${insights.length} insights as memories...`);
+  console.log(`💾 Recording ${insights.length} insights as memories...`);
 
+  let recorded = 0;
   for (const insight of insights) {
-    if (insight.confidence >= 0.5) {
+    if (insight.confidence >= 0.65) {
       try {
         memoryModule.remember({
           kind: 'insight',
@@ -233,14 +520,20 @@ function recordInsights(insights) {
           meta: {
             confidence: insight.confidence,
             actionable: insight.actionable,
-            generatedBy: 'self_review.cjs'
-          }
+            generatedBy: 'self_review.cjs',
+            type: insight.type,
+            ...insight.meta
+          },
+          importance: Math.min(1.0, 0.5 + insight.confidence * 0.5) // Scale to 0.5-1.0
         });
-      } catch (err) {
-        console.error('Failed to record insight:', err.message);
+        recorded++;
+      } catch (error) {
+        console.error('⚠️  Failed to record insight:', error.message);
       }
     }
   }
+
+  console.log(`✅ Recorded ${recorded}/${insights.length} high-confidence insights`);
 }
 
 // ============================================================================
@@ -248,7 +541,7 @@ function recordInsights(insights) {
 // ============================================================================
 
 async function main() {
-  console.log('=== Self-Review Engine (Phase 7 MVP Scaffold) ===\n');
+  console.log('=== Self-Review Engine (Phase 7.1 Full Implementation) ===\n');
 
   // Parse command-line arguments
   const args = process.argv.slice(2);
@@ -258,11 +551,11 @@ async function main() {
   const days = daysArg ? parseInt(daysArg.split('=')[1], 10) : 7;
   const customOutput = outputArg ? outputArg.split('=')[1] : null;
 
-  // Run analysis
-  console.log(`Analyzing last ${days} days...\n`);
+  console.log(`📅 Analyzing last ${days} days...\n`);
 
+  // Run analysis
   const telemetryAnalysis = analyzeTelemetry(days);
-  const relevantMemories = queryRelevantMemories({ days });
+  const relevantMemories = queryRelevantMemories({ analysis: telemetryAnalysis });
   const insights = generateInsights(telemetryAnalysis, relevantMemories);
 
   // Generate report
@@ -274,24 +567,34 @@ async function main() {
   });
 
   // Save report
+  if (!fs.existsSync(REPORTS_DIR)) {
+    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  }
+
   const reportPath = customOutput ||
     path.join(REPORTS_DIR, `self_review_${timestamp}.md`);
 
   fs.writeFileSync(reportPath, report);
-  console.log(`✅ Report saved: ${reportPath}\n`);
+  console.log(`\n✅ Report saved: ${reportPath}`);
 
   // Record insights
   recordInsights(insights);
-  console.log(`✅ Recorded ${insights.filter(i => i.confidence >= 0.5).length} insights\n`);
 
-  console.log('=== Self-Review Complete ===');
-  console.log('NOTE: This is a SCAFFOLD. Full implementation in Phase 7.');
+  // Summary
+  console.log('\n=== Self-Review Complete ===');
+  console.log(`Period: ${days} days`);
+  console.log(`Total Runs: ${telemetryAnalysis.current.totalRuns}`);
+  console.log(`Success Rate: ${(telemetryAnalysis.current.successRate * 100).toFixed(1)}%`);
+  console.log(`Insights Generated: ${insights.length}`);
+  console.log(`High-Confidence Insights: ${insights.filter(i => i.confidence >= 0.65).length}`);
+  console.log(`Trend: ${telemetryAnalysis.trends.trending}`);
 }
 
 // Run if executed directly
 if (require.main === module) {
   main().catch(err => {
     console.error('Error:', err.message);
+    console.error(err.stack);
     process.exit(1);
   });
 }
