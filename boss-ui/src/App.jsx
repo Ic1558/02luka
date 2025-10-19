@@ -205,6 +205,57 @@ const normalizeReportStatus = (value) => {
   return 'unknown';
 };
 
+const normalizeHealthStatus = (payload) => {
+  if (payload === true) {
+    return 'ok';
+  }
+  if (payload === false) {
+    return 'error';
+  }
+
+  const candidates = [];
+
+  if (payload && typeof payload === 'object') {
+    if (typeof payload.status === 'string') {
+      candidates.push(payload.status);
+    }
+    if (typeof payload.state === 'string') {
+      candidates.push(payload.state);
+    }
+    if (typeof payload.result === 'string') {
+      candidates.push(payload.result);
+    }
+    if (typeof payload.content === 'string') {
+      candidates.push(payload.content);
+    }
+    if (typeof payload.ok === 'boolean') {
+      return payload.ok ? 'ok' : 'error';
+    }
+    if (typeof payload.healthy === 'boolean') {
+      return payload.healthy ? 'ok' : 'error';
+    }
+  }
+
+  if (typeof payload === 'string') {
+    candidates.push(payload);
+  }
+
+  for (const candidate of candidates) {
+    const normalized = candidate.trim().toLowerCase();
+    if (!normalized) {
+      continue;
+    }
+    if (['ok', 'okay', 'pass', 'passed', 'healthy', 'up', 'ready', 'success'].includes(normalized)) {
+      return 'ok';
+    }
+    if (['warn', 'warning', 'partial', 'unknown', 'degraded'].includes(normalized)) {
+      return 'warn';
+    }
+  }
+
+  return 'error';
+};
+
 const formatTimestamp = (value) => {
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
     return '';
@@ -408,13 +459,13 @@ export default function App() {
         return;
       }
 
-      const ok = typeof payload?.status === 'string' && payload.status.toLowerCase() === 'ok';
+      const status = normalizeHealthStatus(payload);
       setHealthState({
         data: payload,
         loading: false,
         error: null,
         fetchedAt: new Date(),
-        status: ok ? 'ok' : 'error'
+        status
       });
     } catch (err) {
       if (err.name === 'AbortError') {
