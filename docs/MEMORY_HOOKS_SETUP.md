@@ -232,14 +232,161 @@ node memory/index.cjs --stats  # Total memories
 
 ---
 
+## Automatic Cleanup and Importance Scoring (Phase 6.5-A)
+
+### What Is It?
+
+**Importance Scoring**: Every memory now gets an automatic importance score (0.0-1.0) based on:
+- **Memory kind**: `error` memories get +0.2, `insight` memories get +0.15
+- **Success rate**: High success rate (>0.9) gets +0.1
+- **Reuse count**: Frequently reused (>5 times) gets +0.1
+- **Base score**: Default 0.5, can be overridden
+
+**Smart Cleanup**: Removes old or low-importance memories while preserving:
+- Recent memories (within `maxAgeDays`, default: 90 days)
+- Important memories (importance >= `minImportance`, default: 0.3)
+
+### Usage
+
+**Store memory with metadata (automatic importance calculation):**
+```bash
+node memory/index.cjs --remember plan "Deploy fix for ops-gate" --meta '{"successRate":0.95}'
+# Importance: 0.5 (base) + 0.1 (high success rate) = 0.6
+```
+
+**Store error with high importance:**
+```bash
+node memory/index.cjs --remember error "Critical database connection timeout" --meta '{"reuseCount":10}'
+# Importance: 0.5 (base) + 0.2 (error) + 0.1 (high reuse) = 0.8
+```
+
+**Manual cleanup:**
+```bash
+# Cleanup memories older than 90 days OR with importance < 0.3
+node memory/index.cjs --cleanup --maxAge 90 --minImportance 0.3
+
+# More aggressive cleanup
+node memory/index.cjs --cleanup --maxAge 30 --minImportance 0.5
+```
+
+**Automated cleanup script:**
+```bash
+# Run manual cleanup
+bash scripts/cleanup_memory.sh
+
+# With custom parameters (via environment variables)
+MEMORY_CLEANUP_MAX_AGE=60 MEMORY_CLEANUP_MIN_IMPORTANCE=0.4 bash scripts/cleanup_memory.sh
+```
+
+**Schedule automated cleanup (macOS LaunchAgent):**
+```bash
+# Create weekly cleanup schedule
+# Add to: ~/Library/LaunchAgents/com.02luka.memory.cleanup.plist
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.memory.cleanup</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/scripts/cleanup_memory.sh</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>3</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/Library/02luka/logs/memory_cleanup.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/Library/02luka/logs/memory_cleanup_error.log</string>
+</dict>
+</plist>
+
+# Load the agent
+launchctl load ~/Library/LaunchAgents/com.02luka.memory.cleanup.plist
+```
+
+### Importance Scoring Logic
+
+```javascript
+function calculateImportance(kind, meta = {}, userImportance = 0.5) {
+  let score = userImportance;
+
+  // Kind-based importance
+  if (kind === 'error') score += 0.2;
+  if (kind === 'insight') score += 0.15;
+
+  // Metadata-based importance
+  if (meta.successRate && meta.successRate > 0.9) score += 0.1;
+  if (meta.reuseCount && meta.reuseCount > 5) score += 0.1;
+
+  return Math.min(1.0, score); // Cap at 1.0
+}
+```
+
+**Example Scores:**
+- `plan` memory with default meta: **0.5**
+- `error` memory: **0.7** (0.5 + 0.2)
+- `insight` memory with high success rate: **0.75** (0.5 + 0.15 + 0.1)
+- `error` memory with high reuse: **0.8** (0.5 + 0.2 + 0.1)
+- `insight` with both: **0.85** (0.5 + 0.15 + 0.1 + 0.1)
+
+### Cleanup Strategy
+
+**Preserved Memories:**
+- ✅ Recent (< 90 days old by default)
+- ✅ Important (importance >= 0.3 by default)
+- ✅ Both recent AND important
+
+**Removed Memories:**
+- ❌ Old (>90 days) AND low importance (<0.3)
+
+**Example:**
+```
+Memory A: 120 days old, importance 0.8 → KEPT (important)
+Memory B: 30 days old, importance 0.2 → KEPT (recent)
+Memory C: 120 days old, importance 0.2 → REMOVED (old + low importance)
+```
+
+### Monitoring
+
+**Check memory health:**
+```bash
+# View stats
+node memory/index.cjs --stats
+
+# Check oldest memories (via direct file inspection)
+cat g/memory/vector_index.json | jq '.memories | sort_by(.timestamp) | .[0:5] | .[] | {id, kind, importance, timestamp}'
+
+# Check lowest importance memories
+cat g/memory/vector_index.json | jq '.memories | sort_by(.importance) | .[0:5] | .[] | {id, kind, importance, text}'
+```
+
+**Cleanup logs:**
+```bash
+# If using automated cleanup
+tail -f ~/Library/02luka/logs/memory_cleanup.log
+```
+
+---
+
 ## Related Documentation
 
 - **Memory System**: `docs/CONTEXT_ENGINEERING.md` (Vector Memory section)
 - **Memory Sharing**: `docs/MEMORY_SHARING_GUIDE.md`
 - **Setup Script**: `scripts/setup_cursor_memory_bridge.sh`
 - **Cognitive Model**: `g/concepts/PHASE6_COGNITIVE_MODEL.md`
+- **Cleanup Script**: `scripts/cleanup_memory.sh`
 
 ---
 
 **Last Updated:** 2025-10-20
-**Status:** Active (Phase 6)
+**Status:** Active (Phase 6 + 6.5-A)
