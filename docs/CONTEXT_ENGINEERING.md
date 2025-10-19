@@ -82,3 +82,175 @@
 5. **Memory Bridge**: Uses repo-relative paths for portability
 6. **Phase 4 Assets**: Verification + Linear-lite context dumps stored under `f/ai_context/phase4/`
 
+## Vector Memory System
+
+### Overview
+The vector memory system provides semantic storage and retrieval of past experiences using TF-IDF vectors and cosine similarity. This enables agents to learn from previous tasks and recall relevant solutions.
+
+### Architecture
+```
+┌─────────────────────────────────────┐
+│      memory/index.cjs               │
+│  - TF-IDF Vectorization             │
+│  - Cosine Similarity Search         │
+│  - remember({kind, text, meta})     │
+│  - recall({query, kind, topK})      │
+└────────────┬────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────┐
+│   g/memory/vector_index.json        │
+│  - File-backed storage               │
+│  - JSON Lines format                 │
+│  - IDF scores for corpus             │
+│  - Memory vectors                    │
+└─────────────────────────────────────┘
+```
+
+### Integration Points
+
+#### 1. Planner Integration (agents/lukacode/plan.cjs)
+- **Before Planning**: Recalls top 3 relevant memories based on prompt
+- **Output**: Includes `relevantMemories` in plan metadata
+- **Purpose**: Shows agent past experiences with similar tasks
+
+#### 2. Task Completion Hooks
+- **After Success**: `run/ops_atomic.sh` remembers successful runs
+- **After Success**: `run/smoke_api_ui.sh` remembers clean test runs
+- **Kind**: `plan` (ops_atomic) or `solution` (smoke tests)
+- **Purpose**: Build knowledge base of successful patterns
+
+### API Reference
+
+#### remember({kind, text, meta})
+Store a memory with semantic embedding.
+
+**Parameters:**
+- `kind` (string): Memory type - `plan`, `solution`, `error`, custom
+- `text` (string): Memory content to store
+- `meta` (object, optional): Additional metadata
+
+**Returns:**
+```json
+{
+  "id": "plan_1760905932038_rhwv717",
+  "kind": "plan",
+  "timestamp": "2025-10-19T20:32:12.038Z"
+}
+```
+
+**CLI Usage:**
+```bash
+node memory/index.cjs --remember plan "Successfully deployed Discord integration"
+node memory/index.cjs --remember solution "Fixed macOS date command with \$(($(date +%s) * 1000))"
+```
+
+#### recall({query, kind, topK})
+Retrieve similar memories using cosine similarity.
+
+**Parameters:**
+- `query` (string): Search query
+- `kind` (string, optional): Filter by memory type
+- `topK` (number, default: 5): Number of results to return
+
+**Returns:**
+```json
+[
+  {
+    "id": "solution_1760905940644_wk9zzyt",
+    "kind": "solution",
+    "text": "Fixed macOS date command...",
+    "meta": {},
+    "timestamp": "2025-10-19T20:32:20.644Z",
+    "similarity": 0.6405
+  }
+]
+```
+
+**CLI Usage:**
+```bash
+node memory/index.cjs --recall "How to fix date command on macOS?"
+node memory/index.cjs --recall-kind solution "date command issues"
+node memory/index.cjs --stats
+```
+
+### Storage Format
+
+**File:** `g/memory/vector_index.json`
+
+**Structure:**
+```json
+{
+  "memories": [
+    {
+      "id": "plan_1760905932038_rhwv717",
+      "kind": "plan",
+      "text": "Implemented Discord integration...",
+      "meta": {},
+      "tokens": ["implemented", "discord", "integration", ...],
+      "vector": {"implemented": 0.0549, "discord": 0.1098, ...},
+      "timestamp": "2025-10-19T20:32:12.038Z"
+    }
+  ],
+  "idf": {
+    "implemented": 1.0986,
+    "discord": 1.0986,
+    ...
+  }
+}
+```
+
+### Memory Kinds
+
+**Recommended Types:**
+- `plan` - Successful task plans and execution summaries
+- `solution` - Solutions to specific problems
+- `error` - Error patterns and resolutions
+- `insight` - Learned patterns or optimization discoveries
+- `config` - Configuration patterns that worked
+
+### Best Practices
+
+1. **Be Specific**: Store detailed, actionable memories
+   - ✅ "Fixed macOS date command incompatibility by replacing date +%s%3N with \$(($(date +%s) * 1000))"
+   - ❌ "Fixed date command"
+
+2. **Use Appropriate Kinds**: Categorize memories for better filtering
+   - Plans → `plan`
+   - Bug fixes → `solution`
+   - New learnings → `insight`
+
+3. **Include Context**: Add relevant metadata when available
+   - Commit hashes, timestamps, file paths
+   - Performance metrics, test results
+
+4. **Automatic Recording**: Hooks already in place for:
+   - OPS atomic runs (successful only)
+   - Smoke tests (successful only)
+   - Planner now recalls memories before execution
+
+### Maintenance
+
+**Check Memory Stats:**
+```bash
+node memory/index.cjs --stats
+```
+
+**Clear All Memories** (use with caution):
+```bash
+node memory/index.cjs --clear
+```
+
+**Backup Index:**
+```bash
+cp g/memory/vector_index.json g/memory/vector_index.backup.json
+```
+
+### Future Enhancements
+- [ ] Automatic cleanup of old/irrelevant memories
+- [ ] Importance scoring for memory prioritization
+- [ ] Integration with CI/CD for failure pattern detection
+- [ ] Cross-agent memory sharing
+- [ ] Metadata-based filtering (commit hash, file paths)
+- [ ] Memory clustering for pattern discovery
+

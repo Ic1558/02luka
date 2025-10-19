@@ -133,6 +133,12 @@ if command -v node >/dev/null 2>&1; then
     --duration "$DURATION" >/dev/null 2>&1 || true
 fi
 
+# Record in vector memory (successful runs only)
+if [ "$FAIL" -eq 0 ] && command -v node >/dev/null 2>&1; then
+  memory_text="Smoke test completed successfully. Results: PASS=$PASS WARN=$WARN FAIL=$FAIL. Duration: ${DURATION}ms."
+  node "$REPO_ROOT/memory/index.cjs" --remember solution "$memory_text" >/dev/null 2>&1 || true
+fi
+
 # Exit with appropriate code
 if [ "$FAIL" -gt 0 ]; then
   exit 1
