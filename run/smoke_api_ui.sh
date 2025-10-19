@@ -88,7 +88,9 @@ test_endpoint "API Smoke" "GET" "http://127.0.0.1:4000/api/smoke" "" "200" "true
 
 echo ""
 echo "=== Discord Integration (Optional) ==="
-if [ -n "${DISCORD_WEBHOOK_DEFAULT:-}" ]; then
+if [ "${SMOKE_SKIP_DISCORD_NOTIFY:-0}" = "1" ]; then
+  echo "Discord Notify... SKIP (disabled by SMOKE_SKIP_DISCORD_NOTIFY=1)"
+elif [ -n "${DISCORD_WEBHOOK_DEFAULT:-}" ] || [ -n "${DISCORD_WEBHOOK_MAP:-}" ]; then
   echo -n "Discord Notify... "
   payload='{"content":"02LUKA smoke check","level":"info","channel":"default"}'
   response=$(curl -s -m "5" -w "%{http_code}" -o /tmp/smoke_response.json -X "POST" \
@@ -97,10 +99,12 @@ if [ -n "${DISCORD_WEBHOOK_DEFAULT:-}" ]; then
     "http://127.0.0.1:4000/api/discord/notify" 2>/dev/null || echo "000")
   http_code="${response: -3}"
   if [ "$http_code" = "200" ]; then
-    echo "✅ PASS ($http_code)"
+    echo "PASS ✅ ($http_code)"
     PASS=$((PASS + 1))
+  elif [ "$http_code" = "503" ]; then
+    echo "SKIP (webhook bridge not ready)"
   else
-    echo "❌ FAIL ($http_code, expected 200)"
+    echo "FAIL ❌ ($http_code, expected 200)"
     FAIL=$((FAIL + 1))
   fi
 else
