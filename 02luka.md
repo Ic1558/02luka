@@ -429,4 +429,70 @@ make boss-refresh
 
 ---
 
-Last Session: 251017_0429
+## 12) Latest Deployment (2025-10-20)
+
+**Phase 5: Discord Integration + Telemetry System** ✅
+
+### Infrastructure
+- **Boss API**: http://127.0.0.1:4000 (Local) + https://boss-api.ittipong-c.workers.dev (Cloudflare Worker)
+- **Discord Channels**: 3 channels configured (alerts, general, project)
+- **Telemetry System**: Auto-logging to `g/telemetry/*.log` (JSON Lines format)
+
+### Phase 5 Features
+- ✅ **Discord Notifications**: Live webhooks for OPS atomic reports
+- ✅ **Telemetry Module**: `boss-api/telemetry.cjs` - record/read/summary/cleanup
+- ✅ **Report Generator**: `scripts/generate_telemetry_report.sh` - 24h summaries
+- ✅ **CI/CD Integration**: ops-gate configured with OPS_ATOMIC_URL
+- ✅ **Cloudflare Deployment**: Worker with GitHub API integration
+
+### Key Components
+- `boss-api/telemetry.cjs` - Telemetry module (290 lines)
+- `scripts/generate_telemetry_report.sh` - Report generator
+- `docs/TELEMETRY.md` - Complete telemetry documentation
+- `docs/DISCORD_OPS_INTEGRATION.md` - Discord integration guide
+- `g/telemetry/*.log` - Daily telemetry data (JSON Lines)
+- `g/reports/telemetry_last24h.md` - Generated reports
+
+### GitHub Secrets Configuration
+- `OPS_ATOMIC_URL` → Cloudflare Worker endpoint
+- `DISCORD_WEBHOOK_DEFAULT` → Discord #general channel
+- `DISCORD_WEBHOOK_MAP` → JSON map for 3 channels
+- `OPS_GATE_OVERRIDE` → 0 (production mode, no bypass)
+
+### CI/CD Pipeline
+- **validate** job: MCP config + structure validation ✅
+- **ops-gate** job: Checks `/api/reports/summary` for failures ✅
+- **docs-links** job: Verifies documentation cross-references ✅
+
+### Key Commits
+- `bf74cd0` - feat(telemetry): self-metrics for agent runs
+- `94c0e27` - feat(boss-api): Deploy to Cloudflare Workers with GitHub API
+- `b50f981` - feat(discord): Phase 5 Discord integration complete
+- `b85259c` - fix(ci): Configure OPS_ATOMIC_URL and variables
+
+### Documentation & Reports
+- Post-deployment report: `g/reports/OPS_POSTDEPLOY_251020_phase5.md`
+- Discord integration: `docs/DISCORD_OPS_INTEGRATION.md`
+- Telemetry system: `docs/TELEMETRY.md`
+- GitHub secrets: `docs/GITHUB_SECRETS_SETUP.md`
+- Phase 5 checklist: `docs/PHASE5_CHECKLIST.md`
+
+### Telemetry Metrics (24h Snapshot)
+- Total Runs: 2
+- Total Pass: 7 | Total Warn: 4 | Total Fail: 2
+- Avg Duration: 617ms
+- Tasks: smoke_api_ui, test_run
+
+### Verification
+- Discord notify example: `{"ok":true}` ✅
+- OPS Atomic integration: `DISCORD_RESULT=PASS` ✅
+- Telemetry report generation: `g/reports/telemetry_last24h.md` ✅
+- CI/CD pipeline: Run 18635504910 - **success** ✅
+
+**Tag:** `v251020_phase5-live`
+
+**Status:** ✅ All Systems Operational • Zero Errors • Ready for Phase 6
+
+---
+
+Last Session: 251020_2016
