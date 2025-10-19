@@ -316,6 +316,12 @@ if command -v node >/dev/null 2>&1; then
     --duration "$DURATION" >/dev/null 2>&1 || true
 fi
 
+# Record in vector memory (successful runs only)
+if [[ "$overall_final_status" == "pass" ]] && command -v node >/dev/null 2>&1; then
+  memory_text="OPS Atomic run completed successfully. Phases: ${PHASE_NAMES[*]}. Results: PASS=$PASS WARN=$WARN FAIL=$FAIL. Duration: ${DURATION}ms."
+  node "$REPO_ROOT/memory/index.cjs" --remember plan "$memory_text" >/dev/null 2>&1 || true
+fi
+
 # Exit with appropriate status
 if [[ "$overall_final_status" == "fail" ]]; then
   exit 1
