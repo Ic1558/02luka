@@ -1,0 +1,17 @@
+name = "boss-api"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "boss-api-prod"
+routes = [
+  { pattern = "boss-api.theedges.work/*", custom_domain = true }
+]
+
+# Environment variables will be set via Cloudflare dashboard or wrangler secret
+# Required secrets:
+# - DISCORD_WEBHOOK_DEFAULT
+# - DISCORD_WEBHOOK_MAP
+# - AI_GATEWAY_URL (optional)
+# - AI_GATEWAY_KEY (optional)
