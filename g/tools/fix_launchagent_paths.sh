@@ -111,8 +111,9 @@ suggest_path_fix() {
 
     # Try each path mapping
     for pattern in "${!PATH_FIXES[@]}"; do
-        if [[ "$old_path" =~ $pattern ]]; then
-            suggested="${old_path/$pattern/${PATH_FIXES[$pattern]}}"
+        if [[ "$old_path" == "$pattern"* ]]; then
+            local replacement="${PATH_FIXES[$pattern]}"
+            suggested="${old_path/#$pattern/$replacement}"
 
             # Check if suggested path exists
             if check_path_exists "$suggested"; then
