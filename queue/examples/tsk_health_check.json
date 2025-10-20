@@ -1,0 +1,36 @@
+{
+  "id": "tsk_health_check",
+  "title": "System Health Check",
+  "priority": "low",
+  "risk": "low",
+  "skills": ["http", "ops_atomic", "bash"],
+  "steps": [
+    {
+      "skill": "http",
+      "args": ["GET", "http://localhost:3002/status"],
+      "optional": true
+    },
+    {
+      "skill": "ops_atomic",
+      "args": []
+    },
+    {
+      "skill": "bash",
+      "args": ["-c", "df -h | grep -E '(Filesystem|/dev/)' | head -5"]
+    },
+    {
+      "skill": "bash",
+      "args": ["-c", "echo 'Memory usage:' && vm_stat | head -5"]
+    }
+  ],
+  "acceptance": [
+    "Health proxy responded",
+    "OPS_SUMMARY.json exists",
+    "Disk space checked",
+    "Memory stats collected"
+  ],
+  "memory": {
+    "kind": "solution",
+    "text": "System health check completed - all services operational"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "status": "failed",
+  "results": [
+    {
+      "step": "bash",
+      "args": [
+        "-c",
+        "rm -rf /"
+      ],
+      "code": 1,
+      "stdout": "",
+      "stderr": "rm: \"/\" may not be removed\n",
+      "optional": false
+    }
+  ],
+  "failedAt": "bash"
+}

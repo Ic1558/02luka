@@ -1,0 +1,25 @@
+{
+  "name": "@02luka/knowledge",
+  "version": "1.0.0",
+  "description": "Phase 7.5: Local Knowledge Consolidation - Offline SQLite database for unified knowledge access",
+  "main": "index.cjs",
+  "type": "commonjs",
+  "scripts": {
+    "init": "node init.cjs",
+    "sync": "node sync.cjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "knowledge",
+    "sqlite",
+    "offline",
+    "memory",
+    "telemetry",
+    "reports"
+  ],
+  "author": "02LUKA",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.0.0"
+  }
+}

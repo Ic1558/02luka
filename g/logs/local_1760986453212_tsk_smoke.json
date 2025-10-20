@@ -1,0 +1,53 @@
+{
+  "status": "ok",
+  "results": [
+    {
+      "step": "bash",
+      "args": [
+        "-c",
+        "echo 'SMOKE_OK: Phase 7.2 delegation working'"
+      ],
+      "code": 0,
+      "stdout": "SMOKE_OK: Phase 7.2 delegation working\n",
+      "stderr": "",
+      "optional": false
+    },
+    {
+      "step": "bash",
+      "args": [
+        "-c",
+        "echo 'Telemetry integration: OK'"
+      ],
+      "code": 0,
+      "stdout": "Telemetry integration: OK\n",
+      "stderr": "",
+      "optional": false
+    },
+    {
+      "step": "bash",
+      "args": [
+        "-c",
+        "date"
+      ],
+      "code": 0,
+      "stdout": "Tue Oct 21 01:54:13 +07 2025\n",
+      "stderr": "",
+      "optional": false
+    }
+  ],
+  "acceptance": [
+    {
+      "rule": "Printed SMOKE_OK",
+      "ok": true
+    },
+    {
+      "rule": "Telemetry written",
+      "ok": true
+    },
+    {
+      "rule": "Memory recorded",
+      "ok": true
+    }
+  ],
+  "duration_ms": 24
+}
