@@ -27,7 +27,7 @@ run_check () {
 
 [ -x "$ROOT/.codex/preflight.sh" ] && run_check preflight bash "$ROOT/.codex/preflight.sh"
 [ -x "$ROOT/g/tools/mapping_drift_guard.sh" ] && run_check mapping_drift_guard bash "$ROOT/g/tools/mapping_drift_guard.sh" --validate
-[ -x "$ROOT/run/smoke_api_ui.sh" ] && run_check smoke_api_ui bash "$ROOT/run/smoke_api_ui.sh" </dev/null || true
+[ -x "$ROOT/scripts/smoke_wrapper.sh" ] && run_check smoke_api_ui bash "$ROOT/scripts/smoke_wrapper.sh" </dev/null || true
 
 echo "[CLC] summary: OK=$ok WARN=$warn FAIL=$fail (scope=$SCOPE strict=$STRICT)"
 if [ "$fail" -gt 0 ]; then
