@@ -42,7 +42,7 @@ jobs:
         # The script below handles missing/empty values gracefully
         env:
           OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
-          OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
+          OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN || '' }}
           OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
         run: |
           set -euo pipefail
