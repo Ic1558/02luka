@@ -8,6 +8,10 @@ boss-api/node_modules/
 # Build outputs and environment files
 boss-ui/dist/
 .env
+
+# Local secrets and credentials
+.secrets/
+*.secrets
 .codex/templates/master_prompt.md.backup-
 
 # Memory system autosaves and logs
