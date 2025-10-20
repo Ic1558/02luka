@@ -7,7 +7,7 @@
 # Usage:
 #   bash scripts/pr_push_reportbot.sh [BRANCH_NAME]
 #
-# Default branch: feat/alerts-reportbot
+# Default branch: feat/alerts-reportbot (created locally)
 
 set -euo pipefail
 
