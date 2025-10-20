@@ -85,10 +85,12 @@ jobs:
           fi
 
           echo "Ops gate clear: no failures reported."
-      - name: Phase 5/6/7 smoke (local)
+      - name: Smoke (CI mode via Worker)
+        env:
+          OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
+          OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
         run: |
-          set -euo pipefail
-          bash run/smoke_api_ui.sh
+          bash scripts/smoke.sh
           node agents/reflection/self_review.cjs --days=7 >/dev/null
   docs-links:
     name: docs cross-link check
