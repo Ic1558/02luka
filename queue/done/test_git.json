@@ -1,0 +1,9 @@
+{
+  "id": "test_git",
+  "title": "Test Git Skill",
+  "risk": "low",
+  "skills": ["git"],
+  "steps": [
+    {"skill": "git", "args": ["status", "--short"]}
+  ]
+}

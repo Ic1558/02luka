@@ -1,0 +1,11 @@
+{
+  "id": "test_optional",
+  "title": "Test Optional Steps",
+  "risk": "low",
+  "skills": ["bash"],
+  "steps": [
+    {"skill": "bash", "args": ["-c", "echo 'Step 1 OK'"]},
+    {"skill": "bash", "args": ["-c", "exit 1"], "optional": true},
+    {"skill": "bash", "args": ["-c", "echo 'Step 3 OK (after optional fail)'"]}
+  ]
+}

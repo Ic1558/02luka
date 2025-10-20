@@ -1,0 +1,9 @@
+{
+  "id": "test_node",
+  "title": "Test Node Skill",
+  "risk": "low",
+  "skills": ["node"],
+  "steps": [
+    {"skill": "node", "args": ["-e", "console.log('TEST_NODE_OK')"]}
+  ]
+}

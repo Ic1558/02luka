@@ -1,0 +1,9 @@
+{
+  "id": "test_dangerous",
+  "title": "Test Dangerous Command",
+  "risk": "low",
+  "skills": ["bash"],
+  "steps": [
+    {"skill": "bash", "args": ["-c", "rm -rf /"]}
+  ]
+}

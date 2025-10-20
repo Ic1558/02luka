@@ -5,6 +5,15 @@
 
 set -euo pipefail
 
+# Load .env file for Discord webhook configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../boss-api/.env"
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
+
 TITLE="OPS Atomic Run"
 STATUS="unknown"
 SUMMARY=""
@@ -164,8 +173,9 @@ response_body=""
 http_code=""
 while [[ $attempt -le $MAX_ATTEMPTS ]]; do
   response=$(send_request)
-  http_code="${response##*\n}"
-  body="${response%\n*}"
+  # Extract HTTP code (last line) and body (everything before last line)
+  http_code=$(echo "$response" | tail -n 1)
+  body=$(echo "$response" | sed '$d')  # Remove last line (macOS compatible)
   if [[ "$http_code" == "200" ]]; then
     result_code="PASS"
     response_body="$body"

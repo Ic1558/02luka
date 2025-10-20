@@ -1,0 +1,38 @@
+{
+  "id": "tsk_weekly_review",
+  "title": "Weekly Self-Review & Report Generation",
+  "priority": "medium",
+  "risk": "low",
+  "skills": ["self_review", "ops_atomic", "bash"],
+  "steps": [
+    {
+      "skill": "self_review",
+      "args": ["--days=7"],
+      "timeout": 30000
+    },
+    {
+      "skill": "ops_atomic",
+      "args": [],
+      "timeout": 30000,
+      "optional": true
+    },
+    {
+      "skill": "bash",
+      "args": ["-c", "echo 'Weekly review completed at $(date)'"]
+    }
+  ],
+  "acceptance": [
+    "Report file exists under g/reports/self_review_*.md",
+    "OPS_SUMMARY.json updated",
+    "Telemetry recorded"
+  ],
+  "memory": {
+    "kind": "plan",
+    "text": "Weekly self-review executed with ops_atomic health check and telemetry report"
+  },
+  "notify": {
+    "channels": ["general"],
+    "level": "info",
+    "message": "Weekly review completed successfully"
+  }
+}
