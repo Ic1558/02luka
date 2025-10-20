@@ -14,6 +14,11 @@ jobs:
     if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       - name: Get PRs (when main pushed)
         if: ${{ github.event_name == 'push' }}
         uses: actions/github-script@v7
@@ -42,14 +47,19 @@ jobs:
             }
             for (const ref of refs.split(',')) {
               core.info(`::group::Updating ${ref}`);
-              await exec.exec('bash', ['-lc', `
-                git init -q
-                git remote add origin https://github.com/${process.env.GITHUB_REPOSITORY}.git
-                git fetch origin ${ref} main --depth=1
-                git checkout -q -B ${ref} origin/${ref}
-                git merge --no-edit origin/main || git rebase origin/main
-                git push --force-with-lease origin ${ref}
-              `]);
+              try {
+                await exec.exec('bash', ['-lc', `
+                  git config --global user.name "github-actions[bot]"
+                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+                  git fetch origin ${ref} main --depth=1
+                  git checkout -q -B ${ref} origin/${ref}
+                  git merge --no-edit origin/main || git rebase origin/main
+                  git push --force-with-lease origin ${ref}
+                `]);
+                core.info(`✅ Successfully updated ${ref}`);
+              } catch (error) {
+                core.warning(`❌ Failed to update ${ref}: ${error.message}`);
+              }
               core.info('::endgroup::');
             }
         env:
@@ -65,6 +75,8 @@ jobs:
       - name: Rebase/merge main into PR
         if: ${{ github.event_name == 'pull_request' }}
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin main --depth=1
           (git rebase origin/main || git merge --no-edit origin/main)
           git push --force-with-lease
