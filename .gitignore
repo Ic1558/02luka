@@ -38,3 +38,7 @@ test-results/
 .cursor/mcp.example.json
 .cursor/mcp.json
 .env.local
+
+# Phase 7.5: Knowledge Base (SQLite and exports)
+knowledge/02luka.db
+knowledge/exports/*.json
