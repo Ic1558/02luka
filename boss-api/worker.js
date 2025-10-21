@@ -1,13 +1,21 @@
 /**
- * Cloudflare Worker - boss-api
+ * Cloudflare Worker - boss-api v2.0
  *
- * Provides:
+ * V1 Endpoints:
  * - /healthz - Health check
  * - /api/discord/notify - Discord notifications
  * - /api/reports/summary - OPS summary (from GitHub)
  * - /api/reports/latest - Latest report (from GitHub)
  * - /api/reports/list - List reports (from GitHub)
  * - /api/capabilities - API capabilities
+ *
+ * V2 Endpoints:
+ * - /api/v2/runs - List run reports
+ * - /api/v2/runs/:runId - Get specific run report
+ * - /api/v2/memory - List memory entries
+ * - /api/v2/memory/:memoryId - Get specific memory entry
+ * - /api/v2/telemetry - Get telemetry data
+ * - /api/v2/approvals - Approval workflows
  *
  * Required environment variables:
  * - DISCORD_WEBHOOK_DEFAULT
@@ -20,6 +28,8 @@
 const GITHUB_REPO = 'Ic1558/02luka';
 const GITHUB_API_BASE = 'https://api.github.com';
 const REPORTS_PATH = 'g/reports';
+const MEMORY_PATH = 'memory';
+const TELEMETRY_PATH = 'f/ai_context';
 
 // Discord webhook relay
 async function postDiscordWebhook(webhookUrl, payload) {
@@ -27,7 +37,7 @@ async function postDiscordWebhook(webhookUrl, payload) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': '02luka-boss-api/1.0'
+      'User-Agent': '02luka-boss-api/2.0'
     },
     body: JSON.stringify(payload)
   });
@@ -55,7 +65,7 @@ async function fetchGitHub(path, env) {
 
   const headers = {
     'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': '02luka-boss-api/1.0'
+    'User-Agent': '02luka-boss-api/2.0'
   };
 
   if (token) {
@@ -190,6 +200,7 @@ async function handleRequest(request, env) {
   if (path === '/healthz') {
     return jsonResponse({
       status: 'ok',
+      version: '2.0',
       timestamp: new Date().toISOString(),
       worker: 'boss-api-cloudflare'
     });
@@ -207,14 +218,26 @@ async function handleRequest(request, env) {
       features: {
         discord: true,
         reports: true,
-        github: true
+        github: true,
+        memory: true,
+        telemetry: true
       },
       endpoints: {
-        healthz: true,
-        discord_notify: true,
-        reports_summary: true,
-        reports_latest: true,
-        reports_list: true
+        v1: {
+          healthz: true,
+          discord_notify: true,
+          reports_summary: true,
+          reports_latest: true,
+          reports_list: true
+        },
+        v2: {
+          runs: true,
+          runs_detail: true,
+          memory: true,
+          memory_detail: true,
+          telemetry: true,
+          approvals: true
+        }
       }
     });
   }
@@ -326,6 +349,191 @@ async function handleRequest(request, env) {
       console.error('Failed to fetch latest report:', error);
       return errorResponse('Failed to read latest report', 500);
     }
+  }
+
+  // ============================================================
+  // V2 API ROUTES
+  // ============================================================
+
+  // V2: List runs
+  if (path === '/api/v2/runs') {
+    try {
+      const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const agent = url.searchParams.get('agent') || null;
+
+      const data = await fetchGitHub(REPORTS_PATH, env);
+
+      if (!Array.isArray(data)) {
+        return errorResponse('Invalid response from GitHub', 500);
+      }
+
+      let files = data
+        .filter(item => item.type === 'file' && /^OPS_ATOMIC_\d+_\d+\.md$/.test(item.name))
+        .sort((a, b) => b.name.localeCompare(a.name));
+
+      // Filter by agent if specified
+      if (agent) {
+        // For now, we can't filter by agent without reading each file
+        // This would require metadata or naming convention
+      }
+
+      files = files.slice(0, limit);
+
+      const runs = files.map(f => ({
+        id: f.name.replace('.md', ''),
+        filename: f.name,
+        url: f.html_url,
+        size: f.size,
+        sha: f.sha
+      }));
+
+      return jsonResponse({ runs, count: runs.length });
+    } catch (error) {
+      console.error('Failed to list runs:', error);
+      return jsonResponse({ runs: [], count: 0 });
+    }
+  }
+
+  // V2: Get specific run
+  if (path.startsWith('/api/v2/runs/')) {
+    try {
+      const runId = path.replace('/api/v2/runs/', '');
+      const filename = runId.endsWith('.md') ? runId : `${runId}.md`;
+
+      const fileData = await fetchGitHub(`${REPORTS_PATH}/${filename}`, env);
+      const content = decodeGitHubContent(fileData.content);
+
+      return jsonResponse({
+        id: runId,
+        filename: fileData.name,
+        content: content,
+        url: fileData.html_url,
+        size: fileData.size,
+        sha: fileData.sha
+      });
+    } catch (error) {
+      console.error('Failed to fetch run:', error);
+      return errorResponse('Run not found', 404);
+    }
+  }
+
+  // V2: List memory
+  if (path === '/api/v2/memory') {
+    try {
+      const limit = parseInt(url.searchParams.get('limit') || '20', 10);
+      const agent = url.searchParams.get('agent') || 'gc';
+
+      const memoryDir = `${MEMORY_PATH}/${agent}`;
+      const data = await fetchGitHub(memoryDir, env);
+
+      if (!Array.isArray(data)) {
+        return jsonResponse({
+          memories: [],
+          count: 0,
+          note: `No memory directory found for agent: ${agent}`
+        });
+      }
+
+      const files = data
+        .filter(item => item.type === 'file' && item.name.endsWith('.md'))
+        .sort((a, b) => b.name.localeCompare(a.name))
+        .slice(0, limit);
+
+      const memories = files.map(f => ({
+        id: f.name.replace('.md', ''),
+        filename: f.name,
+        agent: agent,
+        url: f.html_url,
+        size: f.size,
+        sha: f.sha
+      }));
+
+      return jsonResponse({ memories, count: memories.length, agent });
+    } catch (error) {
+      console.error('Failed to list memory:', error);
+      return jsonResponse({
+        memories: [],
+        count: 0,
+        note: 'Memory directory not accessible or empty'
+      });
+    }
+  }
+
+  // V2: Get specific memory
+  if (path.startsWith('/api/v2/memory/')) {
+    try {
+      const memoryId = path.replace('/api/v2/memory/', '');
+      const agent = url.searchParams.get('agent') || 'gc';
+      const filename = memoryId.endsWith('.md') ? memoryId : `${memoryId}.md`;
+
+      const fileData = await fetchGitHub(`${MEMORY_PATH}/${agent}/${filename}`, env);
+      const content = decodeGitHubContent(fileData.content);
+
+      return jsonResponse({
+        id: memoryId,
+        filename: fileData.name,
+        agent: agent,
+        content: content,
+        url: fileData.html_url,
+        size: fileData.size,
+        sha: fileData.sha
+      });
+    } catch (error) {
+      console.error('Failed to fetch memory:', error);
+      return errorResponse('Memory entry not found', 404);
+    }
+  }
+
+  // V2: Telemetry
+  if (path === '/api/v2/telemetry') {
+    try {
+      const source = url.searchParams.get('source') || 'system_health';
+
+      let telemetryFile = '';
+      switch (source) {
+        case 'system_health':
+          telemetryFile = `${TELEMETRY_PATH}/SYSTEM_HEALTH.json`;
+          break;
+        case 'current_work':
+          telemetryFile = `${TELEMETRY_PATH}/CURRENT_WORK.json`;
+          break;
+        case 'daily':
+          telemetryFile = `${TELEMETRY_PATH}/DAILY_CONTEXT.json`;
+          break;
+        case 'minimal':
+          telemetryFile = `${TELEMETRY_PATH}/MINIMAL_CONTEXT.json`;
+          break;
+        default:
+          telemetryFile = `${TELEMETRY_PATH}/SYSTEM_HEALTH.json`;
+      }
+
+      const data = await fetchGitHub(telemetryFile, env);
+      const content = decodeGitHubContent(data.content);
+      const telemetry = JSON.parse(content);
+
+      return jsonResponse({
+        source,
+        data: telemetry,
+        updated_at: data.sha
+      });
+    } catch (error) {
+      console.error('Failed to fetch telemetry:', error);
+      return jsonResponse({
+        source: url.searchParams.get('source') || 'system_health',
+        data: null,
+        note: 'Telemetry data not available',
+        hint: 'Check if telemetry files exist in f/ai_context/'
+      });
+    }
+  }
+
+  // V2: Approvals (stub for now)
+  if (path === '/api/v2/approvals') {
+    return jsonResponse({
+      approvals: [],
+      count: 0,
+      note: 'Approval workflows not yet implemented'
+    });
   }
 
   // 404 for unknown routes

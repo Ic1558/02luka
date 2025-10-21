@@ -8,6 +8,7 @@ const path = require('path');
 const BashSkill = require('../../packages/skills/bash.js');
 const NodeSkill = require('../../packages/skills/node.js');
 const GitSkill = require('../../packages/skills/git.js');
+const { writeArtifacts } = require('../../packages/io/atomicExport.cjs');
 
 class CLSOrchestrator {
   constructor() {
@@ -49,11 +50,11 @@ class CLSOrchestrator {
       try {
         await this.executeTask(data);
         this.moveTask(file, inboxPath, donePath);
-        this.logTelemetry(data.id, 'PASS', data);
+        await this.logTelemetry(data.id, 'PASS', data);
         console.log(`✅ Task ${data.id} completed successfully`);
       } catch (error) {
         this.moveTask(file, inboxPath, failedPath);
-        this.logTelemetry(data.id, 'FAIL', data, error.message);
+        await this.logTelemetry(data.id, 'FAIL', data, error.message);
         console.log(`❌ Task ${data.id} failed: ${error.message}`);
       }
     }
@@ -108,9 +109,9 @@ class CLSOrchestrator {
   }
 
   /**
-   * Log telemetry data
+   * Log telemetry data (async with atomic writes)
    */
-  logTelemetry(taskId, status, task, error = null) {
+  async logTelemetry(taskId, status, task, error = null) {
     const timestamp = new Date().toISOString();
     const logEntry = {
       timestamp,
@@ -122,8 +123,12 @@ class CLSOrchestrator {
       duration: Date.now() // Simple timestamp for now
     };
 
-    const logFile = path.join(this.telemetryPath, `cls_${Date.now()}.log`);
-    fs.writeFileSync(logFile, JSON.stringify(logEntry, null, 2));
+    const logFileName = `cls_${Date.now()}.log`;
+    await writeArtifacts({
+      targetDir: this.telemetryPath,
+      artifacts: [{ name: logFileName, data: JSON.stringify(logEntry, null, 2) }],
+      log: { log: () => {} } // Silent mode for telemetry
+    });
   }
 
   /**

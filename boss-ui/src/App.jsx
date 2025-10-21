@@ -1,1081 +1,788 @@
-import { useEffect, useMemo, useState, useCallback, memo, useRef } from 'react';
-import { marked } from 'marked';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ErrorBoundary from './ErrorBoundary';
+import {
+  API_BASE,
+  decideApproval,
+  fetchMemoryRecall,
+  fetchRun,
+  fetchRuns,
+  fetchTelemetrySummary,
+  requestApproval,
+  subscribeEvents,
+  updateRun
+} from './api.js';
 
-const resolveApiBase = () => {
-  const envBase = import.meta?.env?.VITE_API_BASE;
-  if (envBase && typeof envBase === 'string' && envBase.trim()) {
-    return envBase.trim().replace(/\/+$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
-    if (window.API_BASE && typeof window.API_BASE === 'string' && window.API_BASE.trim()) {
-      return window.API_BASE.trim().replace(/\/+$/, '');
-    }
-
-    const { protocol = 'http:', hostname = '127.0.0.1' } = window.location || {};
-    return `${protocol}//${hostname}:4000`;
-  }
-
-  return 'http://127.0.0.1:4000';
+const STATUS_META = {
+  success: { label: 'Success', tone: 'success' },
+  failed: { label: 'Failed', tone: 'danger' },
+  running: { label: 'Running', tone: 'info' },
+  queued: { label: 'Queued', tone: 'pending' },
+  cancelled: { label: 'Cancelled', tone: 'neutral' }
 };
 
-const API_BASE = resolveApiBase();
-
-const folders = [
-  { key: 'inbox', label: 'Inbox' },
-  { key: 'sent', label: 'Sent' },
-  { key: 'deliverables', label: 'Deliverables' },
-  { key: 'dropbox', label: 'Dropbox' },
-  { key: 'drafts', label: 'Drafts' },
-  { key: 'documents', label: 'Documents' }
-];
-
-const defaultMarkdown = '# Boss Workspace\n\nSelect a file to preview its contents or review system status on the left.';
-
-// Cache for API responses with size limits
-const apiCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 50; // Maximum cached responses
-const MAX_CACHE_MEMORY = 10 * 1024 * 1024; // 10MB max cache memory
-
-const textEncoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
-let cacheMemoryUsage = 0;
-
-const estimateEntrySize = (text) => {
-  if (!text) return 0;
-  const stringified = typeof text === 'string' ? text : JSON.stringify(text);
-  if (textEncoder) {
-    return textEncoder.encode(stringified).length;
-  }
-  return stringified.length;
-};
-
-const normalizeFiles = (items) => {
-  if (!Array.isArray(items)) {
-    return [];
-  }
-
-  const seen = new Set();
-  const normalized = [];
-
-  for (const item of items) {
-    if (!item) continue;
-    const entry = typeof item === 'string' ? { name: item } : item;
-    if (!entry?.name || seen.has(entry.name)) continue;
-    seen.add(entry.name);
-    normalized.push(entry);
-  }
-
-  return normalized;
-};
-
-const parseLastUpdated = (payload) => {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-
-  const candidates = [
-    payload.lastUpdated,
-    payload.updatedAt,
-    payload.timestamp,
-    payload.lastRefreshed,
-    payload.meta?.lastUpdated,
-    payload.meta?.updatedAt
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const parsed = new Date(candidate);
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed;
-    }
-  }
-
-  return null;
-};
-
-const diffFileLists = (previous = [], next = []) => {
-  const previousNames = new Set(previous.map((item) => item.name));
-  const nextNames = new Set(next.map((item) => item.name));
-
-  const added = [];
-  const removed = [];
-
-  for (const name of nextNames) {
-    if (!previousNames.has(name)) {
-      added.push(name);
-    }
-  }
-
-  for (const name of previousNames) {
-    if (!nextNames.has(name)) {
-      removed.push(name);
-    }
-  }
-
-  added.sort((a, b) => a.localeCompare(b));
-  removed.sort((a, b) => a.localeCompare(b));
-
-  return { added, removed };
-};
-
-const normalizeConnectorEntries = (connectors) => {
-  if (!connectors || typeof connectors !== 'object') {
-    return [];
-  }
-
-  const entries = [];
-
-  const describe = (id, label, data) => {
-    if (!data || typeof data !== 'object') {
-      return;
-    }
-
-    const ready = typeof data.ready === 'boolean' ? data.ready : false;
-    const error = typeof data.error === 'string' ? data.error : '';
-    let detail = '';
-    if (error) {
-      detail = error;
-    } else if (typeof data.documents === 'number') {
-      detail = `${data.documents} document${data.documents === 1 ? '' : 's'}`;
-    } else if (Array.isArray(data.datasets)) {
-      const count = data.datasets.length;
-      detail = `${count} dataset${count === 1 ? '' : 's'}`;
-    } else if (typeof data.script === 'string' && data.script) {
-      detail = data.script.split('/').pop();
-    } else if (ready) {
-      detail = 'Ready';
-    } else {
-      detail = 'Unavailable';
-    }
-
-    entries.push({ id, label, ready, detail });
-  };
-
-  for (const [provider, value] of Object.entries(connectors)) {
-    if (!value || typeof value !== 'object') {
-      continue;
-    }
-
-    if (typeof value.ready === 'boolean') {
-      describe(provider, provider, value);
-    }
-
-    for (const [capability, data] of Object.entries(value)) {
-      if (capability === 'ready' || capability === 'error') {
-        continue;
-      }
-      describe(`${provider}:${capability}`, `${provider} ${capability}`, data);
-    }
-  }
-
-  return entries.sort((a, b) => a.label.localeCompare(b.label));
-};
-
-const formatFeatureLabel = (key) => {
-  if (!key) {
-    return '';
-  }
-  return key
-    .toString()
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase());
-};
-
-const createStatusState = () => ({
-  data: null,
-  loading: true,
-  error: null,
-  fetchedAt: null,
-  status: 'unknown'
-});
-
-const normalizeReportStatus = (value) => {
-  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
-  if (['ok', 'ready', 'pass', 'healthy'].includes(normalized)) {
-    return 'ok';
-  }
-  if (['warn', 'warning', 'unknown', 'pending', 'partial'].includes(normalized)) {
-    return 'warn';
-  }
-  if (normalized) {
-    return 'error';
-  }
-  return 'unknown';
-};
-
-const formatTimestamp = (value) => {
-  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
-    return '';
-  }
-  return value.toLocaleTimeString();
-};
-
-const truncateText = (value, max = 140) => {
-  if (typeof value !== 'string') {
-    return '';
-  }
-  if (value.length <= max) {
-    return value;
-  }
-  return `${value.slice(0, max - 1)}…`;
-};
-
-const removeCacheEntry = (key) => {
-  const entry = apiCache.get(key);
-  if (!entry) return false;
-  cacheMemoryUsage = Math.max(0, cacheMemoryUsage - (entry.size || 0));
-  apiCache.delete(key);
-  return true;
-};
-
-const ensureCacheHasSpace = (incomingSize = 0) => {
-  if (incomingSize > MAX_CACHE_MEMORY) {
-    return false;
-  }
-
-  if (cacheMemoryUsage + incomingSize <= MAX_CACHE_MEMORY && apiCache.size < MAX_CACHE_SIZE) {
-    return true;
-  }
-
-  const entries = Array.from(apiCache.entries());
-  entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-  for (const [key] of entries) {
-    if (cacheMemoryUsage + incomingSize <= MAX_CACHE_MEMORY && apiCache.size < MAX_CACHE_SIZE) {
-      break;
-    }
-    removeCacheEntry(key);
-  }
-
-  return cacheMemoryUsage + incomingSize <= MAX_CACHE_MEMORY && apiCache.size < MAX_CACHE_SIZE;
-};
-
-// Configure marked for better performance
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-  sanitize: false,
-  smartLists: true,
-  smartypants: false
-});
-
-export default function App() {
-  const [selectedFolder, setSelectedFolder] = useState(folders[0].key);
-  const [files, setFiles] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [content, setContent] = useState(defaultMarkdown);
-  const [error, setError] = useState(null);
-  const [loadingStates, setLoadingStates] = useState({ files: false, file: false });
-  const [isRescanning, setIsRescanning] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [listInsights, setListInsights] = useState(null);
-  const [healthState, setHealthState] = useState(createStatusState);
-  const [capabilitiesState, setCapabilitiesState] = useState(createStatusState);
-  const [reportsState, setReportsState] = useState(createStatusState);
-  const selectedFileRef = useRef(null);
-  const filesRef = useRef(files);
-  const activeControllersRef = useRef({ files: null, file: null, health: null, capabilities: null, reports: null });
-
-  useEffect(() => {
-    selectedFileRef.current = selectedFile;
-  }, [selectedFile]);
-
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
-
-  const setLoading = useCallback((key, value) => {
-    setLoadingStates((previous) => {
-      if (previous[key] === value) {
-        return previous;
-      }
-      return { ...previous, [key]: value };
-    });
-  }, []);
-
-  const isLoadingFiles = loadingStates.files;
-  const isLoading = loadingStates.files || loadingStates.file;
-
-  // Cache cleanup function
-  const cleanupCache = useCallback(() => {
-    const now = Date.now();
-    let cleaned = 0;
-
-    for (const [key, value] of Array.from(apiCache.entries())) {
-      if (now - value.timestamp > CACHE_DURATION) {
-        if (removeCacheEntry(key)) {
-          cleaned++;
-        }
-      }
-    }
-
-    if (cacheMemoryUsage > MAX_CACHE_MEMORY || apiCache.size > MAX_CACHE_SIZE) {
-      const entries = Array.from(apiCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-      for (const [key] of entries) {
-        if (cacheMemoryUsage <= MAX_CACHE_MEMORY && apiCache.size <= MAX_CACHE_SIZE) {
-          break;
-        }
-        if (removeCacheEntry(key)) {
-          cleaned++;
-        }
-      }
-    }
-
-    if (cleaned > 0) {
-      console.log(`Frontend cache cleanup: removed ${cleaned} entries`);
-    }
-  }, []);
-
-  // Cached API call function
-  const fetchWithCache = useCallback(async (url, cacheKey, { signal, bypassCache = false } = {}) => {
-    const now = Date.now();
-    const cached = apiCache.get(cacheKey);
-
-    if (cached && !bypassCache && (now - cached.timestamp) < CACHE_DURATION) {
-      cached.timestamp = now;
-      return cached.data;
-    }
-
-    if (cached) {
-      removeCacheEntry(cacheKey);
-    }
-
-    const response = await fetch(url, { signal, cache: 'no-store' });
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      let message = 'Unable to fetch data';
-      if (errorText) {
-        try {
-          const payload = JSON.parse(errorText);
-          message = payload.message || message;
-        } catch {
-          message = errorText;
-        }
-      }
-      throw new Error(message);
-    }
-
-    const rawText = await response.text();
-    let data;
-    if (!rawText) {
-      data = {};
-    } else {
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        data = { content: rawText };
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new DOMException('Aborted', 'AbortError');
-    }
-
-    cleanupCache();
-
-    const entrySize = estimateEntrySize(rawText);
-    if (ensureCacheHasSpace(entrySize)) {
-      apiCache.set(cacheKey, { data, timestamp: now, size: entrySize });
-      cacheMemoryUsage += entrySize;
-    } else if (entrySize > 0) {
-      console.warn(`Skipping cache for ${cacheKey} due to memory constraints (size: ${entrySize} bytes)`);
-    }
-
-    return data;
-  }, [cleanupCache]);
-
-  const loadHealth = useCallback(async ({ bypassCache = false } = {}) => {
-    const controller = new AbortController();
-    if (activeControllersRef.current.health) {
-      activeControllersRef.current.health.abort();
-    }
-    activeControllersRef.current.health = controller;
-
-    setHealthState((previous) => ({ ...previous, loading: true, error: null }));
-
-    try {
-      const payload = await fetchWithCache(
-        `${API_BASE}/healthz`,
-        'healthz',
-        { signal: controller.signal, bypassCache }
-      );
-
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const ok = typeof payload?.status === 'string' && payload.status.toLowerCase() === 'ok';
-      setHealthState({
-        data: payload,
-        loading: false,
-        error: null,
-        fetchedAt: new Date(),
-        status: ok ? 'ok' : 'error'
-      });
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      setHealthState({
-        data: null,
-        loading: false,
-        error: err.message,
-        fetchedAt: new Date(),
-        status: 'error'
-      });
-    } finally {
-      if (activeControllersRef.current.health === controller) {
-        activeControllersRef.current.health = null;
-      }
-    }
-  }, [fetchWithCache]);
-
-  const loadCapabilities = useCallback(async ({ bypassCache = false } = {}) => {
-    const controller = new AbortController();
-    if (activeControllersRef.current.capabilities) {
-      activeControllersRef.current.capabilities.abort();
-    }
-    activeControllersRef.current.capabilities = controller;
-
-    setCapabilitiesState((previous) => ({ ...previous, loading: true, error: null }));
-
-    try {
-      const payload = await fetchWithCache(
-        `${API_BASE}/api/capabilities`,
-        'capabilities',
-        { signal: controller.signal, bypassCache }
-      );
-
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const hasMailboxes = Array.isArray(payload?.mailboxes?.list) && payload.mailboxes.list.length > 0;
-      setCapabilitiesState({
-        data: payload,
-        loading: false,
-        error: null,
-        fetchedAt: new Date(),
-        status: hasMailboxes ? 'ok' : 'warn'
-      });
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      setCapabilitiesState({
-        data: null,
-        loading: false,
-        error: err.message,
-        fetchedAt: new Date(),
-        status: 'error'
-      });
-    } finally {
-      if (activeControllersRef.current.capabilities === controller) {
-        activeControllersRef.current.capabilities = null;
-      }
-    }
-  }, [fetchWithCache]);
-
-  const loadReportsSummary = useCallback(async ({ bypassCache = false } = {}) => {
-    const controller = new AbortController();
-    if (activeControllersRef.current.reports) {
-      activeControllersRef.current.reports.abort();
-    }
-    activeControllersRef.current.reports = controller;
-
-    setReportsState((previous) => ({ ...previous, loading: true, error: null }));
-
-    try {
-      const payload = await fetchWithCache(
-        `${API_BASE}/api/reports/summary`,
-        'reports-summary',
-        { signal: controller.signal, bypassCache }
-      );
-
-      if (controller.signal.aborted) {
-        return;
-      }
-
-      const status = normalizeReportStatus(payload?.status);
-      setReportsState({
-        data: payload,
-        loading: false,
-        error: null,
-        fetchedAt: new Date(),
-        status
-      });
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      setReportsState({
-        data: null,
-        loading: false,
-        error: err.message,
-        fetchedAt: new Date(),
-        status: 'error'
-      });
-    } finally {
-      if (activeControllersRef.current.reports === controller) {
-        activeControllersRef.current.reports = null;
-      }
-    }
-  }, [fetchWithCache]);
-
-  // Periodic cache cleanup
-  useEffect(() => {
-    const cleanupInterval = setInterval(cleanupCache, 60000); // Every minute
-    return () => clearInterval(cleanupInterval);
-  }, [cleanupCache]);
-
-  const openFile = useCallback(async (file, { bypassCache = false } = {}) => {
-    const controller = new AbortController();
-    if (activeControllersRef.current.file) {
-      activeControllersRef.current.file.abort();
-    }
-    activeControllersRef.current.file = controller;
-
-    setLoading('file', true);
-    setError(null);
-
-    try {
-      const cacheKey = `file-${selectedFolder}-${file.name}`;
-      const payload = await fetchWithCache(
-        `${API_BASE}/api/file/${selectedFolder}/${encodeURIComponent(file.name)}`,
-        cacheKey,
-        { signal: controller.signal, bypassCache }
-      );
-      setSelectedFile(payload.name || file.name);
-      setContent(payload.content || '');
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      setError(err.message);
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading('file', false);
-      }
-      if (activeControllersRef.current.file === controller) {
-        activeControllersRef.current.file = null;
-      }
-    }
-  }, [selectedFolder, fetchWithCache, setLoading]);
-
-  const loadFiles = useCallback(async ({ bypassCache = false, resetSelection = true } = {}) => {
-    const controller = new AbortController();
-    if (activeControllersRef.current.files) {
-      activeControllersRef.current.files.abort();
-    }
-    activeControllersRef.current.files = controller;
-
-    setLoading('files', true);
-    setError(null);
-    if (resetSelection) {
-      setSelectedFile(null);
-      setContent(defaultMarkdown);
-      setLastUpdated(null);
-      setListInsights(null);
-    }
-    if (bypassCache) {
-      setIsRescanning(true);
-    }
-
-    try {
-      const payload = await fetchWithCache(
-        `${API_BASE}/api/list/${selectedFolder}`,
-        `files-${selectedFolder}`,
-        { signal: controller.signal, bypassCache }
-      );
-      const nextFiles = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload?.items)
-          ? payload.items
-          : Array.isArray(payload?.files)
-            ? payload.files
-            : [];
-      const normalizedFiles = normalizeFiles(nextFiles);
-      const previousFiles = filesRef.current || [];
-
-      if (!resetSelection) {
-        const { added, removed } = diffFileLists(previousFiles, normalizedFiles);
-        if (added.length > 0 || removed.length > 0 || bypassCache) {
-          setListInsights({
-            added,
-            removed,
-            generatedAt: new Date()
-          });
-        } else {
-          setListInsights(null);
-        }
-      }
-
-      setFiles(normalizedFiles);
-      filesRef.current = normalizedFiles;
-      if (!resetSelection) {
-        const currentName = selectedFileRef.current;
-        if (currentName) {
-          const match = normalizedFiles.find((item) => item.name === currentName);
-          if (!match) {
-            setSelectedFile(null);
-            setContent(defaultMarkdown);
-          } else if (bypassCache) {
-            await openFile(match, { bypassCache: true });
-          }
-        }
-      }
-      const updatedAt = parseLastUpdated(payload) || new Date();
-      setLastUpdated(updatedAt);
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        return;
-      }
-      setError(err.message);
-      setFiles([]);
-      filesRef.current = [];
-      setListInsights(null);
-      if (!resetSelection) {
-        setSelectedFile(null);
-        setContent(defaultMarkdown);
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading('files', false);
-      }
-      if (bypassCache) {
-        setIsRescanning(false);
-      }
-      if (activeControllersRef.current.files === controller) {
-        activeControllersRef.current.files = null;
-      }
-    }
-  }, [fetchWithCache, openFile, selectedFolder, setLoading, selectedFileRef]);
-
-  useEffect(() => {
-    loadFiles({ resetSelection: true });
-    return () => {
-      if (activeControllersRef.current.files) {
-        activeControllersRef.current.files.abort();
-        activeControllersRef.current.files = null;
-      }
-      if (activeControllersRef.current.file) {
-        activeControllersRef.current.file.abort();
-        activeControllersRef.current.file = null;
-      }
-    };
-  }, [loadFiles]);
-
-  useEffect(() => {
-    loadHealth();
-    loadCapabilities();
-    loadReportsSummary();
-
-    return () => {
-      ['health', 'capabilities', 'reports'].forEach((key) => {
-        if (activeControllersRef.current[key]) {
-          activeControllersRef.current[key].abort();
-          activeControllersRef.current[key] = null;
-        }
-      });
-    };
-  }, [loadHealth, loadCapabilities, loadReportsSummary]);
-
-  const handleRescan = useCallback(() => {
-    loadFiles({ bypassCache: true, resetSelection: false });
-  }, [loadFiles]);
-
-  const handleStatusRefresh = useCallback(() => {
-    loadHealth({ bypassCache: true });
-    loadCapabilities({ bypassCache: true });
-    loadReportsSummary({ bypassCache: true });
-  }, [loadHealth, loadCapabilities, loadReportsSummary]);
-
-  const isRefreshingStatus = healthState.loading || capabilitiesState.loading || reportsState.loading;
-
-  // Memoized markdown rendering with better performance
-  const renderedMarkdown = useMemo(() => {
-    if (!content || content === defaultMarkdown) {
-      return marked.parse(content || defaultMarkdown);
-    }
-    
-    // Use a more efficient parsing approach for large content
-    try {
-      return marked.parse(content);
-    } catch (error) {
-      console.warn('Markdown parsing error:', error);
-      return `<pre>Error parsing markdown: ${error.message}</pre>`;
-    }
-  }, [content]);
-
+function StatusBadge({ status }) {
+  const meta = STATUS_META[status] || { label: status ?? 'Unknown', tone: 'neutral' };
+  return <span className={`pill pill-${meta.tone}`}>{meta.label}</span>;
+}
+
+function RiskBadge({ value }) {
+  const score = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+  let tone = 'low';
+  if (score >= 0.67) tone = 'high';
+  else if (score >= 0.34) tone = 'medium';
+  const label = score >= 0.67 ? 'High' : score >= 0.34 ? 'Medium' : 'Low';
   return (
-    <ErrorBoundary>
-      <div className="app-shell">
-        <Sidebar
-          folders={folders}
-          selectedFolder={selectedFolder}
-          onFolderSelect={setSelectedFolder}
-        />
-        <main className="main-pane">
-          <SystemStatus
-            health={healthState}
-            capabilities={capabilitiesState}
-            reports={reportsState}
-            onRefresh={handleStatusRefresh}
-            isRefreshing={isRefreshingStatus}
-          />
-          <FileList
-            files={files}
-            selectedFile={selectedFile}
-            selectedFolder={selectedFolder}
-            folders={folders}
-            isLoading={isLoadingFiles}
-            error={error}
-            onFileSelect={openFile}
-            onRescan={handleRescan}
-            isRescanning={isRescanning}
-            lastUpdated={lastUpdated}
-            listInsights={listInsights}
-          />
-          <PreviewPane
-            selectedFile={selectedFile}
-            content={renderedMarkdown}
-            isLoading={isLoading}
-          />
-        </main>
-      </div>
-    </ErrorBoundary>
+    <span className={`pill pill-risk-${tone}`}>
+      {label}
+      <span className="pill-detail">{Math.round(score * 100)}%</span>
+    </span>
   );
 }
 
-const StatusChip = ({ label, state, detail, loading }) => {
-  const normalizedState = loading ? 'pending' : state || 'unknown';
-  const className = `status-chip ${normalizedState}`;
-  return (
-    <span className={className}>
-      <span className="dot" aria-hidden="true"></span>
-      <span className="status-chip-label">{label}</span>
-      <span className="status-chip-detail">{loading ? 'Checking…' : detail || '—'}</span>
-    </span>
-  );
-};
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
+}
 
-const SystemStatus = memo(({ health, capabilities, reports, onRefresh, isRefreshing }) => {
-  const connectors = useMemo(
-    () => normalizeConnectorEntries(capabilities?.data?.connectors),
-    [capabilities]
-  );
+function formatDuration(ms) {
+  const duration = Number(ms) || 0;
+  if (!duration) return '—';
+  if (duration < 1000) return `${duration} ms`;
+  const seconds = duration / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)} s`;
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  return `${minutes}m ${remaining}s`;
+}
 
-  const features = useMemo(() => {
-    const raw = capabilities?.data?.features;
-    if (!raw || typeof raw !== 'object') {
-      return [];
-    }
-    return Object.entries(raw)
-      .map(([key, value]) => ({ key, label: formatFeatureLabel(key), enabled: Boolean(value) }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [capabilities]);
-
-  const engines = useMemo(() => {
-    const raw = capabilities?.data?.engine;
-    if (!raw || typeof raw !== 'object') {
-      return [];
-    }
-    return Object.entries(raw)
-      .map(([key, value]) => ({ key, label: formatFeatureLabel(key), enabled: Boolean(value) }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [capabilities]);
-
-  const mailboxFlow = useMemo(() => {
-    const flow = capabilities?.data?.mailboxes?.flow;
-    return Array.isArray(flow) ? flow : [];
-  }, [capabilities]);
-
-  const readyConnectors = connectors.filter((item) => item.ready).length;
-  const mailboxCount = Array.isArray(capabilities?.data?.mailboxes?.list)
-    ? capabilities.data.mailboxes.list.length
-    : 0;
-
-  const healthDetail = health.loading
-    ? 'Checking…'
-    : health.error
-      ? truncateText(health.error)
-      : `Online${health.fetchedAt ? ` · ${formatTimestamp(health.fetchedAt)}` : ''}`;
-
-  let capabilitiesDetail;
-  if (capabilities.loading) {
-    capabilitiesDetail = 'Loading…';
-  } else if (capabilities.error) {
-    capabilitiesDetail = truncateText(capabilities.error);
-  } else {
-    const parts = [];
-    parts.push(`${mailboxCount} mailbox${mailboxCount === 1 ? '' : 'es'}`);
-    if (connectors.length > 0) {
-      parts.push(`${readyConnectors}/${connectors.length} connector${connectors.length === 1 ? '' : 's'} ready`);
-    }
-    if (capabilities.fetchedAt) {
-      parts.push(formatTimestamp(capabilities.fetchedAt));
-    }
-    capabilitiesDetail = parts.join(' · ');
+function upsertRun(list, run) {
+  if (!run?.id) return list;
+  const idx = list.findIndex((item) => item.id === run.id);
+  if (idx === -1) {
+    const next = [run, ...list];
+    next.sort((a, b) => {
+      const left = new Date(a.createdAt || 0).getTime();
+      const right = new Date(b.createdAt || 0).getTime();
+      return right - left;
+    });
+    return next.slice(0, 120);
   }
+  const next = list.slice();
+  next[idx] = { ...next[idx], ...run };
+  return next;
+}
 
-  let reportsDetail;
-  if (reports.loading) {
-    reportsDetail = 'Refreshing…';
-  } else if (reports.error) {
-    reportsDetail = truncateText(reports.error);
-  } else if (reports.data) {
-    const parts = [];
-    parts.push(formatFeatureLabel(reports.status));
-    if (reports.data.note) {
-      parts.push(truncateText(reports.data.note, 100));
-    } else if (reports.data.hint) {
-      parts.push(truncateText(reports.data.hint, 100));
-    }
-    if (reports.fetchedAt) {
-      parts.push(formatTimestamp(reports.fetchedAt));
-    }
-    reportsDetail = parts.filter(Boolean).join(' · ');
-  } else {
-    reportsDetail = 'No summary';
-  }
+function RunsSidebar({
+  runs,
+  filteredRuns,
+  runQuery,
+  setRunQuery,
+  loading,
+  selectedId,
+  onSelect,
+  telemetry
+}) {
+  const successRate = useMemo(() => {
+    if (!telemetry?.runs?.total) return null;
+    return Math.round((telemetry.runs.success / telemetry.runs.total) * 100);
+  }, [telemetry]);
 
   return (
-    <section className="system-status">
-      <header>
-        <div className="status-heading">
-          <h2>System Status</h2>
-          {!capabilities.loading && capabilities.fetchedAt && (
-            <span className="status-note">Synced {formatTimestamp(capabilities.fetchedAt)}</span>
-          )}
+    <aside className="console-sidebar">
+      <header className="sidebar-header">
+        <div>
+          <p className="sidebar-overline">Unified Console</p>
+          <h1>Task Orchestration</h1>
         </div>
-        <button
-          type="button"
-          className="status-refresh"
-          onClick={() => onRefresh?.()}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <p className="sidebar-api">{API_BASE}</p>
       </header>
-      <div className="status-chip-row">
-        <StatusChip label="API" state={health.status} detail={healthDetail} loading={health.loading} />
-        <StatusChip
-          label="Capabilities"
-          state={capabilities.status}
-          detail={capabilitiesDetail}
-          loading={capabilities.loading}
+
+      <div className="sidebar-section">
+        <label htmlFor="run-search">Search runs</label>
+        <input
+          id="run-search"
+          type="search"
+          placeholder="Title, ID, or agent"
+          value={runQuery}
+          onChange={(event) => setRunQuery(event.target.value)}
         />
-        <StatusChip label="Reports" state={reports.status} detail={reportsDetail} loading={reports.loading} />
       </div>
 
-      {mailboxFlow.length > 0 && (
-        <div className="status-section">
-          <h3>Mailboxes</h3>
-          <div className="status-note flow">{mailboxFlow.join(' → ')}</div>
+      <div className="sidebar-section sidebar-runs">
+        <div className="sidebar-section-heading">
+          <h2>Recent runs</h2>
+          {loading ? <span className="status-text">Loading…</span> : <span className="status-text">{runs.length} total</span>}
         </div>
-      )}
-
-      {connectors.length > 0 && (
-        <div className="status-section">
-          <div className="status-section-header">
-            <h3>Connectors</h3>
-            <span className="status-note">{readyConnectors}/{connectors.length} ready</span>
-          </div>
-          <ul className="connector-list">
-            {connectors.map((connector) => (
-              <li key={connector.id} className="connector-item">
-                <span className={`status-dot ${connector.ready ? 'ok' : 'error'}`} aria-hidden="true"></span>
-                <span className="connector-name">{connector.label}</span>
-                <span className="connector-detail">{connector.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {features.length > 0 && (
-        <div className="status-section">
-          <h3>Features</h3>
-          <div className="feature-tags">
-            {features.map((feature) => (
-              <span
-                key={feature.key}
-                className={`feature-chip ${feature.enabled ? 'enabled' : 'disabled'}`}
+        <div className="run-list" role="list">
+          {filteredRuns.length === 0 && !loading ? (
+            <p className="empty-state">No runs match the current filters.</p>
+          ) : (
+            filteredRuns.map((run) => (
+              <button
+                key={run.id}
+                type="button"
+                className={`run-item${selectedId === run.id ? ' active' : ''}`}
+                onClick={() => onSelect(run.id)}
               >
-                {feature.label}
-              </span>
-            ))}
-          </div>
+                <div className="run-item-title">{run.title || run.id}</div>
+                <div className="run-item-meta">
+                  <StatusBadge status={run.status} />
+                  <RiskBadge value={run.riskScore} />
+                </div>
+                <div className="run-item-foot">
+                  <span>Agent · {run.agent || '—'}</span>
+                  <span>{formatDate(run.createdAt)}</span>
+                </div>
+              </button>
+            ))
+          )}
         </div>
-      )}
+      </div>
 
-      {engines.length > 0 && (
-        <div className="status-section">
-          <h3>Engines</h3>
-          <div className="feature-tags">
-            {engines.map((engine) => (
-              <span
-                key={engine.key}
-                className={`feature-chip ${engine.enabled ? 'enabled' : 'disabled'}`}
-              >
-                {engine.label}
-              </span>
-            ))}
-          </div>
+      <div className="sidebar-section sidebar-telemetry">
+        <div className="sidebar-section-heading">
+          <h2>Rolling 14d health</h2>
+          {telemetry ? (
+            <span className="status-text success">{successRate ?? '—'}% success</span>
+          ) : (
+            <span className="status-text">Loading…</span>
+          )}
         </div>
-      )}
+        {telemetry ? (
+          <dl className="telemetry-grid">
+            <div>
+              <dt>Total runs</dt>
+              <dd>{telemetry.runs.total}</dd>
+            </div>
+            <div>
+              <dt>Failed</dt>
+              <dd>{telemetry.runs.failed}</dd>
+            </div>
+            <div>
+              <dt>Cancelled</dt>
+              <dd>{telemetry.runs.cancelled}</dd>
+            </div>
+            <div>
+              <dt>p95 latency</dt>
+              <dd>{telemetry.service?.[0]?.latencyP95 ? `${telemetry.service[0].latencyP95.toFixed(1)}s` : '—'}</dd>
+            </div>
+            <div>
+              <dt>Tokens saved</dt>
+              <dd>{telemetry.service?.[0]?.tokensSaved ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>Tokens spent</dt>
+              <dd>{telemetry.service?.[0]?.tokensSpent ?? '—'}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="empty-state">Telemetry will appear once data is available.</p>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function MemoryPanel({ run, query, setQuery, results, loading, onRefresh }) {
+  const hits = run?.memoryHits || [];
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h3>Memory Reference</h3>
+          <p>{hits.length} memories used in this run</p>
+        </div>
+        <button type="button" onClick={onRefresh} className="ghost-btn">Refresh</button>
+      </header>
+
+      <div className="memory-used" role="list">
+        {hits.length === 0 ? (
+          <p className="empty-state">Run has not called memory yet.</p>
+        ) : (
+          hits.map((hit) => (
+            <article key={hit.id} className="memory-hit" role="listitem">
+              <h4>{hit.title}</h4>
+              <p className="memory-meta">
+                <span>Score {hit.score?.toFixed(2)}</span>
+                <span>{hit.kind}</span>
+              </p>
+              <p>{hit.snippet}</p>
+            </article>
+          ))
+        )}
+      </div>
+
+      <form className="memory-search" onSubmit={(event) => event.preventDefault()}>
+        <label htmlFor="memory-search-input">Search knowledge base</label>
+        <input
+          id="memory-search-input"
+          type="search"
+          placeholder="Vector memory, reports, telemetry…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </form>
+
+      <div className="memory-results" role="list">
+        {query ? (
+          loading ? (
+            <p className="status-text">Searching…</p>
+          ) : results.length === 0 ? (
+            <p className="empty-state">No matches for “{query}”.</p>
+          ) : (
+            results.map((item) => (
+              <article key={item.id} className="memory-hit" role="listitem">
+                <h4>{item.title}</h4>
+                <p className="memory-meta">
+                  <span>{item.kind}</span>
+                  <span>Importance {item.importance}</span>
+                </p>
+                <p>{item.snippet}</p>
+              </article>
+            ))
+          )
+        ) : (
+          <p className="empty-state">Start typing to search across knowledge.</p>
+        )}
+      </div>
     </section>
   );
-});
+}
 
-// Memoized Sidebar component
-const Sidebar = memo(({ folders, selectedFolder, onFolderSelect }) => (
-  <aside className="sidebar">
-    <div className="sidebar-title">Boss Workspace</div>
-    <nav>
-      {folders.map((folder) => (
-        <button
-          key={folder.key}
-          className={`nav-item${selectedFolder === folder.key ? ' active' : ''}`}
-          onClick={() => onFolderSelect(folder.key)}
-          type="button"
-        >
-          {folder.label}
+function ApprovalsPanel({ run, onRequest, onDecision }) {
+  const approvals = run?.approvals || [];
+  const pending = approvals.filter((approval) => approval.status === 'pending');
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h3>Approvals</h3>
+          <p>{pending.length} pending</p>
+        </div>
+        <button type="button" className="primary-btn" onClick={onRequest}>
+          Request approval
         </button>
-      ))}
-    </nav>
-  </aside>
-));
-
-// Memoized FileList component
-const FileList = memo(({
-  files,
-  selectedFile,
-  selectedFolder,
-  folders,
-  isLoading,
-  error,
-  onFileSelect,
-  onRescan,
-  isRescanning,
-  lastUpdated,
-  listInsights
-}) => (
-  <section className="file-list">
-    <header>
-      <div className="file-list-heading">
-        <h2>{folders.find((f) => f.key === selectedFolder)?.label}</h2>
-        {lastUpdated && !isRescanning && (
-          <span className="file-list-meta">Updated {lastUpdated.toLocaleTimeString()}</span>
+      </header>
+      <div className="approvals-list" role="list">
+        {approvals.length === 0 ? (
+          <p className="empty-state">No approvals logged for this run yet.</p>
+        ) : (
+          approvals.map((approval) => (
+            <article key={approval.id} className={`approval-card status-${approval.status}`} role="listitem">
+              <header>
+                <strong>{approval.status === 'pending' ? 'Pending review' : approval.status}</strong>
+                <span>Requested by {approval.requestedBy || 'system'}</span>
+              </header>
+              <p>{approval.reason || 'No rationale provided.'}</p>
+              <footer>
+                <span>{formatDate(approval.requestedAt)}</span>
+                {approval.status === 'pending' ? (
+                  <div className="approval-actions">
+                    <button type="button" className="ghost-btn" onClick={() => onDecision(approval, 'denied')}>
+                      Deny
+                    </button>
+                    <button type="button" className="primary-btn" onClick={() => onDecision(approval, 'approved')}>
+                      Approve
+                    </button>
+                  </div>
+                ) : (
+                  <span>
+                    {approval.decidedBy ? `By ${approval.decidedBy}` : 'Auto'} · {formatDate(approval.decidedAt)}
+                  </span>
+                )}
+              </footer>
+            </article>
+          ))
         )}
-        {isRescanning && <span className="file-list-meta">Rescanning…</span>}
       </div>
-      <button
-        type="button"
-        className="rescan-button"
-        onClick={onRescan}
-        disabled={isLoading || isRescanning}
-      >
-        {isRescanning ? 'Rescanning…' : 'Rescan'}
-      </button>
-    </header>
-    {isLoading && <div className="status">Loading…</div>}
-    {error && <div className="status error">{error}</div>}
-    {!error && listInsights && (
-      <div className="status insights">
-        <div className="insights-summary">
-          {listInsights.added.length === 0 && listInsights.removed.length === 0 ? (
-            <span>No file changes detected during the rescan.</span>
+    </section>
+  );
+}
+
+function MetricsPanel({ run }) {
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h3>Run Metrics</h3>
+          <p>Execution cost &amp; timing</p>
+        </div>
+      </header>
+      <dl className="metrics-grid">
+        <div>
+          <dt>Status</dt>
+          <dd>
+            <StatusBadge status={run?.status} />
+          </dd>
+        </div>
+        <div>
+          <dt>Risk score</dt>
+          <dd>
+            <RiskBadge value={run?.riskScore} />
+          </dd>
+        </div>
+        <div>
+          <dt>Duration</dt>
+          <dd>{formatDuration(run?.durationMs)}</dd>
+        </div>
+        <div>
+          <dt>Tokens used</dt>
+          <dd>{run?.tokensUsed ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>Tokens saved</dt>
+          <dd>{run?.tokensSaved ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>Started</dt>
+          <dd>{formatDate(run?.startedAt)}</dd>
+        </div>
+        <div>
+          <dt>Completed</dt>
+          <dd>{formatDate(run?.completedAt)}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function TimelinePanel({ run, onRetry }) {
+  const steps = run?.steps || [];
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h3>Run timeline</h3>
+          <p>{steps.length} steps captured</p>
+        </div>
+        <button type="button" className="ghost-btn" onClick={onRetry}>
+          Retry run
+        </button>
+      </header>
+      <div className="timeline" role="list">
+        {steps.length === 0 ? (
+          <p className="empty-state">Run has not recorded any steps yet.</p>
+        ) : (
+          steps.map((step) => (
+            <article key={step.id} className={`timeline-step status-${step.status}`} role="listitem">
+              <header>
+                <strong>{step.title}</strong>
+                <StatusBadge status={step.status} />
+              </header>
+              <p className="timeline-meta">
+                <span>{formatDate(step.startedAt)}</span>
+                <span>{formatDuration(step.startedAt && step.completedAt ? new Date(step.completedAt) - new Date(step.startedAt) : 0)}</span>
+              </p>
+              {step.log ? <pre>{step.log}</pre> : null}
+              {Array.isArray(step.artifacts) && step.artifacts.length > 0 ? (
+                <ul className="timeline-artifacts">
+                  {step.artifacts.map((artifact) => (
+                    <li key={artifact.name || artifact.url}>{artifact.label || artifact.name}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function LogsPanel({ run, containerRef }) {
+  const logs = run?.logs || [];
+  return (
+    <section className="panel logs-panel">
+      <header className="panel-header">
+        <div>
+          <h3>Live logs</h3>
+          <p>{logs.length} entries</p>
+        </div>
+      </header>
+      <div ref={containerRef} className="logs-body">
+        {logs.length === 0 ? (
+          <p className="empty-state">No logs captured yet.</p>
+        ) : (
+          logs.map((entry) => (
+            <article key={entry.id || `${entry.timestamp}-${entry.message}`} className={`log-entry level-${entry.level}`}>
+              <header>
+                <span>{formatDate(entry.timestamp)}</span>
+                <span className="log-level">{entry.level?.toUpperCase()}</span>
+              </header>
+              <pre>{entry.message}</pre>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ApprovalsModal({ modal, onClose, onSubmit, loading }) {
+  const [reason, setReason] = useState('');
+  const [riskScore, setRiskScore] = useState(modal?.riskScore ?? 0.5);
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    setReason(modal?.reason ?? '');
+    setRiskScore(modal?.riskScore ?? 0.5);
+    setNote('');
+  }, [modal]);
+
+  if (!modal) return null;
+  const isDecision = modal.type === 'decision';
+  const actionLabel = isDecision ? (modal.action === 'approved' ? 'Approve run' : 'Deny run') : 'Submit request';
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (isDecision) {
+      onSubmit({
+        type: 'decision',
+        approval: modal.approval,
+        action: modal.action,
+        note
+      });
+    } else {
+      onSubmit({ type: 'request', reason, riskScore });
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal">
+        <header>
+          <h2>{isDecision ? actionLabel : 'Request approval'}</h2>
+          <button type="button" className="ghost-btn" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <form onSubmit={handleSubmit} className="modal-body">
+          {isDecision ? (
+            <>
+              <p>Confirm you want to {modal.action} the selected approval request.</p>
+              <label htmlFor="decision-note">Decision note</label>
+              <textarea
+                id="decision-note"
+                placeholder="Optional context for the audit log"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+              />
+            </>
           ) : (
             <>
-              {listInsights.added.length > 0 && (
-                <span>{listInsights.added.length} added</span>
-              )}
-              {listInsights.removed.length > 0 && (
-                <span>{listInsights.removed.length} removed</span>
-              )}
+              <label htmlFor="approval-reason">Why is this approval required?</label>
+              <textarea
+                id="approval-reason"
+                placeholder="Summarize the risky action and mitigation."
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                required
+              />
+              <label htmlFor="approval-risk">Risk score</label>
+              <input
+                id="approval-risk"
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                value={riskScore}
+                onChange={(event) => setRiskScore(Number(event.target.value))}
+              />
             </>
           )}
-        </div>
-        <span className="insights-timestamp">
-          Verified {(listInsights.generatedAt || new Date()).toLocaleTimeString()}
-        </span>
-        {(listInsights.added.length > 0 || listInsights.removed.length > 0) && (
-          <details>
-            <summary>View details</summary>
-            <div className="insights-details">
-              {listInsights.added.length > 0 && (
-                <div>
-                  <strong>Added</strong>
-                  <ul>
-                    {listInsights.added.map((name) => (
-                      <li key={`added-${name}`}>{name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {listInsights.removed.length > 0 && (
-                <div>
-                  <strong>Removed</strong>
-                  <ul>
-                    {listInsights.removed.map((name) => (
-                      <li key={`removed-${name}`}>{name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          <footer className="modal-footer">
+            <button type="button" className="ghost-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="primary-btn" disabled={loading}>
+              {loading ? 'Processing…' : actionLabel}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AppShell() {
+  const [runs, setRuns] = useState([]);
+  const [runQuery, setRunQuery] = useState('');
+  const [runsLoading, setRunsLoading] = useState(true);
+  const [selectedRunId, setSelectedRunId] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
+  const [runLoading, setRunLoading] = useState(false);
+  const [telemetry, setTelemetry] = useState(null);
+  const [memoryQuery, setMemoryQuery] = useState('');
+  const [memoryLoading, setMemoryLoading] = useState(false);
+  const [memoryResults, setMemoryResults] = useState([]);
+  const [modal, setModal] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const logContainerRef = useRef(null);
+
+  const filteredRuns = useMemo(() => {
+    if (!runQuery) {
+      return runs;
+    }
+    const search = runQuery.toLowerCase();
+    return runs.filter((run) => {
+      return (
+        run.title?.toLowerCase().includes(search) ||
+        run.id?.toLowerCase().includes(search) ||
+        run.agent?.toLowerCase().includes(search)
+      );
+    });
+  }, [runs, runQuery]);
+
+  const loadRuns = useCallback(async () => {
+    try {
+      setRunsLoading(true);
+      const data = await fetchRuns({ limit: 60 });
+      setRuns(data);
+      setSelectedRunId((current) => (current ? current : data[0]?.id ?? null));
+    } catch (err) {
+      console.error('Failed to load runs', err);
+      setError('Failed to load runs.');
+    } finally {
+      setRunsLoading(false);
+    }
+  }, []);
+
+  const loadRunDetail = useCallback(async (runId) => {
+    if (!runId) {
+      setSelectedRun(null);
+      return;
+    }
+    try {
+      setRunLoading(true);
+      const run = await fetchRun(runId, { logs: 300 });
+      setSelectedRun(run);
+    } catch (err) {
+      console.error('Failed to load run detail', err);
+      setError('Failed to load run detail.');
+    } finally {
+      setRunLoading(false);
+    }
+  }, []);
+
+  const loadTelemetry = useCallback(async () => {
+    try {
+      const summary = await fetchTelemetrySummary({ window: 14 });
+      setTelemetry(summary);
+    } catch (err) {
+      console.warn('Telemetry unavailable', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRuns();
+    loadTelemetry();
+  }, [loadRuns, loadTelemetry]);
+
+  useEffect(() => {
+    loadRunDetail(selectedRunId);
+  }, [selectedRunId, loadRunDetail]);
+
+  useEffect(() => {
+    if (!memoryQuery) {
+      setMemoryResults([]);
+      return undefined;
+    }
+    setMemoryLoading(true);
+    const handle = setTimeout(async () => {
+      try {
+        const results = await fetchMemoryRecall({ search: memoryQuery, limit: 10 });
+        setMemoryResults(results);
+      } catch (err) {
+        console.error('Memory search failed', err);
+      } finally {
+        setMemoryLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [memoryQuery]);
+
+  useEffect(() => {
+    if (!selectedRun?.logs || !logContainerRef.current) {
+      return;
+    }
+    logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+  }, [selectedRun?.logs?.length]);
+
+  const handleEvents = useCallback((event) => {
+    if (!event || !event.type) return;
+
+    if (event.type === 'run.created' && event.run) {
+      setRuns((prev) => upsertRun(prev, event.run));
+      return;
+    }
+
+    if (event.type === 'run.updated' && event.run) {
+      setRuns((prev) => upsertRun(prev, event.run));
+      setSelectedRun((prev) => (prev?.id === event.run.id ? { ...prev, ...event.run } : prev));
+      return;
+    }
+
+    if (event.type === 'run.steps') {
+      setSelectedRun((prev) => (prev?.id === event.runId ? { ...prev, steps: event.steps } : prev));
+      return;
+    }
+
+    if (event.type === 'run.memory') {
+      setSelectedRun((prev) => (prev?.id === event.runId ? { ...prev, memoryHits: event.memoryHits } : prev));
+      return;
+    }
+
+    if (event.type === 'run.logs') {
+      setSelectedRun((prev) => {
+        if (!prev || prev.id !== event.runId) return prev;
+        const nextLogs = [...(prev.logs || []), ...(event.entries || [])];
+        const limited = nextLogs.slice(-400);
+        return { ...prev, logs: limited };
+      });
+      return;
+    }
+
+    if (event.type === 'approval.created') {
+      setSelectedRun((prev) => {
+        if (!prev || prev.id !== event.runId) return prev;
+        const approvals = prev.approvals || [];
+        const exists = approvals.some((approval) => approval.id === event.approval.id);
+        return exists ? prev : { ...prev, approvals: [event.approval, ...approvals] };
+      });
+      return;
+    }
+
+    if (event.type === 'approval.updated') {
+      setSelectedRun((prev) => {
+        if (!prev) return prev;
+        const approvals = prev.approvals || [];
+        const idx = approvals.findIndex((approval) => approval.id === event.approval.id);
+        if (idx === -1) return prev;
+        const next = approvals.slice();
+        next[idx] = event.approval;
+        return { ...prev, approvals: next };
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = subscribeEvents(handleEvents);
+    return unsubscribe;
+  }, [handleEvents]);
+
+  const handleDecision = useCallback((approval, action) => {
+    setModal({ type: 'decision', approval, action });
+  }, []);
+
+  const handleModalSubmit = useCallback(async (payload) => {
+    if (!selectedRun) return;
+    setModalLoading(true);
+    try {
+      if (payload.type === 'decision' && payload.approval) {
+        await decideApproval(payload.approval.id, {
+          status: payload.action,
+          decisionNote: payload.note,
+          decidedBy: 'operator'
+        });
+      } else if (payload.type === 'request') {
+        await requestApproval(selectedRun.id, {
+          reason: payload.reason,
+          riskScore: payload.riskScore,
+          requestedBy: 'operator'
+        });
+      }
+      await loadRunDetail(selectedRun.id);
+    } catch (err) {
+      console.error('Approval action failed', err);
+      setError('Approval action failed.');
+    } finally {
+      setModalLoading(false);
+      setModal(null);
+    }
+  }, [loadRunDetail, selectedRun]);
+
+  const handleRetry = useCallback(async () => {
+    if (!selectedRun?.id) return;
+    try {
+      await updateRun(selectedRun.id, { status: 'queued', startedAt: null, completedAt: null });
+    } catch (err) {
+      console.error('Failed to retry run', err);
+      setError('Unable to queue retry.');
+    }
+  }, [selectedRun]);
+
+  const refreshMemory = useCallback(() => {
+    if (selectedRun?.id) {
+      loadRunDetail(selectedRun.id);
+    }
+  }, [loadRunDetail, selectedRun]);
+
+  return (
+    <div className="console-shell">
+      <RunsSidebar
+        runs={runs}
+        filteredRuns={filteredRuns}
+        runQuery={runQuery}
+        setRunQuery={setRunQuery}
+        loading={runsLoading}
+        selectedId={selectedRunId}
+        onSelect={setSelectedRunId}
+        telemetry={telemetry}
+      />
+      <main className="console-main">
+        {error ? <div className="error-banner">{error}</div> : null}
+        {!selectedRun ? (
+          <div className="empty-state large">Select a run to inspect details.</div>
+        ) : (
+          <>
+            <header className="run-header">
+              <div>
+                <p className="run-id">Run · {selectedRun.id}</p>
+                <h2>{selectedRun.title || 'Untitled run'}</h2>
+                {selectedRun.summary ? <p className="run-summary">{selectedRun.summary}</p> : null}
+              </div>
+              <div className="run-header-actions">
+                <StatusBadge status={selectedRun.status} />
+                <RiskBadge value={selectedRun.riskScore} />
+                <button type="button" className="ghost-btn" onClick={() => loadRunDetail(selectedRun.id)} disabled={runLoading}>
+                  {runLoading ? 'Refreshing…' : 'Refresh'}
+                </button>
+              </div>
+            </header>
+
+            <div className="console-panels">
+              <div className="primary-column">
+                <TimelinePanel run={selectedRun} onRetry={handleRetry} />
+                <LogsPanel run={selectedRun} containerRef={logContainerRef} />
+              </div>
+              <div className="secondary-column">
+                <MemoryPanel
+                  run={selectedRun}
+                  query={memoryQuery}
+                  setQuery={setMemoryQuery}
+                  results={memoryResults}
+                  loading={memoryLoading}
+                  onRefresh={refreshMemory}
+                />
+                <ApprovalsPanel run={selectedRun} onRequest={() => setModal({ type: 'request', riskScore: selectedRun.riskScore })} onDecision={handleDecision} />
+                <MetricsPanel run={selectedRun} />
+              </div>
             </div>
-          </details>
+          </>
         )}
-      </div>
-    )}
-    {!isLoading && !error && files.length === 0 && <div className="status">No files available.</div>}
-    <ul>
-      {files.map((file) => (
-        <FileItem
-          key={file.name}
-          file={file}
-          isSelected={selectedFile === file.name}
-          onSelect={onFileSelect}
-        />
-      ))}
-    </ul>
-  </section>
-));
+      </main>
+      <ApprovalsModal modal={modal} onClose={() => setModal(null)} onSubmit={handleModalSubmit} loading={modalLoading} />
+    </div>
+  );
+}
 
-// Memoized FileItem component
-const FileItem = memo(({ file, isSelected, onSelect }) => (
-  <li>
-    <button
-      type="button"
-      className={`file-item${isSelected ? ' selected' : ''}`}
-      onClick={() => onSelect(file)}
-    >
-      {file.name}
-    </button>
-  </li>
-));
-
-// Memoized PreviewPane component
-const PreviewPane = memo(({ selectedFile, content, isLoading }) => (
-  <section className="preview-pane">
-    <header>
-      <h2>{selectedFile || 'Preview'}</h2>
-    </header>
-    {isLoading ? (
-      <div className="loading-skeleton">
-        <div className="skeleton-line"></div>
-        <div className="skeleton-line"></div>
-        <div className="skeleton-line short"></div>
-        <div className="skeleton-line"></div>
-        <div className="skeleton-line short"></div>
-      </div>
-    ) : (
-      <article className="markdown" dangerouslySetInnerHTML={{ __html: content }} />
-    )}
-  </section>
-));
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppShell />
+    </ErrorBoundary>
+  );
+}

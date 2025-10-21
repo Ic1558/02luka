@@ -18,6 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { writeArtifacts } = require('../../packages/io/atomicExport.cjs');
 
 // Configuration
 const REPO_ROOT = process.env.REPO_ROOT || path.resolve(__dirname, '../..');
@@ -567,14 +568,14 @@ async function main() {
   });
 
   // Save report
-  if (!fs.existsSync(REPORTS_DIR)) {
-    fs.mkdirSync(REPORTS_DIR, { recursive: true });
-  }
-
   const reportPath = customOutput ||
     path.join(REPORTS_DIR, `self_review_${timestamp}.md`);
 
-  fs.writeFileSync(reportPath, report);
+  await writeArtifacts({
+    targetDir: path.dirname(reportPath),
+    artifacts: [{ name: path.basename(reportPath), data: report }],
+    log: { log: (msg) => console.log(msg) } // Show progress for reports
+  });
   console.log(`\n✅ Report saved: ${reportPath}`);
 
   // Record insights

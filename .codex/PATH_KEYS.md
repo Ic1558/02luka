@@ -5,9 +5,11 @@ Use: `bash g/tools/path_resolver.sh human:<key>`
 ## Allowed keys (from mapping.json)
 - version
 - generated_at
+- updated_at_utc
 - namespaces
 - namespaces:human
 - namespaces:human:dropbox
+- namespaces:human:outbox
 - namespaces:human:inbox
 - namespaces:human:sent
 - namespaces:human:deliverables
@@ -21,6 +23,23 @@ Use: `bash g/tools/path_resolver.sh human:<key>`
 - namespaces:status
 - namespaces:status:system
 - namespaces:status:tickets
+- namespaces:codex
+- namespaces:codex:templates
+- namespaces:codex:prompts
+- namespaces:codex:master_prompt
+- namespaces:codex:golden_prompt
+- namespaces:codex:memory_bridge
+- namespaces:codex:autosave
+- namespaces:codex:gate
+- status_snapshot
+- status_snapshot:mcp_health
+- status_snapshot:config_errors
+- status_snapshot:system_health_percent
+- tiers
+- tiers:hidden
+- tiers:hidden:0
+- tiers:hidden:1
+- tiers:hidden:2
 
 ## Examples
 ```bash

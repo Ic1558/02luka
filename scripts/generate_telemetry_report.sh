@@ -8,8 +8,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/repo_root_resolver.sh"
 
-# Output file
+# Output file (use temp file for atomic write)
 OUTPUT_FILE="$REPO_ROOT/g/reports/telemetry_last24h.md"
+TMP_OUTPUT="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+trap "rm -f $TMP_OUTPUT" EXIT
 
 # Get telemetry summary
 if ! command -v node >/dev/null 2>&1; then
@@ -48,8 +50,8 @@ else
   avg_duration=0
 fi
 
-# Generate markdown report
-cat > "$OUTPUT_FILE" <<EOF
+# Generate markdown report (to temp file)
+cat > "$TMP_OUTPUT" <<EOF
 # Telemetry Report — Last 24 Hours
 
 **Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -71,7 +73,7 @@ cat > "$OUTPUT_FILE" <<EOF
 EOF
 
 # Add task breakdown
-python3 - "$SUMMARY_FILE" <<'PYTHON' >> "$OUTPUT_FILE"
+python3 - "$SUMMARY_FILE" <<'PYTHON' >> "$TMP_OUTPUT"
 import sys, json
 
 with open(sys.argv[1], 'r') as f:
@@ -96,14 +98,14 @@ for task, stats in sorted(by_task.items()):
 PYTHON
 
 # Add raw telemetry data section
-cat >> "$OUTPUT_FILE" <<'EOF'
+cat >> "$TMP_OUTPUT" <<'EOF'
 
 ## Recent Runs (Last 10)
 
 EOF
 
 # Get last 10 entries
-python3 - "$REPO_ROOT" <<'PYTHON' >> "$OUTPUT_FILE"
+python3 - "$REPO_ROOT" <<'PYTHON' >> "$TMP_OUTPUT"
 import sys, json, os
 from datetime import datetime
 
@@ -162,6 +164,9 @@ for entry in entries:
 
     print(f"| {ts_display} | {task} | {pass_count} | {warn_count} | {fail_count} | {duration}ms |")
 PYTHON
+
+# Atomic move to final location
+mv "$TMP_OUTPUT" "$OUTPUT_FILE"
 
 echo ""
 echo "Telemetry report generated: $OUTPUT_FILE"

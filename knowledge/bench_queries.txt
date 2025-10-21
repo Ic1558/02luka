@@ -1,0 +1,57 @@
+# Benchmark queries for hybrid search testing
+# Each line is a query (lines starting with # are comments)
+
+# Performance & Optimization
+token efficiency
+performance optimization
+memory usage
+query speed
+embedding latency
+
+# Phase-related queries
+phase 7 delegation
+phase 7.2 implementation
+phase 7.5 knowledge
+phase 7.6 integration
+
+# RAG & Vector DB
+RAG system architecture
+vector database design
+TF-IDF cosine similarity
+semantic search
+embedding model
+
+# Technical concepts
+hybrid search pipeline
+FTS pre-filter
+cosine similarity
+semantic chunking
+batch processing
+
+# Documentation queries
+how to use recall
+API reference
+quick reference guide
+deployment guide
+troubleshooting errors
+
+# System components
+knowledge sync
+memory indexing
+SQLite schema
+Google Drive freeze
+boss API endpoints
+
+# Operational
+health check
+system status
+telemetry data
+error handling
+offline mode
+
+# Specific features
+Discord integration
+Claude Code context
+delegation protocol
+work order format
+PRP workflow

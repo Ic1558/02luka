@@ -1,9 +1,11 @@
 {
-  "version": "1.0",
-  "generated_at": "manual",
+  "version": "2.1",
+  "generated_at": "2025-10-02T00:00:00Z",
+  "updated_at_utc": "2025-10-02T00:00:00Z",
   "namespaces": {
     "human": {
       "dropbox": "boss/dropbox/",
+      "outbox": "boss/outbox/",
       "inbox": "boss/inbox/",
       "sent": "boss/sent/",
       "deliverables": "boss/deliverables/"
@@ -20,6 +22,27 @@
     "status": {
       "system": "run/system_status.v2.json",
       "tickets": "run/tickets/"
+    },
+    "codex": {
+      "templates": "prompts/",
+      "prompts": "prompts/",
+      "master_prompt": "prompts/master_prompt.md",
+      "golden_prompt": "prompts/golden_prompt.md",
+      "memory_bridge": true,
+      "autosave": true,
+      "gate": true
     }
+  },
+  "status_snapshot": {
+    "mcp_health": "healthy",
+    "config_errors": 0,
+    "system_health_percent": 100
+  },
+  "tiers": {
+    "hidden": [
+      ".git",
+      ".claude",
+      ".codex"
+    ]
   }
 }
