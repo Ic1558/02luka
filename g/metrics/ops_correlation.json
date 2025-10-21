@@ -1,0 +1,13 @@
+{
+  "generated_at": "2025-10-21T21:30:00.862Z",
+  "window": {
+    "alerts_min": 10,
+    "autoheal_min": 30
+  },
+  "health": {
+    "recentSuccess": 0,
+    "recentLatency": 0,
+    "totalChecks": 10
+  },
+  "findings": []
+}

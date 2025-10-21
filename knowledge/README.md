@@ -1,278 +1,469 @@
-# Phase 7.5: Local Knowledge Consolidation
+# Phase 7.6+: Hybrid Vector Database (Embeddings)
 
-**Status:** Day 1 - IN PROGRESS (better-sqlite3 installation BLOCKED)
-**Date:** 2025-10-20
-**Dependencies:** Phase 6 + 6.5-A + 6.5-B + 7.1
+**Status:** ✅ PRODUCTION READY
+**Date:** 2025-10-22
+**Previous:** Phase 7.5 (SQLite FTS), Phase 6 (TF-IDF Memory)
 
 ---
 
 ## Overview
 
-Offline-first SQLite knowledge base for unified access to:
-- Vector memories (`g/memory/vector_index.json`)
-- Telemetry logs (`g/telemetry/*.log`)
-- Generated reports (`g/reports/*.md`)
-- Agent memories (GG, CLC, Codex, etc.)
-- Self-review insights
+Hybrid semantic search system combining **embeddings + full-text search** for 100% documentation coverage with human-like understanding.
 
-**Key Features:**
-- Full-text search with FTS5
-- TF-IDF semantic recall
-- Incremental sync (watermarks)
-- Hash-based deduplication
-- Fail-safe auto-hooks
-- Date-based exports for Git
+**Key Achievement:** Eliminated "waste paper" problem - 100% of docs/, reports/, and memory/ files now indexed and searchable.
+
+### Features
+- ✅ **Semantic Search**: all-MiniLM-L6-v2 embeddings (384 dims)
+- ✅ **Hybrid Scoring**: FTS pre-filter + embedding rerank (30/70 split)
+- ✅ **100% Coverage**: 4,002 chunks from 258 documents
+- ✅ **Exceptional Performance**: 7-8ms avg query time (12x better than target)
+- ✅ **Offline-First**: No external APIs, runs on CPU
+- ✅ **Backward Compatible**: Old commands (--search, --recall) still work
 
 ---
 
-## Installation Status
+## Quick Start
 
-### ⚠️  BLOCKER: better-sqlite3 Installation Issue
+### Search Commands
 
-**Problem:** Node.js native module compilation fails on macOS 15 (Sequoia) due to node-gyp Xcode detection bug.
-
-**Error:**
-```
-AttributeError: 'NoneType' object has no attribute 'groupdict'
-gyp ERR! configure error
-```
-
-**Root Cause:** node-gyp cannot parse Xcode Command Line Tools version on macOS 15.
-
-### Solutions
-
-**Option 1: Install Full Xcode (RECOMMENDED)**
 ```bash
-# Install Xcode from App Store (~15GB)
-# Then:
-sudo xcode-select --switch /Applications/Xcode.app
-cd knowledge
-npm install better-sqlite3
+# Hybrid search (semantic + keyword)
+node knowledge/index.cjs --hybrid "token efficiency improvements"
+
+# With timing breakdown
+node knowledge/index.cjs --verify "phase 7 delegation"
+
+# Benchmark performance
+node knowledge/index.cjs --bench --iters=30
+
+# Reindex all documents
+node knowledge/index.cjs --reindex
+
+# Legacy commands (still supported)
+node knowledge/index.cjs --search "keyword"     # FTS only
+node knowledge/index.cjs --recall "query"       # TF-IDF only
+node knowledge/index.cjs --stats                # Statistics
 ```
 
-**Option 2: Reinstall Command Line Tools**
+### Example Query
+
 ```bash
-sudo rm -rf /Library/Developer/CommandLineTools
-xcode-select --install
-# Wait for installation
-cd knowledge && npm install better-sqlite3
-```
+$ node knowledge/index.cjs --hybrid "how to reduce costs"
 
-**Option 3: Use Helper Script**
-```bash
-bash scripts/fix_xcode_for_node_gyp.sh
+{
+  "query": "how to reduce costs",
+  "results": [
+    {
+      "doc_path": "docs/PHASE7_2_DELEGATION.md",
+      "snippet": "...89% [token] savings through delegation...",
+      "scores": {
+        "fts": 0.85,
+        "semantic": 0.72,
+        "final": 0.759
+      }
+    },
+    // ... 9 more results
+  ],
+  "count": 10
+}
 ```
-
-**Option 4: Wait for Fix**
-- Track issue: https://github.com/nodejs/node-gyp/issues
-- node-gyp team is working on macOS 15 compatibility
 
 ---
 
-## Files Created (Day 1)
+## Architecture
 
-- ✅ `schema.sql` - Database schema with all tables, indices, FTS5, triggers
-- ✅ `package.json` - Package configuration with better-sqlite3 dependency
-- ✅ `init.cjs` - Database initialization script (ready to use once better-sqlite3 is installed)
-- ⏳ `node_modules/` - BLOCKED on better-sqlite3 installation
+### 3-Stage Hybrid Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 1: FTS Pre-filter (Fast)                              │
+│ SQLite FTS5 → Top 50 candidates                             │
+│ Performance: ~4ms                                            │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 2: Embedding Rerank (Precise)                         │
+│ all-MiniLM-L6-v2 → Cosine similarity                        │
+│ Performance: ~4ms                                            │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 3: Hybrid Scoring                                     │
+│ Final = (0.3 × FTS) + (0.7 × Semantic)                      │
+│ Performance: ~0.1ms                                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+- **Embeddings**: @xenova/transformers (ONNX runtime, CPU-only)
+- **Model**: all-MiniLM-L6-v2 (384 dimensions, 80MB)
+- **Database**: SQLite with FTS5 (knowledge/02luka.db, 14 MB)
+- **Chunks**: 4,002 semantic chunks (split by markdown headers)
+- **Storage**: 5.86 MB embeddings + 1.27 MB text + 6.87 MB overhead
 
 ---
 
 ## Database Schema
 
-### Tables
+### document_chunks Table
 
-1. **memories** - Vector memories from Phase 6
-   - Stable UUIDs, TF-IDF vectors, importance scores
-   - Tracks queryCount, lastAccess (Phase 6.5-B)
-   - Source path + hash for dedupe
+```sql
+CREATE TABLE document_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  doc_path TEXT NOT NULL,              -- Relative path from repo root
+  chunk_index INTEGER NOT NULL,         -- Position in document
+  text TEXT NOT NULL,                   -- Chunk content with hierarchy
+  embedding BLOB,                       -- 384 floats (1,536 bytes)
+  metadata TEXT,                        -- JSON: hierarchy, tags, importance
+  indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-2. **telemetry** - NDJSON telemetry logs
-   - Hash-based deduplication (ts+task+duration+results)
-   - Source lineage for incremental sync
+-- FTS5 for keyword search
+CREATE VIRTUAL TABLE document_chunks_fts
+USING fts5(text, content='document_chunks', content_rowid='id');
 
-3. **reports** - Generated markdown reports
-   - Filename uniqueness (prevents re-import)
-   - Full-text searchable via FTS5
+-- Index for fast doc_path lookups
+CREATE INDEX idx_doc_path ON document_chunks(doc_path);
+```
 
-4. **agent_memories** - Agent-specific memories
-   - GG, CLC, Codex, Mary, Paula, Boss
-   - Categories: session, note, plan, etc.
+### Metadata Structure
 
-5. **insights** - Cached insights from self-review
-   - Confidence scores, actionable flags
-   - Optional link to source memory (foreign key)
-
-### FTS5 Virtual Tables
-
-- `memories_fts` - Full-text search on memory text
-- `reports_fts` - Full-text search on report content
-
-### Indices
-
-12 indices for performance on:
-- kind, agent, importance, queryCount, lastAccess, timestamp
-- task, type, confidence, generated dates
-
-### Triggers
-
-6 triggers to keep FTS indices in sync:
-- Insert/update/delete on memories → memories_fts
-- Insert/update/delete on reports → reports_fts
+```json
+{
+  "hierarchy": ["Phase 7.2: Local Orchestrator & Delegation"],
+  "section": "Architecture",
+  "tags": ["success", "phase-doc", "api"],
+  "importance": 0.65,
+  "level": 2,
+  "wordCount": 245,
+  "hasCode": true,
+  "hasList": false
+}
+```
 
 ---
 
-## Usage (Once Installed)
+## Components
 
-### Initialize Database
+### Core Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `embedder.cjs` | 76 | all-MiniLM-L6-v2 wrapper (lazy-loaded singleton) |
+| `chunker.cjs` | 202 | Semantic document splitting by headers |
+| `search.cjs` | 179 | 3-stage hybrid search pipeline |
+| `reindex-all.cjs` | 188 | Batch indexing (31.2 chunks/sec) |
+| `index.cjs` | 95+ | CLI interface with all commands |
+| `util/timer.cjs` | 74 | High-precision timing (hrtime) |
+| `util/benchmark.cjs` | 169 | Performance benchmarking |
+| `bench_queries.txt` | 39 | Test queries for benchmarking |
+
+### Legacy Files (Phase 7.5)
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `schema.sql` | ✅ Used | Schema for memories, telemetry, reports tables |
+| `sync.cjs` | ✅ Active | Syncs JSON → SQLite (backward compatible) |
+| `init.cjs` | ⚠️ Deprecated | Use reindex-all.cjs instead |
+
+---
+
+## Performance Metrics
+
+### Benchmark Results (30 iterations)
+
+| Metric | Value | Target | Status |
+|--------|-------|--------|--------|
+| Mean | 7.04ms | <100ms | 🚀 14x better |
+| Median | 6.62ms | <100ms | 🚀 15x better |
+| P95 | 17.47ms | <100ms | 🚀 5.7x better |
+| Max | 20.16ms | <100ms | ✅ 5x better |
+
+### Stage Breakdown (Mean)
+- **FTS Pre-filter**: 4.37ms (62%)
+- **Embedding**: 2.55ms (36%)
+- **Rerank**: 0.11ms (2%)
+
+### Indexing Performance
+- **Rate**: 31.2 chunks/second
+- **Total Time**: 128.3 seconds for 258 files
+- **Chunks Created**: 4,002 semantic chunks
+
+---
+
+## Coverage Statistics
+
+### Before (Phase 6 - TF-IDF Only)
+- Memory chunks: 27
+- Docs indexed: 0/41 (0%)
+- Reports indexed: 125/185 (68%)
+- **Waste paper**: ~30,000 words unindexed
+
+### After (Phase 7.6+ - Hybrid)
+- Document chunks: 4,002
+- Docs indexed: 41/41 (100%) ✅
+- Reports indexed: 185+/185 (100%) ✅
+- **Waste paper**: 0 words ✅
+
+### Improvement
+- Coverage: +14,700% chunks
+- Docs: +100% coverage
+- Reports: +32% coverage
+- Zero documentation waste ✅
+
+---
+
+## Usage Examples
+
+### 1. Find Token Savings Information
 
 ```bash
-cd knowledge
-node init.cjs
+$ node knowledge/index.cjs --hybrid "token efficiency improvements"
 ```
 
-Output:
-```
-=== Phase 7.5: Knowledge Database Initialization ===
+**Top Results:**
+- RAG_QUICK_REFERENCE.md (score: 0.651)
+- 251022_RAG_SYSTEM_CLARIFICATION.md (score: 0.513)
+- PHASE7_2_7_5_COMPLETION_REPORT.md (score: 0.370)
 
-📄 Reading schema from: schema.sql
-🔨 Creating database: 02luka.db
-📊 Executing schema...
-✅ Schema applied successfully
-
-🔍 Verifying tables...
-
-Tables created:
-  ✓ memories             (0 rows)
-  ✓ telemetry            (0 rows)
-  ✓ reports              (0 rows)
-  ✓ agent_memories       (0 rows)
-  ✓ insights             (0 rows)
-
-FTS5 virtual tables:
-  ✓ memories_fts
-  ✓ reports_fts
-
-Indices created: 12
-Triggers created: 6
-
-=== Initialization Complete ✅ ===
-```
-
-### Force Recreate
+### 2. Search for Phase 7.2 Documentation
 
 ```bash
-node init.cjs --force
+$ node knowledge/index.cjs --verify "phase 7.2 complete"
+```
+
+**Results:**
+- PHASE7_2_7_5_COMPLETION_REPORT.md (score: 0.721)
+- Timing: 15ms FTS, 278ms embedding, 293ms total
+
+### 3. Benchmark Performance
+
+```bash
+$ node knowledge/index.cjs --bench --iters=10
+```
+
+**Output:**
+```
+BENCHMARK RESULTS
+═════════════════════════════════════════════
+Iterations: 10
+Queries: 39 unique
+
+TOTAL TIME
+  Min      3.28 ms
+  Mean     8.03 ms
+  Median   7.83 ms
+  P95     13.07 ms
+  Max     13.07 ms
+
+ASSESSMENT: 🚀 Excellent performance (<50ms avg)
 ```
 
 ---
 
-## Next Steps (Day 1)
+## Semantic Understanding Examples
 
-1. ✅ Schema design complete
-2. ✅ package.json created
-3. ✅ init.cjs ready
-4. ⏳ **BLOCKER:** Install better-sqlite3
-5. ⏳ Test database creation
+The hybrid system understands concepts, not just keywords:
 
-**Once unblocked:**
-- Run `node init.cjs`
-- Verify all tables/indices/triggers
-- Move to Day 2: Build sync.cjs
-
----
-
-## Implementation Plan
-
-### Day 1 ✅ (Mostly Complete)
-- ✅ Create schema.sql with 6 user deltas
-- ✅ Create package.json
-- ✅ Create init.cjs
-- ⏳ Install better-sqlite3 (BLOCKED)
-- ⏳ Test database initialization
-
-### Day 2 (Next)
-- Build sync.cjs (incremental sync engine)
-- Implement watermarks (.sync_state.json)
-- Hash-based dedupe for telemetry
-- Filename dedupe for reports
-- Source lineage tracking
-
-### Day 3
-- Build query interface (search, recall, stats)
-- Port TF-IDF similarity from memory/index.cjs
-- FTS5 full-text search
-- CLI wrappers
-
-### Day 4
-- Export functionality (--export flag)
-- Date-based export folders
-- JSON + Markdown output
-- CLI tools
-
-### Day 5
-- Auto-sync hooks (fail-safe, non-blocking)
-- Documentation (PHASE7_5_KNOWLEDGE_DB.md)
-- Integration tests
-- Acceptance criteria verification
+| Query | Finds Documents About |
+|-------|----------------------|
+| "token efficiency" | Token savings, optimization, delegation |
+| "reducing costs" | Efficiency, delegation, resource optimization |
+| "how to improve performance" | Performance metrics, benchmarks, optimizations |
+| "phase 7 delegation" | Phase 7.2 docs, delegation architecture |
+| "version 2.0" | v2.0 deployments (handles periods correctly) |
 
 ---
 
-## Architecture Notes
+## Special Character Handling
 
-### Source of Record Pattern
+Fixed FTS5 syntax errors with special characters:
 
-**Existing files remain authoritative:**
-- `g/memory/vector_index.json` - Memory source of truth
-- `g/telemetry/*.log` - Telemetry source of truth
-- `g/reports/*.md` - Reports source of truth
+✅ **Working Queries:**
+- "version 2.0" (periods)
+- "boss-api" (hyphens)
+- "phase 7.2 complete" (decimals)
+- "v2.0 deployment" (versions)
 
-**SQLite is a derived/cached view:**
-- Sync engine reads files → imports to DB
-- Incremental updates based on mtime watermarks
-- Never writes back to source files
-- DB can be dropped and rebuilt at any time
-
-### Fail-Safe Hooks
-
-Auto-sync hooks are designed to never break existing workflows:
-- Silent failure if DB is unavailable
-- No blocking operations
-- Async/background sync
-- Log errors but continue execution
-
-### Deduplication Strategy
-
-**Telemetry:** Hash-based (content hash)
-```
-source_hash = SHA256(ts + task + duration + pass + warn + fail)
-UNIQUE constraint prevents duplicates
+**Solution:** Tokenize query, wrap each term in quotes, join with OR
+```javascript
+// Input:  "phase 7.2 implementation"
+// Output: "phase" OR "7.2" OR "implementation"
 ```
 
-**Reports:** Filename-based
-```
-filename UNIQUE constraint
-Same filename = same report (idempotent import)
+---
+
+## Backward Compatibility
+
+All Phase 6 and Phase 7.5 commands still work:
+
+```bash
+# FTS keyword search (Phase 7.5)
+node knowledge/index.cjs --search "delegation"
+
+# TF-IDF vector search (Phase 6)
+node knowledge/index.cjs --recall "token efficiency"
+
+# Database statistics
+node knowledge/index.cjs --stats
+
+# Export to JSON
+node knowledge/index.cjs --export
 ```
 
-**Memories:** Stable UUIDs
+New commands are **additive**, not breaking changes.
+
+---
+
+## Maintenance
+
+### Reindexing
+
+Rebuild the entire index from scratch:
+
+```bash
+node knowledge/index.cjs --reindex
+# Or directly:
+node knowledge/reindex-all.cjs
 ```
-id from existing vector_index.json
-Updates merge with existing entries
+
+**When to reindex:**
+- After adding many new documents
+- After changing chunking logic
+- To fix index corruption
+- Database performance degraded
+
+**Performance:** ~2 minutes for 258 files
+
+### Updating the Model
+
+The embedding model (all-MiniLM-L6-v2) is cached locally after first download (80MB). No updates needed unless you want to change models.
+
+### Storage Management
+
+Database file: `knowledge/02luka.db` (14 MB)
+
+**Cleanup:**
+```bash
+# Check size
+du -h knowledge/02luka.db
+
+# Optimize database
+sqlite3 knowledge/02luka.db "VACUUM; REINDEX;"
+
+# Full rebuild (if needed)
+rm knowledge/02luka.db
+node knowledge/reindex-all.cjs
 ```
 
 ---
 
 ## Related Documentation
 
-- **Phase 7 Overview:** `docs/PHASE7_COGNITIVE_LAYER.md`
-- **Memory System:** `docs/CONTEXT_ENGINEERING.md`
-- **Telemetry:** `boss-api/telemetry.cjs`
-- **Self-Review:** `agents/reflection/self_review.cjs`
+### Implementation Reports
+- **Implementation**: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- **Verification**: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+- **RAG System**: `g/reports/251022_RAG_SYSTEM_CLARIFICATION.md`
+- **Quick Reference**: `g/reports/RAG_QUICK_REFERENCE.md`
+
+### Phase Documentation
+- **Phase 7 Overview**: `docs/PHASE7_COGNITIVE_LAYER.md`
+- **Phase 7.2 Delegation**: `docs/PHASE7_2_DELEGATION.md`
+- **Phase 7.5 Knowledge**: `docs/PHASE7_5_KNOWLEDGE.md`
+- **Context Engineering**: `docs/CONTEXT_ENGINEERING.md`
+
+### System Overview
+- **02luka.md**: Main system documentation (see Phase 7.6+ section)
 
 ---
 
-**Last Updated:** 2025-10-20
+## Troubleshooting
+
+### No Results for Query
+
+**Cause:** Query may be too specific or use unsupported syntax
+
+**Solution:** Simplify query, use common terms
+```bash
+# Instead of: "how do I optimize the performance of queries"
+node knowledge/index.cjs --hybrid "query performance optimization"
+```
+
+### Slow Queries (>100ms)
+
+**Cause:** First query loads embedding model (~500ms)
+
+**Solution:** Subsequent queries are fast (<10ms). First query is always slower.
+
+### Database Locked
+
+**Cause:** Another process has the database open
+
+**Solution:** Wait for other process to finish, or check:
+```bash
+lsof knowledge/02luka.db
+```
+
+### FTS Syntax Error
+
+**Cause:** Special characters in query (should be fixed, but if not...)
+
+**Solution:** The system now handles special chars automatically. If errors persist, use simpler queries.
+
+---
+
+## Performance Comparison
+
+| Metric | TF-IDF (Phase 6) | Hybrid (Phase 7.6+) |
+|--------|------------------|---------------------|
+| Coverage | 27 memories | 4,002 chunks (258 docs) |
+| Docs | 0% | 100% ✅ |
+| Reports | 68% | 100% ✅ |
+| Storage | ~100 KB | 14 MB |
+| Query Speed | N/A | 7-8ms |
+| Semantic | ❌ Keyword only | ✅ Full semantic |
+| Special Chars | N/A | ✅ Fixed |
+
+---
+
+## Future Enhancements
+
+### Planned (Optional)
+1. **LRU Cache**: Query embedding cache (95% speedup for repeated queries)
+2. **Context Expansion**: Fetch neighboring chunks for better context
+3. **Auto-Reindex**: Watch files and reindex on changes (chokidar + LaunchAgent)
+4. **Multi-Vector Search**: Query + negative examples
+5. **Temporal Decay**: Boost recent documents in scoring
+
+### Integration Opportunities
+1. **CLC Integration**: Use hybrid search in knowledge queries
+2. **Boss API**: Expose `/api/v2/search` endpoint
+3. **Memory System**: Auto-index agent memories
+4. **Web UI**: Search interface for dashboard
+
+---
+
+## FAQ
+
+**Q: How does this differ from traditional RAG?**
+A: We use local embeddings (not OpenAI API), hybrid FTS+embeddings (not pure vector), and file-backed SQLite (not cloud DBs like Pinecone).
+
+**Q: Can I use a different embedding model?**
+A: Yes, but you'll need to modify `embedder.cjs` and update the model name. all-MiniLM-L6-v2 is optimized for speed/quality balance.
+
+**Q: What happens if I delete the database?**
+A: Just reindex: `node knowledge/index.cjs --reindex`. All source files are unchanged.
+
+**Q: Is this GPU-accelerated?**
+A: No, runs on CPU using ONNX runtime. Fast enough for <5K chunks.
+
+**Q: How do I add more documents?**
+A: Just add markdown files to docs/, g/reports/, or memory/ folders and reindex.
+
+---
+
+**Last Updated:** 2025-10-22
+**Status:** ✅ Production Ready
 **Maintained By:** CLC (Implementation)
-**Status:** Day 1 BLOCKED on better-sqlite3 installation
-**Next Action:** Install better-sqlite3 per instructions above
+**Tag:** `v251022_phase7.6-hybrid-vector-db`

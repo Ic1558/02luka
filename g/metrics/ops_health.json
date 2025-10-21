@@ -1,0 +1,271 @@
+{
+  "checks": [
+    {
+      "timestamp": "2025-10-21T20:48:21.554Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 15,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 3,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 0.271894792
+    },
+    {
+      "timestamp": "2025-10-21T20:50:57.928Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 16,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 3,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 0.077902292
+    },
+    {
+      "timestamp": "2025-10-21T20:52:58.404Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 6,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 0.056966
+    },
+    {
+      "timestamp": "2025-10-21T20:57:58.455Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 7,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 3,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 300.115202888
+    },
+    {
+      "timestamp": "2025-10-21T21:02:58.501Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 40,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 6,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 13,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 600.214606191
+    },
+    {
+      "timestamp": "2025-10-21T21:07:58.538Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 6,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 900.176484827
+    },
+    {
+      "timestamp": "2025-10-21T21:12:58.646Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 9,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 1200.28840513
+    },
+    {
+      "timestamp": "2025-10-21T21:17:58.725Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 7,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 1500.365611851
+    },
+    {
+      "timestamp": "2025-10-21T21:22:58.777Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 8,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 2,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 1800.420695987
+    },
+    {
+      "timestamp": "2025-10-21T21:27:58.829Z",
+      "success_rate": 0,
+      "avg_latency_ms": 0,
+      "endpoints": {
+        "ping": {
+          "success": false,
+          "latency": 8,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n"
+        },
+        "state": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n"
+        },
+        "metrics": {
+          "success": false,
+          "latency": 1,
+          "data": null,
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n"
+        }
+      },
+      "uptime": 2100.454987999
+    }
+  ],
+  "summary": {
+    "last_check": "2025-10-21T21:27:58.829Z",
+    "total_checks": 10,
+    "recent_success_rate": 0,
+    "recent_avg_latency_ms": 0,
+    "uptime_hours": 1
+  }
+}

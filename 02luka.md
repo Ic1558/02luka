@@ -589,4 +589,120 @@ Refine Plan → Execute → Record Learnings
 
 ---
 
-Last Session: 251020_2100
+## Phase 7.6+: Hybrid Vector Database (Embeddings) ✅
+
+### Core Achievement
+> **"Zero Waste Paper - 100% Documentation Coverage"**
+>
+> Upgraded from TF-IDF-only to **hybrid embeddings + FTS search**, indexing 100% of project documentation with semantic understanding
+
+### Infrastructure
+- **Embedding Model**: `all-MiniLM-L6-v2` (384 dimensions, 80MB)
+- **Database**: SQLite (`knowledge/02luka.db`, 14 MB)
+- **Chunks**: 4,002 semantic chunks from 258 documents
+- **Libraries**: `@xenova/transformers` (ONNX runtime, CPU-only)
+
+### Phase 7.6+ Features
+- ✅ **Semantic Chunking**: Document splitting by markdown headers (preserves hierarchy)
+- ✅ **Hybrid Search**: 3-stage pipeline (FTS pre-filter → embedding rerank → results)
+- ✅ **100% Coverage**: All docs/, reports/, memory/ files indexed (zero waste)
+- ✅ **Exceptional Performance**: 7-8ms avg query time (12x better than 100ms target)
+- ✅ **Special Char Handling**: Fixed FTS5 errors (periods, hyphens, versions work)
+- ✅ **Backward Compatible**: Old commands (--search, --recall) still functional
+
+### Key Components
+- `knowledge/embedder.cjs` - all-MiniLM-L6-v2 wrapper (lazy-loaded, singleton)
+- `knowledge/chunker.cjs` - Semantic document splitting (202 lines)
+- `knowledge/search.cjs` - 3-stage hybrid pipeline (179 lines)
+- `knowledge/reindex-all.cjs` - Batch indexing (31.2 chunks/sec)
+- `knowledge/util/timer.cjs` + `benchmark.cjs` - Performance tools
+- `knowledge/bench_queries.txt` - 39 test queries
+
+### Database Schema
+```sql
+CREATE TABLE document_chunks (
+  id INTEGER PRIMARY KEY,
+  doc_path TEXT,
+  chunk_index INTEGER,
+  text TEXT,
+  embedding BLOB,          -- 384 floats (1,536 bytes each)
+  metadata TEXT            -- JSON: hierarchy, tags, importance
+);
+CREATE VIRTUAL TABLE document_chunks_fts USING fts5(text);
+```
+
+### Commands
+```bash
+# Hybrid search (FTS + embeddings)
+node knowledge/index.cjs --hybrid "query"
+
+# With timing breakdown
+node knowledge/index.cjs --verify "query"
+
+# Benchmark
+node knowledge/index.cjs --bench --iters=30
+
+# Reindex all documents
+node knowledge/index.cjs --reindex
+```
+
+### Coverage (Before → After)
+| Category | Before | After | Change |
+|----------|--------|-------|--------|
+| Docs indexed | 0/41 (0%) | 41/41 (100%) | ✅ +100% |
+| Reports indexed | 125/185 (68%) | 185+/185 (100%) | ✅ +32% |
+| Total chunks | 27 memories | 4,002 chunks | 🚀 +14,700% |
+| Waste paper | ~30K words | 0 words | ✅ Eliminated |
+
+### Performance Metrics (Verified Benchmark)
+- **Mean Query Time**: 7-8ms (🚀 12x better than 100ms target)
+- **P95 Query Time**: 13-17ms
+- **Stage Breakdown**: FTS (4ms) + Embed (4ms) + Rerank (0.1ms)
+- **Indexing Rate**: 31.2 chunks/second
+- **Storage**: 14 MB total (5.86 MB embeddings + 1.27 MB text + 6.87 MB overhead)
+
+### Hybrid Scoring Formula
+```
+Final Score = (0.3 × FTS Score) + (0.7 × Semantic Score)
+```
+- FTS: Fast keyword matching (precision)
+- Semantic: Embedding similarity (recall)
+- Combined: Best of both worlds
+
+### Quality Verification
+- ✅ Semantic understanding: "token efficiency" finds "token savings", "optimization"
+- ✅ Special characters: "phase 7.2", "v2.0", "boss-api" all work correctly
+- ✅ Multi-word queries: "how to optimize performance" returns relevant docs
+- ✅ Relevance scoring: Top results have 0.6-0.7+ scores (high quality)
+
+### Key Commits
+- Implementation: All files created 2025-10-22 (Phase 7.6+ rollout)
+
+### Documentation & Reports
+- Implementation: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- Verification: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+- RAG System: `g/reports/251022_RAG_SYSTEM_CLARIFICATION.md`
+- Quick Ref: `g/reports/RAG_QUICK_REFERENCE.md`
+
+### Comparison: TF-IDF vs Hybrid Embeddings
+| Aspect | TF-IDF (Phase 6) | Hybrid (Phase 7.6+) |
+|--------|------------------|---------------------|
+| Coverage | 27 memories | 4,002 chunks (258 docs) |
+| Storage | ~100 KB | 14 MB |
+| Query Speed | N/A | 7-8ms |
+| Semantic Search | ❌ Keyword only | ✅ Full semantic |
+| Docs Coverage | 0% | 100% ✅ |
+| Reports Coverage | 68% | 100% ✅ |
+
+**Tag:** `v251022_phase7.6-hybrid-vector-db`
+
+**Status:** ✅ Production Ready • 100% Documentation Coverage • Zero Waste Paper
+
+**Impact:**
+- Before: 40% of docs unindexed ("waste paper")
+- After: 100% coverage, semantic search, <10ms queries
+- Result: Complete knowledge retrieval with human-like understanding
+
+---
+
+Last Session: 251022_030212

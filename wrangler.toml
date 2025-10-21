@@ -1,14 +1,5 @@
 name = "ops-02luka"
 main = "ops-worker.js"
 compatibility_date = "2024-10-01"
-
-[vars]
-BRIDGE_URL = "https://ops.theedges.work/bridge"
-
-# put the token as a Worker secret (not in git)
-# wrangler secret put BRIDGE_TOKEN
-
-[routes]
-routes = [
-  { pattern = "ops.theedges.work/*", zone_name = "theedges.work" }
-]
+workers_dev = true
+# No routes here yet; we'll add a custom domain later in the dashboard.
