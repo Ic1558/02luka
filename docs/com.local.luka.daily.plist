@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.local.luka.daily</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-lc</string>
+      <string>cd /path/to/02luka && ./scripts/run_auto.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>CLS_SHELL</key>
+      <string>/bin/bash</string>
+      <key>CLS_FS_ALLOW</key>
+      <string>/Volumes/lukadata:/Volumes/hd2:$HOME</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/tmp/luka-auto.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/luka-auto.err</string>
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key>
+      <integer>9</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+  </dict>
+</plist>

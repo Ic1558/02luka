@@ -187,7 +187,7 @@ function approvalRequest(task) {
     risk_level: task.risk,
     steps_count: (task.steps || []).length,
     message: `Task "${task.title}" requires approval (risk=${risk})`,
-    approval_command: `LOCAL_ALLOW_HIGH=1 node agents/local/orchestrator.cjs --once`
+    approval_command: `LOCAL_ALLOW_HIGH=1 node agents/local/orchestrator.mjs --once`
   };
 }
 
