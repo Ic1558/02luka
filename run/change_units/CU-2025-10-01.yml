@@ -38,3 +38,18 @@
     - smoke_api_ui: pending
   guardrail_status: pending
   followups: []
+- time: "2025-10-14T21:10:00Z"
+  change_id: CU-2025-10-01-boss-ui-api-v1
+  summary: "Compiled latest debug/optimize/block verification report"
+  files_touched:
+    - g/reports/251014_2106_debug-optimize-block-status.md
+    - run/change_units/CU-2025-10-01.yml
+    - run/worklog/CU-2025-10-01.md
+    - run/daily_reports/REPORT_2025-10-01.md
+  tags: ["reports","verification"]
+  tests_ran:
+    - preflight: warn (missing master_prompt template)
+    - mapping_drift_guard: ok
+    - clc_gate: fail (smoke services offline in devcontainer)
+  guardrail_status: warn
+  followups: ["Re-run clc_gate after bringing API/UI online"]
