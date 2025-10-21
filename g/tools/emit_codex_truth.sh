@@ -6,6 +6,7 @@ cd "$ROOT"
 mkdir -p .codex run/auto_context
 
 # 1) System Map (CONTEXT_SEED.md)
+tmp_context_seed="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
 {
   echo "# 02luka System Map (auto)"
   echo
@@ -26,21 +27,33 @@ mkdir -p .codex run/auto_context
   echo
   echo "## Data Flow"
   echo "dropbox → (router) → inbox/sent (query/answer) → deliverables"
-} > .codex/CONTEXT_SEED.md
+} > "$tmp_context_seed"
+mv "$tmp_context_seed" .codex/CONTEXT_SEED.md
 
 # 2) Mapping ของเครื่อง (mapping.json) — copy สถานะจริง + สรุป key
 MAP="f/ai_context/mapping.json"
 if [ -f "$MAP" ]; then
-  jq -r '.' "$MAP" > run/auto_context/mapping.snapshot.json || cp "$MAP" run/auto_context/mapping.snapshot.json
-  echo "# Mapping Summary (auto)" > run/auto_context/mapping.keys.md
-  echo >> run/auto_context/mapping.keys.md
-  (jq -r 'paths(scalars) as $p | "\($p|join(".")) = \(.|getpath($p))"' "$MAP" 2>/dev/null || true) | sed 's/^/- /' >> run/auto_context/mapping.keys.md
+  tmp_snapshot="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+  tmp_keys="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+  jq -r '.' "$MAP" > "$tmp_snapshot" || cp "$MAP" "$tmp_snapshot"
+  {
+    echo "# Mapping Summary (auto)"
+    echo
+    (jq -r 'paths(scalars) as $p | "\($p|join(".")) = \(.|getpath($p))"' "$MAP" 2>/dev/null || true) | sed 's/^/- /'
+  } > "$tmp_keys"
+  mv "$tmp_snapshot" run/auto_context/mapping.snapshot.json
+  mv "$tmp_keys" run/auto_context/mapping.keys.md
 else
-  echo "{}" > run/auto_context/mapping.snapshot.json
-  echo "# Mapping Summary (auto)\n- (mapping.json not found)" > run/auto_context/mapping.keys.md
+  tmp_snapshot="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+  tmp_keys="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+  echo "{}" > "$tmp_snapshot"
+  echo "# Mapping Summary (auto)\n- (mapping.json not found)" > "$tmp_keys"
+  mv "$tmp_snapshot" run/auto_context/mapping.snapshot.json
+  mv "$tmp_keys" run/auto_context/mapping.keys.md
 fi
 
 # 3) PATH_KEYS.md — ดึง key ที่อนุญาตจาก mapping + ตัวอย่าง resolver
+tmp_path_keys="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
 {
   echo "# PATH KEYS (auto)"
   echo
@@ -64,9 +77,11 @@ fi
   echo 'bash g/tools/path_resolver.sh human:sent'
   echo 'bash g/tools/path_resolver.sh human:deliverables'
   echo '```'
-} > .codex/PATH_KEYS.md
+} > "$tmp_path_keys"
+mv "$tmp_path_keys" .codex/PATH_KEYS.md
 
 # 4) Guardrails + Tests — รวบรวมข้อห้าม + คำสั่งทดสอบจริง
+tmp_guardrails="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
 {
   echo "# GUARDRAILS (auto)"
   echo "- Resolver-only paths (no absolute paths, no symlinks)"
@@ -83,10 +98,12 @@ fi
   echo 'HOST=127.0.0.1 PORT=4000 node boss-api/server.cjs'
   echo 'curl -s http://127.0.0.1:4000/api/list/inbox | jq .'
   echo '```'
-} > .codex/GUARDRAILS.md
+} > "$tmp_guardrails"
+mv "$tmp_guardrails" .codex/GUARDRAILS.md
 
 # 5) Workflow/Recipes — ดึงสูตรที่ใช้บ่อย (ถ้าไม่มี ใส่สั้นๆ ให้)
 if [ ! -f ".codex/TASK_RECIPES.md" ]; then
+  tmp_recipes="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
   {
     echo "# TASK RECIPES (auto)"
     echo "## Patch server.cjs to resolver-only + WHATWG URL"
@@ -95,15 +112,18 @@ if [ ! -f ".codex/TASK_RECIPES.md" ]; then
     echo "- Point to http://127.0.0.1:4000"
     echo "## Append manifest + update daily report"
     echo "- run/change_units/<CONTEXT_ID>.yml (append), run/daily_reports/REPORT_\$(date +%F).md"
-  } > .codex/TASK_RECIPES.md
+  } > "$tmp_recipes"
+  mv "$tmp_recipes" .codex/TASK_RECIPES.md
 fi
 
 # 6) Environment Hints — สร้างไฟล์ env ให้ชัด
+tmp_env="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
 {
   echo "HOST: 127.0.0.1"
   echo "PORT: 4000"
   echo "SOT_PATH_HINT: $ROOT"
-} > .codex/codex.env.yml
+} > "$tmp_env"
+mv "$tmp_env" .codex/codex.env.yml
 
 # รายงานผล
 echo "[02luka] codex-truth emitted:"

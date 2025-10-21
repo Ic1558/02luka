@@ -1,0 +1,280 @@
+{
+  "runs": [
+    {
+      "id": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "title": "Shadow Deploy — Bridge API",
+      "status": "success",
+      "agent": "CLS",
+      "riskScore": 0.72,
+      "createdAt": "2025-10-21T11:02:26.015Z",
+      "startedAt": "2025-10-21T08:12:26.015Z",
+      "completedAt": "2025-10-21T09:02:26.015Z",
+      "summary": "Shipped bridge API shadow deploy with live traffic guardrails.",
+      "tokensUsed": 1823,
+      "tokensSaved": 940,
+      "durationMs": 3000000,
+      "input": {},
+      "metadata": {
+        "demo": true,
+        "key": "demo-success"
+      }
+    },
+    {
+      "id": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "title": "Playbook: Refresh knowledge index",
+      "status": "failed",
+      "agent": "Codex",
+      "riskScore": 0.28,
+      "createdAt": "2025-10-21T11:02:26.023Z",
+      "startedAt": "2025-10-21T09:37:26.023Z",
+      "completedAt": "2025-10-21T10:02:26.023Z",
+      "summary": "Nightly index refresh failed during embedding batch.",
+      "tokensUsed": 640,
+      "tokensSaved": 210,
+      "durationMs": 1500000,
+      "input": {},
+      "metadata": {
+        "demo": true,
+        "key": "demo-failure"
+      }
+    }
+  ],
+  "runSteps": [
+    {
+      "id": "demo-success-step-1",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "idx": 1,
+      "title": "Queue deployment job",
+      "status": "success",
+      "startedAt": "2025-10-21T08:12:26.015Z",
+      "completedAt": "2025-10-21T08:17:26.017Z",
+      "log": "Queued deploy via shipit pipeline with canary tag.",
+      "artifacts": []
+    },
+    {
+      "id": "demo-success-step-2",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "idx": 2,
+      "title": "Mirror traffic at 5%",
+      "status": "success",
+      "startedAt": "2025-10-21T08:17:26.017Z",
+      "completedAt": "2025-10-21T08:32:26.017Z",
+      "log": "Mirror configured: bridge-api@latest to bridge-api@shadow.",
+      "artifacts": []
+    },
+    {
+      "id": "demo-success-step-3",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "idx": 3,
+      "title": "Validate telemetry",
+      "status": "success",
+      "startedAt": "2025-10-21T08:32:26.017Z",
+      "completedAt": "2025-10-21T08:52:26.017Z",
+      "log": "p95 latency stable at 480ms, error rate < 0.1%.",
+      "artifacts": []
+    },
+    {
+      "id": "demo-success-step-4",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "idx": 4,
+      "title": "Promote to 100%",
+      "status": "success",
+      "startedAt": "2025-10-21T08:52:26.017Z",
+      "completedAt": "2025-10-21T09:02:26.015Z",
+      "log": "Cutover completed, monitoring steady for 5 minutes.",
+      "artifacts": []
+    },
+    {
+      "id": "demo-failure-step-1",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "idx": 1,
+      "title": "Extract latest docs",
+      "status": "success",
+      "startedAt": "2025-10-21T09:37:26.023Z",
+      "completedAt": "2025-10-21T09:44:26.025Z",
+      "log": "Collected 124 docs from workspace sync.",
+      "artifacts": []
+    },
+    {
+      "id": "demo-failure-step-2",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "idx": 2,
+      "title": "Generate embeddings",
+      "status": "failed",
+      "startedAt": "2025-10-21T09:44:26.025Z",
+      "completedAt": "2025-10-21T10:02:26.023Z",
+      "log": "OpenAI rate limit exceeded after 80 embeddings. Abort.",
+      "artifacts": []
+    }
+  ],
+  "runLogs": [
+    {
+      "id": "bfa8dccf-2e57-4e96-85ab-a62d2c1aa23c",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "timestamp": "2025-10-21T08:12:26.015Z",
+      "level": "info",
+      "message": "Starting deploy workflow with risk score 0.72",
+      "data": null
+    },
+    {
+      "id": "5b062760-e962-4af3-a617-3ee81e6c93f7",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "timestamp": "2025-10-21T08:20:26.018Z",
+      "level": "info",
+      "message": "Shipit response: job=bridge-7121 queued",
+      "data": null
+    },
+    {
+      "id": "9a0e2987-e3fc-4413-b577-a322351f115d",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "timestamp": "2025-10-21T08:33:26.018Z",
+      "level": "info",
+      "message": "Metrics: latency=478ms p95, success_rate=99.4%",
+      "data": null
+    },
+    {
+      "id": "557a6fd5-12c8-48a1-a357-9d204afd0cac",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "timestamp": "2025-10-21T08:49:26.018Z",
+      "level": "warn",
+      "message": "One retry detected during canary ramp. Auto-resolved.",
+      "data": null
+    },
+    {
+      "id": "0dfd98b5-84ac-4d18-9f1b-dbf644875647",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "timestamp": "2025-10-21T09:02:26.015Z",
+      "level": "info",
+      "message": "Deployment promoted to 100% traffic.",
+      "data": null
+    },
+    {
+      "id": "e0fa2e69-588b-421f-beb5-491b9f53dd2e",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "timestamp": "2025-10-21T09:37:26.023Z",
+      "level": "info",
+      "message": "Refreshing vector index from nightly batch.",
+      "data": null
+    },
+    {
+      "id": "cb6c99b1-04b3-4869-ac9a-c6ce344ef6c0",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "timestamp": "2025-10-21T09:46:26.026Z",
+      "level": "info",
+      "message": "Batch progress 64/124 embeddings.",
+      "data": null
+    },
+    {
+      "id": "e2f8d4da-17e3-4fd4-8b1e-fbc59b1570b5",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "timestamp": "2025-10-21T09:57:26.026Z",
+      "level": "warn",
+      "message": "Rate limit near threshold, slowing requests.",
+      "data": null
+    },
+    {
+      "id": "a6970f83-1dc5-4379-bba2-1e885de007fe",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "timestamp": "2025-10-21T10:02:26.023Z",
+      "level": "error",
+      "message": "OpenAI: Rate limit exceeded. Retry after 60s.",
+      "data": null
+    }
+  ],
+  "memoryHits": [
+    {
+      "id": "demo-memory-1",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "memoryId": "memo-shadow-deploy",
+      "title": "Shadow deploy procedure",
+      "snippet": "1) queue canary 2) mirror 5% 3) guardrail check 4) promote when stable.",
+      "score": 0.92,
+      "kind": "playbook",
+      "createdAt": "2025-10-21T08:31:26.019Z"
+    },
+    {
+      "id": "demo-memory-2",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "memoryId": "memo-diff-checklist",
+      "title": "Risk approval checklist",
+      "snippet": "Capture rollback plan and notify approver before promote.",
+      "score": 0.81,
+      "kind": "memo",
+      "createdAt": "2025-10-21T08:34:26.019Z"
+    },
+    {
+      "id": "demo-memory-3",
+      "runId": "c2c09331-d3e6-4977-a3b3-25b0902e96b0",
+      "memoryId": "memo-throttle",
+      "title": "Embedding throttle guidance",
+      "snippet": "Use 4 parallel workers max; exponential backoff on 429.",
+      "score": 0.76,
+      "kind": "memo",
+      "createdAt": "2025-10-21T09:52:26.026Z"
+    }
+  ],
+  "memoryItems": [
+    {
+      "id": "memo-shadow-deploy",
+      "kind": "playbook",
+      "title": "Shadow deploy procedure",
+      "snippet": "Deploy behind feature flag, mirror traffic at 5%, validate metrics before promote.",
+      "importance": 5,
+      "embedding": null,
+      "createdAt": "2025-10-19T11:22:38.997Z"
+    },
+    {
+      "id": "memo-diff-checklist",
+      "kind": "checklist",
+      "title": "Risk approval checklist",
+      "snippet": "Capture diff, list blast radius, confirm rollback, tag approver with summary.",
+      "importance": 4,
+      "embedding": null,
+      "createdAt": "2025-10-20T11:22:38.997Z"
+    },
+    {
+      "id": "memo-throttle",
+      "kind": "memo",
+      "title": "Embedding throttle guidance",
+      "snippet": "Limit parallel embeddings to 4 workers; exponential backoff on HTTP 429.",
+      "importance": 3,
+      "embedding": null,
+      "createdAt": "2025-10-20T20:22:38.997Z"
+    }
+  ],
+  "approvals": [
+    {
+      "id": "34698907-4582-4144-8e6f-8fbe6e4acc63",
+      "runId": "a8144113-5fe9-4f73-aae0-318fb685cde6",
+      "status": "approved",
+      "requestedBy": "CLS",
+      "requestedAt": "2025-10-21T11:02:26.020Z",
+      "reason": "Production cutover requires approver sign-off.",
+      "decidedAt": "2025-10-21T11:02:26.021Z",
+      "decidedBy": "operator",
+      "decisionNote": "Guardrails cleared, cutover permitted.",
+      "riskScore": 0.72
+    }
+  ],
+  "telemetryDaily": [
+    {
+      "date": "2025-10-21",
+      "runsTotal": 42,
+      "runsSuccess": 37,
+      "latencyP50": 1.9,
+      "latencyP95": 3.2,
+      "latencyP99": 6.5,
+      "failureTop": [
+        {
+          "label": "Embedding batch",
+          "count": 3
+        }
+      ],
+      "tokensSaved": 12450,
+      "tokensSpent": 3680
+    }
+  ],
+  "counters": {
+    "logs": 0
+  }
+}

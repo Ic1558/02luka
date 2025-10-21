@@ -31,6 +31,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { writeArtifacts } = require('../packages/io/atomicExport.cjs');
 
 // Configuration
 const REPO_ROOT = process.env.REPO_ROOT || path.resolve(__dirname, '..');
@@ -166,11 +167,17 @@ function loadIndex() {
 }
 
 /**
- * Save memory index to disk
+ * Save memory index to disk (async with atomic write)
  */
-function saveIndex(index) {
+async function saveIndex(index) {
   try {
-    fs.writeFileSync(INDEX_FILE, JSON.stringify(index, null, 2));
+    const targetDir = path.dirname(INDEX_FILE);
+    const fileName = path.basename(INDEX_FILE);
+    await writeArtifacts({
+      targetDir,
+      artifacts: [{ name: fileName, data: JSON.stringify(index, null, 2) }],
+      log: { log: () => {} } // Silent mode for memory operations
+    });
   } catch (err) {
     console.error('Error saving memory index:', err.message);
     throw err;
@@ -241,7 +248,7 @@ function calculateImportance(kind, meta = {}, userImportance = 0.5, queryCount =
  * @param {number} options.halfLifeDays - Days for importance to decay to half (default: 60)
  * @returns {Object} Decay results
  */
-function decay({ halfLifeDays = 60 } = {}) {
+async function decay({ halfLifeDays = 60 } = {}) {
   const index = loadIndex();
   const now = Date.now();
   const halfLifeMs = halfLifeDays * 86400000;
@@ -270,7 +277,7 @@ function decay({ halfLifeDays = 60 } = {}) {
 
   const avgImportanceAfter = index.memories.reduce((sum, m) => sum + (m.importance || 0.5), 0) / (index.memories.length || 1);
 
-  saveIndex(index);
+  await saveIndex(index);
 
   return {
     processed: index.memories.length,
@@ -342,7 +349,7 @@ function discoverPatterns({ n = 2, minOccurrences = 3, topK = 10 } = {}) {
  * @param {number} options.importance - User-provided importance (0.0-1.0, optional)
  * @returns {Object} Stored memory object
  */
-function remember({ kind, text, meta = {}, importance = null }) {
+async function remember({ kind, text, meta = {}, importance = null }) {
   if (!kind || !text) {
     throw new Error('remember() requires kind and text');
   }
@@ -377,7 +384,7 @@ function remember({ kind, text, meta = {}, importance = null }) {
   rebuildVectors(index.memories, index.idf);
 
   // Save to disk
-  saveIndex(index);
+  await saveIndex(index);
 
   return {
     id: memory.id,
@@ -396,7 +403,7 @@ function remember({ kind, text, meta = {}, importance = null }) {
  * @param {number} options.topK - Number of results to return (default: 5)
  * @returns {Array} Top matching memories with similarity scores
  */
-function recall({ query, kind = null, topK = 5 }) {
+async function recall({ query, kind = null, topK = 5 }) {
   if (!query) {
     throw new Error('recall() requires query');
   }
@@ -445,7 +452,7 @@ function recall({ query, kind = null, topK = 5 }) {
 
   // Save updated access stats
   if (indexModified) {
-    saveIndex(index);
+    await saveIndex(index);
   }
 
   return results;
@@ -478,7 +485,7 @@ function stats() {
  * @param {number} options.minImportance - Keep memories with importance >= this (default: 0.3)
  * @returns {Object} Cleanup results with detailed analytics
  */
-function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
+async function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
   const index = loadIndex();
   const before = index.memories.length;
 
@@ -539,7 +546,7 @@ function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
     rebuildVectors(index.memories, index.idf);
   }
 
-  saveIndex(index);
+  await saveIndex(index);
 
   return {
     before,
@@ -559,9 +566,9 @@ function cleanup({ maxAgeDays = 90, minImportance = 0.3 } = {}) {
 /**
  * Clear all memories (use with caution)
  */
-function clear() {
+async function clear() {
   const index = { memories: [], idf: {} };
-  saveIndex(index);
+  await saveIndex(index);
   return { cleared: true };
 }
 

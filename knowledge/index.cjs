@@ -41,12 +41,57 @@ async function main(){
     const {spawnSync} = require('child_process');
     const res = spawnSync('node', [path.join(ROOT,'knowledge','sync.cjs'),'--export'], {stdio:'inherit'});
     process.exit(res.status || 0);
+  } else if (mode === '--hybrid') {
+    // Hybrid search (FTS + embeddings)
+    const q = args.slice(1).join(' ');
+    const { hybridSearch } = require('./search.cjs');
+    const result = await hybridSearch(db, q);
+    console.log(JSON.stringify({
+      query: q,
+      results: result.results.map(r => ({
+        doc_path: r.doc_path,
+        chunk_index: r.chunk_index,
+        snippet: r.snippet,
+        scores: r.scores
+      })),
+      count: result.count
+    }, null, 2));
+  } else if (mode === '--verify') {
+    // Hybrid search with detailed timing breakdown
+    const q = args.slice(1).join(' ');
+    const { hybridSearch } = require('./search.cjs');
+    const result = await hybridSearch(db, q);
+    console.log(JSON.stringify({
+      query: q,
+      results: result.results.map(r => ({
+        doc_path: r.doc_path,
+        chunk_index: r.chunk_index,
+        snippet: r.snippet,
+        scores: r.scores
+      })),
+      count: result.count,
+      timings: result.timings
+    }, null, 2));
+  } else if (mode === '--bench') {
+    // Run benchmark
+    const { runBenchmark } = require('./util/benchmark.cjs');
+    const iterations = parseInt(args.find(a => a.startsWith('--iters='))?.split('=')[1]) || 30;
+    await runBenchmark(db, { iterations });
+  } else if (mode === '--reindex') {
+    // Reindex all documents
+    const {spawnSync} = require('child_process');
+    const res = spawnSync('node', [path.join(ROOT,'knowledge','reindex-all.cjs')], {stdio:'inherit'});
+    process.exit(res.status || 0);
   } else {
     console.log(`Usage:
-  node knowledge/index.cjs --search "query"
-  node knowledge/index.cjs --recall "query"
-  node knowledge/index.cjs --stats
-  node knowledge/index.cjs --export`);
+  node knowledge/index.cjs --search "query"      # FTS keyword search
+  node knowledge/index.cjs --recall "query"      # TF-IDF vector search
+  node knowledge/index.cjs --hybrid "query"      # Hybrid search (FTS + embeddings)
+  node knowledge/index.cjs --verify "query"      # Hybrid search with timing
+  node knowledge/index.cjs --bench [--iters=N]   # Run benchmark
+  node knowledge/index.cjs --stats               # Show statistics
+  node knowledge/index.cjs --export              # Export to JSON
+  node knowledge/index.cjs --reindex             # Reindex all documents`);
   }
   db.close();
 }

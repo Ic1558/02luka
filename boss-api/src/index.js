@@ -7,6 +7,7 @@ import fs from 'node:fs/promises';
 import { createWriteStream, constants as fsConstants } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import v2Router from './routes/v2.js';
 
 dotenv.config();
 
@@ -76,6 +77,8 @@ app.use((req, res, next) => {
     next();
   }
 });
+
+app.use('/api/v2', v2Router);
 
 // Simple in-memory cache with size limits
 const cache = new Map();
@@ -610,6 +613,17 @@ app.get('/api/file/:folder/:name', async (req, res) => {
     const code = error.code === 'ENOENT' ? 'file_not_found' : error.code || 'internal_error';
     res.status(status).json(buildError(error.message, code));
   }
+});
+
+app.use((error, req, res, next) => {
+  console.error('API error', error);
+  if (res.headersSent) {
+    return next(error);
+  }
+  const status = error.status || 500;
+  const code = error.code || 'internal_error';
+  const message = error.message || 'Unexpected error';
+  res.status(status).json(buildError(message, code));
 });
 
 app.use((req, res) => {

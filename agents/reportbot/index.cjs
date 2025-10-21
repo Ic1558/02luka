@@ -12,6 +12,7 @@ const path = require('path');
 const http = require('http');
 const https = require('https');
 const { URL } = require('url');
+const { writeArtifacts } = require('../../packages/io/atomicExport.cjs');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const reportsDir = path.join(repoRoot, 'g', 'reports');
@@ -335,10 +336,11 @@ function formatSummaryText(summary) {
   const summary = await collectSummary();
   if (options.write) {
     try {
-      if (!fs.existsSync(reportsDir)) {
-        fs.mkdirSync(reportsDir, { recursive: true });
-      }
-      fs.writeFileSync(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+      await writeArtifacts({
+        targetDir: path.dirname(summaryPath),
+        artifacts: [{ name: path.basename(summaryPath), data: `${JSON.stringify(summary, null, 2)}\n` }],
+        log: { log: () => {} } // Silent mode
+      });
     } catch (error) {
       console.error(`Failed to write ${summaryPath}:`, error.message);
       process.exit(1);

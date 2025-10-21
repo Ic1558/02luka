@@ -70,9 +70,21 @@ if [[ "$INPUT_PATH" != "/dev/stdin" && ! -f "$INPUT_PATH" ]]; then
 fi
 
 # Safe-mode passthrough — copies input to output without mutation
-if ! cat "$INPUT_PATH" > "$OUTPUT_PATH"; then
-  echo "Failed to copy context payload" >&2
-  exit 70
+# Use atomic write for regular files (not stdout)
+if [[ "$OUTPUT_PATH" != "/dev/stdout" ]]; then
+  tmp_output="$(mktemp "${TMPDIR:-/tmp}/02luka-export.XXXXXX")"
+  if ! cat "$INPUT_PATH" > "$tmp_output"; then
+    rm -f "$tmp_output"
+    echo "Failed to copy context payload" >&2
+    exit 70
+  fi
+  mv "$tmp_output" "$OUTPUT_PATH"
+else
+  # Direct passthrough for stdout
+  if ! cat "$INPUT_PATH" > "$OUTPUT_PATH"; then
+    echo "Failed to copy context payload" >&2
+    exit 70
+  fi
 fi
 
 log_info "Completed safe pass-through"
