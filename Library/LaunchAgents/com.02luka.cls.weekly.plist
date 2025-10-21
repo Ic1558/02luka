@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.cls.weekly</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/workspaces/02luka-repo/scripts/run_cls_review.sh</string>
+        <string>--days</string>
+        <string>7</string>
+        <string>--notify</string>
+    </array>
+    
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/workspaces/02luka-repo/g/logs/cls_weekly.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/workspaces/02luka-repo/g/logs/cls_weekly_error.log</string>
+    
+    <key>RunAtLoad</key>
+    <false/>
+    
+    <key>KeepAlive</key>
+    <false/>
+</dict>
+</plist>

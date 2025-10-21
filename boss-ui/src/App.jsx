@@ -2,7 +2,25 @@ import { useEffect, useMemo, useState, useCallback, memo, useRef } from 'react';
 import { marked } from 'marked';
 import ErrorBoundary from './ErrorBoundary';
 
-const API_BASE = 'http://localhost:4000';
+const resolveApiBase = () => {
+  const envBase = import.meta?.env?.VITE_API_BASE;
+  if (envBase && typeof envBase === 'string' && envBase.trim()) {
+    return envBase.trim().replace(/\/+$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    if (window.API_BASE && typeof window.API_BASE === 'string' && window.API_BASE.trim()) {
+      return window.API_BASE.trim().replace(/\/+$/, '');
+    }
+
+    const { protocol = 'http:', hostname = '127.0.0.1' } = window.location || {};
+    return `${protocol}//${hostname}:4000`;
+  }
+
+  return 'http://127.0.0.1:4000';
+};
+
+const API_BASE = resolveApiBase();
 
 const folders = [
   { key: 'inbox', label: 'Inbox' },
@@ -13,7 +31,7 @@ const folders = [
   { key: 'documents', label: 'Documents' }
 ];
 
-const defaultMarkdown = '# Boss Workspace\n\nSelect a file to preview its contents.';
+const defaultMarkdown = '# Boss Workspace\n\nSelect a file to preview its contents or review system status on the left.';
 
 // Cache for API responses with size limits
 const apiCache = new Map();
@@ -102,6 +120,108 @@ const diffFileLists = (previous = [], next = []) => {
   return { added, removed };
 };
 
+const normalizeConnectorEntries = (connectors) => {
+  if (!connectors || typeof connectors !== 'object') {
+    return [];
+  }
+
+  const entries = [];
+
+  const describe = (id, label, data) => {
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    const ready = typeof data.ready === 'boolean' ? data.ready : false;
+    const error = typeof data.error === 'string' ? data.error : '';
+    let detail = '';
+    if (error) {
+      detail = error;
+    } else if (typeof data.documents === 'number') {
+      detail = `${data.documents} document${data.documents === 1 ? '' : 's'}`;
+    } else if (Array.isArray(data.datasets)) {
+      const count = data.datasets.length;
+      detail = `${count} dataset${count === 1 ? '' : 's'}`;
+    } else if (typeof data.script === 'string' && data.script) {
+      detail = data.script.split('/').pop();
+    } else if (ready) {
+      detail = 'Ready';
+    } else {
+      detail = 'Unavailable';
+    }
+
+    entries.push({ id, label, ready, detail });
+  };
+
+  for (const [provider, value] of Object.entries(connectors)) {
+    if (!value || typeof value !== 'object') {
+      continue;
+    }
+
+    if (typeof value.ready === 'boolean') {
+      describe(provider, provider, value);
+    }
+
+    for (const [capability, data] of Object.entries(value)) {
+      if (capability === 'ready' || capability === 'error') {
+        continue;
+      }
+      describe(`${provider}:${capability}`, `${provider} ${capability}`, data);
+    }
+  }
+
+  return entries.sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const formatFeatureLabel = (key) => {
+  if (!key) {
+    return '';
+  }
+  return key
+    .toString()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+};
+
+const createStatusState = () => ({
+  data: null,
+  loading: true,
+  error: null,
+  fetchedAt: null,
+  status: 'unknown'
+});
+
+const normalizeReportStatus = (value) => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (['ok', 'ready', 'pass', 'healthy'].includes(normalized)) {
+    return 'ok';
+  }
+  if (['warn', 'warning', 'unknown', 'pending', 'partial'].includes(normalized)) {
+    return 'warn';
+  }
+  if (normalized) {
+    return 'error';
+  }
+  return 'unknown';
+};
+
+const formatTimestamp = (value) => {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+    return '';
+  }
+  return value.toLocaleTimeString();
+};
+
+const truncateText = (value, max = 140) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  if (value.length <= max) {
+    return value;
+  }
+  return `${value.slice(0, max - 1)}…`;
+};
+
 const removeCacheEntry = (key) => {
   const entry = apiCache.get(key);
   if (!entry) return false;
@@ -151,9 +271,12 @@ export default function App() {
   const [isRescanning, setIsRescanning] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [listInsights, setListInsights] = useState(null);
+  const [healthState, setHealthState] = useState(createStatusState);
+  const [capabilitiesState, setCapabilitiesState] = useState(createStatusState);
+  const [reportsState, setReportsState] = useState(createStatusState);
   const selectedFileRef = useRef(null);
   const filesRef = useRef(files);
-  const activeControllersRef = useRef({ files: null, file: null });
+  const activeControllersRef = useRef({ files: null, file: null, health: null, capabilities: null, reports: null });
 
   useEffect(() => {
     selectedFileRef.current = selectedFile;
@@ -264,6 +387,144 @@ export default function App() {
 
     return data;
   }, [cleanupCache]);
+
+  const loadHealth = useCallback(async ({ bypassCache = false } = {}) => {
+    const controller = new AbortController();
+    if (activeControllersRef.current.health) {
+      activeControllersRef.current.health.abort();
+    }
+    activeControllersRef.current.health = controller;
+
+    setHealthState((previous) => ({ ...previous, loading: true, error: null }));
+
+    try {
+      const payload = await fetchWithCache(
+        `${API_BASE}/healthz`,
+        'healthz',
+        { signal: controller.signal, bypassCache }
+      );
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const ok = typeof payload?.status === 'string' && payload.status.toLowerCase() === 'ok';
+      setHealthState({
+        data: payload,
+        loading: false,
+        error: null,
+        fetchedAt: new Date(),
+        status: ok ? 'ok' : 'error'
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return;
+      }
+      setHealthState({
+        data: null,
+        loading: false,
+        error: err.message,
+        fetchedAt: new Date(),
+        status: 'error'
+      });
+    } finally {
+      if (activeControllersRef.current.health === controller) {
+        activeControllersRef.current.health = null;
+      }
+    }
+  }, [fetchWithCache]);
+
+  const loadCapabilities = useCallback(async ({ bypassCache = false } = {}) => {
+    const controller = new AbortController();
+    if (activeControllersRef.current.capabilities) {
+      activeControllersRef.current.capabilities.abort();
+    }
+    activeControllersRef.current.capabilities = controller;
+
+    setCapabilitiesState((previous) => ({ ...previous, loading: true, error: null }));
+
+    try {
+      const payload = await fetchWithCache(
+        `${API_BASE}/api/capabilities`,
+        'capabilities',
+        { signal: controller.signal, bypassCache }
+      );
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const hasMailboxes = Array.isArray(payload?.mailboxes?.list) && payload.mailboxes.list.length > 0;
+      setCapabilitiesState({
+        data: payload,
+        loading: false,
+        error: null,
+        fetchedAt: new Date(),
+        status: hasMailboxes ? 'ok' : 'warn'
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return;
+      }
+      setCapabilitiesState({
+        data: null,
+        loading: false,
+        error: err.message,
+        fetchedAt: new Date(),
+        status: 'error'
+      });
+    } finally {
+      if (activeControllersRef.current.capabilities === controller) {
+        activeControllersRef.current.capabilities = null;
+      }
+    }
+  }, [fetchWithCache]);
+
+  const loadReportsSummary = useCallback(async ({ bypassCache = false } = {}) => {
+    const controller = new AbortController();
+    if (activeControllersRef.current.reports) {
+      activeControllersRef.current.reports.abort();
+    }
+    activeControllersRef.current.reports = controller;
+
+    setReportsState((previous) => ({ ...previous, loading: true, error: null }));
+
+    try {
+      const payload = await fetchWithCache(
+        `${API_BASE}/api/reports/summary`,
+        'reports-summary',
+        { signal: controller.signal, bypassCache }
+      );
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const status = normalizeReportStatus(payload?.status);
+      setReportsState({
+        data: payload,
+        loading: false,
+        error: null,
+        fetchedAt: new Date(),
+        status
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return;
+      }
+      setReportsState({
+        data: null,
+        loading: false,
+        error: err.message,
+        fetchedAt: new Date(),
+        status: 'error'
+      });
+    } finally {
+      if (activeControllersRef.current.reports === controller) {
+        activeControllersRef.current.reports = null;
+      }
+    }
+  }, [fetchWithCache]);
 
   // Periodic cache cleanup
   useEffect(() => {
@@ -401,12 +662,39 @@ export default function App() {
         activeControllersRef.current.files.abort();
         activeControllersRef.current.files = null;
       }
+      if (activeControllersRef.current.file) {
+        activeControllersRef.current.file.abort();
+        activeControllersRef.current.file = null;
+      }
     };
   }, [loadFiles]);
+
+  useEffect(() => {
+    loadHealth();
+    loadCapabilities();
+    loadReportsSummary();
+
+    return () => {
+      ['health', 'capabilities', 'reports'].forEach((key) => {
+        if (activeControllersRef.current[key]) {
+          activeControllersRef.current[key].abort();
+          activeControllersRef.current[key] = null;
+        }
+      });
+    };
+  }, [loadHealth, loadCapabilities, loadReportsSummary]);
 
   const handleRescan = useCallback(() => {
     loadFiles({ bypassCache: true, resetSelection: false });
   }, [loadFiles]);
+
+  const handleStatusRefresh = useCallback(() => {
+    loadHealth({ bypassCache: true });
+    loadCapabilities({ bypassCache: true });
+    loadReportsSummary({ bypassCache: true });
+  }, [loadHealth, loadCapabilities, loadReportsSummary]);
+
+  const isRefreshingStatus = healthState.loading || capabilitiesState.loading || reportsState.loading;
 
   // Memoized markdown rendering with better performance
   const renderedMarkdown = useMemo(() => {
@@ -426,12 +714,19 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="app-shell">
-        <Sidebar 
+        <Sidebar
           folders={folders}
           selectedFolder={selectedFolder}
           onFolderSelect={setSelectedFolder}
         />
         <main className="main-pane">
+          <SystemStatus
+            health={healthState}
+            capabilities={capabilitiesState}
+            reports={reportsState}
+            onRefresh={handleStatusRefresh}
+            isRefreshing={isRefreshingStatus}
+          />
           <FileList
             files={files}
             selectedFile={selectedFile}
@@ -455,6 +750,187 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+const StatusChip = ({ label, state, detail, loading }) => {
+  const normalizedState = loading ? 'pending' : state || 'unknown';
+  const className = `status-chip ${normalizedState}`;
+  return (
+    <span className={className}>
+      <span className="dot" aria-hidden="true"></span>
+      <span className="status-chip-label">{label}</span>
+      <span className="status-chip-detail">{loading ? 'Checking…' : detail || '—'}</span>
+    </span>
+  );
+};
+
+const SystemStatus = memo(({ health, capabilities, reports, onRefresh, isRefreshing }) => {
+  const connectors = useMemo(
+    () => normalizeConnectorEntries(capabilities?.data?.connectors),
+    [capabilities]
+  );
+
+  const features = useMemo(() => {
+    const raw = capabilities?.data?.features;
+    if (!raw || typeof raw !== 'object') {
+      return [];
+    }
+    return Object.entries(raw)
+      .map(([key, value]) => ({ key, label: formatFeatureLabel(key), enabled: Boolean(value) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [capabilities]);
+
+  const engines = useMemo(() => {
+    const raw = capabilities?.data?.engine;
+    if (!raw || typeof raw !== 'object') {
+      return [];
+    }
+    return Object.entries(raw)
+      .map(([key, value]) => ({ key, label: formatFeatureLabel(key), enabled: Boolean(value) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [capabilities]);
+
+  const mailboxFlow = useMemo(() => {
+    const flow = capabilities?.data?.mailboxes?.flow;
+    return Array.isArray(flow) ? flow : [];
+  }, [capabilities]);
+
+  const readyConnectors = connectors.filter((item) => item.ready).length;
+  const mailboxCount = Array.isArray(capabilities?.data?.mailboxes?.list)
+    ? capabilities.data.mailboxes.list.length
+    : 0;
+
+  const healthDetail = health.loading
+    ? 'Checking…'
+    : health.error
+      ? truncateText(health.error)
+      : `Online${health.fetchedAt ? ` · ${formatTimestamp(health.fetchedAt)}` : ''}`;
+
+  let capabilitiesDetail;
+  if (capabilities.loading) {
+    capabilitiesDetail = 'Loading…';
+  } else if (capabilities.error) {
+    capabilitiesDetail = truncateText(capabilities.error);
+  } else {
+    const parts = [];
+    parts.push(`${mailboxCount} mailbox${mailboxCount === 1 ? '' : 'es'}`);
+    if (connectors.length > 0) {
+      parts.push(`${readyConnectors}/${connectors.length} connector${connectors.length === 1 ? '' : 's'} ready`);
+    }
+    if (capabilities.fetchedAt) {
+      parts.push(formatTimestamp(capabilities.fetchedAt));
+    }
+    capabilitiesDetail = parts.join(' · ');
+  }
+
+  let reportsDetail;
+  if (reports.loading) {
+    reportsDetail = 'Refreshing…';
+  } else if (reports.error) {
+    reportsDetail = truncateText(reports.error);
+  } else if (reports.data) {
+    const parts = [];
+    parts.push(formatFeatureLabel(reports.status));
+    if (reports.data.note) {
+      parts.push(truncateText(reports.data.note, 100));
+    } else if (reports.data.hint) {
+      parts.push(truncateText(reports.data.hint, 100));
+    }
+    if (reports.fetchedAt) {
+      parts.push(formatTimestamp(reports.fetchedAt));
+    }
+    reportsDetail = parts.filter(Boolean).join(' · ');
+  } else {
+    reportsDetail = 'No summary';
+  }
+
+  return (
+    <section className="system-status">
+      <header>
+        <div className="status-heading">
+          <h2>System Status</h2>
+          {!capabilities.loading && capabilities.fetchedAt && (
+            <span className="status-note">Synced {formatTimestamp(capabilities.fetchedAt)}</span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="status-refresh"
+          onClick={() => onRefresh?.()}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </header>
+      <div className="status-chip-row">
+        <StatusChip label="API" state={health.status} detail={healthDetail} loading={health.loading} />
+        <StatusChip
+          label="Capabilities"
+          state={capabilities.status}
+          detail={capabilitiesDetail}
+          loading={capabilities.loading}
+        />
+        <StatusChip label="Reports" state={reports.status} detail={reportsDetail} loading={reports.loading} />
+      </div>
+
+      {mailboxFlow.length > 0 && (
+        <div className="status-section">
+          <h3>Mailboxes</h3>
+          <div className="status-note flow">{mailboxFlow.join(' → ')}</div>
+        </div>
+      )}
+
+      {connectors.length > 0 && (
+        <div className="status-section">
+          <div className="status-section-header">
+            <h3>Connectors</h3>
+            <span className="status-note">{readyConnectors}/{connectors.length} ready</span>
+          </div>
+          <ul className="connector-list">
+            {connectors.map((connector) => (
+              <li key={connector.id} className="connector-item">
+                <span className={`status-dot ${connector.ready ? 'ok' : 'error'}`} aria-hidden="true"></span>
+                <span className="connector-name">{connector.label}</span>
+                <span className="connector-detail">{connector.detail}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {features.length > 0 && (
+        <div className="status-section">
+          <h3>Features</h3>
+          <div className="feature-tags">
+            {features.map((feature) => (
+              <span
+                key={feature.key}
+                className={`feature-chip ${feature.enabled ? 'enabled' : 'disabled'}`}
+              >
+                {feature.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {engines.length > 0 && (
+        <div className="status-section">
+          <h3>Engines</h3>
+          <div className="feature-tags">
+            {engines.map((engine) => (
+              <span
+                key={engine.key}
+                className={`feature-chip ${engine.enabled ? 'enabled' : 'disabled'}`}
+              >
+                {engine.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+});
 
 // Memoized Sidebar component
 const Sidebar = memo(({ folders, selectedFolder, onFolderSelect }) => (
