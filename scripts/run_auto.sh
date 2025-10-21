@@ -6,4 +6,4 @@ export CLS_SHELL="${CLS_SHELL:-/bin/bash}"
 export CLS_FS_ALLOW="${CLS_FS_ALLOW:-/Volumes/lukadata:/Volumes/hd2:$HOME}"
 
 cd "$ROOT_DIR"
-exec node apps/assistant-runtime/index.mjs manual "$@"
+exec node apps/assistant-runtime/index.mjs auto "$@"
