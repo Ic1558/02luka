@@ -49,7 +49,7 @@ function loadLocalDocuments({ rootDir }) {
  * @param {string} rootDir
  * @returns {string[]}
  */
-function walkMarkdown(rootDir) {
+function walkMarkdown(rootDir, baseRoot = rootDir) {
   /** @type {string[]} */
   const results = [];
 
@@ -64,9 +64,9 @@ function walkMarkdown(rootDir) {
     }
 
     if (stats.isDirectory()) {
-      results.push(...walkMarkdown(fullPath));
+      results.push(...walkMarkdown(fullPath, baseRoot));
     } else if (stats.isFile() && entry.endsWith('.md')) {
-      results.push(path.relative(rootDir, fullPath));
+      results.push(path.relative(baseRoot, fullPath));
     }
   }
 
