@@ -1,9 +1,26 @@
 {
-  "name": "02Luka Dev Container",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "remoteUser": "root",
-  "postCreateCommand": "true",
+  "name": "02Luka Development Container",
+  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+  "containerEnv": {
+    "CLS_SHELL": "/bin/bash",
+    "SHELL": "/bin/bash",
+    "PATH": "/usr/local/bin:/usr/bin:/bin"
+  },
   "customizations": {
-    "vscode": { "extensions": ["openai.codex","ms-vscode-remote.remote-containers"] }
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        }
+      }
+    }
   }
 }

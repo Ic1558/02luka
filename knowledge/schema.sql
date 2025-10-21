@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
 
 -- Insights cache (from Phase 7.1 self-review)
 CREATE TABLE IF NOT EXISTS insights (
-  id TEXT PRIMARY KEY AUTOINCREMENT,
+  id TEXT PRIMARY KEY,
   text TEXT,
   confidence REAL,
   actionable INTEGER,

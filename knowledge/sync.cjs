@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /* Syncs g/memory, g/telemetry, g/reports into knowledge/02luka.db and exports JSON/MD */
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
+const os = require('os');
 const sqlite3 = require('sqlite3').verbose();
 
 const ROOT = path.resolve(__dirname, '..');
@@ -15,6 +17,7 @@ const EXP_DIR = path.join(ROOT, 'knowledge', 'exports');
 const args = process.argv.slice(2);
 const FULL = args.includes('--full');
 const DO_EXPORT = args.includes('--export');
+const EXPORT_DIRECT = process.env.EXPORT_DIRECT === '1' || args.includes('--export-direct');
 
 main().catch(e => { console.error(e); process.exit(1); });
 
@@ -134,8 +137,45 @@ function guessIsoFromName(f){ const m=f.match(/\d{4}-\d{2}-\d{2}T[\d-]+Z|\d{8,}/
 
 async function exportJSON(db){
   const all = (q)=>new Promise((res,rej)=>db.all(q,[],(e,rows)=>e?rej(e):res(rows)));
-  fs.writeFileSync(path.join(EXP_DIR,'memories.json'), JSON.stringify(await all('SELECT * FROM memories'), null, 2));
-  fs.writeFileSync(path.join(EXP_DIR,'telemetry.json'), JSON.stringify(await all('SELECT * FROM telemetry'), null, 2));
-  const reps = await all('SELECT id, filename, type, generated FROM reports');
-  fs.writeFileSync(path.join(EXP_DIR,'reports.index.json'), JSON.stringify(reps, null, 2));
+
+  // Temp-then-move pattern: write to local temp first, then atomic rename to Google Drive
+  const tmpRoot = process.env.EXPORT_TMP_DIR || path.join(os.tmpdir(), '02luka-exports');
+  const tmpOut = EXPORT_DIRECT ? EXP_DIR : path.join(tmpRoot, String(process.pid));
+  const finalOut = EXP_DIR;
+
+  console.log(`\n[export] mode: ${EXPORT_DIRECT ? 'direct-to-drive' : 'temp-then-move'}`);
+
+  // Ensure temp directory exists
+  await fsp.mkdir(tmpOut, { recursive: true });
+
+  // Prepare data
+  const artifacts = [
+    { name: 'memories.json', data: JSON.stringify(await all('SELECT * FROM memories'), null, 2) },
+    { name: 'telemetry.json', data: JSON.stringify(await all('SELECT * FROM telemetry'), null, 2) },
+    { name: 'reports.index.json', data: JSON.stringify(await all('SELECT id, filename, type, generated FROM reports'), null, 2) }
+  ];
+
+  // Write files
+  for (const a of artifacts) {
+    const tmpFile = path.join(tmpOut, a.name);
+    process.stdout.write(`  • writing ${a.name}... `);
+    await fsp.writeFile(tmpFile, a.data, 'utf8');
+    process.stdout.write('✓\n');
+  }
+
+  // Atomic move to final destination if using temp path
+  if (!EXPORT_DIRECT) {
+    process.stdout.write('  • staging → drive... ');
+    await fsp.mkdir(finalOut, { recursive: true });
+    for (const a of artifacts) {
+      const src = path.join(tmpOut, a.name);
+      const dst = path.join(finalOut, a.name);
+      await fsp.rename(src, dst);
+    }
+    // Clean up temp directory
+    await fsp.rm(tmpOut, { recursive: true, force: true }).catch(() => {});
+    process.stdout.write('✓\n');
+  }
+
+  console.log('[export] complete\n');
 }

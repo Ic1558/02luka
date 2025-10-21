@@ -1,0 +1,8 @@
+{
+  "id": "sync-project-hd2",
+  "skill": "bash",
+  "desc": "Rsync mirror of docs to hd2",
+  "cmd": "rsync -a --delete 'docs/' '/Volumes/hd2/CLS/docs/'",
+  "allowWrite": true,
+  "paths": ["/Volumes/hd2/CLS/docs"]
+}

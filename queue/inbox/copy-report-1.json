@@ -1,0 +1,8 @@
+{
+  "id": "copy-report-1",
+  "skill": "bash",
+  "desc": "Copy latest report to lukadata",
+  "cmd": "mkdir -p '/Volumes/lukadata/CLS/reports' && cp -f 'g/reports/telemetry_last24h.md' '/Volumes/lukadata/CLS/reports/telemetry_last24h.md'",
+  "allowWrite": true,
+  "paths": ["/Volumes/lukadata/CLS/reports"]
+}
