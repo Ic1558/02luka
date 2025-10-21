@@ -1,19 +1,20 @@
 # RAG System Clarification - 02luka Architecture
 
-**Date:** 2025-10-22
+**Date:** 2025-10-22 (Updated with Phase 7.6+)
 **Status:** ✅ Production Ready
-**Phases:** 6, 6.5-A, 6.5-B, 7.5
+**Phases:** 6, 6.5-A, 6.5-B, 7.5, **7.6 (CURRENT)**
 
 ---
 
 ## What is RAG in Our System?
 
-**RAG (Retrieval-Augmented Generation)** in the 02luka system is a two-tier knowledge retrieval architecture that combines:
+**RAG (Retrieval-Augmented Generation)** in the 02luka system is a three-tier knowledge retrieval architecture that combines:
 
-1. **In-Memory TF-IDF Vector Search** (Phase 6 + 6.5)
-2. **SQLite Full-Text Search (FTS5)** (Phase 7.5)
+1. **Hybrid Embeddings (all-MiniLM-L6-v2 + FTS5)** (Phase 7.6 - **CURRENT, PRIMARY**)
+2. **In-Memory TF-IDF Vector Search** (Phase 6 + 6.5 - Legacy)
+3. **SQLite Full-Text Search (FTS5)** (Phase 7.5 - Legacy)
 
-Unlike traditional RAG systems that use external vector databases (Pinecone, Weaviate, etc.), our system is **offline-first, file-backed, and lightweight** - designed for local AI agent operations.
+Unlike traditional RAG systems that use external vector databases (Pinecone, Weaviate, etc.), our system is **offline-first, file-backed, and lightweight** - designed for local AI agent operations. Phase 7.6 adds true semantic understanding via transformer-based embeddings while maintaining the offline-first philosophy.
 
 ---
 
@@ -592,6 +593,222 @@ Savings: 97.7% reduction (62,000 → 1,450)
 
 ---
 
+## Phase 7.6: Hybrid Embeddings System ⭐ (CURRENT)
+
+**Status:** ✅ PRODUCTION READY (2025-10-22)
+**File:** `knowledge/search.cjs`, `knowledge/embedder.cjs`, `knowledge/chunker.cjs`
+**Model:** all-MiniLM-L6-v2 (384 dimensions, 80MB, ONNX runtime)
+**Database:** `knowledge/02luka.db` (14 MB, 4,002 semantic chunks)
+
+### What Changed from Phase 7.5?
+
+Phase 7.6 introduces **true semantic understanding** via transformer-based embeddings, combined with FTS5 pre-filtering for speed. This eliminates the "waste paper" problem where 40% of documentation was unindexed.
+
+**Key Improvements:**
+- ✅ **100% Documentation Coverage**: 4,002 chunks from 258 documents (vs 125 reports in Phase 7.5)
+- 🚀 **Exceptional Performance**: 7-8ms average query time (vs ~10ms FTS-only)
+- 🧠 **Semantic Understanding**: Finds "token savings" when searching "cost reduction"
+- ⚡ **Hybrid Architecture**: FTS pre-filter + embedding rerank (best of both worlds)
+
+### Architecture: 3-Stage Hybrid Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 1: FTS Pre-filter (Fast, 4ms)                        │
+│ • SQLite FTS5 keyword search                                │
+│ • Returns top 50 candidates                                 │
+│ • Handles special characters ("phase 7.2", "v2.0")         │
+└────────────────────────────┬────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 2: Embedding Rerank (Precise, 3ms)                   │
+│ • Load query embedding: all-MiniLM-L6-v2                   │
+│ • Compute cosine similarity with 50 candidates              │
+│ • ONNX runtime, CPU-only, no GPU needed                    │
+└────────────────────────────┬────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 3: Hybrid Scoring (Balanced, 0.1ms)                  │
+│ • Final = (0.3 × FTS_score) + (0.7 × Semantic_score)       │
+│ • Sort by final score descending                            │
+│ • Return top 10 results                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### How It Works
+
+**Step 1: Document Chunking (Semantic)**
+```javascript
+// chunker.cjs - Splits by markdown headers, preserves hierarchy
+const chunks = semanticChunk(content, { filepath });
+
+// Example chunk
+{
+  doc_path: "docs/PHASE7_2_DELEGATION.md",
+  chunk_index: 3,
+  text: "# Phase 7.2: Delegation\n\n## Architecture\n\n...",
+  hierarchy: ["Phase 7.2: Delegation"],
+  tags: ["success", "phase-doc", "delegation"],
+  importance: 0.65
+}
+```
+
+**Step 2: Embedding Generation (all-MiniLM-L6-v2)**
+```javascript
+// embedder.cjs - Generate 384-dimensional embeddings
+const embedding = await getEmbedding(chunk.text);
+// Returns: Float32Array(384) [0.023, -0.145, 0.091, ...]
+```
+
+**Step 3: Hybrid Search (3-stage pipeline)**
+```javascript
+// search.cjs - Hybrid retrieval
+const results = await hybridSearch(db, query);
+
+// 1. FTS pre-filter → 50 candidates (4ms)
+// 2. Embedding rerank → semantic scores (3ms)
+// 3. Hybrid scoring → final results (0.1ms)
+```
+
+### Performance Characteristics
+
+| Metric | Phase 6 (TF-IDF) | Phase 7.5 (FTS) | **Phase 7.6 (Hybrid)** |
+|--------|------------------|-----------------|------------------------|
+| **Coverage** | 27 memories | 125 reports (68%) | **258 docs (100%)** ✅ |
+| **Chunks** | 27 | N/A | **4,002** ✅ |
+| **Query Time** | ~65ms | ~10ms | **7-8ms** 🚀 |
+| **Semantic** | ❌ Keyword-like | ❌ Keyword only | ✅ **Full semantic** |
+| **Special Chars** | N/A | ⚠️ Errors | ✅ **Fixed** |
+| **Docs Indexed** | 0% | 0% | **100%** ✅ |
+| **Reports Indexed** | N/A | 68% | **100%** ✅ |
+
+### Example Usage
+
+**Command:**
+```bash
+node knowledge/index.cjs --hybrid "token efficiency improvements"
+```
+
+**Output:**
+```json
+{
+  "query": "token efficiency improvements",
+  "results": [
+    {
+      "doc_path": "g/reports/RAG_QUICK_REFERENCE.md",
+      "chunk_index": 5,
+      "snippet": "...Phase 7.2 delegation: 89% token savings (6500→700)...",
+      "scores": {
+        "fts": 0.85,
+        "semantic": 0.72,
+        "final": 0.759
+      }
+    }
+  ],
+  "count": 10,
+  "timings": {
+    "fts_ms": 4.37,
+    "embedding_ms": 2.55,
+    "rerank_ms": 0.11,
+    "total_ms": 7.03
+  }
+}
+```
+
+### Semantic Understanding Examples
+
+| Query | Finds (Semantic Match) | Why |
+|-------|------------------------|-----|
+| "token efficiency" | "89% token savings", "delegation reduces costs" | Understands "efficiency" = "savings" |
+| "reducing costs" | "delegation architecture", "token optimization" | Understands "cost" = "resource usage" |
+| "phase 7.2 complete" | "Phase 7.2 Completion Report" | Handles decimals correctly |
+| "version 2.0" | "boss-api v2.0 deployment" | Handles version numbers |
+
+### When to Use Phase 7.6 Hybrid Search
+
+✅ **Use as PRIMARY search method for:**
+- General questions about the system
+- Concept discovery ("token efficiency" finds "delegation")
+- Version/phase lookups ("phase 7.2", "v2.0")
+- Before asking CLC questions (saves tokens!)
+- Finding related documentation across multiple files
+
+**Performance:** 7-8ms avg, 100% docs indexed ✅
+
+### Comparison with Previous Phases
+
+**Phase 6 (TF-IDF) - Legacy:**
+- Use for: Agent memory (past experiences, successful plans)
+- Coverage: 27 memories only
+- Semantic: Keyword-like (limited)
+
+**Phase 7.5 (FTS) - Legacy:**
+- Use for: Exact keyword/phrase matching
+- Coverage: 125 reports (68%)
+- Semantic: None (keyword only)
+
+**Phase 7.6 (Hybrid) - CURRENT:**
+- Use for: **Everything** (primary search method)
+- Coverage: 258 documents (100%), 4,002 chunks
+- Semantic: Full transformer-based understanding ✅
+
+### Technical Details
+
+**Embedding Model:** all-MiniLM-L6-v2
+- **Dimensions:** 384
+- **Size:** 80MB (cached locally)
+- **Runtime:** ONNX (CPU-only, no GPU needed)
+- **Speed:** ~3ms per query embedding
+- **Quality:** Industry-standard sentence-transformers model
+
+**Database Schema:**
+```sql
+CREATE TABLE document_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  doc_path TEXT NOT NULL,
+  chunk_index INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  embedding BLOB,                    -- 384 floats = 1,536 bytes
+  metadata TEXT,                     -- JSON
+  indexed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- FTS5 for keyword pre-filter
+CREATE VIRTUAL TABLE document_chunks_fts
+USING fts5(text, content='document_chunks', content_rowid='id');
+```
+
+**Storage Breakdown (14 MB total):**
+- Embeddings (BLOB): 5.86 MB (4,002 × 1,536 bytes)
+- Text content: 1.27 MB
+- FTS5 index: 6.87 MB
+
+### Commands
+
+```bash
+# Hybrid search (RECOMMENDED)
+node knowledge/index.cjs --hybrid "query"
+
+# With timing breakdown
+node knowledge/index.cjs --verify "query"
+
+# Benchmark performance
+node knowledge/index.cjs --bench --iters=30
+
+# Reindex all documents
+node knowledge/index.cjs --reindex
+```
+
+### Documentation
+
+- **Phase Guide**: `docs/PHASE7_6_HYBRID_EMBEDDINGS.md`
+- **User Guide**: `knowledge/README.md`
+- **Quick Reference**: `g/reports/RAG_QUICK_REFERENCE.md`
+- **Implementation**: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- **Verification**: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+
+---
+
 ## Comparison with Traditional RAG
 
 | Feature | 02luka RAG | Traditional RAG (e.g., LangChain + Pinecone) |
@@ -672,20 +889,22 @@ Savings: 97.7% reduction (62,000 → 1,450)
 
 ## Conclusion
 
-The 02luka RAG system is a **lightweight, offline-first, file-backed** retrieval architecture optimized for local AI agent operations. It combines:
+The 02luka RAG system is a **lightweight, offline-first, file-backed** retrieval architecture optimized for local AI agent operations. It has evolved through three major phases:
 
-1. **TF-IDF vector search** for semantic understanding
-2. **SQLite FTS5** for fast keyword matching
-3. **Hybrid retrieval** for best-of-both-worlds accuracy
+1. **Phase 6 (Legacy):** TF-IDF vector search for semantic understanding (27 memories)
+2. **Phase 7.5 (Legacy):** SQLite FTS5 for fast keyword matching (125 reports, 68% coverage)
+3. **Phase 7.6 (CURRENT):** Hybrid embeddings (all-MiniLM-L6-v2 + FTS5) for true semantic search (4,002 chunks, 100% coverage) ⭐
 
-**Key Achievements:**
-- ✅ 97.7% token reduction for knowledge queries
-- ✅ <100ms query latency
-- ✅ Zero external API dependencies
+**Key Achievements (Phase 7.6):**
+- ✅ **100% Documentation Coverage**: 4,002 chunks from 258 documents (zero waste paper)
+- 🚀 **7-8ms Query Latency**: 12x better than 100ms target
+- 🧠 **True Semantic Understanding**: Transformer-based embeddings (all-MiniLM-L6-v2)
+- ✅ Zero external API dependencies (offline-first)
 - ✅ Fully portable (single SQLite file)
 - ✅ Privacy-first (no data leaves local machine)
+- ✅ 97.7% token reduction for knowledge queries (vs asking CLC directly)
 
-**Status:** ✅ Production Ready (Phase 7.5 Complete)
+**Status:** ✅ Production Ready (Phase 7.6 Complete)
 
 ---
 

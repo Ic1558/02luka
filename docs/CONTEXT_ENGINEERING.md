@@ -1,6 +1,6 @@
 # 🧠 Context Engineering Guide
 > **Scope:** 02luka-repo local workspace
-> **Updated:** 2025-10-15T04:45:00Z
+> **Updated:** 2025-10-22T03:20:00Z (Phase 7.6+ added)
 
 ## System Architecture
 ```
@@ -253,4 +253,109 @@ cp g/memory/vector_index.json g/memory/vector_index.backup.json
 - [ ] Cross-agent memory sharing
 - [ ] Metadata-based filtering (commit hash, file paths)
 - [ ] Memory clustering for pattern discovery
+
+---
+
+## Phase 7.6+: Hybrid Embeddings System ⭐
+
+**Status:** ✅ PRODUCTION READY (2025-10-22)
+**Location:** `knowledge/`
+**Model:** all-MiniLM-L6-v2 (384 dimensions, 80MB, offline)
+**Database:** `knowledge/02luka.db` (SQLite, 14 MB)
+
+### Architecture: 3-Stage Hybrid Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 1: FTS Pre-filter (Fast)                              │
+│ SQLite FTS5 → Top 50 candidates                             │
+│ Performance: ~4ms                                            │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 2: Embedding Rerank (Precise)                         │
+│ all-MiniLM-L6-v2 → Cosine similarity                        │
+│ Performance: ~3ms                                            │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Stage 3: Hybrid Scoring                                     │
+│ Final = (0.3 × FTS) + (0.7 × Semantic)                      │
+│ Performance: ~0.1ms                                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Quick Commands
+
+```bash
+# Hybrid search (best for most queries)
+node knowledge/index.cjs --hybrid "query"
+
+# With timing breakdown
+node knowledge/index.cjs --verify "query"
+
+# Benchmark performance
+node knowledge/index.cjs --bench --iters=30
+
+# Reindex all documents
+node knowledge/index.cjs --reindex
+```
+
+### Coverage Statistics
+
+- **258 documents** indexed (100% of docs/, g/reports/, memory/)
+- **4,002 semantic chunks** created
+- **7-8ms** average query time (🚀 12x better than <100ms target)
+- **Zero waste paper** ✅ (all documentation searchable)
+
+### Key Features
+
+1. **Semantic Understanding**: Finds "token savings" when searching "cost reduction"
+2. **Special Character Support**: "phase 7.2", "v2.0", "boss-api" all work correctly
+3. **Hybrid Scoring**: Balances keyword precision (FTS) with semantic recall (embeddings)
+4. **Offline-First**: No external APIs, runs on CPU using ONNX runtime
+5. **Backward Compatible**: Old commands (--search, --recall, --stats) still work
+
+### Use Cases
+
+**When to Use Hybrid Search:**
+- Finding documentation on any topic
+- Discovering related concepts across different docs
+- Understanding system architecture and past decisions
+- **Before asking CLC questions** (saves tokens, instant answers)
+
+**Example Queries:**
+```bash
+# Semantic search
+node knowledge/index.cjs --hybrid "token efficiency improvements"
+node knowledge/index.cjs --hybrid "how to reduce costs"
+
+# Version/phase searches
+node knowledge/index.cjs --hybrid "phase 7.2 delegation"
+node knowledge/index.cjs --hybrid "version 2.0 deployment"
+
+# Concept discovery
+node knowledge/index.cjs --hybrid "performance optimization strategies"
+```
+
+### Token Savings vs TF-IDF (Phase 6)
+
+| Approach | Coverage | Query Time | Semantic | Token Cost |
+|----------|----------|------------|----------|------------|
+| **Phase 6: TF-IDF** | 27 memories | N/A | ❌ Keyword only | 0 tokens |
+| **Phase 7.6: Hybrid** | 4,002 chunks (258 docs) | 7-8ms | ✅ Full semantic | 0 tokens |
+
+**Improvement:**
+- Coverage: +14,700% chunks
+- Docs: 0% → 100% indexed
+- Reports: 68% → 100% indexed
+- Semantic understanding: None → Full
+
+### Documentation
+
+- **Implementation Report**: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- **Verification Report**: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+- **User Guide**: `knowledge/README.md`
+- **Quick Reference**: `g/reports/RAG_QUICK_REFERENCE.md`
+- **System Overview**: `02luka.md` (Phase 7.6+ section)
 

@@ -6,18 +6,28 @@
 
 ## One-Line Summary
 
-**Dual-path knowledge retrieval:** TF-IDF vectors (semantic) + SQLite FTS5 (keyword) → Offline-first, file-backed, <100ms queries
+**Three-path knowledge retrieval:** Hybrid Embeddings (7ms, **PRIMARY**) + TF-IDF vectors (legacy) + SQLite FTS5 (keyword) → Offline-first, file-backed, semantic understanding
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Vector search (semantic similarity)
+# ⭐ HYBRID SEARCH (RECOMMENDED - Phase 7.6+)
+node knowledge/index.cjs --hybrid "query"               # Semantic + keyword (7ms)
+node knowledge/index.cjs --verify "query"               # With timing breakdown
+
+# Vector search (semantic similarity - Phase 6, legacy)
 bash knowledge/cli/recall.sh "token efficiency"
 
-# Full-text search (keyword matching)
+# Full-text search (keyword matching - Phase 7.5)
 bash knowledge/cli/search.sh "phase 7 delegation"
+
+# Reindex all documents (after adding new docs)
+node knowledge/index.cjs --reindex
+
+# Benchmark performance
+node knowledge/index.cjs --bench --iters=30
 
 # Get statistics
 bash knowledge/cli/stats.sh
@@ -36,32 +46,52 @@ node knowledge/index.cjs --export
 ```
 Need to find...
 │
-├─ Exact keywords/phrases? ────────→ Use FTS (search)
+├─ ⭐ MOST CASES? ─────────────────→ Use HYBRID (--hybrid) ← PRIMARY
+│   Best for:
+│   • General questions about the system
+│   • Concept discovery ("token efficiency" finds "delegation")
+│   • Version lookups ("phase 7.2", "v2.0")
+│   • Before asking CLC questions (saves tokens!)
+│
 │   Examples:
-│   • "phase 7"
+│   • "how to reduce costs" → finds delegation docs
+│   • "phase 7.2 complete" → finds completion report
+│   • "RAG system architecture" → finds RAG docs
+│   • "performance optimization" → finds benchmarks
+│
+│   Performance: 7-8ms avg, 100% docs indexed ✅
+│
+├─ Exact keywords/phrases only? ───→ Use FTS (--search) - Phase 7.5
+│   Examples:
 │   • "freeze-proofing"
 │   • "OPS_ATOMIC"
+│   • Specific function names
 │
-├─ Similar concepts/meanings? ─────→ Use Vector (recall)
+├─ Agent memory (old memories)? ───→ Use Vector (recall) - Phase 6
 │   Examples:
-│   • "token efficiency" (finds "token savings")
-│   • "performance improvements" (finds optimizations)
-│   • "error handling" (finds error patterns)
+│   • Past agent experiences
+│   • Successful plans
+│   • Error patterns
 │
-└─ Not sure? ──────────────────────→ Use BOTH, combine results
+│   Note: Only 27 memories (legacy system)
+│
+└─ Not sure? ──────────────────────→ Use HYBRID (default choice)
 ```
 
 ---
 
 ## Data Locations
 
-| What | Where | Size |
-|------|-------|------|
-| Vector index | `g/memory/vector_index.json` | ~100KB |
-| SQLite DB | `knowledge/02luka.db` | ~1.5MB |
-| JSON exports | `knowledge/exports/*.json` | ~200KB |
-| Telemetry | `g/telemetry/*.log` | varies |
-| Reports | `g/reports/*.md` | varies |
+| What | Where | Size | Status |
+|------|-------|------|--------|
+| **Hybrid DB (Phase 7.6+)** | `knowledge/02luka.db` | **14 MB** | ✅ **PRIMARY** |
+| └─ Embeddings | (BLOB in chunks table) | 5.86 MB | 4,002 chunks |
+| └─ Text | (TEXT in chunks table) | 1.27 MB | Semantic chunks |
+| └─ FTS index | (FTS5 virtual table) | 6.87 MB | Keyword search |
+| Vector index (Phase 6) | `g/memory/vector_index.json` | ~100KB | ⚠️ Legacy |
+| JSON exports | `knowledge/exports/*.json` | ~200KB | Sync output |
+| Telemetry | `g/telemetry/*.log` | varies | Historical |
+| Reports | `g/reports/*.md` | varies | Source docs |
 
 ---
 
@@ -175,6 +205,70 @@ reports/*.md         ──┘         (runs every           ├─ memories
                                                        ├─ reports
                                                        └─ reports_fts
 ```
+
+---
+
+## Phase 7.6+: Hybrid Embeddings (NEW)
+
+**Status:** ✅ PRODUCTION READY (2025-10-22)
+
+### How It Works
+
+**3-Stage Pipeline:**
+1. **FTS Pre-filter** (4ms): SQLite FTS5 finds top 50 keyword matches
+2. **Embedding Rerank** (3ms): all-MiniLM-L6-v2 computes semantic similarity
+3. **Hybrid Scoring** (0.1ms): Combines (0.3 × FTS + 0.7 × Semantic)
+
+### Key Features
+
+- ✅ **100% Documentation Coverage**: 4,002 chunks from 258 documents
+- 🚀 **7-8ms Queries**: 12x better than 100ms target
+- 🧠 **Semantic Understanding**: Finds "token savings" when you search "cost reduction"
+- ⚡ **Offline-First**: all-MiniLM-L6-v2 (384 dims, 80MB, no APIs)
+- 🔄 **Backward Compatible**: Old commands still work
+
+### Example Query
+
+```bash
+$ node knowledge/index.cjs --hybrid "token efficiency improvements"
+
+{
+  "query": "token efficiency improvements",
+  "results": [
+    {
+      "doc_path": "g/reports/RAG_QUICK_REFERENCE.md",
+      "snippet": "...89% token savings through delegation...",
+      "scores": {
+        "fts": 0.85,
+        "semantic": 0.72,
+        "final": 0.759
+      }
+    }
+  ],
+  "count": 10
+}
+```
+
+### Why Hybrid?
+
+**FTS (Keyword):** Fast, precise for exact matches → Pre-filter
+**Embeddings (Semantic):** Slow, understands concepts → Rerank
+**Hybrid:** Best of both → Fast + accurate ✅
+
+### Coverage Comparison
+
+| System | Docs | Reports | Memories | Total |
+|--------|------|---------|----------|-------|
+| Phase 6 (TF-IDF) | 0% | N/A | 27 | 27 |
+| Phase 7.5 (FTS) | 0% | 68% | N/A | 125 |
+| **Phase 7.6 (Hybrid)** | **100%** ✅ | **100%** ✅ | **100%** ✅ | **4,002** ✅ |
+
+### Documentation
+
+- **User Guide**: `knowledge/README.md`
+- **Implementation**: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- **Verification**: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+- **Phase Docs**: `docs/PHASE7_6_HYBRID_EMBEDDINGS.md`
 
 ---
 
@@ -306,12 +400,19 @@ CLC: "We improved token efficiency through Phase 7.2 delegation,
 
 ## Related Docs
 
-- Full Specification: `g/reports/251022_RAG_SYSTEM_CLARIFICATION.md`
-- Phase 7.5 Docs: `docs/PHASE7_5_KNOWLEDGE.md`
-- Memory System: `docs/CONTEXT_ENGINEERING.md`
-- Phase 7.2 Delegation: `docs/PHASE7_2_DELEGATION.md`
+### Phase 7.6+ (Current)
+- **Phase Docs**: `docs/PHASE7_6_HYBRID_EMBEDDINGS.md` ⭐
+- **Implementation**: `g/reports/251022_HYBRID_VECTOR_DB_IMPLEMENTATION.md`
+- **Verification**: `g/reports/251022_HYBRID_VDB_VERIFICATION.md`
+- **User Guide**: `knowledge/README.md`
+
+### Previous Phases
+- **RAG Specification**: `g/reports/251022_RAG_SYSTEM_CLARIFICATION.md`
+- **Phase 7.5**: `docs/PHASE7_5_KNOWLEDGE.md`
+- **Phase 7.2 Delegation**: `docs/PHASE7_2_DELEGATION.md`
+- **Memory System**: `docs/CONTEXT_ENGINEERING.md`
 
 ---
 
-**Last Updated:** 2025-10-22
+**Last Updated:** 2025-10-22 (Phase 7.6+ added)
 **Status:** ✅ Production Ready
