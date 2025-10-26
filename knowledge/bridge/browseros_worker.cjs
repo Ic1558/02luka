@@ -162,9 +162,58 @@ async function handleRequest(raw) {
 async function start() {
   const subscriber = createRedisSubscriber();
   const publisher = createRedisClient();
-  await subscriber.connect();
-  await subscriber.subscribe(REQUEST_CHANNEL);
-  console.log(`[BrowserOS] Worker listening on ${REQUEST_CHANNEL}`);
+
+  let reconnectTimer = null;
+
+  const resetSubscriptions = () => {
+    if (subscriber.active) {
+      if (typeof subscriber.active.clear === 'function') {
+        subscriber.active.clear();
+      } else if (typeof subscriber.active.delete === 'function') {
+        subscriber.active.delete(REQUEST_CHANNEL);
+      }
+    }
+  };
+
+  const scheduleReconnect = (delay = 1000) => {
+    if (reconnectTimer) {
+      return;
+    }
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      resetSubscriptions();
+      connectAndSubscribe().catch((err) => {
+        console.error('BrowserOS worker reconnect attempt failed:', err);
+        scheduleReconnect(Math.min(delay * 2, 10000));
+      });
+    }, delay);
+    if (typeof reconnectTimer.unref === 'function') {
+      reconnectTimer.unref();
+    }
+  };
+
+  const connectAndSubscribe = async () => {
+    try {
+      await subscriber.connect();
+      await subscriber.subscribe(REQUEST_CHANNEL);
+      console.log(`[BrowserOS] Worker listening on ${REQUEST_CHANNEL}`);
+    } catch (err) {
+      console.error('BrowserOS worker failed to connect subscriber:', err);
+      scheduleReconnect();
+    }
+  };
+
+  subscriber.on('error', (err) => {
+    console.error('BrowserOS Redis subscriber error:', err);
+    scheduleReconnect();
+  });
+
+  subscriber.on('close', () => {
+    console.warn('BrowserOS Redis subscriber connection closed.');
+    scheduleReconnect();
+  });
+
+  await connectAndSubscribe();
 
   subscriber.on('message', async (channel, message) => {
     if (channel !== REQUEST_CHANNEL) {

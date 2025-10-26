@@ -196,31 +196,39 @@ async function callDirect(tool, params = {}, options = {}) {
         error = `Domain policy violation: ${blocked}`;
       }
       if (ok) {
-        try {
-          const response = await fetch(DIRECT_ENDPOINT, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ tool, params }),
-          });
-          httpStatus = response.status;
-          const text = await response.text();
-          let data;
+        if (params && params.validateOnly) {
+          result = {
+            ok: true,
+            dryRun: true,
+            message: 'Plan validated without execution.',
+          };
+        } else {
           try {
-            data = text ? JSON.parse(text) : {};
+            const response = await fetch(DIRECT_ENDPOINT, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ tool, params }),
+            });
+            httpStatus = response.status;
+            const text = await response.text();
+            let data;
+            try {
+              data = text ? JSON.parse(text) : {};
+            } catch (err) {
+              data = { ok: false, raw: text };
+            }
+            const success = response.ok && (data.ok !== false);
+            if (!success) {
+              ok = false;
+              error = data.error || `HTTP ${response.status}`;
+              result = data;
+            } else {
+              result = data;
+            }
           } catch (err) {
-            data = { ok: false, raw: text };
-          }
-          const success = response.ok && (data.ok !== false);
-          if (!success) {
             ok = false;
-            error = data.error || `HTTP ${response.status}`;
-            result = data;
-          } else {
-            result = data;
+            error = err.message || 'BrowserOS direct call failed';
           }
-        } catch (err) {
-          ok = false;
-          error = err.message || 'BrowserOS direct call failed';
         }
       }
     }
