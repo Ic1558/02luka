@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${HOME}/02luka"
+SCRIPT_DIR=$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd -- "${SCRIPT_DIR}/.." && pwd)
 cd "${ROOT}"
 
 JSONL="g/reports/web_actions.jsonl"
@@ -17,6 +18,10 @@ ensure_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "missing command: $1"
 }
 
+ensure_file() {
+  [ -f "$1" ] || fail "missing file: $1 — install BrowserOS helpers or adjust the path"
+}
+
 echo "# Phase 7.7 Verification — $(date -Iseconds)" > "${SUMMARY}"
 echo >> "${SUMMARY}"
 
@@ -30,6 +35,7 @@ rm -f 02luka/config/browseros.off || true
 pass "Prep done (allowlist example.com, killswitch off)"
 
 # 1) MCP selftest
+ensure_file "knowledge/mcp/browseros.cjs"
 if node knowledge/mcp/browseros.cjs --selftest | tee /tmp/mcp_selftest.log | grep -qi "selftest"; then
   pass "MCP selftest ok"
 else
@@ -38,6 +44,7 @@ else
 fi
 
 # 2) CLI run (navigate)
+ensure_file "tools/browseros.sh"
 REQ_CLI=$(cat <<JSON
 {
   "tool":"browseros.workflow",
