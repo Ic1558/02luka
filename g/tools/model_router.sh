@@ -55,22 +55,42 @@ case "$norm_task" in
     ;;
 esac
 
-case "$norm_task" in
-  review)
-    MODEL="deepseek-coder"
-    REASON="Task flagged as review; preferring critique-oriented DeepSeek"
-    ;;
-  optimize)
-    MODEL="llama3.1"
-    REASON="Task targets optimisation/refinement; routing to Llama 3.1"
-    ;;
-  generate|*)
-    MODEL="qwen2.5-coder"
-    REASON="Defaulting to Qwen2.5-Coder for general code generation"
-    ;;
-esac
-
+MODEL=""
+REASON=""
 CONFIDENCE="0.85"
+
+route_gemini=0
+for keyword in browser search cloud external; do
+  if [[ "$norm_task" == "$keyword" ]]; then
+    route_gemini=1
+    break
+  fi
+  if [[ "$norm_hints" == *" $keyword "* ]]; then
+    route_gemini=1
+    break
+  fi
+done
+
+if [[ $route_gemini -eq 1 ]]; then
+  MODEL="gemini"
+  REASON="Hints indicate browser/search/cloud/external context; routing to Gemini"
+  CONFIDENCE="0.80"
+else
+  case "$norm_task" in
+    review)
+      MODEL="deepseek-coder"
+      REASON="Task flagged as review; preferring critique-oriented DeepSeek"
+      ;;
+    optimize)
+      MODEL="llama3.1"
+      REASON="Task targets optimisation/refinement; routing to Llama 3.1"
+      ;;
+    generate|*)
+      MODEL="qwen2.5-coder"
+      REASON="Defaulting to Qwen2.5-Coder for general code generation"
+      ;;
+  esac
+fi
 
 check_model() {
   local desired="$1"
@@ -88,10 +108,15 @@ check_model() {
   echo "ok"
 }
 
-availability="$(check_model "$MODEL")"
-FALLBACK=""
+if [[ "$MODEL" == "gemini" ]]; then
+  availability="remote"
+  FALLBACK=""
+else
+  availability="$(check_model "$MODEL")"
+  FALLBACK=""
+fi
 
-if [[ "$availability" == "missing_model" ]]; then
+if [[ "$MODEL" != "gemini" && "$availability" == "missing_model" ]]; then
   while IFS= read -r candidate; do
     [[ "$(lower "$candidate")" == "$(lower "$MODEL")" ]] && continue
     if [[ "$(check_model "$candidate")" == "ok" ]]; then
@@ -109,7 +134,7 @@ if [[ "$availability" == "missing_model" ]]; then
     REASON="Requested model '$MODEL' unavailable on Ollama host"
     CONFIDENCE="0.20"
   fi
-elif [[ "$availability" == "missing_ollama" ]]; then
+elif [[ "$MODEL" != "gemini" && "$availability" == "missing_ollama" ]]; then
   REASON="Ollama CLI not found; cannot resolve local model"
   MODEL=""
   CONFIDENCE="0.10"
