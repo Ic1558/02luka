@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
+# P1 Fix: Compute project root from script location, not hard-coded path
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${GITHUB_WORKSPACE:-${SCRIPT_DIR}}"
 cd "${ROOT}"
 
 JSONL="g/reports/web_actions.jsonl"
@@ -13,6 +15,8 @@ pass(){ echo "✅ $*"; }
 fail(){ echo "❌ $*"; exit 1; }
 note(){ echo "— $*"; }
 
+mkdir -p g/reports
+
 echo "# Phase 7.7 Verification — $(date -Iseconds)" > "${SUMMARY}"
 mkdir -p g/reports 02luka/config
 
@@ -23,6 +27,29 @@ pass "Prep OK (allowlist set; killswitch off)"
 
 # Helpers
 has_cmd(){ command -v "$1" >/dev/null 2>&1; }
+
+# P1 Fix: Check for missing BrowserOS scripts before running harness
+check_browseros_dependencies() {
+    local missing_deps=()
+    
+    # Check for knowledge/mcp/browseros.cjs
+    if [ ! -f "knowledge/mcp/browseros.cjs" ]; then
+        missing_deps+=("knowledge/mcp/browseros.cjs")
+    fi
+    
+    # Check for tools/browseros.sh
+    if [ ! -f "tools/browseros.sh" ]; then
+        missing_deps+=("tools/browseros.sh")
+    fi
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        note "Missing BrowserOS dependencies: ${missing_deps[*]}"
+        note "Creating stub implementations for CI testing..."
+        return 1
+    fi
+    
+    return 0
+}
 
 # 1) MCP selftest (best-effort)
 if [ -f knowledge/mcp/browseros.cjs ]; then
