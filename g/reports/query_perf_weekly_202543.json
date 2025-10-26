@@ -1,0 +1,200 @@
+{
+  "week": "202543",
+  "days_covered": 1,
+  "total_patterns": 9,
+  "top_slow_by_p95": [
+    {
+      "pattern": "select * from docs where content like '%test%'",
+      "samples": 5,
+      "p50_weekly": 52,
+      "p95_weekly": 131,
+      "p99_weekly": 146.2
+    },
+    {
+      "pattern": "update docs set content = ? where id = ?",
+      "samples": 3,
+      "p50_weekly": 128,
+      "p95_weekly": 129.8,
+      "p99_weekly": 129.96
+    },
+    {
+      "pattern": "select embedding from embeddings where doc_id = ?",
+      "samples": 5,
+      "p50_weekly": 102,
+      "p95_weekly": 109,
+      "p99_weekly": 109.8
+    },
+    {
+      "pattern": "select * from docs where path = ?",
+      "samples": 5,
+      "p50_weekly": 28,
+      "p95_weekly": 101.99999999999999,
+      "p99_weekly": 116.39999999999999
+    },
+    {
+      "pattern": "delete from docs where id = ?",
+      "samples": 2,
+      "p50_weekly": 36.5,
+      "p95_weekly": 37.85,
+      "p99_weekly": 37.97
+    },
+    {
+      "pattern": "select count(*) from docs",
+      "samples": 4,
+      "p50_weekly": 13.5,
+      "p95_weekly": 14.85,
+      "p99_weekly": 14.969999999999999
+    },
+    {
+      "pattern": "insert into embeddings values (?)",
+      "samples": 5,
+      "p50_weekly": 8,
+      "p95_weekly": 9.8,
+      "p99_weekly": 9.96
+    },
+    {
+      "pattern": "phase 7.2 --k=5",
+      "samples": 2,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    },
+    {
+      "pattern": "token savings --k=3",
+      "samples": 1,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    }
+  ],
+  "top_frequent_by_samples": [
+    {
+      "pattern": "select * from docs where content like '%test%'",
+      "samples": 5,
+      "p50_weekly": 52,
+      "p95_weekly": 131,
+      "p99_weekly": 146.2
+    },
+    {
+      "pattern": "select embedding from embeddings where doc_id = ?",
+      "samples": 5,
+      "p50_weekly": 102,
+      "p95_weekly": 109,
+      "p99_weekly": 109.8
+    },
+    {
+      "pattern": "select * from docs where path = ?",
+      "samples": 5,
+      "p50_weekly": 28,
+      "p95_weekly": 101.99999999999999,
+      "p99_weekly": 116.39999999999999
+    },
+    {
+      "pattern": "insert into embeddings values (?)",
+      "samples": 5,
+      "p50_weekly": 8,
+      "p95_weekly": 9.8,
+      "p99_weekly": 9.96
+    },
+    {
+      "pattern": "select count(*) from docs",
+      "samples": 4,
+      "p50_weekly": 13.5,
+      "p95_weekly": 14.85,
+      "p99_weekly": 14.969999999999999
+    },
+    {
+      "pattern": "update docs set content = ? where id = ?",
+      "samples": 3,
+      "p50_weekly": 128,
+      "p95_weekly": 129.8,
+      "p99_weekly": 129.96
+    },
+    {
+      "pattern": "delete from docs where id = ?",
+      "samples": 2,
+      "p50_weekly": 36.5,
+      "p95_weekly": 37.85,
+      "p99_weekly": 37.97
+    },
+    {
+      "pattern": "phase 7.2 --k=5",
+      "samples": 2,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    },
+    {
+      "pattern": "token savings --k=3",
+      "samples": 1,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    }
+  ],
+  "all_patterns": [
+    {
+      "pattern": "select * from docs where content like '%test%'",
+      "samples": 5,
+      "p50_weekly": 52,
+      "p95_weekly": 131,
+      "p99_weekly": 146.2
+    },
+    {
+      "pattern": "update docs set content = ? where id = ?",
+      "samples": 3,
+      "p50_weekly": 128,
+      "p95_weekly": 129.8,
+      "p99_weekly": 129.96
+    },
+    {
+      "pattern": "select embedding from embeddings where doc_id = ?",
+      "samples": 5,
+      "p50_weekly": 102,
+      "p95_weekly": 109,
+      "p99_weekly": 109.8
+    },
+    {
+      "pattern": "select * from docs where path = ?",
+      "samples": 5,
+      "p50_weekly": 28,
+      "p95_weekly": 101.99999999999999,
+      "p99_weekly": 116.39999999999999
+    },
+    {
+      "pattern": "delete from docs where id = ?",
+      "samples": 2,
+      "p50_weekly": 36.5,
+      "p95_weekly": 37.85,
+      "p99_weekly": 37.97
+    },
+    {
+      "pattern": "select count(*) from docs",
+      "samples": 4,
+      "p50_weekly": 13.5,
+      "p95_weekly": 14.85,
+      "p99_weekly": 14.969999999999999
+    },
+    {
+      "pattern": "insert into embeddings values (?)",
+      "samples": 5,
+      "p50_weekly": 8,
+      "p95_weekly": 9.8,
+      "p99_weekly": 9.96
+    },
+    {
+      "pattern": "phase 7.2 --k=5",
+      "samples": 2,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    },
+    {
+      "pattern": "token savings --k=3",
+      "samples": 1,
+      "p50_weekly": 0,
+      "p95_weekly": 0,
+      "p99_weekly": 0
+    }
+  ]
+}
