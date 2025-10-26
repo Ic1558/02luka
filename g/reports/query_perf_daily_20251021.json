@@ -1,0 +1,112 @@
+{
+  "date": "20251021",
+  "total_queries": 32,
+  "patterns": [
+    {
+      "pattern": "select * from docs where content like '%test%'",
+      "samples": 5,
+      "p50": 52,
+      "p95": 131,
+      "p99": 146.2,
+      "slow": true
+    },
+    {
+      "pattern": "update docs set content = ? where id = ?",
+      "samples": 3,
+      "p50": 128,
+      "p95": 129.8,
+      "p99": 129.96,
+      "slow": true
+    },
+    {
+      "pattern": "select embedding from embeddings where doc_id = ?",
+      "samples": 5,
+      "p50": 102,
+      "p95": 109,
+      "p99": 109.8,
+      "slow": true
+    },
+    {
+      "pattern": "select * from docs where path = ?",
+      "samples": 5,
+      "p50": 28,
+      "p95": 101.99999999999999,
+      "p99": 116.39999999999999,
+      "slow": true
+    },
+    {
+      "pattern": "delete from docs where id = ?",
+      "samples": 2,
+      "p50": 36.5,
+      "p95": 37.85,
+      "p99": 37.97,
+      "slow": false
+    },
+    {
+      "pattern": "select count(*) from docs",
+      "samples": 4,
+      "p50": 13.5,
+      "p95": 14.85,
+      "p99": 14.969999999999999,
+      "slow": false
+    },
+    {
+      "pattern": "insert into embeddings values (?)",
+      "samples": 5,
+      "p50": 8,
+      "p95": 9.8,
+      "p99": 9.96,
+      "slow": false
+    },
+    {
+      "pattern": "phase 7.2 --k=5",
+      "samples": 2,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "slow": false
+    },
+    {
+      "pattern": "token savings --k=3",
+      "samples": 1,
+      "p50": 0,
+      "p95": 0,
+      "p99": 0,
+      "slow": false
+    }
+  ],
+  "slow_patterns": [
+    {
+      "pattern": "select * from docs where content like '%test%'",
+      "samples": 5,
+      "p50": 52,
+      "p95": 131,
+      "p99": 146.2,
+      "slow": true
+    },
+    {
+      "pattern": "update docs set content = ? where id = ?",
+      "samples": 3,
+      "p50": 128,
+      "p95": 129.8,
+      "p99": 129.96,
+      "slow": true
+    },
+    {
+      "pattern": "select embedding from embeddings where doc_id = ?",
+      "samples": 5,
+      "p50": 102,
+      "p95": 109,
+      "p99": 109.8,
+      "slow": true
+    },
+    {
+      "pattern": "select * from docs where path = ?",
+      "samples": 5,
+      "p50": 28,
+      "p95": 101.99999999999999,
+      "p99": 116.39999999999999,
+      "slow": true
+    }
+  ]
+}

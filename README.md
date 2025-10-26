@@ -1,3 +1,4 @@
+![BrowserOS CI](https://github.com/Ic1558/02luka/actions/workflows/browseros_phase77_ci.yml/badge.svg)
 # 02luka
 
 Local AI Agent Gateway UI — minimal, fast, deployable anywhere.
