@@ -77,35 +77,57 @@ jobs:
           mkdir -p knowledge/ci g/reports
           cat > knowledge/ci/browseros_worker.cjs <<'EOS'
           // Minimal CI worker: subscribes ai.action.request; writes ai.action.result:<id> and JSONL log.
-          import { createClient } from 'redis';
-          import fs from 'fs';
-          const sub = createClient(); const pub = createClient();
-          await sub.connect(); await pub.connect();
-          await sub.subscribe('ai.action.request', async (msg) => {
-            try {
-              const req = JSON.parse(msg);
-              const id = req.id || `ci_${Date.now()}`;
-              const result = {
-                id, ok: true,
-                result: { data: { mock: true }, perf: { totalMs: 111 } },
-                ts: new Date().toISOString()
-              };
-              // publish result (optional channel via GET key)
-              await pub.set(`ai.action.result:${id}`, JSON.stringify(result), { EX: 120 });
-              // append telemetry
-              const line = JSON.stringify({
-                id, caller: req.caller || "CI", tool: req.tool || "browseros.workflow",
-                ok: true, perf: { totalMs: 111 }, domains: (req.params?.allowDomains)||[],
-                ts: result.ts, status: "ok"
-              }) + "\n";
-              fs.mkdirSync("g/reports", { recursive: true });
-              fs.appendFileSync("g/reports/web_actions.jsonl", line);
-            } catch (e) {
-              console.error("CI worker error:", e);
-            }
+          const { createClient } = require('redis');
+          const fs = require('fs');
+
+          async function main() {
+            const sub = createClient();
+            const pub = createClient();
+
+            await sub.connect();
+            await pub.connect();
+
+            await sub.subscribe('ai.action.request', async (msg) => {
+              try {
+                const req = JSON.parse(msg);
+                const id = req.id || `ci_${Date.now()}`;
+                const result = {
+                  id,
+                  ok: true,
+                  result: { data: { mock: true }, perf: { totalMs: 111 } },
+                  ts: new Date().toISOString()
+                };
+
+                await pub.set(`ai.action.result:${id}`, JSON.stringify(result), { EX: 120 });
+
+                const line = JSON.stringify({
+                  id,
+                  caller: req.caller || 'CI',
+                  tool: req.tool || 'browseros.workflow',
+                  ok: true,
+                  perf: { totalMs: 111 },
+                  domains: (req.params && req.params.allowDomains) || [],
+                  ts: result.ts,
+                  status: 'ok'
+                }) + '\n';
+                fs.mkdirSync('g/reports', { recursive: true });
+                fs.appendFileSync('g/reports/web_actions.jsonl', line);
+              } catch (e) {
+                console.error('CI worker error:', e);
+              }
+            });
+
+            // keep alive ~2 minutes for the job
+            setTimeout(async () => {
+              await sub.quit();
+              await pub.quit();
+            }, 120000);
+          }
+
+          main().catch((err) => {
+            console.error('Failed to start CI worker', err);
+            process.exit(1);
           });
-          // keep alive ~2 minutes for the job
-          setTimeout(async () => { await sub.quit(); await pub.quit(); }, 120000);
           EOS
 
       - name: Init CI worker deps
