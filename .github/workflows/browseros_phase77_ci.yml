@@ -18,6 +18,11 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           echo "Workspace: $PWD"
+          sudo apt-get update
+          sudo apt-get install -y redis-tools
+          mkdir -p tools g/reports
+          npm install
+          npm i redis@^4 -D
           chmod +x tools/test_browseros_phase77.sh
           bash tools/test_browseros_phase77.sh
 
