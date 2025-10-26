@@ -1,0 +1,20 @@
+# Kubricate v1 Issue Index
+issues:
+  - id: issue-001
+    req: true
+    plan: true
+    code: true
+    tests: true
+    auditor: present
+  - id: issue-002
+    req: true
+    plan: true
+    code: true
+    tests: true
+    auditor: present
+  - id: issue-003
+    req: true
+    plan: true
+    code: true
+    tests: true
+    auditor: present

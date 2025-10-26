@@ -1,0 +1,11 @@
+# Requirement (Single Source of Truth)
+- Issue: issue-002
+- Title: Token efficiency calc
+- Owner: @me
+- Goal: (what success looks like)
+- Non-goals:
+- Constraints: (types, API stability, perf targets)
+- Acceptance Criteria:
+  - [ ] Unit tests pass
+  - [ ] Auditor checklist ≥ 90%
+  - [ ] No API breakage

@@ -1,0 +1,11 @@
+# Requirement (Single Source of Truth)
+- Issue: {{ISSUE_ID}}
+- Title: {{TITLE}}
+- Owner: {{OWNER}}
+- Goal: (what success looks like)
+- Non-goals:
+- Constraints: (types, API stability, perf targets)
+- Acceptance Criteria:
+  - [ ] Unit tests pass
+  - [ ] Auditor checklist ≥ 90%
+  - [ ] No API breakage
