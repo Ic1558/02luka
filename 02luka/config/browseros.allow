@@ -1,0 +1,9 @@
+# BrowserOS default domain allowlist
+# Add one domain per line. Supports:
+#   - example.com       (exact)
+#   - .example.com      (suffix, includes subdomains)
+#   - *.gov             (simple wildcard)
+#   - *                 (allow everything — use cautiously)
+example.com
+linkedin.com
+news.ycombinator.com
