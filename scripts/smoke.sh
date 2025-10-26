@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-<<<<<<< ours
 
 BASE="${OPS_ATOMIC_URL:-http://127.0.0.1:4000}"   # CI uses secret; local uses localhost
 echo "🧪 Smoke target: $BASE"
@@ -26,7 +25,6 @@ if [[ $fail -gt 0 ]]; then
   echo "❌ Smoke failed ($fail) checks"; exit 1
 fi
 echo "✅ Smoke passed"
-=======
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-4100}"
 LOG_FILE="${ROOT_DIR}/test-results/assistant-smoke.log"
@@ -79,4 +77,3 @@ kill "${SERVER_PID}" 2>/dev/null || true
 wait "${SERVER_PID}" 2>/dev/null || true
 
 echo "[smoke] Completed" | tee -a "${LOG_FILE}"
->>>>>>> theirs
