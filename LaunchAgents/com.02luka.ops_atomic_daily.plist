@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.02luka.ops_atomic_daily</string>
+    <key>ProgramArguments</key>
+      <array>
+        <string>/bin/bash</string>
+        <string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/run/ops_atomic.sh</string>
+      </array>
+    <key>StartCalendarInterval</key>
+      <dict><key>Hour</key><integer>2</integer><key>Minute</key><integer>0</integer></dict>
+    <key>StandardOutPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/ops_atomic_daily.log</string>
+    <key>StandardErrorPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/ops_atomic_daily.err</string>
+    <key>WorkingDirectory</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo</string>
+    <key>RunAtLoad</key><false/>
+    <key>EnvironmentVariables</key>
+      <dict>
+        <key>REPO_ROOT</key>
+        <string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo</string>
+      </dict>
+  </dict>
+</plist>
