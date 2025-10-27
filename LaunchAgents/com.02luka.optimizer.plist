@@ -6,15 +6,13 @@
     <string>com.02luka.optimizer</string>
     <key>ProgramArguments</key>
       <array>
-        <string>/usr/local/bin/node</string>
-        <string>/Users/icmini/02luka/knowledge/optimize/nightly_optimizer.cjs</string>
-        <string>--telemetry</string>
-        <string>g/telemetry/latest_rollup.ndjson</string>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/knowledge/optimize/nightly_optimizer.cjs</string>
       </array>
     <key>StartCalendarInterval</key>
       <dict><key>Hour</key><integer>4</integer><key>Minute</key><integer>0</integer></dict>
-    <key>StandardOutPath</key><string>/Users/icmini/02luka/g/telemetry/optimizer.log</string>
-    <key>StandardErrorPath</key><string>/Users/icmini/02luka/g/telemetry/optimizer.err</string>
-    <key>WorkingDirectory</key><string>/Users/icmini/02luka</string>
+    <key>StandardOutPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/optimizer.log</string>
+    <key>StandardErrorPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/optimizer.err</string>
+    <key>WorkingDirectory</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo</string>
     <key>RunAtLoad</key><true/></dict>
 </plist>

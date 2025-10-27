@@ -7,13 +7,14 @@
     <key>ProgramArguments</key>
       <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/icmini/02luka/g/tools/services/daily_digest.cjs</string>
+        <string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/tools/services/daily_digest.cjs</string>
         <string>--since</string>
         <string>24h</string>
       </array>
     <key>StartCalendarInterval</key>
       <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
-    <key>StandardOutPath</key><string>/Users/icmini/02luka/g/logs/digest.out</string>
-    <key>StandardErrorPath</key><string>/Users/icmini/02luka/g/logs/digest.err</string>
+    <key>StandardOutPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/digest.out</string>
+    <key>StandardErrorPath</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g/logs/digest.err</string>
+    <key>WorkingDirectory</key><string>/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo</string>
     <key>RunAtLoad</key><true/></dict>
 </plist>
