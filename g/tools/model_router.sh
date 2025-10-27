@@ -33,12 +33,25 @@ lower() {
 }
 
 norm_task="$(lower "$TASK_TYPE")"
+raw_task="$norm_task"
 
 if [[ -z "$HINTS" ]]; then
   norm_hints=""
 else
   norm_hints=" $(lower "$HINTS") "
 fi
+
+route_gemini=0
+for keyword in browser search cloud external; do
+  if [[ "$raw_task" == "$keyword" ]]; then
+    route_gemini=1
+    break
+  fi
+  if [[ "$norm_hints" == *" $keyword "* ]]; then
+    route_gemini=1
+    break
+  fi
+done
 
 case "$norm_task" in
   review|code_review|audit) norm_task="review" ;;
@@ -59,21 +72,13 @@ MODEL=""
 REASON=""
 CONFIDENCE="0.85"
 
-route_gemini=0
-for keyword in browser search cloud external; do
-  if [[ "$norm_task" == "$keyword" ]]; then
-    route_gemini=1
-    break
-  fi
-  if [[ "$norm_hints" == *" $keyword "* ]]; then
-    route_gemini=1
-    break
-  fi
-done
-
 if [[ $route_gemini -eq 1 ]]; then
   MODEL="gemini"
-  REASON="Hints indicate browser/search/cloud/external context; routing to Gemini"
+  if [[ "$raw_task" == "browser" || "$raw_task" == "search" || "$raw_task" == "cloud" || "$raw_task" == "external" ]]; then
+    REASON="Task type '$TASK_TYPE' targets browser/search/cloud/external workflow; routing to Gemini"
+  else
+    REASON="Hints indicate browser/search/cloud/external context; routing to Gemini"
+  fi
   CONFIDENCE="0.80"
 else
   case "$norm_task" in

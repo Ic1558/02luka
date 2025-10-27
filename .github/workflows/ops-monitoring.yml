@@ -49,6 +49,9 @@ jobs:
           DISCORD_WEBHOOK_DEFAULT: ${{ secrets.DISCORD_WEBHOOK_DEFAULT }}
           DISCORD_WEBHOOK_MAP: ${{ secrets.DISCORD_WEBHOOK_MAP }}
           REPORTBOT_REPORT_BASE_URL: ${{ secrets.REPORTBOT_REPORT_BASE_URL }}
+          GITHUB_ACTIONS: true
+          CI: true
+          REPO_ROOT: ${{ github.workspace }}
         run: |
           chmod +x ./run/ops_atomic.sh
           ./run/ops_atomic.sh || true
