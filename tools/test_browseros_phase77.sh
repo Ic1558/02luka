@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-<<<<<<< HEAD
 # P1 Fix: Compute project root from script location, not hard-coded path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="${GITHUB_WORKSPACE:-${SCRIPT_DIR}}"
@@ -149,20 +148,8 @@ else
 fi
 
 echo -e "\nAll checks attempted. See ${SUMMARY} and ${JSONL}."
-=======
-ROOT="${GITHUB_WORKSPACE:-$(pwd)}"
-cd "${ROOT}"
-
-REPORT_DIR="${REPORT_DIR:-g/reports}"
-SUMMARY="${SUMMARY:-${REPORT_DIR}/phase7_7_summary.md}"
-mkdir -p "${REPORT_DIR}"
-
-TIMESTAMP="$(date -Iseconds)"
-CLEAN_TS="${TIMESTAMP//[^0-9A-Za-z]/}"
 
 {
-  echo "# Phase 7.7 Verification — ${TIMESTAMP}"
-  echo
   echo "## Repository Checks"
   echo "- Workspace root: ${ROOT}"
   echo "- Git revision: $(git rev-parse HEAD 2>/dev/null || echo 'unknown')"
@@ -172,6 +159,9 @@ CLEAN_TS="${TIMESTAMP//[^0-9A-Za-z]/}"
   echo "- pnpm: ${PNPM_VERSION}"
 } > "${SUMMARY}"
 
+TIMESTAMP="$(date -Iseconds)"
+CLEAN_TS="${TIMESTAMP//[^0-9A-Za-z]/}"
+REPORT_DIR="${REPORT_DIR:-g/reports}"
 JSON_REPORT="${REPORT_DIR}/web_actions_${CLEAN_TS}.json"
 CSV_REPORT="${REPORT_DIR}/web_actions_${CLEAN_TS}.csv"
 
@@ -210,4 +200,3 @@ fi
 printf 'Summary written to %s\n' "${SUMMARY}"
 printf 'Web action JSON written to %s\n' "${JSON_REPORT}"
 printf 'Web action CSV written to %s\n' "${CSV_REPORT}"
->>>>>>> 8efad7f072b912bf39dadf9bd40026a866ea218b
