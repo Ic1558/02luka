@@ -1,0 +1,10 @@
+{"ts":"2025-10-26T03:12:10Z","pattern":"token efficiency","ms":7.2,"ok":true,"agent":"CLS"}
+{"ts":"2025-10-26T09:41:33Z","pattern":"phase 7.2 delegation","ms":12.1,"ok":true,"agent":"GG"}
+{"ts":"2025-10-26T11:05:00Z","pattern":"system architecture","ms":108.3,"ok":true,"agent":"Mary"}
+{"ts":"2025-10-27T01:05:55Z","pattern":"token efficiency","ms":6.9,"ok":true,"agent":"CLS"}
+{"ts":"2025-10-27T01:22:10Z","pattern":"phase 7.2 delegation","ms":13.9,"ok":true,"agent":"GG"}
+{"ts":"2025-10-27T02:40:00Z","pattern":"incident correlation","ms":9.5,"ok":true,"agent":"Paula"}
+{"ts":"2025-10-27T03:00:10Z","pattern":"system architecture","ms":103.2,"ok":true,"agent":"Mary"}
+{"ts":"2025-10-27T03:11:47Z","pattern":"token efficiency","ms":5.9,"ok":true,"agent":"CLS"}
+{"ts":"2025-10-27T03:35:01Z","pattern":"boss-api v2.0","ms":8.2,"ok":true,"agent":"Lisa"}
+{"ts":"2025-10-27T03:59:59Z","pattern":"token efficiency","ms":7.1,"ok":true,"agent":"CLS"}

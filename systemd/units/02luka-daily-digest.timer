@@ -1,8 +1,8 @@
 [Unit]
-Description=02LUKA Daily Digest Timer
+Description=Run 02luka Daily Digest at 02:30
 
 [Timer]
-OnCalendar=09:00
+OnCalendar=*-*-* 02:30:00
 Persistent=true
 
 [Install]
