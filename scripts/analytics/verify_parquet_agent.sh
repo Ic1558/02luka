@@ -26,10 +26,25 @@ fi
 history_log="$LOG_DIR/WO_HISTORY.log"
 audit_status="⚠️ Pending"
 if [[ -f "$history_log" ]]; then
-  if grep -q "WO-251029-PARQUET-EXPORTER" "$history_log"; then
+  drop_logged=false
+  trigger_logged=false
+
+  if grep -q "DROP -> .*WO-251029-PARQUET-EXPORTER" "$history_log"; then
+    drop_logged=true
+  fi
+
+  if grep -q "TRIGGER -> .*WO-251029" "$history_log"; then
+    trigger_logged=true
+  fi
+
+  if [[ "$drop_logged" == true && "$trigger_logged" == true ]]; then
     audit_status="✅ Logged"
+  elif [[ "$drop_logged" == true ]]; then
+    audit_status="⚠️ Trigger Missing"
+  elif [[ "$trigger_logged" == true ]]; then
+    audit_status="⚠️ Drop Missing"
   else
-    audit_status="⚠️ Drop Logged?"
+    audit_status="⚠️ Entry Missing"
   fi
 else
   audit_status="⚠️ Log Missing"
