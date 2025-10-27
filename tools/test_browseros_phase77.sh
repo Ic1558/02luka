@@ -16,10 +16,48 @@ note(){ echo "— $*"; }
 echo "# Phase 7.7 Verification — $(date -Iseconds)" > "${SUMMARY}"
 mkdir -p g/reports 02luka/config
 
+ALLOWLIST_PATH="02luka/config/browseros.allow"
+KILLSWITCH_PATH="02luka/config/browseros.off"
+ALLOWLIST_PREEXIST=0
+ALLOWLIST_TMP=""
+KILLSWITCH_PREEXIST=0
+KILLSWITCH_TMP=""
+
+if [ -f "${ALLOWLIST_PATH}" ]; then
+  ALLOWLIST_TMP=$(mktemp)
+  cp "${ALLOWLIST_PATH}" "${ALLOWLIST_TMP}"
+  ALLOWLIST_PREEXIST=1
+fi
+
+if [ -f "${KILLSWITCH_PATH}" ]; then
+  KILLSWITCH_TMP=$(mktemp)
+  cp "${KILLSWITCH_PATH}" "${KILLSWITCH_TMP}"
+  KILLSWITCH_PREEXIST=1
+  rm -f "${KILLSWITCH_PATH}"
+fi
+rm -f "${KILLSWITCH_PATH}" || true
+
+cleanup(){
+  set +e
+  if [ "${ALLOWLIST_PREEXIST}" -eq 1 ] && [ -n "${ALLOWLIST_TMP}" ]; then
+    cp "${ALLOWLIST_TMP}" "${ALLOWLIST_PATH}"
+  else
+    rm -f "${ALLOWLIST_PATH}"
+  fi
+  if [ -n "${ALLOWLIST_TMP}" ]; then rm -f "${ALLOWLIST_TMP}"; fi
+
+  if [ "${KILLSWITCH_PREEXIST}" -eq 1 ] && [ -n "${KILLSWITCH_TMP}" ]; then
+    cp "${KILLSWITCH_TMP}" "${KILLSWITCH_PATH}"
+  else
+    rm -f "${KILLSWITCH_PATH}"
+  fi
+  if [ -n "${KILLSWITCH_TMP}" ]; then rm -f "${KILLSWITCH_TMP}"; fi
+}
+trap cleanup EXIT
+
 # 0) Prep
-echo "example.com" > 02luka/config/browseros.allow || true
-rm -f 02luka/config/browseros.off || true
-pass "Prep OK (allowlist set; killswitch off)"
+echo "example.com" > "${ALLOWLIST_PATH}" || true
+pass "Prep OK (allowlist set; killswitch off; originals preserved)"
 
 # Helpers
 has_cmd(){ command -v "$1" >/dev/null 2>&1; }
@@ -108,12 +146,12 @@ else
 fi
 
 # 6.2 killswitch
-touch 02luka/config/browseros.off
+touch "${KILLSWITCH_PATH}"
 set +e
 OUT_KILL=$(echo "${REQ_CLI}" | tools/browseros.sh 2>&1)
 EC2=$?
 set -e
-rm -f 02luka/config/browseros.off
+rm -f "${KILLSWITCH_PATH}"
 if [ ${EC2} -ne 0 ] || echo "${OUT_KILL}" | grep -qi "kill"; then
   pass "Killswitch (simulated/stub) ok"
 else
