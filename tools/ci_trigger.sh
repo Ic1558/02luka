@@ -26,6 +26,7 @@ echo "${now}" > "${RATE_LOCK}"
 cd "${REPO}"
 git fetch origin "${BRANCH}" --quiet || true
 git checkout "${BRANCH}" --quiet
+git reset --hard "origin/${BRANCH}" --quiet
 
 # Safety: Only run for owner repo
 OWNER="$(git config --get remote.origin.url | sed -E 's#.*[:/](.+)/.+\.git#\1#')"
