@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 set -euo pipefail
-ROOT="$HOME/02luka"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPORTS="$ROOT/g/reports"
 ARCHIVE="$REPORTS/archive"
 LOG="$REPORTS/_rotate_reports.log"
