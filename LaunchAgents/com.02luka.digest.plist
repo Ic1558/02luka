@@ -6,14 +6,14 @@
     <string>com.02luka.digest</string>
     <key>ProgramArguments</key>
       <array>
-        <string>/usr/local/bin/node</string>
-        <string>~/02luka/g/tools/services/daily_digest.cjs</string>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/icmini/02luka/g/tools/services/daily_digest.cjs</string>
         <string>--since</string>
         <string>24h</string>
       </array>
     <key>StartCalendarInterval</key>
       <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
-    <key>StandardOutPath</key><string>~/02luka/g/logs/digest.out</string>
-    <key>StandardErrorPath</key><string>~/02luka/g/logs/digest.err</string>
+    <key>StandardOutPath</key><string>/Users/icmini/02luka/g/logs/digest.out</string>
+    <key>StandardErrorPath</key><string>/Users/icmini/02luka/g/logs/digest.err</string>
     <key>RunAtLoad</key><true/></dict>
 </plist>
