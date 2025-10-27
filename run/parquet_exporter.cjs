@@ -10,9 +10,12 @@ const OUTDIR = G('g/analytics');
 const LOG = G('g/logs/parquet_exporter.log');
 const DUCKDB = process.env.DUCKDB_BIN || 'duckdb';
 
-function latest(globDir, prefix) {
+function latest(globDir, prefix, ext) {
   if (!existsSync(globDir)) return null;
-  const list = readdirSync(globDir).filter(f => f.startsWith(prefix)).sort().reverse();
+  const list = readdirSync(globDir)
+    .filter(f => f.startsWith(prefix) && (!ext || f.endsWith(ext)))
+    .sort()
+    .reverse();
   return list.length ? path.join(globDir, list[0]) : null;
 }
 
@@ -26,10 +29,10 @@ function main() {
   const JSON_DIR = G('g/reports');
   const NDJSON_DIR = G('g/telemetry');
 
-  const dailyCsv = latest(CSV_DIR, 'query_perf_daily_');
-  const weeklyCsv = latest(CSV_DIR, 'query_perf_weekly_');
-  const dailyJson = latest(JSON_DIR, 'query_perf_daily_');
-  const weeklyJson = latest(JSON_DIR, 'query_perf_weekly_');
+  const dailyCsv = latest(CSV_DIR, 'query_perf_daily_', '.csv');
+  const weeklyCsv = latest(CSV_DIR, 'query_perf_weekly_', '.csv');
+  const dailyJson = latest(JSON_DIR, 'query_perf_daily_', '.json');
+  const weeklyJson = latest(JSON_DIR, 'query_perf_weekly_', '.json');
   const ndjsonPath = path.join(NDJSON_DIR, 'rollup_daily.ndjson');
   const ndjson = existsSync(ndjsonPath) ? ndjsonPath : null;
 
