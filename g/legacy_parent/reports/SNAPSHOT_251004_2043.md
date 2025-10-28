@@ -1,0 +1,41 @@
+---
+project: general
+tags: [legacy]
+---
+# Final Snapshot — Sat Oct  4 20:43:18 UTC 2025
+
+## Git
+## main...origin/main [ahead 1]
+ M 02luka.md
+ M run_local.sh
+?? .codex/doc_write_through.sh
+?? .codex/memory_merge_bridge.sh
+?? .codex/memory_merge_rules.yml
+?? .gitignore.bak
+?? 02luka.md.bak
+?? a/section/clc/memory/
+?? g/reports/AUDIT_20251004_2015.md
+?? g/reports/IMPROVEMENT_20251004_2026.md
+?? g/reports/INDEX.md
+?? g/reports/SNAPSHOT_251004_2043.md
+?? g/reports/sessions/session_251004_204313.md
+
+## Tags
+v2025-10-05-docs-refresh
+v2025-10-04-locked
+v2025-10-05-docs-stable
+v2025-10-05-stabilized
+v2025-10-04-dual-memory-ready
+
+## Memory System
+- Dual Memory: OK
+- Bridge Sync: Active
+- Autosave: OK
+
+## Health
+- Preflight: OK
+- Smoke Tests: OK
+- API/UI: Online
+
+## Notes
+Baseline: post-merge readiness v1.1 locked
