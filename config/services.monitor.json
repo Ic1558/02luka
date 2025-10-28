@@ -1,0 +1,22 @@
+{
+  "redis": {
+    "url": "127.0.0.1:6379",
+    "critical": true,
+    "timeout": 5000
+  },
+  "api": {
+    "url": "http://127.0.0.1:4000/healthz",
+    "critical": true,
+    "timeout": 5000
+  },
+  "mcp": {
+    "url": "http://127.0.0.1:3003",
+    "critical": false,
+    "timeout": 5000
+  },
+  "health_proxy": {
+    "url": "http://127.0.0.1:3002/health",
+    "critical": false,
+    "timeout": 5000
+  }
+}
