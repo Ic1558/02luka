@@ -1,0 +1,1631 @@
+2025-10-27T21:41:35.010Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T21:41:35.034Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T21:41:35.062Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T21:41:35.153Z [INFO] Boss API (port 4000): UP
+2025-10-27T21:41:35.153Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T21:46:35.229Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T21:46:35.243Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T21:46:35.252Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T21:46:35.263Z [INFO] Boss API (port 4000): UP
+2025-10-27T21:46:35.263Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T21:51:35.376Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T21:51:35.398Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T21:51:35.406Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T21:51:35.418Z [INFO] Boss API (port 4000): UP
+2025-10-27T21:51:35.418Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T21:56:35.517Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T21:56:35.534Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T21:56:35.543Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T21:56:35.552Z [INFO] Boss API (port 4000): UP
+2025-10-27T21:56:35.552Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:01:35.640Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:01:35.653Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:01:35.663Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:01:35.671Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:01:35.671Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:06:35.859Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:06:36.380Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:06:36.401Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:06:36.416Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:06:36.416Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:11:36.439Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:11:36.456Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:11:36.488Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:11:36.498Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:11:36.498Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:16:36.588Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:16:36.606Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:16:36.617Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:16:36.627Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:16:36.627Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:21:36.705Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:21:36.720Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:21:36.729Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:21:36.738Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:21:36.738Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:26:36.826Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:26:36.842Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:26:36.852Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:26:36.860Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:26:36.861Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:31:36.942Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:31:36.957Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:31:36.965Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:31:36.973Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:31:36.973Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:36:37.036Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:36:37.050Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:36:37.058Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:36:37.067Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:36:37.067Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:41:37.152Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:41:37.171Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:41:37.178Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:41:37.189Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:41:37.189Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:46:37.296Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:46:37.310Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:46:37.321Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:46:37.331Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:46:37.332Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:51:37.403Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:51:37.416Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:51:37.427Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:51:37.440Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:51:37.440Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T22:56:37.518Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T22:56:37.531Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T22:56:37.538Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T22:56:37.546Z [INFO] Boss API (port 4000): UP
+2025-10-27T22:56:37.546Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:01:37.948Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:01:38.406Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:01:38.424Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:01:38.432Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:01:38.432Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:06:38.511Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:06:38.525Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:06:38.532Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:06:38.541Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:06:38.541Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:11:38.617Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:11:38.641Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:11:38.649Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:11:38.662Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:11:38.662Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:16:39.758Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:16:40.253Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:16:40.272Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:16:40.283Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:16:40.284Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:21:40.379Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:21:40.392Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:21:40.399Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:21:40.407Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:21:40.407Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:26:40.491Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:26:40.507Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:26:40.516Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:26:40.525Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:26:40.526Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:31:40.600Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:31:40.614Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:31:40.622Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:31:40.630Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:31:40.630Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:36:40.712Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:36:40.726Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:36:40.733Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:36:40.741Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:36:40.741Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:41:40.826Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:41:40.840Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:41:40.847Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:41:40.858Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:41:40.858Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:46:40.986Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:46:40.998Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:46:41.005Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:46:41.013Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:46:41.013Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:51:41.127Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:51:41.142Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:51:41.161Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:51:41.175Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:51:41.175Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-27T23:56:41.286Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-27T23:56:41.419Z [INFO] Health Proxy (port 3002): UP
+2025-10-27T23:56:41.445Z [INFO] MCP Bridge (port 3003): UP
+2025-10-27T23:56:41.480Z [INFO] Boss API (port 4000): UP
+2025-10-27T23:56:41.481Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:01:41.572Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:01:41.587Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:01:41.602Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:01:41.615Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:01:41.616Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:06:41.698Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:06:41.713Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:06:41.722Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:06:41.732Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:06:41.732Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:11:41.841Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:11:41.865Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:11:41.873Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:11:41.883Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:11:41.884Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:16:41.956Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:16:41.968Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:16:41.975Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:16:41.983Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:16:41.984Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:21:42.058Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:21:42.070Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:21:42.077Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:21:42.085Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:21:42.085Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:26:42.873Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:26:43.417Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:26:43.435Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:26:43.456Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:26:43.456Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:31:43.559Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:31:43.572Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:31:43.583Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:31:43.596Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:31:43.596Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:36:43.683Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:36:43.698Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:36:43.705Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:36:43.714Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:36:43.714Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:41:43.860Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:41:44.045Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:41:44.063Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:41:44.074Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:41:44.074Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:46:44.164Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:46:44.179Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:46:44.186Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:46:44.193Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:46:44.194Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:51:44.268Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:51:44.280Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:51:44.287Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:51:44.294Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:51:44.294Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T00:56:44.379Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T00:56:44.396Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T00:56:44.406Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T00:56:44.415Z [INFO] Boss API (port 4000): UP
+2025-10-28T00:56:44.416Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:01:44.509Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:01:44.524Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:01:44.531Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:01:44.539Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:01:44.539Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:06:44.647Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:06:44.663Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:06:44.671Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:06:44.679Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:06:44.679Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:11:44.772Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:11:44.787Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:11:44.798Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:11:44.810Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:11:44.810Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:16:44.906Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:16:44.922Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:16:44.931Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:16:44.942Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:16:44.942Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:21:45.090Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:21:45.472Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:21:45.491Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:21:45.502Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:21:45.502Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:26:45.584Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:26:45.600Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:26:45.608Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:26:45.620Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:26:45.620Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:31:45.751Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:31:45.766Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:31:45.775Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:31:45.782Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:31:45.783Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:36:45.860Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:36:45.876Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:36:45.884Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:36:45.892Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:36:45.892Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:41:46.204Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:41:46.780Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:41:46.822Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:41:46.838Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:41:46.838Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:46:46.926Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:46:46.942Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:46:46.949Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:46:46.957Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:46:46.957Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:51:47.036Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:51:47.055Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:51:47.063Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:51:47.072Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:51:47.072Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T01:56:47.169Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T01:56:47.185Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T01:56:47.197Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T01:56:47.207Z [INFO] Boss API (port 4000): UP
+2025-10-28T01:56:47.207Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:01:47.282Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:01:47.296Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:01:47.303Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:01:47.312Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:01:47.313Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:06:47.427Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:06:47.440Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:06:47.452Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:06:47.463Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:06:47.463Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:11:48.526Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:11:48.825Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:11:48.846Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:11:48.856Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:11:48.856Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:16:50.059Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:16:50.511Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:16:50.532Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:16:50.545Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:16:50.545Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:21:50.622Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:21:50.635Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:21:50.642Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:21:50.649Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:21:50.650Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:26:50.741Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:26:50.756Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:26:50.766Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:26:50.775Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:26:50.775Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:31:51.694Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:31:52.137Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:31:52.166Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:31:52.180Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:31:52.180Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:36:52.276Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:36:52.296Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:36:52.307Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:36:52.317Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:36:52.317Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:41:52.414Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:41:52.427Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:41:52.435Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:41:52.445Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:41:52.445Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:46:52.531Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:46:52.551Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:46:52.560Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:46:52.572Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:46:52.572Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:51:52.650Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:51:52.665Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:51:52.677Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:51:52.687Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:51:52.688Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T02:56:52.774Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T02:56:52.789Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T02:56:52.799Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T02:56:52.810Z [INFO] Boss API (port 4000): UP
+2025-10-28T02:56:52.810Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:01:52.933Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:01:52.947Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:01:52.954Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:01:52.962Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:01:52.962Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:06:53.033Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:06:53.049Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:06:53.058Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:06:53.071Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:06:53.071Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:11:53.162Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:11:53.176Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:11:53.185Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:11:53.195Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:11:53.195Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:16:53.275Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:16:53.293Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:16:53.301Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:16:53.312Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:16:53.312Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:21:53.360Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:21:53.384Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:21:53.391Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:21:53.401Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:21:53.401Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:26:53.498Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:26:53.513Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:26:53.527Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:26:53.540Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:26:53.540Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:31:53.651Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:31:53.670Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:31:53.681Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:31:53.691Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:31:53.691Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:36:53.785Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:36:53.800Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:36:53.808Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:36:53.820Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:36:53.820Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:41:54.294Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:41:54.648Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:41:54.683Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:41:54.743Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:41:54.744Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:46:55.820Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:46:56.163Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:46:56.184Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:46:56.194Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:46:56.195Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:51:56.266Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:51:56.279Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:51:56.286Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:51:56.294Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:51:56.295Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T03:56:56.386Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T03:56:56.584Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T03:56:56.611Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T03:56:56.627Z [INFO] Boss API (port 4000): UP
+2025-10-28T03:56:56.627Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:01:56.701Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:01:56.717Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:01:56.727Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:01:56.737Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:01:56.737Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:06:56.832Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:06:56.846Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:06:56.856Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:06:56.867Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:06:56.867Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:11:57.533Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:11:57.554Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:11:57.564Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:11:57.574Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:11:57.575Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:16:57.744Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:16:58.056Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:16:58.075Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:16:58.093Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:16:58.093Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:21:58.668Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:21:59.117Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:21:59.208Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:21:59.248Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:21:59.248Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:26:59.330Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:26:59.346Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:26:59.354Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:26:59.363Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:26:59.363Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:31:59.472Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:31:59.485Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:31:59.493Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:31:59.502Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:31:59.502Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:36:59.605Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:36:59.618Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:36:59.626Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:36:59.634Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:36:59.634Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:41:59.717Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:41:59.731Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:41:59.738Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:41:59.746Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:41:59.747Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:46:59.833Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:46:59.848Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:46:59.856Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:46:59.864Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:46:59.864Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:51:59.944Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:51:59.961Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:51:59.971Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:51:59.981Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:51:59.981Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T04:57:00.103Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T04:57:00.120Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T04:57:00.129Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T04:57:00.139Z [INFO] Boss API (port 4000): UP
+2025-10-28T04:57:00.139Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:02:00.229Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:02:00.245Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:02:00.253Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:02:00.267Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:02:00.267Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:07:00.653Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:07:00.720Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:07:00.747Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:07:00.767Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:07:00.768Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:12:00.855Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:12:00.869Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:12:00.877Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:12:00.885Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:12:00.885Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:17:00.984Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:17:01.021Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:17:01.126Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:17:01.140Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:17:01.141Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:22:01.230Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:22:01.244Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:22:01.251Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:22:01.281Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:22:01.281Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:27:01.366Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:27:01.381Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:27:01.389Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:27:01.399Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:27:01.399Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:32:01.491Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:32:01.508Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:32:01.516Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:32:01.527Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:32:01.527Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:37:01.603Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:37:01.621Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:37:01.630Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:37:01.641Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:37:01.642Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:42:01.743Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:42:01.757Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:42:01.769Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:42:01.778Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:42:01.779Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:47:01.856Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:47:01.872Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:47:01.881Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:47:01.889Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:47:01.889Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:52:01.988Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:52:02.003Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:52:02.011Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:52:02.019Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:52:02.019Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T05:57:02.105Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T05:57:02.118Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T05:57:02.125Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T05:57:02.133Z [INFO] Boss API (port 4000): UP
+2025-10-28T05:57:02.133Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:02:02.208Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:02:02.229Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:02:02.242Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:02:02.253Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:02:02.254Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:07:02.329Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:07:02.341Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:07:02.348Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:07:02.357Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:07:02.357Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:12:02.450Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:12:02.465Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:12:02.473Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:12:02.482Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:12:02.483Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:17:02.575Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:17:02.601Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:17:02.617Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:17:02.630Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:17:02.630Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:22:02.718Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:22:02.735Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:22:02.742Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:22:02.751Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:22:02.751Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:27:02.833Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:27:02.851Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:27:02.859Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:27:02.869Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:27:02.870Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:32:02.960Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:32:02.974Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:32:02.983Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:32:02.992Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:32:02.992Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:37:03.080Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:37:03.093Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:37:03.100Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:37:03.109Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:37:03.109Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:42:03.152Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:42:03.167Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:42:03.175Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:42:03.185Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:42:03.185Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:47:03.264Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:47:03.279Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:47:03.287Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:47:03.296Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:47:03.296Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:52:03.385Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:52:03.402Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:52:03.410Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:52:03.418Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:52:03.419Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T06:57:03.495Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T06:57:03.508Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T06:57:03.516Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T06:57:03.524Z [INFO] Boss API (port 4000): UP
+2025-10-28T06:57:03.524Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:02:03.585Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:02:03.597Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:02:03.605Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:02:03.615Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:02:03.615Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:07:03.698Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:07:03.711Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:07:03.719Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:07:03.727Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:07:03.727Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:12:03.798Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:12:03.813Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:12:03.821Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:12:03.831Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:12:03.831Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:17:03.940Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:17:03.960Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:17:03.970Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:17:03.989Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:17:03.989Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:22:04.063Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:22:04.084Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:22:04.095Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:22:04.104Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:22:04.104Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:27:04.202Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:27:04.219Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:27:04.232Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:27:04.247Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:27:04.247Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:32:04.351Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:32:04.381Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:32:04.396Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:32:04.412Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:32:04.412Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:37:04.494Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:37:04.510Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:37:04.518Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:37:04.528Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:37:04.528Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:42:04.622Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:42:04.636Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:42:04.648Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:42:04.666Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:42:04.666Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:47:04.749Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:47:04.768Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:47:04.779Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:47:04.794Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:47:04.795Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:52:04.906Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:52:04.924Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:52:04.933Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:52:04.944Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:52:04.944Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T07:57:05.021Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T07:57:05.034Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T07:57:05.043Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T07:57:05.052Z [INFO] Boss API (port 4000): UP
+2025-10-28T07:57:05.052Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:02:05.140Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:02:05.154Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:02:05.173Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:02:05.185Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:02:05.185Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:07:05.272Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:07:05.286Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:07:05.293Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:07:05.302Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:07:05.302Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:12:05.385Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:12:05.401Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:12:05.410Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:12:05.423Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:12:05.424Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:17:05.506Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:17:05.527Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:17:05.537Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:17:05.544Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:17:05.545Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:22:05.627Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:22:05.643Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:22:05.651Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:22:05.659Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:22:05.659Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:27:05.745Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:27:05.759Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:27:05.767Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:27:05.776Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:27:05.776Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:32:06.126Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:32:06.174Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:32:06.183Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:32:06.192Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:32:06.192Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:37:06.282Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:37:06.297Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:37:06.305Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:37:06.313Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:37:06.314Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:42:06.408Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:42:06.423Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:42:06.431Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:42:06.443Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:42:06.443Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:47:06.551Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:47:06.573Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:47:06.585Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:47:06.605Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:47:06.605Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:52:06.689Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:52:06.707Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:52:06.715Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:52:06.725Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:52:06.725Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T08:57:06.816Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T08:57:06.829Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T08:57:06.837Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T08:57:06.846Z [INFO] Boss API (port 4000): UP
+2025-10-28T08:57:06.846Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:02:06.933Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:02:06.948Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:02:06.957Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:02:06.969Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:02:06.969Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:07:07.064Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:07:07.080Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:07:07.089Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:07:07.099Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:07:07.100Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:12:07.167Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:12:07.183Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:12:07.193Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:12:07.203Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:12:07.203Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:17:07.312Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:17:07.337Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:17:07.347Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:17:07.357Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:17:07.357Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:22:07.434Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:22:07.449Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:22:07.458Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:22:07.466Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:22:07.466Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:27:07.549Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:27:07.565Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:27:07.573Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:27:07.584Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:27:07.584Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:32:07.662Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:32:07.680Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:32:07.691Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:32:07.701Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:32:07.701Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:37:07.787Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:37:07.804Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:37:07.813Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:37:07.823Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:37:07.823Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:42:07.901Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:42:07.914Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:42:07.922Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:42:07.929Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:42:07.929Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:47:08.009Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:47:08.027Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:47:08.037Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:47:08.050Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:47:08.050Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:52:08.188Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:52:08.215Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:52:08.223Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:52:08.238Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:52:08.238Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T09:57:08.354Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T09:57:08.374Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T09:57:08.383Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T09:57:08.394Z [INFO] Boss API (port 4000): UP
+2025-10-28T09:57:08.394Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:02:08.482Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:02:08.497Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:02:08.508Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:02:08.519Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:02:08.519Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:07:08.607Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:07:08.624Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:07:08.634Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:07:08.644Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:07:08.644Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:12:08.725Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:12:08.748Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:12:08.759Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:12:08.774Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:12:08.774Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:17:08.827Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:17:08.842Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:17:08.850Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:17:08.858Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:17:08.859Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:22:08.962Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:22:08.979Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:22:08.997Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:22:09.009Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:22:09.009Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:27:09.094Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:27:09.109Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:27:09.117Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:27:09.129Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:27:09.129Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:32:09.217Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:32:09.238Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:32:09.246Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:32:09.256Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:32:09.256Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:37:09.349Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:37:09.370Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:37:09.379Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:37:09.390Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:37:09.391Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:42:09.530Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:42:09.544Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:42:09.552Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:42:09.559Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:42:09.560Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:47:09.641Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:47:09.656Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:47:09.663Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:47:09.672Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:47:09.672Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:52:09.764Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:52:09.782Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:52:09.792Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:52:09.805Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:52:09.806Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T10:57:09.891Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T10:57:09.906Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T10:57:09.913Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T10:57:09.921Z [INFO] Boss API (port 4000): UP
+2025-10-28T10:57:09.921Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:02:09.994Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:02:10.010Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:02:10.021Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:02:10.030Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:02:10.030Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:07:10.112Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:07:10.126Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:07:10.135Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:07:10.145Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:07:10.145Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:12:10.223Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:12:10.237Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:12:10.244Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:12:10.252Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:12:10.252Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:17:10.336Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:17:10.351Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:17:10.360Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:17:10.368Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:17:10.368Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:22:10.451Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:22:10.469Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:22:10.477Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:22:10.484Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:22:10.484Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:27:10.588Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:27:10.601Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:27:10.608Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:27:10.622Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:27:10.622Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:32:10.735Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:32:10.755Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:32:10.765Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:32:10.776Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:32:10.776Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:37:10.859Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:37:10.873Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:37:10.882Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:37:10.890Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:37:10.890Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:42:10.980Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:42:10.993Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:42:11.000Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:42:11.008Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:42:11.008Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:47:11.088Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:47:11.102Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:47:11.109Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:47:11.119Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:47:11.119Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:52:11.175Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:52:11.188Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:52:11.196Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:52:11.204Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:52:11.204Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T11:57:11.285Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T11:57:11.300Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T11:57:11.308Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T11:57:11.317Z [INFO] Boss API (port 4000): UP
+2025-10-28T11:57:11.317Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:02:11.403Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:02:11.418Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:02:11.426Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:02:11.433Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:02:11.433Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:07:11.538Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:07:11.555Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:07:11.563Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:07:11.572Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:07:11.572Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:12:11.673Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:12:11.689Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:12:11.702Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:12:11.712Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:12:11.712Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:17:11.793Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:17:11.806Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:17:11.813Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:17:11.821Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:17:11.821Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:22:11.901Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:22:11.915Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:22:11.922Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:22:11.930Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:22:11.930Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:27:12.029Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:27:12.043Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:27:12.050Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:27:12.060Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:27:12.060Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:32:12.208Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:32:12.565Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:32:12.589Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:32:12.598Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:32:12.598Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:37:12.630Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:37:12.646Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:37:12.656Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:37:12.667Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:37:12.667Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:42:12.745Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:42:12.762Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:42:12.770Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:42:12.779Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:42:12.779Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:47:13.705Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:47:14.164Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:47:14.183Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:47:14.197Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:47:14.198Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:52:14.304Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:52:14.317Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:52:14.324Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:52:14.332Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:52:14.332Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T12:57:14.451Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T12:57:14.471Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T12:57:14.479Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T12:57:14.488Z [INFO] Boss API (port 4000): UP
+2025-10-28T12:57:14.488Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:02:14.579Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:02:14.592Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:02:14.603Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:02:14.616Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:02:14.616Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:07:14.720Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:07:14.752Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:07:14.761Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:07:14.769Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:07:14.769Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:12:14.847Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:12:14.862Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:12:14.881Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:12:14.898Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:12:14.898Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:17:14.983Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:17:15.002Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:17:15.013Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:17:15.024Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:17:15.025Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:22:15.086Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:22:15.103Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:22:15.114Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:22:15.123Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:22:15.123Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:27:15.218Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:27:15.248Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:27:15.257Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:27:15.267Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:27:15.267Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:32:15.352Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:32:15.370Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:32:15.380Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:32:15.388Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:32:15.388Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:37:15.461Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:37:15.474Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:37:15.483Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:37:15.497Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:37:15.498Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:42:15.620Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:42:15.633Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:42:15.640Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:42:15.648Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:42:15.648Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:47:15.805Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:47:15.819Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:47:15.828Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:47:15.838Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:47:15.838Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:52:15.991Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:52:16.359Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:52:16.402Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:52:16.411Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:52:16.411Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T13:57:16.500Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T13:57:16.515Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T13:57:16.523Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T13:57:16.532Z [INFO] Boss API (port 4000): UP
+2025-10-28T13:57:16.532Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:02:16.689Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:02:16.762Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:02:16.787Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:02:16.799Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:02:16.799Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:07:16.863Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:07:16.877Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:07:16.884Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:07:16.891Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:07:16.891Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:12:16.983Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:12:17.001Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:12:17.009Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:12:17.019Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:12:17.019Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:17:17.094Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:17:17.107Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:17:17.115Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:17:17.123Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:17:17.123Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:22:17.208Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:22:17.224Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:22:17.234Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:22:17.243Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:22:17.243Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:27:17.291Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:27:17.307Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:27:17.314Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:27:17.324Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:27:17.324Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:32:17.417Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:32:17.435Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:32:17.442Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:32:17.451Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:32:17.451Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:37:17.522Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:37:17.540Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:37:17.555Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:37:17.568Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:37:17.568Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:42:17.647Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:42:17.664Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:42:17.673Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:42:17.683Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:42:17.683Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:47:17.800Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:47:17.813Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:47:17.820Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:47:17.828Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:47:17.828Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:52:17.913Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:52:17.927Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:52:17.935Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:52:17.943Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:52:17.943Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T14:57:18.031Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T14:57:18.049Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T14:57:18.057Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T14:57:18.071Z [INFO] Boss API (port 4000): UP
+2025-10-28T14:57:18.071Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:02:18.149Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:02:18.163Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:02:18.172Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:02:18.180Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:02:18.180Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:07:18.282Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:07:18.345Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:07:18.360Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:07:18.369Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:07:18.369Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:12:18.430Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:12:18.443Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:12:18.452Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:12:18.460Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:12:18.460Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:17:18.533Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:17:18.546Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:17:18.554Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:17:18.561Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:17:18.561Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:22:18.642Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:22:18.655Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:22:18.662Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:22:18.670Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:22:18.670Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:27:19.599Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:27:20.292Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:27:20.342Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:27:20.358Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:27:20.358Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:32:20.431Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:32:20.445Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:32:20.452Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:32:20.459Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:32:20.459Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:37:20.556Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:37:20.572Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:37:20.580Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:37:20.589Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:37:20.589Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:42:20.665Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:42:20.680Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:42:20.689Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:42:20.701Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:42:20.702Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:47:20.789Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:47:20.806Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:47:20.816Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:47:20.826Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:47:20.826Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:52:20.920Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:52:20.935Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:52:20.943Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:52:20.952Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:52:20.952Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T15:57:21.004Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T15:57:21.024Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T15:57:21.033Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T15:57:21.042Z [INFO] Boss API (port 4000): UP
+2025-10-28T15:57:21.043Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:02:21.110Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:02:21.125Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:02:21.132Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:02:21.142Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:02:21.142Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:07:21.221Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:07:21.234Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:07:21.241Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:07:21.249Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:07:21.249Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:12:21.335Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:12:21.349Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:12:21.358Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:12:21.368Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:12:21.368Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:17:21.460Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:17:21.481Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:17:21.494Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:17:21.505Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:17:21.506Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:22:21.599Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:22:21.614Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:22:21.621Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:22:21.629Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:22:21.629Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:27:21.726Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:27:21.742Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:27:21.750Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:27:21.759Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:27:21.759Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:32:21.836Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:32:21.853Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:32:21.863Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:32:21.875Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:32:21.875Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:37:21.955Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:37:21.969Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:37:21.978Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:37:21.987Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:37:21.987Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:42:22.064Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:42:22.079Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:42:22.087Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:42:22.096Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:42:22.096Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:47:22.208Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:47:22.224Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:47:22.231Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:47:22.240Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:47:22.240Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:52:22.352Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:52:22.389Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:52:22.398Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:52:22.411Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:52:22.411Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T16:57:22.875Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T16:57:22.909Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T16:57:22.919Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T16:57:22.930Z [INFO] Boss API (port 4000): UP
+2025-10-28T16:57:22.930Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
+2025-10-28T17:02:23.060Z [INFO] === Auto-Heal Scan Starting ===
+2025-10-28T17:02:23.088Z [INFO] Health Proxy (port 3002): UP
+2025-10-28T17:02:23.101Z [INFO] MCP Bridge (port 3003): UP
+2025-10-28T17:02:23.114Z [INFO] Boss API (port 4000): UP
+2025-10-28T17:02:23.115Z [INFO] === Auto-Heal Scan Complete ===
+
+Summary: 0 healed, 0 failed
