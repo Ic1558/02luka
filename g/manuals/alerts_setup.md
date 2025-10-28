@@ -97,7 +97,7 @@ curl http://127.0.0.1:4000/api/reports/summary
 
 ```bash
 # Optional: Webhook for FAIL/CRITICAL alerts
-export ALERT_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+export ALERT_WEBHOOK_URL="https://hooks.slack.com/services/REMOVED_FOR_SECURITY
 ```
 
 ### Alert Levels
