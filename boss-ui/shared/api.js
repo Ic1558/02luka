@@ -132,5 +132,8 @@ export const API = {
   agentRoute: (payload) => jfetch('/api/agents/route', { method: 'POST', body: JSON.stringify(payload) }),
   agentHealth: () => jfetch('/api/agents/health'),
   caps: () => jfetch('/api/capabilities'),
+  reportsList: () => jfetch('/api/reports/list'),
+  reportsLatest: () => jfetch('/api/reports/latest'),
+  reportsSummary: () => jfetch('/api/reports/summary'),
   health: () => jfetch('/healthz')
 };

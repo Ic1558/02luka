@@ -1,0 +1,33 @@
+
+## Cleanup Summary - Tue Oct 28 04:11:06 +07 2025
+
+**Phase 7.8 Status:** ✅ Operational throughout cleanup
+
+**Agents Archived:** 8 total
+- 6× exit=127 (command not found)
+- 1× exit=127 (daily-report.publish - earlier run)
+- 1× invalid plist (security.scan)
+
+**System Improvement:**
+- Before: 23/78 healthy (29.5%)
+- After:  36/69 healthy (52.2%)
+- Removed: 9 broken agents
+- Still failing: 33 agents (mostly exit=78 config errors)
+
+**Archived Agents:**
+- com.02luka.update_truth
+- com.02luka.fastvlm.cron
+- com.02luka.heartbeats
+- com.02luka.reports.rotate
+- com.02luka.system_runner.hc
+- com.02luka.mcp.webbridge
+- com.02luka.daily-report.publish
+- com.02luka.security.scan (invalid XML)
+
+**Archive Location:** ~/Library/LaunchAgents_disabled/
+
+**Next Steps:**
+- Monitor remaining 33 failures (mostly exit=78)
+- exit=78 agents are config errors, may be optional features
+- Phase 7.8 Parquet Analytics: Unaffected ✅
+

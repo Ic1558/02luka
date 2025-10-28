@@ -1,0 +1,9 @@
+{
+  "test-service": {
+    "state": "OPEN",
+    "failures": 3,
+    "successes": 0,
+    "nextAttempt": 1761601318208,
+    "lastUpdate": "2025-10-27T21:41:53.208Z"
+  }
+}
