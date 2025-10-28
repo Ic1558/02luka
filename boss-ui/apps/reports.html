@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>02LUKA · Ops Reports</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font: 14px/1.6 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+      background: #0b0b0b;
+      color: #eaeaea;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; font-weight: 600; }
+    h2 { font-size: 20px; margin-bottom: 12px; font-weight: 600; }
+    h3 { font-size: 16px; margin-bottom: 8px; font-weight: 600; }
+    .header { margin-bottom: 32px; }
+    .back-link { color: #60A5FA; text-decoration: none; font-size: 14px; }
+    .back-link:hover { text-decoration: underline; }
+
+    .card {
+      background: #121212;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card.loading { opacity: 0.6; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-ok { background: #065F46; color: #9BEBA7; }
+    .status-fail { background: #7F1D1D; color: #FCA5A5; }
+    .status-warn { background: #78350F; color: #FCD34D; }
+    .status-unknown { background: #374151; color: #9CA3AF; }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .service-item {
+      background: #1a1a1a;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #2a2a2a;
+      text-align: center;
+    }
+    .service-name { font-size: 12px; opacity: 0.7; text-transform: uppercase; }
+    .service-status { font-size: 16px; font-weight: 600; margin-top: 4px; }
+    .service-up { color: #9BEBA7; }
+    .service-down { color: #FCA5A5; }
+
+    .issue-list {
+      margin-top: 12px;
+      padding: 0;
+      list-style: none;
+    }
+    .issue-item {
+      background: #1a1a1a;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 6px;
+      border-left: 3px solid #EF4444;
+      font-size: 13px;
+    }
+    .warn-item {
+      border-left-color: #F59E0B;
+    }
+
+    .files-list {
+      margin-top: 12px;
+      padding: 0;
+      list-style: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .file-item {
+      padding: 8px 12px;
+      margin-bottom: 4px;
+      background: #1a1a1a;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .file-item:hover {
+      background: #252525;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #0f0f0f;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #1c1c1c;
+      max-height: 60vh;
+      overflow: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .error {
+      background: #7F1D1D;
+      color: #FCA5A5;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      opacity: 0.6;
+    }
+
+    .meta-info {
+      margin-top: 12px;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Ops Reports</h1>
+    <a href="/apps/landing.html" class="back-link">← Back to Landing</a>
+  </div>
+
+  <div id="summary-card" class="card loading">
+    <h2>Current Status</h2>
+    <div id="summary-content">Loading...</div>
+  </div>
+
+  <div id="issues-card" class="card" style="display:none;">
+    <h2>Issues & Warnings</h2>
+    <div id="issues-content"></div>
+  </div>
+
+  <div id="services-card" class="card loading">
+    <h2>Services</h2>
+    <div id="services-content">Loading...</div>
+  </div>
+
+  <div id="files-card" class="card loading">
+    <h2>Recent Reports</h2>
+    <div id="files-content">Loading...</div>
+  </div>
+
+  <div id="report-card" class="card loading">
+    <h2>Latest Report</h2>
+    <pre id="report-content">Loading...</pre>
+  </div>
+
+  <script type="module">
+    const API_BASE = 'http://127.0.0.1:4000';
+
+    async function jfetch(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      const ct = res.headers.get('content-type') || '';
+      return ct.includes('application/json') ? res.json() : res.text();
+    }
+
+    function renderStatus(summary) {
+      const status = summary.status || 'unknown';
+      let badgeClass = 'status-unknown';
+      if (status === 'OK') badgeClass = 'status-ok';
+      else if (status === 'FAIL') badgeClass = 'status-fail';
+      else if (status === 'WARN') badgeClass = 'status-warn';
+
+      let html = `<span class="status-badge ${badgeClass}">${status}</span>`;
+
+      if (summary.timestamp) {
+        html += `<div class="meta-info">Report: ${summary.latest_file || 'unknown'}</div>`;
+        html += `<div class="meta-info">Generated: ${new Date(summary.generated_at || Date.now()).toLocaleString()}</div>`;
+      }
+
+      return html;
+    }
+
+    function renderServices(services) {
+      if (!services || Object.keys(services).length === 0) {
+        return '<div class="empty-state">No service data</div>';
+      }
+
+      let html = '<div class="services-grid">';
+      for (const [name, status] of Object.entries(services)) {
+        const isUp = status === 'UP';
+        const statusClass = isUp ? 'service-up' : 'service-down';
+        html += `
+          <div class="service-item">
+            <div class="service-name">${name}</div>
+            <div class="service-status ${statusClass}">${isUp ? '✅ UP' : '❌ DOWN'}</div>
+          </div>
+        `;
+      }
+      html += '</div>';
+      return html;
+    }
+
+    function renderIssues(fails, warns) {
+      const hasFails = fails && fails.length > 0;
+      const hasWarns = warns && warns.length > 0;
+
+      if (!hasFails && !hasWarns) {
+        return null; // Hide card
+      }
+
+      let html = '';
+
+      if (hasFails) {
+        html += '<h3>❌ Failures</h3><ul class="issue-list">';
+        fails.forEach(f => {
+          html += `<li class="issue-item">${escapeHtml(f)}</li>`;
+        });
+        html += '</ul>';
+      }
+
+      if (hasWarns) {
+        html += '<h3>⚠️ Warnings</h3><ul class="issue-list">';
+        warns.forEach(w => {
+          html += `<li class="issue-item warn-item">${escapeHtml(w)}</li>`;
+        });
+        html += '</ul>';
+      }
+
+      return html;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    async function load() {
+      try {
+        // Load summary
+        const summary = await jfetch(`${API_BASE}/api/reports/summary`);
+        document.getElementById('summary-content').innerHTML = renderStatus(summary);
+        document.getElementById('summary-card').classList.remove('loading');
+
+        // Load services
+        if (summary.services) {
+          document.getElementById('services-content').innerHTML = renderServices(summary.services);
+        } else {
+          document.getElementById('services-content').innerHTML = '<div class="empty-state">No service data</div>';
+        }
+        document.getElementById('services-card').classList.remove('loading');
+
+        // Load issues
+        const issuesHtml = renderIssues(summary.fails, summary.warns);
+        if (issuesHtml) {
+          document.getElementById('issues-content').innerHTML = issuesHtml;
+          document.getElementById('issues-card').style.display = 'block';
+        }
+
+        // Load file list
+        const list = await jfetch(`${API_BASE}/api/reports/list`);
+        const filesEl = document.getElementById('files-content');
+        if (list.files && list.files.length > 0) {
+          filesEl.innerHTML = '<ul class="files-list">' +
+            list.files.map(f => `<li class="file-item">${escapeHtml(f)}</li>`).join('') +
+            '</ul>';
+        } else {
+          filesEl.innerHTML = '<div class="empty-state">No reports found</div>';
+        }
+        document.getElementById('files-card').classList.remove('loading');
+
+        // Load latest report
+        const md = await jfetch(`${API_BASE}/api/reports/latest`);
+        document.getElementById('report-content').textContent = md;
+        document.getElementById('report-card').classList.remove('loading');
+
+      } catch (error) {
+        console.error('Load error:', error);
+        document.getElementById('summary-content').innerHTML =
+          `<div class="error">Failed to load: ${escapeHtml(error.message)}</div>`;
+        document.getElementById('summary-card').classList.remove('loading');
+      }
+    }
+
+    addEventListener('DOMContentLoaded', load);
+  </script>
+</body>
+</html>
