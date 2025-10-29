@@ -4,6 +4,13 @@ set -euo pipefail
 BASE="${OPS_ATOMIC_URL:-http://127.0.0.1:4000}"   # CI uses secret; local uses localhost
 echo "🧪 Smoke target: $BASE"
 
+# Skip endpoint checks if running in CI without OPS_ATOMIC_URL
+# (validate job doesn't have the secret, ops-gate job does)
+if [[ -z "${OPS_ATOMIC_URL:-}" ]] && [[ "${CI:-false}" == "true" ]]; then
+  echo "[smoke] Skipping endpoint checks in CI (no OPS_ATOMIC_URL configured)"
+  exit 0
+fi
+
 fail=0
 
 check() {
@@ -25,7 +32,14 @@ if [[ $fail -gt 0 ]]; then
   echo "❌ Smoke failed ($fail) checks"; exit 1
 fi
 echo "✅ Smoke passed"
+
+# Optional: Test local assistant-api server if dependencies are installed
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ ! -d "${ROOT_DIR}/node_modules" ]] || [[ ! -f "${ROOT_DIR}/apps/assistant-api/server.js" ]]; then
+  echo "[smoke] Skipping assistant-api test (dependencies not installed)"
+  exit 0
+fi
+
 PORT="${PORT:-4100}"
 LOG_FILE="${ROOT_DIR}/test-results/assistant-smoke.log"
 mkdir -p "${ROOT_DIR}/test-results"
