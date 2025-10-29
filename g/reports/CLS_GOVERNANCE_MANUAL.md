@@ -58,7 +58,10 @@ The CLS governance workflow keeps the local automation stack safe, observable, a
 ## Incident Response
 1. **Detect**: Auto-heal failure or unauthorized path access triggers `requiresApproval` responses logged in `g/reports/` and surfaced to Guardian.
 2. **Triage**: Guardian inspects latest `CLS_DAILY_MONITORING` report and relevant logs. For filesystem breaches, inspect `CLS_FS_ALLOW` history in `cls_dev_bootcheck.sh` output.
-3. **Mitigate**: Use `scripts/cls_final_cutover.sh --halt` (if available) to stop CLS automation, or temporarily unload LaunchAgents.
+3. **Mitigate**: Immediately unload the CLS LaunchAgent to halt queued automations:
+   - `launchctl bootout "gui/$UID" ~/Library/LaunchAgents/com.02luka.cls.workflow.plist`
+   - If already running, stop any active workflow shell by sending `CTRL+C` or `pkill -f codex_workflow_assistant.sh`.
+   - Document any manual overrides taken (e.g., disabling queue files in `queue/inbox/`).
 4. **Document**: Record outcome in a new `g/reports/CLS_INCIDENT_<timestamp>.md`, referencing impacted queue files and mitigations.
 5. **Review**: Operations Orchestrator updates this manual and `docs/SECURITY_GOVERNANCE.md` if new controls are required.
 
