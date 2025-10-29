@@ -1,158 +1,73 @@
 name: ci
-
 on:
   push:
-    branches: [ main ]
+    branches: [main, develop, 'ci/**']
   pull_request:
-    branches: [ main ]
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
+    branches: [main, develop]
 env:
   NODE_VERSION: '20'
-
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 jobs:
   validate:
-    name: validate
+    name: Phase 4/5/6 smoke (local)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-<<<<<<< ours
-      - uses: actions/checkout@v4
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-      - name: Validate MCP example
-        run: |
-          jq empty .cursor/mcp.example.json
-          test -f .cursor/mcp.example.json || echo ".cursor/mcp.example.json not present (expected on CI)"
-      - name: Validate MCP paths
-        run: |
-          BAD=.cursor/mcp.
-          EXT=json
-          PAT="$BAD$EXT"
-          if command -v rg >/dev/null 2>&1; then rg -n --fixed-strings "$PAT" --hidden --glob "!*example*" || true; else grep -Rna --exclude-dir=.git --exclude="*example*" "$PAT" . || true; fi
-          echo done
-      - name: Validate structure (Option C)
-        run: |
-          make validate-zones
-          make proof || true
-  ops-gate:
-    runs-on: ubuntu-latest
-    needs: validate
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci
-      - name: Check ops atomic summary
-        # Note: OPS_ATOMIC_URL and OPS_ATOMIC_TOKEN must be configured as repository secrets
-        # OPS_GATE_OVERRIDE should be set as a repository variable (set to "1" to skip gate)
-        # The script below handles missing/empty values gracefully
-        env:
-          OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
-          OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
-          OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
-        run: |
-          set -euo pipefail
-=======
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
->>>>>>> theirs
-
+        with:
+          fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
       - name: Install dependencies
+        run: |
+          # Install jq, yq, redis-tools
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          # Verify installations
+          jq --version
+          yq --version
+          redis-cli --version
+      - name: Install npm packages
         run: npm ci
-
-      - name: Smoke tests
-        run: bash scripts/smoke.sh
-
-  docs-links:
-    name: docs-links
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Link check (docs)
-        run: |
-          set -euo pipefail
-          if [ -d docs ]; then
-            while IFS= read -r file; do
-              echo "Checking ${file}"
-              npx -y markdown-link-check@3.11.2 -q "${file}" || true
-            done < <(find docs -type f -name '*.md' | sort)
-          fi
-
-      - name: Governance presence
-        run: |
-          test -f docs/SECURITY_GOVERNANCE.md
-          test -f docs/ARCH_OVERVIEW.md
-          test -f docs/PROMPTS_STANDARD.md
-          test -f docs/DEPLOY.md
-
-<<<<<<< ours
-          echo "Ops gate clear: no failures reported."
-      - name: Smoke (CI mode via Worker)
-        env:
-          OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
-          OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
-        run: |
-          bash scripts/smoke.sh
-          node agents/reflection/self_review.cjs --days=7 >/dev/null
-  docs-links:
-    name: docs cross-link check
-=======
+      - name: Set script permissions
+        run: chmod +x tools/ci/*.sh scripts/*.sh
+      - name: Run validation
+        run: bash tools/ci/validate.sh
   ops-gate:
-    name: ops-gate
->>>>>>> theirs
+    name: Phase 5/6/7 smoke (ops)
     runs-on: ubuntu-latest
-    env:
-      OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
-      OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
-      OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
+    timeout-minutes: 5
+    needs: validate
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Validate gate configuration
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      - name: Install dependencies
         run: |
-          set -euo pipefail
-          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
-            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
-          if [ -z "${OPS_ATOMIC_URL}" ]; then
-            echo "OPS_ATOMIC_URL secret missing" >&2; exit 1; fi
-          if [ -z "${OPS_ATOMIC_TOKEN}" ]; then
-            echo "OPS_ATOMIC_TOKEN secret missing" >&2; exit 1; fi
-
-      - name: Ping Ops Atomic
-        run: |
-          set -euo pipefail
-          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
-            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
-          code=$(curl -s -o /tmp/ops-atomic.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${OPS_ATOMIC_TOKEN}" \
-            "${OPS_ATOMIC_URL}/api/reports/summary" || true)
-          if [ "${code}" != "200" ]; then
-            echo "Ops Atomic endpoint returned status ${code}" >&2
-            cat /tmp/ops-atomic.json >&2 || true
-            exit 1
-          fi
-
-      - name: Phase 5/6/7 smoke (local)
-        run: |
-          set -euo pipefail
-          bash scripts/smoke.sh
-          node agents/reflection/self_review.cjs --days=7 >/dev/null
+          # Install jq, yq
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          # Verify installations
+          jq --version
+          yq --version
+      - name: Install npm packages
+        run: npm ci
+      - name: Set script permissions
+        run: chmod +x tools/ci/*.sh scripts/*.sh
+      - name: Run ops gate
+        run: bash tools/ci/ops_gate.sh
