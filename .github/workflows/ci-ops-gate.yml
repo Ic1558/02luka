@@ -20,7 +20,17 @@ jobs:
           --health-retries=10
     steps:
       - uses: actions/checkout@v4
-      - name: Install redis-tools
-        run: sudo apt-get update && sudo apt-get install -y redis-tools || true
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install npm packages
+        run: npm ci
       - name: Run ops-gate
         run: tools/ci/ops_gate.sh
