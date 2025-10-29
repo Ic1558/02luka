@@ -21,10 +21,16 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq curl
+
+      - name: Install Node.js dependencies
+        run: |
+          npm install
+          cd boss-api
+          npm install
 
       - name: Start mock services (CI environment)
         run: |
