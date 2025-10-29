@@ -17,6 +17,7 @@
     "PATH": "/usr/local/bin:/usr/bin:/bin"
   },
   "postCreateCommand": "ping -c 2 8.8.8.8 && echo '✅ Network OK'",
+  "postStartCommand": "ping -c 2 8.8.8.8 || echo '⚠️  Network not reachable'",
   "customizations": {
     "vscode": {
       "settings": {
