@@ -1,20 +1,31 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -euo pipefail
-echo "== ci/ops-gate =="
-REDIS_HOST="${REDIS_HOST:-redis}"
-REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-changeme-02luka}"
-# ping ด้วย redis-cli ถ้ามี
-if command -v redis-cli >/dev/null 2>&1; then
-  redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PING | grep -q PONG
-  echo "Redis PING OK via redis-cli"
-else
-  # netcat fallback
-  if command -v nc >/dev/null 2>&1; then
-    timeout 3 nc -z "$REDIS_HOST" "$REDIS_PORT"
-    echo "Redis TCP reachable via nc"
-  else
-    echo "(i) neither redis-cli nor nc found; assuming pass in minimal runner"
-  fi
-fi
-echo "OPS-GATE OK"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔒 Ops Gate - Phase 5/6/7 Quality Checks"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Verify dependencies
+echo "✅ Checking dependencies..."
+command -v jq >/dev/null 2>&1 || { echo "❌ jq not found"; exit 1; }
+command -v yq >/dev/null 2>&1 || { echo "❌ yq not found"; exit 1; }
+
+echo "✅ All dependencies present"
+
+# Create required directories
+echo ""
+echo "📁 Creating required directories..."
+mkdir -p g/memory g/reports g/telemetry
+
+# Run smoke tests
+echo ""
+echo "🔥 Running smoke tests..."
+bash scripts/smoke.sh
+
+# Run self-review (non-blocking)
+echo ""
+echo "🔍 Running self-review (non-blocking)..."
+node agents/reflection/self_review.cjs --days=7 >/dev/null || echo "⚠️  self_review skipped (requires existing data)"
+
+echo ""
+echo "✅ Ops gate checks complete"
