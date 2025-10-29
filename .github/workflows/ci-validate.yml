@@ -1,0 +1,20 @@
+name: ci / validate
+on:
+  pull_request:
+  push:
+    branches: [ main, develop, "ci/**" ]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install linters
+        run: |
+          pipx install yamllint || pip install --user yamllint
+          sudo npm i -g actionlint || true
+          sudo apt-get update && sudo apt-get install -y jq || true
+      - name: Run validate
+        run: tools/ci/validate.sh
