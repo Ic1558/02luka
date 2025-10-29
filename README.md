@@ -1,3 +1,9 @@
+<!-- CLS_STATUS_BADGE_START -->
+
+[![](https://github.com/Ic1558/02luka/actions/workflows/cls-contract.yml/badge.svg?branch=main)](https://github.com/Ic1558/02luka/actions/workflows/cls-contract.yml) • [OPS Mirror](https://ops.theedges.work)
+
+<!-- CLS_STATUS_BADGE_END -->
+
 ![BrowserOS CI](https://github.com/Ic1558/02luka/actions/workflows/browseros_phase77_ci.yml/badge.svg)
 # 02luka
 

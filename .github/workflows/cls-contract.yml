@@ -1,0 +1,56 @@
+name: CLS Contract
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/ops/cls_health_mirror.json'
+  schedule:
+    - cron: '0 * * * *'  # hourly check
+  workflow_dispatch:
+
+jobs:
+  verify-cls-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CLS health file exists
+        run: |
+          if [[ ! -f dist/ops/cls_health_mirror.json ]]; then
+            echo "❌ cls_health_mirror.json missing"
+            exit 1
+          fi
+          echo "✅ CLS health file present"
+
+      - name: Verify health status
+        run: |
+          STATUS=$(jq -r '.status' dist/ops/cls_health_mirror.json)
+          WHEN=$(jq -r '.when' dist/ops/cls_health_mirror.json)
+          WO_ID=$(jq -r '.wo_id // "none"' dist/ops/cls_health_mirror.json)
+
+          echo "Status: $STATUS"
+          echo "When: $WHEN"
+          echo "WO ID: $WO_ID"
+
+          if [[ "$STATUS" != "ok" ]]; then
+            REASON=$(jq -r '.reason // "unknown"' dist/ops/cls_health_mirror.json)
+            echo "❌ CLS health check failed: $REASON"
+            exit 1
+          fi
+
+          echo "✅ CLS health check passed"
+
+      - name: Check staleness (warn if > 2h old)
+        run: |
+          WHEN=$(jq -r '.when' dist/ops/cls_health_mirror.json)
+          NOW=$(date -u +%s)
+          THEN=$(date -u -d "$WHEN" +%s 2>/dev/null || echo "0")
+          AGE=$((NOW - THEN))
+
+          if [[ $AGE -gt 7200 ]]; then
+            echo "⚠️  Health data is ${AGE}s old (>2h) - may be stale"
+            # Don't fail, just warn
+          else
+            echo "✅ Health data is fresh (${AGE}s old)"
+          fi
