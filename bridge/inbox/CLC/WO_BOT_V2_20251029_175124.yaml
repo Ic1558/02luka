@@ -1,0 +1,40 @@
+# Work Order: 02LUKA-Bot v2 Setup
+id: WO-BOT-V2
+title: "Deploy 02LUKA GitHub Bot v2 (App + Bridge Integration)"
+priority: P1
+assigned_to: CLC
+tags: [github, automation, bridge, ai-integration]
+
+tasks:
+  - name: Create GitHub App "02LUKA-Bot v2"
+    details: >
+      Permissions: issues, pull_request, checks (RW)
+      Webhook URL: https://bridge.theedges.work/github/event
+      Secret: auto-generate
+      Private Key: save to /02luka/core/secrets/github_app.pem
+      Output .env: /02luka/core/.env.local
+
+  - name: Patch http_redis_bridge
+    details: >
+      Add endpoint /github/event verifying X-Hub-Signature-256
+      Publish events to Redis channel github:events
+
+  - name: Implement bot action router
+    details: >
+      Node.js service github_bot_v2.js:
+        - Subscribes to github:tasks
+        - Handles actions: comment, label, merge, create-WO
+        - Logs to g/telemetry/github_activity.jsonl
+
+  - name: Add AI integration hooks
+    details: >
+      CLS: convert events → Work Orders
+      CLC: diff analysis and compliance checks
+      Codex: auto-apply fixes (on approval)
+      Mary: Telegram alert on merge
+      GG/GC: verify governance consistency
+
+  - name: Validation
+    details: >
+      Open/close PR, add label, trigger /wo create command
+      Expect WO drop + Redis event echo
