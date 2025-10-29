@@ -99,4 +99,5 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/smoke.sh
+          mkdir -p g/memory g/reports g/telemetry
           node agents/reflection/self_review.cjs --days=7 >/dev/null
