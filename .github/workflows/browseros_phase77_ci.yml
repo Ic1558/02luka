@@ -1,0 +1,47 @@
+# DEPRECATED: Retained temporarily for reference. Will be removed or folded into ci.yml.
+# Badge removed from README. Do not rely on this workflow for production checks.
+
+name: "Phase 7.7 – BrowserOS Verification (CI)"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run Phase 7.7 test harness
+        shell: bash
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "Workspace: $PWD"
+          chmod +x tools/test_browseros_phase77.sh
+          bash tools/test_browseros_phase77.sh
+
+      - name: Upload Phase 7.7 summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase77-summary
+          path: g/reports/phase7_7_summary.md
+          if-no-files-found: error
+
+      - name: Upload web action reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase77-web-actions
+          path: |
+            g/reports/web_actions*.json
+            g/reports/web_actions*.csv
+          if-no-files-found: warn
+
+  force-run:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - run: echo "Manual trigger successful ✅"
