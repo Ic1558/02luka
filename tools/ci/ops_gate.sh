@@ -3,10 +3,14 @@ set -euo pipefail
 echo "== ci/ops-gate =="
 REDIS_HOST="${REDIS_HOST:-redis}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-changeme-02luka}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 # ping ด้วย redis-cli ถ้ามี
 if command -v redis-cli >/dev/null 2>&1; then
-  redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PING | grep -q PONG
+  redis_args=("-h" "$REDIS_HOST" "-p" "$REDIS_PORT")
+  if [[ -n "$REDIS_PASSWORD" ]]; then
+    redis_args+=("-a" "$REDIS_PASSWORD")
+  fi
+  redis-cli "${redis_args[@]}" PING | grep -q PONG
   echo "Redis PING OK via redis-cli"
 else
   # netcat fallback
