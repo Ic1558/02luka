@@ -1,9 +1,16 @@
-![BrowserOS CI](https://github.com/Ic1558/02luka/actions/workflows/browseros_phase77_ci.yml/badge.svg)
+<!-- CLS_STATUS_BADGE_START -->
+
+[![CLS Contract](https://github.com/Ic1558/02luka/actions/workflows/cls-contract.yml/badge.svg?branch=main)](https://github.com/Ic1558/02luka/actions/workflows/cls-contract.yml) • [OPS Mirror](https://ops.theedges.work)
+
+<!-- CLS_STATUS_BADGE_END -->
+
+[![CI](https://github.com/Ic1558/02luka/actions/workflows/ci.yml/badge.svg)](https://github.com/Ic1558/02luka/actions/workflows/ci.yml)
+[![Mirror Integrity](https://github.com/Ic1558/02luka/actions/workflows/mirror-integrity.yml/badge.svg)](https://github.com/Ic1558/02luka/actions/workflows/mirror-integrity.yml)
+[![Pages](https://github.com/Ic1558/02luka/actions/workflows/pages.yml/badge.svg)](https://github.com/Ic1558/02luka/actions/workflows/pages.yml)
+
 # 02luka
 
 Local AI Agent Gateway UI — minimal, fast, deployable anywhere.
-
-[![pages](https://github.com/Ic1558/02luka/actions/workflows/pages.yml/badge.svg)](https://github.com/Ic1558/02luka/actions/workflows/pages.yml)
 
 🌐 **Live Demo**: https://ic1558.github.io/02luka/
 
