@@ -1,0 +1,26 @@
+name: ci / ops-gate
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  ops-gate:
+    runs-on: ubuntu-latest
+    env:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'changeme-02luka' }}
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=3s
+          --health-timeout=2s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install redis-tools
+        run: sudo apt-get update && sudo apt-get install -y redis-tools || true
+      - name: Run ops-gate
+        run: tools/ci/ops_gate.sh
