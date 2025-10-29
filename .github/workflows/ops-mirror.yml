@@ -1,6 +1,9 @@
 name: Ops Mirror Pipeline
 
 on:
+
+env:
+  retention-days: 14
   schedule:
     # 02:50 Asia/Bangkok (UTC+7) = 19:50 UTC
     - cron: '50 19 * * *'
