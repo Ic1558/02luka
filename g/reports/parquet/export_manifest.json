@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2025-10-27T20:02:21.098Z",
+  "repoRoot": "/workspace/02luka",
+  "inputDir": "g/reports",
+  "outputDir": "g/reports/parquet",
+  "duckdb": {
+    "bin": "duckdb",
+    "version": "dry-run"
+  },
+  "compression": "SNAPPY",
+  "dryRun": true,
+  "filter": "^(query_perf.*\\.(?:csv|json|jsonl))$",
+  "summary": {
+    "totalSources": 5,
+    "exported": 0,
+    "skipped": 0,
+    "dryRun": 5,
+    "ignored": 0,
+    "failed": 0
+  },
+  "exports": [
+    {
+      "source": "g/reports/query_perf_daily_20251021.csv",
+      "sourceRelative": "query_perf_daily_20251021.csv",
+      "sourceMTime": "2025-10-27T17:05:23.472Z",
+      "sourceSizeBytes": 655,
+      "output": "g/reports/parquet/query_perf_daily_20251021.csv.parquet",
+      "outputRelative": "query_perf_daily_20251021.csv.parquet",
+      "status": "dry-run",
+      "message": "Dry run — export skipped"
+    },
+    {
+      "source": "g/reports/query_perf_daily_20251021.json",
+      "sourceRelative": "query_perf_daily_20251021.json",
+      "sourceMTime": "2025-10-27T17:05:23.472Z",
+      "sourceSizeBytes": 2289,
+      "output": "g/reports/parquet/query_perf_daily_20251021.json.parquet",
+      "outputRelative": "query_perf_daily_20251021.json.parquet",
+      "status": "dry-run",
+      "message": "Dry run — export skipped"
+    },
+    {
+      "source": "g/reports/query_perf_weekly_202543.csv",
+      "sourceRelative": "query_perf_weekly_202543.csv",
+      "sourceMTime": "2025-10-27T17:05:23.472Z",
+      "sourceSizeBytes": 655,
+      "output": "g/reports/parquet/query_perf_weekly_202543.csv.parquet",
+      "outputRelative": "query_perf_weekly_202543.csv.parquet",
+      "status": "dry-run",
+      "message": "Dry run — export skipped"
+    },
+    {
+      "source": "g/reports/query_perf_weekly_202543.json",
+      "sourceRelative": "query_perf_weekly_202543.json",
+      "sourceMTime": "2025-10-27T17:05:23.472Z",
+      "sourceSizeBytes": 4616,
+      "output": "g/reports/parquet/query_perf_weekly_202543.json.parquet",
+      "outputRelative": "query_perf_weekly_202543.json.parquet",
+      "status": "dry-run",
+      "message": "Dry run — export skipped"
+    },
+    {
+      "source": "g/reports/query_perf.jsonl",
+      "sourceRelative": "query_perf.jsonl",
+      "sourceMTime": "2025-10-27T17:05:23.472Z",
+      "sourceSizeBytes": 3298,
+      "output": "g/reports/parquet/query_perf.jsonl.parquet",
+      "outputRelative": "query_perf.jsonl.parquet",
+      "status": "dry-run",
+      "message": "Dry run — export skipped"
+    }
+  ]
+}

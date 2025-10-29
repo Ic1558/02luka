@@ -1,0 +1,18 @@
+[03:32:54] == C.1 Preflight ==
+[03:32:54] ✓ LaunchAgents clean
+[03:32:55] == C.2 Symlink Centralization ==
+[03:32:55] → mv /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/boss  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/.legacy_boss_251011_033254
+[03:32:55] → ln -s /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/boss  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/boss
+[03:32:55] → mv /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/docs  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/.legacy_docs_251011_033254
+[03:32:55] → ln -s /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/docs  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/docs
+[03:32:55] → mv /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/.legacy_g_251011_033254
+[03:32:55] → ln -s /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/g  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g
+[03:32:55] → mv /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/memory  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/.legacy_memory_251011_033254
+[03:32:55] → ln -s /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/memory  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/memory
+[03:32:55] → mv /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/agents  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/.legacy_agents_251011_033254
+[03:32:55] → ln -s /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/agents  /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/agents
+[03:32:55] == C.3 Enable Enforcement ==
+[03:32:55] ✓ created/updated /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/02luka-repo/config/migration.enforced
+[03:32:55] ✓ pre-push enforces validate-workspace
+[03:32:55] == C.4 Verify & Report ==
+[03:32:55] … dry-run: skip verify

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.02luka.analytics.parquet</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>$HOME/02luka/scripts/analytics/run_parquet_exporter.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DUCKDB_BIN</key><string>duckdb</string>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key><string>$HOME/02luka/g/logs/parquet_exporter.launchd.out.log</string>
+  <key>StandardErrorPath</key><string>$HOME/02luka/g/logs/parquet_exporter.launchd.err.log</string>
+  <key>RunAtLoad</key><true/>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>2</integer>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+</dict>
+</plist>
