@@ -8,6 +8,7 @@
     "start": "HOST=127.0.0.1 PORT=4000 node src/index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.19.2"
   }

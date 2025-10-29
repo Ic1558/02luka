@@ -1,0 +1,6 @@
+[2025-10-27 18:01:26] rotate:start keep=24h dryrun=1
+[2025-10-27 18:01:26] rotate:candidates total=0
+[2025-10-27 18:01:26] rotate:done (nothing) 
+[2025-10-27 18:01:28] rotate:start keep=24h dryrun=0
+[2025-10-27 18:01:28] rotate:candidates total=0
+[2025-10-27 18:01:28] rotate:done (nothing) 
