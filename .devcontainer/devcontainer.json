@@ -6,11 +6,28 @@
       "version": "18"
     }
   },
+  "forwardPorts": [4000, 5173],
+  "remoteEnv": {
+    "REDIS_HOST": "host.docker.internal",
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": "changeme-02luka"
+  },
+  "runArgs": [
+    "--dns=8.8.8.8",
+    "--dns=1.1.1.1",
+    "--network=bridge"
+  ],
   "containerEnv": {
     "CLS_SHELL": "/bin/bash",
     "SHELL": "/bin/bash",
-    "PATH": "/usr/local/bin:/usr/bin:/bin"
+    "PATH": "/usr/local/bin:/usr/bin:/bin",
+    "HOST_02LUKA": "/host02luka"
   },
+  "mounts": [
+    "source=${localEnv:HOME}/02luka,target=/host02luka,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "ping -c 2 8.8.8.8 && echo '✅ Network OK'",
+  "postStartCommand": "echo 'Dev up' && test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount not found' ; curl -s http://127.0.0.1:4000/api/capabilities || true",
   "customizations": {
     "vscode": {
       "settings": {
