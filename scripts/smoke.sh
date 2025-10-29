@@ -1,7 +1,63 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE="${OPS_ATOMIC_URL:-http://127.0.0.1:4000}"   # CI uses secret; local uses localhost
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TEST_RESULTS_DIR="${ROOT_DIR}/test-results"
+mkdir -p "${TEST_RESULTS_DIR}"
+
+LOG_FILE="${TEST_RESULTS_DIR}/assistant-smoke.log"
+BOSS_API_LOG="${TEST_RESULTS_DIR}/boss-api-smoke.log"
+
+SERVER_PID=""
+BOSS_API_PID=""
+
+: > "${LOG_FILE}"
+
+cleanup() {
+  if [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null; then
+    kill "${SERVER_PID}" 2>/dev/null || true
+    wait "${SERVER_PID}" 2>/dev/null || true
+  fi
+
+  if [[ -n "${BOSS_API_PID}" ]] && kill -0 "${BOSS_API_PID}" 2>/dev/null; then
+    kill "${BOSS_API_PID}" 2>/dev/null || true
+    wait "${BOSS_API_PID}" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT
+
+die() {
+  echo "[smoke] ${1}" | tee -a "${LOG_FILE}"
+  exit 1
+}
+
+trap 'die "Aborted"' INT TERM
+
+BASE="${OPS_ATOMIC_URL:-}"
+if [[ -z "${BASE}" ]]; then
+  BASE="http://127.0.0.1:4000"
+  : > "${BOSS_API_LOG}"
+  echo "[smoke] Starting local Boss API stub at ${BASE}" | tee -a "${BOSS_API_LOG}"
+  node "${ROOT_DIR}/boss-api/server.cjs" >>"${BOSS_API_LOG}" 2>&1 &
+  BOSS_API_PID=$!
+
+  ready=0
+  for _ in $(seq 1 25); do
+    if curl -fsS "${BASE}/healthz" >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
+    sleep 0.2
+  done
+
+  if [[ "${ready}" -ne 1 ]]; then
+    die "Boss API stub did not start"
+  fi
+else
+  BASE="${BASE%/}"
+fi
+
 echo "🧪 Smoke target: $BASE"
 
 fail=0
@@ -25,26 +81,12 @@ if [[ $fail -gt 0 ]]; then
   echo "❌ Smoke failed ($fail) checks"; exit 1
 fi
 echo "✅ Smoke passed"
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT="${PORT:-4100}"
-LOG_FILE="${ROOT_DIR}/test-results/assistant-smoke.log"
-mkdir -p "${ROOT_DIR}/test-results"
 : > "${LOG_FILE}"
 
 echo "[smoke] Launching API on port ${PORT}" | tee -a "${LOG_FILE}"
 PORT="${PORT}" node "${ROOT_DIR}/apps/assistant-api/server.js" >>"${LOG_FILE}" 2>&1 &
 SERVER_PID=$!
-
-die() {
-  if kill -0 "${SERVER_PID}" 2>/dev/null; then
-    kill "${SERVER_PID}" 2>/dev/null || true
-  fi
-  wait "${SERVER_PID}" 2>/dev/null || true
-  echo "[smoke] ${1}" | tee -a "${LOG_FILE}"
-  exit 1
-}
-
-trap 'die "Aborted"' INT TERM
 
 ready=0
 for _ in $(seq 1 30); do

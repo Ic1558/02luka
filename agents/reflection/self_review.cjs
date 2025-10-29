@@ -20,14 +20,45 @@ const fs = require('fs');
 const path = require('path');
 const { writeArtifacts } = require('../../packages/io/atomicExport.cjs');
 
+if (!process.env.EXPORT_DIRECT) {
+  process.env.EXPORT_DIRECT = '1';
+}
+
 // Configuration
 const REPO_ROOT = process.env.REPO_ROOT || path.resolve(__dirname, '../..');
 const REPORTS_DIR = path.join(REPO_ROOT, 'g', 'reports');
 const TELEMETRY_DIR = path.join(REPO_ROOT, 'g', 'telemetry');
 
+const REQUIRED_DIRS = [
+  path.join(REPO_ROOT, 'g'),
+  REPORTS_DIR,
+  TELEMETRY_DIR,
+  path.join(REPO_ROOT, 'g', 'memory')
+];
+
+for (const dir of REQUIRED_DIRS) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      console.warn(`⚠️  Failed to create directory ${dir}: ${err.message}`);
+    }
+  }
+}
+
 // Load dependencies
 const memoryModule = require(path.join(REPO_ROOT, 'memory', 'index.cjs'));
 const telemetryModule = require(path.join(REPO_ROOT, 'boss-api', 'telemetry.cjs'));
+
+function toArray(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return [];
+  }
+  return [value].flat().filter(Boolean);
+}
 
 // ============================================================================
 // Core Reflection Functions (FULL IMPLEMENTATION)
@@ -148,7 +179,7 @@ function generateTelemetryRecommendations(analysis, trends) {
  * @param {Object} context - Analysis context from telemetry
  * @returns {Array} Relevant memories
  */
-function queryRelevantMemories(context) {
+async function queryRelevantMemories(context) {
   console.log(`🧠 Querying memories for context...`);
 
   try {
@@ -168,17 +199,17 @@ function queryRelevantMemories(context) {
     }
 
     // Query memory for relevant solutions and insights
-    const solutionMemories = memoryModule.recall({
+    const solutionMemories = toArray(await memoryModule.recall({
       query,
       kind: 'solution',
       topK: 3
-    });
+    }));
 
-    const insightMemories = memoryModule.recall({
+    const insightMemories = toArray(await memoryModule.recall({
       query,
       kind: 'insight',
       topK: 2
-    });
+    }));
 
     const allMemories = [...solutionMemories, ...insightMemories]
       .sort((a, b) => b.similarity - a.similarity)
@@ -508,14 +539,14 @@ ${Object.entries(current.byTask).map(([task, stats]) =>
  *
  * @param {Array} insights - Generated insights
  */
-function recordInsights(insights) {
+async function recordInsights(insights) {
   console.log(`💾 Recording ${insights.length} insights as memories...`);
 
   let recorded = 0;
   for (const insight of insights) {
     if (insight.confidence >= 0.65) {
       try {
-        memoryModule.remember({
+        await memoryModule.remember({
           kind: 'insight',
           text: `[Self-Review] ${insight.text}`,
           meta: {
@@ -556,7 +587,7 @@ async function main() {
 
   // Run analysis
   const telemetryAnalysis = analyzeTelemetry(days);
-  const relevantMemories = queryRelevantMemories({ analysis: telemetryAnalysis });
+  const relevantMemories = await queryRelevantMemories({ analysis: telemetryAnalysis });
   const insights = generateInsights(telemetryAnalysis, relevantMemories);
 
   // Generate report
@@ -579,7 +610,7 @@ async function main() {
   console.log(`\n✅ Report saved: ${reportPath}`);
 
   // Record insights
-  recordInsights(insights);
+  await recordInsights(insights);
 
   // Summary
   console.log('\n=== Self-Review Complete ===');
