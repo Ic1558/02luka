@@ -1,0 +1,24 @@
+name: Auto-Merge Verified PRs
+on:
+  workflow_run:
+    workflows: ["CLS Contract"]
+    types:
+      - completed
+
+jobs:
+  merge:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      pull-requests: write
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable auto-merge
+        uses: peter-evans/enable-auto-merge@v3
+        with:
+          pull-request-number: ${{ github.event.workflow_run.pull_requests[0].number }}
+          merge-method: merge
+          token: ${{ secrets.GITHUB_TOKEN }}
