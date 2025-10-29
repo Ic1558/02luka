@@ -6,11 +6,17 @@
       "version": "18"
     }
   },
+  "runArgs": [
+    "--dns=8.8.8.8",
+    "--dns=1.1.1.1",
+    "--network=bridge"
+  ],
   "containerEnv": {
     "CLS_SHELL": "/bin/bash",
     "SHELL": "/bin/bash",
     "PATH": "/usr/local/bin:/usr/bin:/bin"
   },
+  "postCreateCommand": "ping -c 2 8.8.8.8 && echo '✅ Network OK'",
   "customizations": {
     "vscode": {
       "settings": {
