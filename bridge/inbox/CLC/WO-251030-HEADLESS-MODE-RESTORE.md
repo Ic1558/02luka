@@ -137,14 +137,33 @@ Verification Script (create as ~/02luka/run/headless_verify.zsh)
 #!/usr/bin/env zsh
 set -euo pipefail
 fail=0
-check_loaded(){ label="$1"; if launchctl list | grep -q "$label"; then
-  echo "✅ $label loaded"
-else
+check_loaded(){
+  label="$1"
+  domain="${2:-user}"
+  if [[ "$domain" == system ]]; then
+    if sudo launchctl print "system/$label" >/dev/null 2>&1; then
+      echo "✅ $label loaded (system)"
+      return
+    fi
+    if sudo launchctl list | grep -q "$label"; then
+      echo "✅ $label loaded (system)"
+      return
+    fi
+  else
+    if launchctl list | grep -q "$label"; then
+      echo "✅ $label loaded"
+      return
+    fi
+  fi
   echo "❌ $label NOT loaded"; fail=1
-fi }
+}
 
 echo "=== Verify Headless Mode ==="
-check_loaded com.02luka.caffeinate
+if [[ -f "/Library/LaunchDaemons/com.02luka.caffeinate.plist" ]]; then
+  check_loaded com.02luka.caffeinate system
+else
+  check_loaded com.02luka.caffeinate
+fi
 for l in \
   com.02luka.ops_atomic_monitor.loop \
   com.02luka.reports.rotate \
@@ -152,7 +171,7 @@ for l in \
   com.02luka.filebridge
   do
   if [[ -f "/Library/LaunchDaemons/${l}.plist" ]]; then
-    check_loaded "$l"
+    check_loaded "$l" system
   fi
 done
 
