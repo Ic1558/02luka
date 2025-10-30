@@ -1,42 +1,52 @@
 {
   "name": "02Luka Development Container",
-  "image": "mcr.microsoft.com/vscode/devcontainers/base:ubuntu",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "remoteUser": "vscode",
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "18"
-    }
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
   },
-  "forwardPorts": [4000, 5173],
+
+  "forwardPorts": [4000, 3002, 3003, 5173],
+
   "remoteEnv": {
     "REDIS_HOST": "host.docker.internal",
     "REDIS_PORT": "6379",
     "REDIS_PASSWORD": "changeme-02luka"
   },
-  "runArgs": [
-    "--dns=8.8.8.8",
-    "--dns=1.1.1.1",
-    "--network=bridge"
-  ],
+
   "containerEnv": {
+    "WORKDIR": "/workspaces/${localWorkspaceFolderBasename}",
     "CLS_SHELL": "/bin/bash",
     "SHELL": "/bin/bash",
-    "PATH": "/usr/local/bin:/usr/bin:/bin",
-    "HOST_02LUKA": "/host02luka"
+    "HOST_02LUKA": "/host02luka",
+    "BOSS_PORT": "4000",
+    "HEALTH_PORT": "3002",
+    "MCP_PORT": "3003"
   },
+
   "mounts": [
     "source=${localEnv:HOME}/02luka,target=/host02luka,type=bind,consistency=cached"
   ],
-  "postCreateCommand": "ping -c 2 8.8.8.8 && echo '✅ Network OK'",
-  "postStartCommand": "echo 'Dev up' && test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount not found' ; curl -s http://127.0.0.1:4000/api/capabilities || true",
+
+  "postCreateCommand": [
+    "sh", "-c",
+    "cd /workspaces/g && mkdir -p logs .tmp && chown -R vscode:vscode logs .tmp || true"
+  ],
+
+  "postStartCommand": [
+    "sh", "-c",
+    "{ test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount MISSING'; } ; cd /workspaces/g && printf 'Devcontainer UP %s\\n' \"$(date)\" >> logs/devcontainer.log ; nohup sh -c 'cd /workspaces/g && test -f run/boss_api_stub.cjs && node run/boss_api_stub.cjs >> logs/boss_api_stub.out.log 2>> logs/boss_api_stub.err.log & test -f run/health_proxy_stub.cjs && node run/health_proxy_stub.cjs >> logs/health_proxy_stub.out.log 2>> logs/health_proxy_stub.err.log & test -f run/mcp_bridge_stub.cjs && node run/mcp_bridge_stub.cjs >> logs/mcp_bridge_stub.out.log 2>> logs/mcp_bridge_stub.err.log & echo \"Services started (if present): $(date)\" >> logs/devcontainer.log' >/dev/null 2>&1 &"
+  ],
+
   "customizations": {
     "vscode": {
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "terminal.integrated.profiles.linux": {
-          "bash": {
-            "path": "/bin/bash"
-          }
-        }
+        "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
   }

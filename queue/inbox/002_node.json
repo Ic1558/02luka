@@ -1,1 +1,0 @@
-{"id":"002","skill":"node","code":"console.log({sum:[...Array(101).keys()].reduce((a,b)=>a+b,0)})"}

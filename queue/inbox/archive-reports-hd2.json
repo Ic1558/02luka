@@ -1,8 +1,0 @@
-{
-  "id": "archive-reports-hd2",
-  "skill": "bash",
-  "desc": "Tar.gz archive of g/reports to hd2",
-  "cmd": "mkdir -p '/Volumes/hd2/CLS/archives' && tar -czf \"/Volumes/hd2/CLS/archives/reports_$(date +%F).tar.gz\" g/reports",
-  "allowWrite": true,
-  "paths": ["/Volumes/hd2/CLS/archives"]
-}

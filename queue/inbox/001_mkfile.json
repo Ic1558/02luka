@@ -1,1 +1,0 @@
-{"id":"001","skill":"bash","cmd":"mkdir -p g/tmp && echo 'hello cls' > g/tmp/hello.txt"}

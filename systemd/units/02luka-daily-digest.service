@@ -1,8 +1,0 @@
-[Unit]
-Description=02LUKA Daily Digest
-
-[Service]
-Type=oneshot
-WorkingDirectory=%h/02luka
-Environment=NODE_NO_WARNINGS=1
-ExecStart=/usr/bin/env node g/tools/services/daily_digest.cjs --since 24h

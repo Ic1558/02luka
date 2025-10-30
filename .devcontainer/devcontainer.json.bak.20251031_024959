@@ -1,0 +1,48 @@
+{
+  "name": "02Luka Development",
+  "remoteUser": "vscode",
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
+
+  "forwardPorts": [4000, 3002, 3003, 5173],
+
+  "containerEnv": {
+    "WORKDIR": "/workspaces/${localWorkspaceFolderBasename}",
+    "BOSS_PORT": "4000",
+    "HEALTH_PORT": "3002",
+    "MCP_PORT": "3003",
+    "REDIS_HOST": "host.docker.internal",
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": "changeme-02luka",
+    "NODE_ENV": "development"
+  },
+
+  "postCreateCommand": [
+    "sh", "-lc",
+    "mkdir -p \"$WORKDIR/logs\" \"$WORKDIR/.tmp\" \"$WORKDIR/run\" && chown -R vscode:vscode \"$WORKDIR\" || true"
+  ],
+
+  "postStartCommand": [
+    "sh", "-lc",
+    "printf 'Devcontainer UP %s\\n' \"$(date)\" >> \"$WORKDIR/logs/devcontainer.log\" && nohup sh -c 'cd \"$WORKDIR\" && if [ -f run/boss_api_stub.cjs ]; then node run/boss_api_stub.cjs >> logs/boss_api_stub.out.log 2>> logs/boss_api_stub.err.log & fi; if [ -f run/health_proxy_stub.cjs ]; then node run/health_proxy_stub.cjs >> logs/health_proxy_stub.out.log 2>> logs/health_proxy_stub.err.log & fi; if [ -f run/mcp_bridge_stub.cjs ]; then node run/mcp_bridge_stub.cjs >> logs/mcp_bridge_stub.out.log 2>> logs/mcp_bridge_stub.err.log & fi; echo \"Services started: $(date)\" >> logs/devcontainer.log' >/dev/null 2>&1 &"
+  ],
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          }
+        }
+      }
+    }
+  }
+}

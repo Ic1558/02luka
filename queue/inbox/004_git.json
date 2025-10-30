@@ -1,1 +1,0 @@
-{"id":"004","skill":"git","action":"log","args":["-n","1","--pretty=format:%h %s"]}

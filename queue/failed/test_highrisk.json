@@ -1,9 +1,0 @@
-{
-  "id": "test_highrisk",
-  "title": "Test High Risk",
-  "risk": "high",
-  "skills": ["bash"],
-  "steps": [
-    {"skill": "bash", "args": ["-c", "echo 'safe command'"]}
-  ]
-}

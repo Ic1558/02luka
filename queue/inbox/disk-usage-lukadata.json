@@ -1,8 +1,0 @@
-{
-  "id": "disk-usage-lukadata",
-  "skill": "bash",
-  "desc": "Record disk usage for lukadata",
-  "cmd": "df -h '/Volumes/lukadata' > '/Volumes/lukadata/CLS/metrics/disk_free.txt'",
-  "allowWrite": true,
-  "paths": ["/Volumes/lukadata/CLS/metrics"]
-}
