@@ -1,29 +1,12 @@
 {
   "folders": [
-    {
-      "path": ".",
-      "name": "📦 02Luka Repo (Ic1558/02luka)"
-    },
-    {
-      "path": "${env:HOME}/02luka",
-      "name": "🏠 Host 02Luka"
-    }
+    { "path": "." },                    // /workspaces/g  (repo)
+    { "path": "/host02luka", "name": "host02luka" }  // host mirror
   ],
   "settings": {
-    "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.cwd": "${workspaceFolder:📦 02Luka Repo (Ic1558/02luka)}",
-    "files.watcherExclude": {
-      "**/node_modules/**": true,
-      "**/logs/**": true,
-      "**/.tmp/**": true
-    },
-    "git.enabled": true,
-    "git.autorefresh": true,
-    "files.autoSave": "afterDelay"
-  },
-  "extensions": {
-    "recommendations": [
-      "github.vscode-pull-request-github"
-    ]
+    "git.autoRepositoryDetection": "openEditors",
+    "git.openRepositoryInParentFolders": "never",
+    "git.ignoredRepositories": ["/host02luka","/host02luka/*"],
+    "files.watcherExclude": { "/host02luka/**": true }
   }
 }

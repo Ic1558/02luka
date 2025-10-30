@@ -1,0 +1,106 @@
+name: ci / ops-gate
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ops-gate:
+    runs-on: ubuntu-latest
+
+    env:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'changeme-02luka' }}
+      OPS_ATOMIC_URL: http://127.0.0.1:4000
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=3s
+          --health-timeout=2s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install root npm packages
+        run: npm ci || echo "⚠️ No root package-lock.json, skipping"
+
+      - name: Install boss-api dependencies
+        run: |
+          if [ -f boss-api/package.json ]; then
+            echo "📦 Installing boss-api dependencies..."
+            npm ci --prefix boss-api
+          else
+            echo "⚠️ boss-api/package.json not found, skipping"
+          fi
+
+      - name: Start boss-api server
+        run: |
+          echo "🚀 Starting boss-api server..."
+          if [ -f boss-api/server.cjs ]; then
+            # Start server in background
+            PORT=4000 node boss-api/server.cjs > boss-api-server.log 2>&1 &
+            SERVER_PID=$!
+            echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+
+            # Wait for server to be ready
+            echo "⏳ Waiting for server to start..."
+            for i in {1..30}; do
+              if curl -f http://127.0.0.1:4000/healthz >/dev/null 2>&1; then
+                echo "✅ Server started successfully (PID: $SERVER_PID)"
+                break
+              fi
+              echo "Attempt $i/30..."
+              sleep 1
+            done
+
+            # Verify server is running
+            if ! curl -f http://127.0.0.1:4000/healthz >/dev/null 2>&1; then
+              echo "❌ Server failed to start"
+              cat boss-api-server.log
+              exit 1
+            fi
+          else
+            echo "⚠️ boss-api/server.cjs not found, smoke tests may fail"
+          fi
+
+      - name: Verify Redis connection
+        run: |
+          echo "🔍 Testing Redis connection..."
+          redis-cli -h redis -p 6379 ping || echo "⚠️ Redis not accessible via 'redis' hostname"
+          redis-cli -h 127.0.0.1 -p 6379 ping || echo "⚠️ Redis not accessible via localhost"
+
+      - name: Run ops-gate
+        run: tools/ci/ops_gate.sh
+
+      - name: Stop boss-api server
+        if: always()
+        run: |
+          if [ -n "${SERVER_PID:-}" ]; then
+            echo "🛑 Stopping server (PID: $SERVER_PID)"
+            kill $SERVER_PID || true
+          fi
+
+      - name: Upload server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boss-api-logs
+          path: boss-api-server.log
+          retention-days: 7
