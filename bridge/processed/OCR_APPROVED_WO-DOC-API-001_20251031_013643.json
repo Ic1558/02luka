@@ -1,0 +1,13 @@
+{
+  "wo_id": "WO-DOC-API-001",
+  "action": "publish",
+  "approved_by": "admin",
+  "approved_at": "2025-10-31T01:35:00+0700",
+  "files": [
+    {
+      "path": "/Users/icmini/02luka/tmp/api_guide.md",
+      "sha256": "739cef17b036c4f1a939853eb7c09de25d1aee13309cade4a8ec8470dbf86859",
+      "title": "Boss API Documentation"
+    }
+  ]
+}

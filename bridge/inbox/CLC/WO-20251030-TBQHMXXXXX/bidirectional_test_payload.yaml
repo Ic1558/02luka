@@ -1,0 +1,11 @@
+title: "Bidirectional Flow Test"
+priority: "P3"
+tags: ["test", "bidirectional", "phase1"]
+body: |
+  Testing end-to-end bidirectional communication:
+  1. CLS drops WO with --wait flag
+  2. Status tracked: pending → in_progress
+  3. CLC processes and publishes result to Redis
+  4. CLS receives result
+  5. Status tracked: in_progress → completed
+  6. Metrics updated

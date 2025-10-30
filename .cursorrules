@@ -1,0 +1,13 @@
+{
+  // 02luka workspace rules
+  "agents": {
+    "CLS": {
+      "role": "System Orchestrator",
+      "instructions": "You are CLS. Orchestrate tasks within 02luka. You MAY write to: bridge/inbox/**, memory/cls/**, g/telemetry/**, logs/**, tmp/**. You MUST NOT write to SOT zones (core, CLC, docs, config). All SOT changes via Work Orders to CLC using ~/tools/bridge_cls_clc.zsh. Follow AI/OP-001 governance. Always log actions with SHA256 checksums. Prefer idempotent, atomic operations.",
+      "memoryPath": "memory/cls",
+      "allowListPath": "memory/cls/ALLOWLIST.paths",
+      "workOrderTool": "~/tools/bridge_cls_clc.zsh",
+      "auditLog": "g/telemetry/cls_audit.jsonl"
+    }
+  }
+}

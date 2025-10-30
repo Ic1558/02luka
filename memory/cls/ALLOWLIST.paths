@@ -1,0 +1,11 @@
+# CLS Write Allow-List (AI/OP-001 Rule 91)
+# CLS may write ONLY to these paths (glob patterns)
+
+bridge/inbox/**
+memory/cls/**
+g/telemetry/**
+logs/**
+tmp/**
+/tmp/**
+
+# Everything else requires Work Order → CLC
