@@ -200,6 +200,8 @@ auto-loop:
 	@echo "*/5 * * * * cd $(PWD) && AUTO_MODE=$${AUTO_MODE:-advice} node g/tools/services/ops_autonomy.cjs >> g/logs/ops_autonomy.log 2>&1" | crontab -
 	@echo "Autonomy loop installed in cron (every 5 min)"
 
+validate-zones:
+	@echo "Validation logic for zones goes here"
 # Phase 8.4 Config Center
 config:
 	@echo "Open https://ops.theedges.work/config to view configuration center"
