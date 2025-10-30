@@ -1,9 +1,6 @@
 name: Mirror Integrity Monitor
 
 on:
-
-env:
-  retention-days: 14
   schedule:
     # 04:00 Asia/Bangkok (UTC+7) = 21:00 UTC
     - cron: '0 21 * * *'

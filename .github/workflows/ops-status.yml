@@ -1,9 +1,6 @@
 name: Ops Status Board
 
 on:
-
-env:
-  retention-days: 14
   schedule:
     # 03:10 Asia/Bangkok (UTC+7) = 20:10 UTC
     - cron: '10 20 * * *'
