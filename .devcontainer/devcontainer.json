@@ -2,23 +2,25 @@
   "name": "02Luka Development Container",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "remoteUser": "vscode",
-
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
-    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
   },
-
-  "forwardPorts": [4000, 3002, 3003, 5173],
-
+  "forwardPorts": [
+    4000,
+    3002,
+    3003,
+    5173
+  ],
   "remoteEnv": {
     "REDIS_HOST": "host.docker.internal",
     "REDIS_PORT": "6379",
     "REDIS_PASSWORD": "changeme-02luka"
   },
-
   "containerEnv": {
     "WORKDIR": "/workspaces/${localWorkspaceFolderBasename}",
     "CLS_SHELL": "/bin/bash",
@@ -28,21 +30,19 @@
     "HEALTH_PORT": "3002",
     "MCP_PORT": "3003"
   },
-
   "mounts": [
     "source=${localEnv:HOME}/02luka,target=/host02luka,type=bind,consistency=cached"
   ],
-
   "postCreateCommand": [
-    "sh", "-c",
+    "sh",
+    "-c",
     "cd /workspaces/g && mkdir -p logs .tmp && chown -R vscode:vscode logs .tmp || true"
   ],
-
   "postStartCommand": [
-    "sh", "-lc",
+    "sh",
+    "-lc",
     "test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount MISSING'; cd \"$WORKDIR\" && printf 'Devcontainer UP %s\\n' \"$(date)\" >> logs/devcontainer.log; nohup bash tools/ensure_stubs.sh >> logs/devcontainer.log 2>&1 & if command -v code >/dev/null 2>&1; then (sleep 1; code -r \"$WORKDIR/02luka.code-workspace\" >/dev/null 2>&1 &); else echo 'code CLI missing, skip auto-open' >> logs/devcontainer.log; fi"
   ],
-
   "customizations": {
     "vscode": {
       "settings": {
