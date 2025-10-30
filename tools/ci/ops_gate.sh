@@ -20,14 +20,18 @@ echo "✅ Base dependencies present"
 
 REDIS_HOST="${REDIS_HOST:-redis}"
 REDIS_PORT="${REDIS_PORT:-6379}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-changeme-02luka}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 
 echo ""
 echo "🧠 Checking Redis availability..."
 if [[ "${OPS_GATE_OVERRIDE:-0}" == "1" ]]; then
   echo "⚠️  Gate override ON — skipping Redis connectivity check"
 elif command -v redis-cli >/dev/null 2>&1; then
-  if redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PING | grep -q PONG; then
+  redis_cli_args=(-h "$REDIS_HOST" -p "$REDIS_PORT")
+  if [[ -n "$REDIS_PASSWORD" ]]; then
+    redis_cli_args+=(-a "$REDIS_PASSWORD")
+  fi
+  if redis-cli "${redis_cli_args[@]}" PING | grep -q PONG; then
     echo "✅ Redis responded to PING"
   else
     echo "❌ Redis PING failed"
