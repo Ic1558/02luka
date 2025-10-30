@@ -1,0 +1,120 @@
+# CLC Work Order: LightRAG Deployment
+# Usage: Copy to WO-DEPLOY-LIGHTRAG.yml to trigger CLC automation
+# Target: Deploy LightRAG server (FastAPI + Web UI) on Mac mini host
+
+type: deploy
+agent: CLC
+target: lightrag
+priority: high
+rollback_on_failure: true
+
+metadata:
+  created: 2025-10-23T00:00:00Z
+  author: ops
+  project: 02luka
+  tags: [lightrag, rag, deployment]
+
+environment:
+  required:
+    - LIGHTRAG_LLM_HOST
+    - LIGHTRAG_LLM_API_KEY
+  optional:
+    - LIGHTRAG_EMBEDDING_MODEL
+    - LIGHTRAG_EMBEDDING_API_KEY
+    - LIGHTRAG_AUTH_ACCOUNTS
+    - LIGHTRAG_API_KEY
+    - LIGHTRAG_TOKEN_SECRET
+  instructions:
+    - "# Example:"
+    - "set -a"
+    - ". ~/.config/02luka/lightrag.env"
+    - "set +a"
+  validation:
+    - command -v docker
+    - command -v git
+    - test -d "$HOME"
+
+steps:
+  - name: Preflight
+    description: Ensure Docker, git, and curl are available before deployment
+    run: |
+      set -euo pipefail
+      command -v docker >/dev/null
+      command -v git >/dev/null
+      command -v curl >/dev/null
+      command -v jq >/dev/null
+      docker info >/dev/null 2>&1
+    timeout: 60s
+
+  - name: Prepare workspace
+    description: Ensure LightRAG home directory exists and secrets are loaded
+    run: |
+      set -euo pipefail
+      mkdir -p "$HOME/02luka/services"
+      test -n "${LIGHTRAG_LLM_HOST:-}" || { echo "LIGHTRAG_LLM_HOST missing"; exit 1; }
+      test -n "${LIGHTRAG_LLM_API_KEY:-}" || { echo "LIGHTRAG_LLM_API_KEY missing"; exit 1; }
+    timeout: 30s
+
+  - name: Deploy LightRAG
+    description: Clone/update repository, write config, and start container via docker compose
+    run: |
+      set -euo pipefail
+      LIGHTRAG_HOME="$HOME/02luka/services/lightrag" \
+      LIGHTRAG_PORT="${LIGHTRAG_PORT:-9621}" \
+      bash scripts/deploy_lightrag.sh
+    timeout: 600s
+    retry_on_failure: true
+    max_retries: 1
+
+  - name: Verify LightRAG health
+    description: Confirm the API is serving /health successfully
+    run: |
+      set -euo pipefail
+      PORT="${LIGHTRAG_PORT:-9621}"
+      curl -sf "http://127.0.0.1:${PORT}/health" | jq .
+    timeout: 60s
+    retry_on_failure: true
+    max_retries: 3
+    retry_delay: 10s
+
+  - name: Publish deployment report
+    description: Surface latest deployment report in logs for awareness
+    run: |
+      set -euo pipefail
+      latest=$(ls -1t g/reports/deploy/lightrag_*.md 2>/dev/null | head -n1)
+      if [ -n "$latest" ]; then
+        cat "$latest"
+      else
+        echo "No LightRAG deployment report found"
+      fi
+    timeout: 30s
+    always_run: true
+
+post_deploy:
+  success:
+    - echo "✅ LightRAG deployed"
+    - echo "Health: http://127.0.0.1:${LIGHTRAG_PORT:-9621}/health"
+  failure:
+    - echo "❌ LightRAG deployment failed - inspect docker logs"
+    - docker logs --tail 200 lightrag || true
+
+notifications:
+  on_success:
+    - type: report
+      path: g/reports/deploy/
+  on_failure:
+    - type: log
+      path: $HOME/Library/Logs/02luka/com.02luka.clc.err
+
+rollback:
+  enabled: true
+  strategy: container
+  steps:
+    - docker rm -f lightrag || true
+    - rm -rf "$HOME/02luka/services/lightrag"/data/cache || true
+    - echo "Manual redeploy required after rollback"
+
+monitoring:
+  health_url: http://127.0.0.1:${LIGHTRAG_PORT:-9621}/health
+  check_interval: 60s
+  alert_on_failure: true

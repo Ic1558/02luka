@@ -31,10 +31,10 @@ done
 
 echo ""
 echo "== Health endpoint =="
-if curl -sf http://localhost:5011/health >/dev/null 2>&1; then
-  echo "✅ health_proxy responding"
+if curl -sf https://kim.theedges.work/health >/dev/null 2>&1; then
+  echo "✅ Kim bot endpoint responding"
 else
-  echo "⚠️  health endpoint not responding (health_proxy may not be deployed)"
+  echo "⚠️  Kim bot endpoint not responding (service may need redeploy)"
   warn=1
 fi
 

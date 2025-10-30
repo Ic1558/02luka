@@ -18,5 +18,10 @@
     "url": "http://127.0.0.1:3002/health",
     "critical": false,
     "timeout": 5000
+  },
+  "lightrag": {
+    "url": "http://127.0.0.1:9621/health",
+    "critical": false,
+    "timeout": 5000
   }
 }
