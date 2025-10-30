@@ -284,9 +284,9 @@
       "description": "Docker container"
     },
     {
-      "id": "kim_bot_agent        Up 37 hours (healthy)             02luka/kim_bot:1.0.0-shared                   0.0.0.0:5011->5011/tcp, [::]:5011->5011/tcp",
+      "id": "kim_bot_agent        Up 37 hours (healthy)             02luka/kim_bot:1.0.0-shared                   0.0.0.0:7217->7217/tcp, [::]:7217->7217/tcp",
       "type": "service",
-      "container": "kim_bot_agent        Up 37 hours (healthy)             02luka/kim_bot:1.0.0-shared                   0.0.0.0:5011->5011/tcp, [::]:5011->5011/tcp",
+      "container": "kim_bot_agent        Up 37 hours (healthy)             02luka/kim_bot:1.0.0-shared                   0.0.0.0:7217->7217/tcp, [::]:7217->7217/tcp",
       "status": "stopped",
       "health": "unknown",
       "image": "",

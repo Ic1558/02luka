@@ -70,7 +70,7 @@
 | rooney | ✅ healthy | 36 sec | 5005 |
 | sumo_agent | ✅ healthy | 1 min | 5006 |
 | lisa_agent | ✅ healthy | 10 days | 5007 |
-| kim_bot_agent | ✅ healthy | 10 days | 5011 |
+| kim_bot_agent | ✅ healthy | 10 days | 7217 |
 | **Services** ||||
 | mcp_gateway_agent | ✅ healthy | 10 days | 5012 |
 | terminalhandler | ✅ healthy | 10 days | 5008 |

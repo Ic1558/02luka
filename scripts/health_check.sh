@@ -31,7 +31,7 @@ done
 
 echo ""
 echo "== Health endpoint =="
-if curl -sf http://localhost:5011/health >/dev/null 2>&1; then
+if curl -sf http://localhost:7217/health >/dev/null 2>&1; then
   echo "✅ health_proxy responding"
 else
   echo "⚠️  health endpoint not responding (health_proxy may not be deployed)"
