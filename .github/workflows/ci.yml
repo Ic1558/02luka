@@ -1,12 +1,14 @@
 name: ci
 on:
-
-env:
-  retention-days: 14
   push:
     branches: [main, develop, 'ci/**']
   pull_request:
     branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
 
 env:
   NODE_VERSION: '20'
@@ -14,10 +16,6 @@ env:
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
 jobs:
-  permissions:
-    contents: read
-    pull-requests: read
-    actions: read
   validate:
     name: Phase 4/5/6 smoke (local)
     runs-on: ubuntu-latest
