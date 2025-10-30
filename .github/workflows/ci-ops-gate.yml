@@ -22,5 +22,21 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install redis-tools
         run: sudo apt-get update && sudo apt-get install -y redis-tools || true
+      - name: Wait for redis
+        run: |
+          set -e
+          echo "Waiting for redis service to be resolvable and respond to PING..."
+          for i in $(seq 1 30); do
+            if getent hosts redis >/dev/null 2>&1; then
+              if redis-cli -h redis -a "${REDIS_PASSWORD}" ping >/dev/null 2>&1; then
+                echo "redis is up"
+                exit 0
+              fi
+            fi
+            echo "redis not ready yet ($i/30) — sleeping 2s"
+            sleep 2
+          done
+          echo "redis did not become available after 60s" >&2
+          exit 1
       - name: Run ops-gate
         run: tools/ci/ops_gate.sh
