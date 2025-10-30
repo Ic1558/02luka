@@ -1,0 +1,102 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Smoke tests
+        run: bash scripts/smoke.sh
+
+  docs-links:
+    name: docs-links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Link check (docs)
+        run: |
+          set -euo pipefail
+          if [ -d docs ]; then
+            while IFS= read -r file; do
+              echo "Checking ${file}"
+              npx -y markdown-link-check@3.11.2 -q "${file}" || true
+            done < <(find docs -type f -name '*.md' | sort)
+          fi
+
+      - name: Governance presence
+        run: |
+          test -f docs/SECURITY_GOVERNANCE.md
+          test -f docs/ARCH_OVERVIEW.md
+          test -f docs/PROMPTS_STANDARD.md
+          test -f docs/DEPLOY.md
+
+  ops-gate:
+    name: ops-gate
+    runs-on: ubuntu-latest
+    env:
+      OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
+      OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
+      OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate gate configuration
+        run: |
+          set -euo pipefail
+          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
+            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
+          if [ -z "${OPS_ATOMIC_URL}" ]; then
+            echo "OPS_ATOMIC_URL secret missing" >&2; exit 1; fi
+          if [ -z "${OPS_ATOMIC_TOKEN}" ]; then
+            echo "OPS_ATOMIC_TOKEN secret missing" >&2; exit 1; fi
+
+      - name: Ping Ops Atomic
+        run: |
+          set -euo pipefail
+          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
+            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
+          code=$(curl -s -o /tmp/ops-atomic.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${OPS_ATOMIC_TOKEN}" \
+            "${OPS_ATOMIC_URL}/api/reports/summary" || true)
+          if [ "${code}" != "200" ]; then
+            echo "Ops Atomic endpoint returned status ${code}" >&2
+            cat /tmp/ops-atomic.json >&2 || true
+            exit 1
+          fi
+
+      - name: Phase 5/6/7 smoke (local)
+        run: |
+          set -euo pipefail
+          bash scripts/smoke.sh
+          node agents/reflection/self_review.cjs --days=7 >/dev/null
