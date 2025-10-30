@@ -1,16 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🔒 Ops Gate - Phase 5/6/7 Quality Checks"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Verify dependencies
-echo "✅ Checking dependencies..."
-command -v jq >/dev/null 2>&1 || { echo "❌ jq not found"; exit 1; }
-command -v yq >/dev/null 2>&1 || { echo "❌ yq not found"; exit 1; }
+check_cmd() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "❌ ${cmd} not found"
+    exit 1
+  fi
+}
 
-echo "✅ All dependencies present"
+echo "✅ Checking dependencies..."
+check_cmd jq
+check_cmd yq
+echo "✅ Base dependencies present"
+
+REDIS_HOST="${REDIS_HOST:-redis}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-changeme-02luka}"
+
+echo ""
+echo "🧠 Checking Redis availability..."
+if [[ "${OPS_GATE_OVERRIDE:-0}" == "1" ]]; then
+  echo "⚠️  Gate override ON — skipping Redis connectivity check"
+elif command -v redis-cli >/dev/null 2>&1; then
+  if redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PING | grep -q PONG; then
+    echo "✅ Redis responded to PING"
+  else
+    echo "❌ Redis PING failed"
+    exit 1
+  fi
+else
+  echo "⚠️  redis-cli not found, attempting TCP check via nc"
+  if command -v nc >/dev/null 2>&1; then
+    if timeout 3 nc -z "$REDIS_HOST" "$REDIS_PORT"; then
+      echo "✅ Redis port reachable"
+    else
+      echo "❌ Unable to reach Redis port"
+      exit 1
+    fi
+  else
+    echo "⚠️  nc not available; skipping Redis connectivity check"
+  fi
+fi
 
 # Create required directories
 echo ""

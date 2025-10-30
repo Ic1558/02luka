@@ -21,11 +21,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+
+      - name: Install linters
+        run: |
+          python3 -m pip install --user --upgrade pip
+          python3 -m pip install --user yamllint
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+          sudo npm install -g actionlint || true
 
       - name: Install dependencies
         run: |
@@ -54,6 +66,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: validate
+    env:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'changeme-02luka' }}
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=3s
+          --health-timeout=2s
+          --health-retries=10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,9 +93,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Install jq, yq
+          # Install jq, yq, redis-tools
           sudo apt-get update -qq
-          sudo apt-get install -y -qq jq
+          sudo apt-get install -y -qq jq redis-tools
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
