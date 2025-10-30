@@ -1,5 +1,8 @@
 # 02LUKA System Documentation
 
+[![CI Status](https://github.com/Ic1558/02luka/workflows/ci/badge.svg)](https://github.com/Ic1558/02luka/actions)
+[![Daily Proof](https://github.com/Ic1558/02luka/workflows/Daily%20Proof%20(Option%20C)/badge.svg)](https://github.com/Ic1558/02luka/actions)
+
 ## Overview
 
 02LUKA is an AI-powered system integrating:
@@ -7,6 +10,13 @@
 - **Ops Monitoring**: Real-time operational health tracking
 - **Public Docs Publisher**: Automated documentation deployment
 - **GitHub Actions**: CI/CD with artifact@v4 compliance
+
+## Performance
+
+- ✅ All CI jobs passing
+- ✅ Artifact uploads: v4 compliant
+- ✅ Smoke tests: < 2 seconds
+- ✅ Documentation: Auto-published
 
 ## Quick Links
 

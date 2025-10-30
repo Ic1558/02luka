@@ -5,9 +5,20 @@
   "private": true,
   "scripts": {
     "test": "bash scripts/smoke.sh",
-    "smoke": "bash scripts/smoke.sh"
+    "smoke": "bash scripts/smoke.sh",
+    "validate": "make validate-zones",
+    "proof": "make proof",
+    "status": "make status",
+    "help": "make help"
   },
-  "keywords": ["ai", "cls", "ops", "monitoring"],
+  "keywords": ["ai", "cls", "ops", "monitoring", "github-actions"],
   "author": "icmini",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Ic1558/02luka.git"
+  }
 }

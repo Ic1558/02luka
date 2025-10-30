@@ -1,5 +1,44 @@
+# Node
 node_modules/
-logs/
-dist/
-.tmp/
+npm-debug.log*
+package-lock.json
+
+# Logs
 *.log
+logs/
+local_logs/
+
+# Temporary files
+tmp/
+.tmp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Archives and backups
+archive/
+backups/
+*.bak
+*.backup
+
+# System-specific
+02luka
+hostbridge/
+services/
+
+# CLS heartbeats (auto-generated)
+g/reports/ops_atomic/heartbeat_*.md
+
+# Process IDs
+*.pid
