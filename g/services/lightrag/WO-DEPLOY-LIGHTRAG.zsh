@@ -1,9 +1,21 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-say(){ print -P "%F{cyan}%D{%H:%M:%S}%f  $*"; }
-ok(){  print -P "%F{green}✓%f $*"; }
-err(){ print -P "%F{red}✗%f $*" >&2; }
+timestamp() {
+  date +"%H:%M:%S"
+}
+
+say() {
+  printf '\033[36m%s\033[0m  %s\n' "$(timestamp)" "$*"
+}
+
+ok() {
+  printf '\033[32m✓\033[0m %s\n' "$*"
+}
+
+err() {
+  printf '\033[31m✗\033[0m %s\n' "$*" >&2
+}
 
 # --- Settings ---
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
@@ -16,18 +28,19 @@ PORT_BASE=${LIGHTRAG_PORT_BASE:-7210}   # will map sequentially by index
 
 # --- Ensure tree & venv ---
 say "Prepare directories"
-mkdir -p "$BASE"/{bin,conf} || true
+mkdir -p "$BASE"/{bin,conf}
 python3 -m venv "$BASE/.venv"
+# shellcheck disable=SC1090
 source "$BASE/.venv/bin/activate"
 
 say "Install python deps"
-$PIP install --upgrade pip wheel >/dev/null
+"$PIP" install --upgrade pip wheel >/dev/null
 # Minimal REST + RAG skeleton (adjust if you pinned versions in repo)
-$PIP install "fastapi>=0.115" "uvicorn[standard]>=0.30" pydantic requests pyyaml >/dev/null
+"$PIP" install "fastapi>=0.115" "uvicorn[standard]>=0.30" pydantic requests pyyaml >/dev/null
 
 # --- Write runner script (shared) ---
 RUNNER="$BASE/bin/serve.py"
-cat <<'PY' > "$RUNNER"
+cat > "$RUNNER" <<'PY'
 import argparse
 import time
 from fastapi import FastAPI
@@ -70,13 +83,13 @@ if __name__ == "__main__":
 PY
 
 # --- Small shim so uvicorn can import it as "serve:app" ---
-cat <<'PY' > "$BASE/bin/serve.pyproj"
+cat > "$BASE/bin/serve.pyproj" <<'PY'
 from serve import app  # noqa
 PY
 
 # --- Per-agent launch sh ---
 LAUNCH_SH="$BASE/bin/run_agent.zsh"
-cat <<'INNERZSH' > "$LAUNCH_SH"
+cat > "$LAUNCH_SH" <<'INNERZSH'
 #!/usr/bin/env zsh
 set -euo pipefail
 AGENT="${1:?agent name}"
@@ -90,13 +103,13 @@ chmod +x "$LAUNCH_SH"
 
 # --- Per-agent configs & LaunchAgents ---
 say "Create LaunchAgents"
-for i in {1..${#AGENTS[@]}}; do
-  idx=$((i-1))
-  agent="${AGENTS[$i]}"
-  port=$((PORT_BASE+idx))
+agent_count=${#AGENTS[@]}
+for ((idx = 0; idx < agent_count; idx++)); do
+  agent="${AGENTS[$idx]}"
+  port=$((PORT_BASE + idx))
 
   # Config (room to extend later)
-  cat <<YML > "$BASE/conf/${agent}.yaml"
+  cat > "$BASE/conf/${agent}.yaml" <<YML
 agent: ${agent}
 port: ${port}
 sources:
@@ -106,7 +119,7 @@ YML
 
   # LaunchAgent
   PLIST="$HOME/Library/LaunchAgents/com.02luka.lightrag.${agent}.plist"
-  cat <<PL > "$PLIST"
+  cat > "$PLIST" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -130,17 +143,16 @@ YML
 PL
 
   launchctl unload "$PLIST" 2>/dev/null || true
-  launchctl load  "$PLIST"
+  launchctl load "$PLIST"
 done
 
 # --- Health check ---
 say "Health check"
 sleep 1
 FAIL=0
-for i in {1..${#AGENTS[@]}}; do
-  idx=$((i-1))
-  agent="${AGENTS[$i]}"
-  port=$((PORT_BASE+idx))
+for ((idx = 0; idx < agent_count; idx++)); do
+  agent="${AGENTS[$idx]}"
+  port=$((PORT_BASE + idx))
   if curl -fsS "http://127.0.0.1:${port}/health" >/dev/null; then
     ok "${agent} : http://127.0.0.1:${port}  (healthy)"
   else
@@ -151,7 +163,11 @@ done
 
 echo
 say "Examples (Kim)"
-echo "  curl -s http://127.0.0.1:$((PORT_BASE+7))/health | jq"
-echo "  curl -s -X POST http://127.0.0.1:$((PORT_BASE+7))/query -H 'content-type: application/json' -d '{\"agent\":\"kim\",\"q\":\"Where are Phase 12 reports?\"}' | jq"
+echo "  curl -s http://127.0.0.1:$((PORT_BASE + 7))/health | jq"
+echo "  curl -s -X POST http://127.0.0.1:$((PORT_BASE + 7))/query -H 'content-type: application/json' -d '{\"agent\":\"kim\",\"q\":\"Where are Phase 12 reports?\"}' | jq"
 
-[[ "$FAIL" -eq 0 ]] && ok "Lightrag deployed for agents: ${AGENTS[*]}" || err "Some agents failed health (see ${LOGDIR}/lightrag_*.err)"
+if [[ "$FAIL" -eq 0 ]]; then
+  ok "Lightrag deployed for agents: ${AGENTS[*]}"
+else
+  err "Some agents failed health (see ${LOGDIR}/lightrag_*.err)"
+fi
