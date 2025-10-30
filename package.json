@@ -1,0 +1,13 @@
+{
+  "name": "02luka",
+  "version": "1.0.0",
+  "description": "02LUKA AI System - CLS Learning, Ops Monitoring, Public Docs Publisher",
+  "private": true,
+  "scripts": {
+    "test": "bash scripts/smoke.sh",
+    "smoke": "bash scripts/smoke.sh"
+  },
+  "keywords": ["ai", "cls", "ops", "monitoring"],
+  "author": "icmini",
+  "license": "UNLICENSED"
+}
