@@ -1,3 +1,6 @@
+# DEPRECATED: Retained temporarily for reference. Will be removed or folded into ci.yml.
+# Badge removed from README. Do not rely on this workflow for production checks.
+
 name: "Phase 7.7 – BrowserOS Verification (CI)"
 
 on:
