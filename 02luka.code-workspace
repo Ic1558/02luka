@@ -2,7 +2,7 @@
   "folders": [
     {
       "path": ".",
-      "name": "📦 02Luka Repo (Ic1558/02luka)"
+      "name": "02Luka Repo"
     }
   ],
   "settings": {
@@ -16,12 +16,19 @@
     "git.enabled": true,
     "git.path": "git",
     "git.autorefresh": true,
+    "git.detectSubmodules": true,
     "git.defaultCloneDirectory": "${workspaceFolder}",
+    "github.gitProtocol": "ssh",
     "files.autoSave": "afterDelay"
   },
   "extensions": {
     "recommendations": [
-      "github.vscode-pull-request-github"
+      "github.vscode-pull-request-github",
+      "github.copilot"
     ]
-  }
+  },
+  "remoteAuthority": "dev-container+02luka",
+  "remote.containers.defaultExtensions": [
+    "github.vscode-pull-request-github"
+  ]
 }
