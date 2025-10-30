@@ -1,9 +1,0 @@
-{
-  "timestamp": "2025-10-15T20:11:54.965Z",
-  "level": "WARN",
-  "message": "Smoke test warning detected",
-  "context": {
-    "line": "Testing API Smoke... ⚠️  WARN (500, expected 200 - optional endpoint)"
-  },
-  "id": "alert_1760559114965_rqs95s51r"
-}

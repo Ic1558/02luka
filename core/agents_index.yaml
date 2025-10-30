@@ -1,8 +1,0 @@
-- id: gm
-  name: Gemini Pro
-  role: cloud-research / code-assist / data-fusion
-  type: external
-  endpoint: https://generativelanguage.googleapis.com
-  status: active
-  api_key_env: GEMINI_API_KEY
-  router_tag: gemini

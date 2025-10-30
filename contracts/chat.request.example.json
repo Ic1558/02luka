@@ -1,7 +1,0 @@
-{
-  "model": "gpt-5-codex-medium",
-  "system": "You are Luka...",
-  "context": [{"title": "Project 02luka", "content": "…"}],
-  "approvals": {"requireApprove": true, "softDelete": true, "dryRunLarge": true},
-  "messages": [{"role": "user", "content": "hello"}]
-}

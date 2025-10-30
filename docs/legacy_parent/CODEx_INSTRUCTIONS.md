@@ -1,6 +1,0 @@
-- Run linters/tests before proposing changes.
-- Keep diffs minimal; no mass reformat.
-- Never hardcode secrets; use env vars.
-- Luka app: keep single-file unless asked to modularize.
-- Endpoints via profiles (no hardcoded URLs).
-- Follow approval policies (require-approve, dry-run, soft-delete).

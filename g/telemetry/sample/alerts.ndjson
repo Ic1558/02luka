@@ -1,8 +1,0 @@
-{"ts":"2025-10-23T07:12:03Z","severity":"warn","dedupe":"bridge:down","msg":"bridge unreachable"}
-{"ts":"2025-10-23T07:13:40Z","severity":"info","dedupe":"governance:ping","msg":"ok"}
-{"ts":"2025-10-23T07:45:22Z","severity":"info","dedupe":"health:check","msg":"worker health check passed"}
-{"ts":"2025-10-23T08:12:15Z","severity":"warn","dedupe":"tunnel:disconnect","msg":"tunnel connection lost"}
-{"ts":"2025-10-23T08:15:33Z","severity":"info","dedupe":"tunnel:reconnect","msg":"tunnel reconnected"}
-{"ts":"2025-10-23T08:30:47Z","severity":"info","dedupe":"autoheal:monitor","msg":"process monitoring active"}
-{"ts":"2025-10-23T08:45:12Z","severity":"info","dedupe":"cache:stats","msg":"cache hit rate 62%"}
-{"ts":"2025-10-23T09:00:00Z","severity":"info","dedupe":"digest:start","msg":"daily digest generation started"}

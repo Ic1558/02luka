@@ -1,1 +1,0 @@
-{"id":"006","skill":"bash","cmd":"node agents/reportbot/index.cjs --write"}

@@ -1,1 +1,0 @@
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKifXJ7gzidselhWyJ+OsVP1PQsDyK6qVpHRJnC10kax ci@02luka.local
