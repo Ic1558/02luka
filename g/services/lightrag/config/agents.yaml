@@ -1,0 +1,46 @@
+# Per-agent RAG configuration. Update paths to match your local checkout when installing.
+agents:
+  cls:
+    port: 7210
+    sources:
+      - ~/02luka/g/reports/**/*.md
+      - ~/02luka/CLS/**/*.md
+      - ~/02luka/memory/cls/**/*.json*
+  mary:
+    port: 7211
+    sources:
+      - ~/02luka/g/reports/**/*.md
+      - ~/02luka/docs/**/*.md
+      - ~/02luka/memory/**/*.json*
+  paula:
+    port: 7212
+    sources:
+      - ~/02luka/g/reports/trading/**/*.md
+      - ~/02luka/memory/paula/**/*.json*
+  qs:
+    port: 7213
+    sources:
+      - ~/02luka/g/reports/QS/**/*.md
+      - ~/02luka/docs/**/*.pdf
+  rooney:
+    port: 7214
+    sources:
+      - ~/02luka/g/reports/ops/**/*.md
+  sumo:
+    port: 7215
+    sources:
+      - ~/02luka/g/reports/**/*.md
+  lisa:
+    port: 7216
+    sources:
+      - ~/02luka/g/reports/**/*.md
+      - ~/02luka/memory/lisa/**/*.json*
+  kim:
+    port: 7217
+    sources:
+      - ~/02luka/g/reports/**/*.md
+      - ~/02luka/docs/**/*.md
+      - ~/02luka/memory/**/*.json*
+index_base: ~/02luka/g/services/lightrag/indexes
+embedding_model: text-embedding-3-small
+llm_model: gpt-4o-mini
