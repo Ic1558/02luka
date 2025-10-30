@@ -39,8 +39,8 @@
   ],
 
   "postStartCommand": [
-    "sh", "-c",
-    "{ test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount MISSING'; } ; cd /workspaces/g && printf 'Devcontainer UP %s\\n' \"$(date)\" >> logs/devcontainer.log ; nohup sh -c 'cd /workspaces/g && test -f run/boss_api_stub.cjs && node run/boss_api_stub.cjs >> logs/boss_api_stub.out.log 2>> logs/boss_api_stub.err.log & test -f run/health_proxy_stub.cjs && node run/health_proxy_stub.cjs >> logs/health_proxy_stub.out.log 2>> logs/health_proxy_stub.err.log & test -f run/mcp_bridge_stub.cjs && node run/mcp_bridge_stub.cjs >> logs/mcp_bridge_stub.out.log 2>> logs/mcp_bridge_stub.err.log & echo \"Services started (if present): $(date)\" >> logs/devcontainer.log' >/dev/null 2>&1 &"
+    "sh", "-lc",
+    "test -f /host02luka/CLS/agents/CLS_agent_latest.md && echo 'Host mount OK' || echo 'Host mount MISSING'; cd \"$WORKDIR\" && printf 'Devcontainer UP %s\\n' \"$(date)\" >> logs/devcontainer.log; nohup bash tools/ensure_stubs.sh >> logs/devcontainer.log 2>&1 & if command -v code >/dev/null 2>&1; then (sleep 1; code -r \"$WORKDIR/02luka.code-workspace\" >/dev/null 2>&1 &); else echo 'code CLI missing, skip auto-open' >> logs/devcontainer.log; fi"
   ],
 
   "customizations": {
