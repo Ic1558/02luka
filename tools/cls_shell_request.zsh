@@ -32,13 +32,32 @@ redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PUBLISH shell "
 
 # Wait for response on a dedicated list key (Terminalhandler should LPUSH it)
 # Key pattern: shell:response:shell:<TASK_ID>
-RESP_RAW=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" \
-  BRPOP "$REPLY_KEY" "$TIMEOUT" 2>/dev/null | tail -n1 || true)
+RESP_OUTPUT=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" \
+  BRPOP "$REPLY_KEY" "$TIMEOUT" 2>&1)
+RESP_STATUS=$?
+RESP_RAW=$(printf '%s\n' "$RESP_OUTPUT" | tail -n1)
 
-if [[ -z "$RESP_RAW" ]]; then
+if [[ $RESP_STATUS -ne 0 ]]; then
+  if [[ "$RESP_RAW" == "(nil)" ]]; then
+    echo "⏱️  No response within ${TIMEOUT}s. task_id=${TASK_ID}"
+    echo "$TASK_ID"
+    exit 0
+  fi
+
+  echo "❌ redis-cli BRPOP failed (exit $RESP_STATUS). task_id=${TASK_ID}" >&2
+  printf '%s\n' "$RESP_OUTPUT" >&2
+  exit $RESP_STATUS
+fi
+
+if [[ "$RESP_RAW" == "(nil)" ]]; then
   echo "⏱️  No response within ${TIMEOUT}s. task_id=${TASK_ID}"
   echo "$TASK_ID"
   exit 0
+fi
+
+if [[ -z "$RESP_RAW" ]]; then
+  echo "❓ Empty response received. task_id=${TASK_ID}" >&2
+  exit 1
 fi
 
 echo "$RESP_RAW"
