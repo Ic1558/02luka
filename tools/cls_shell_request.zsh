@@ -32,9 +32,11 @@ redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PUBLISH shell "
 
 # Wait for response on a dedicated list key (Terminalhandler should LPUSH it)
 # Key pattern: shell:response:shell:<TASK_ID>
+set +e
 RESP_OUTPUT=$(redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" \
   BRPOP "$REPLY_KEY" "$TIMEOUT" 2>&1)
 RESP_STATUS=$?
+set -e
 RESP_RAW=$(printf '%s\n' "$RESP_OUTPUT" | tail -n1)
 
 if [[ $RESP_STATUS -ne 0 ]]; then
