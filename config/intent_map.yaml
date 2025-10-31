@@ -1,0 +1,10 @@
+# intent → skill chain (รันตามลำดับ)
+check_health:
+  - skills/http_fetch.py
+  - skills/run_shell.zsh
+
+deploy_dashboard:
+  - misc/deploy_dashboard.zsh
+
+update_docker_yaml:
+  - misc/update_docker_yaml.zsh
