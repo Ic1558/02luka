@@ -74,7 +74,18 @@ services:
     ports:
       - "4000:4000"
     networks: [ "02luka-net" ]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "sh", "-lc", "apk add --no-cache curl >/dev/null 2>&1 || true; curl -fsS http://localhost:4000/ping >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
+    labels:
+      com.02luka.role: "health-server"
+      com.02luka.stack: "core"
 
 volumes:
   luka-ops_redis_data:
