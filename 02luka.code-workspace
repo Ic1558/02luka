@@ -2,12 +2,15 @@
   "folders": [
     {
       "path": ".",
-      "name": "02Luka Repo"
+      "name": "02luka"
     }
   ],
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash",
     "terminal.integrated.cwd": "${workspaceFolder}",
+    "files.exclude": {
+      "**/.DS_Store": true
+    },
     "files.watcherExclude": {
       "**/node_modules/**": true,
       "**/logs/**": true,
@@ -26,9 +29,5 @@
       "github.vscode-pull-request-github",
       "github.copilot"
     ]
-  },
-  "remoteAuthority": "dev-container+02luka",
-  "remote.containers.defaultExtensions": [
-    "github.vscode-pull-request-github"
-  ]
+  }
 }
