@@ -1,0 +1,126 @@
+{
+  "last_updated": "2025-10-28T21:12:00.383Z",
+  "total_runs": 10,
+  "runs": [
+    {
+      "id": "mock-0",
+      "run_number": 1000,
+      "timestamp": "2025-10-28T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 69001.11257233832,
+      "files_count": 11,
+      "total_size_bytes": 9218,
+      "source": "github_actions",
+      "workflow_run_id": "mock-0",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-0"
+    },
+    {
+      "id": "mock-1",
+      "run_number": 999,
+      "timestamp": "2025-10-27T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 33622.368838825045,
+      "files_count": 7,
+      "total_size_bytes": 4740,
+      "source": "github_actions",
+      "workflow_run_id": "mock-1",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-1"
+    },
+    {
+      "id": "mock-2",
+      "run_number": 998,
+      "timestamp": "2025-10-26T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 66582.60782638923,
+      "files_count": 8,
+      "total_size_bytes": 10455,
+      "source": "github_actions",
+      "workflow_run_id": "mock-2",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-2"
+    },
+    {
+      "id": "mock-3",
+      "run_number": 997,
+      "timestamp": "2025-10-25T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 43982.46302816384,
+      "files_count": 3,
+      "total_size_bytes": 4294,
+      "source": "github_actions",
+      "workflow_run_id": "mock-3",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-3"
+    },
+    {
+      "id": "mock-4",
+      "run_number": 996,
+      "timestamp": "2025-10-24T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 88175.66856016169,
+      "files_count": 3,
+      "total_size_bytes": 2494,
+      "source": "github_actions",
+      "workflow_run_id": "mock-4",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-4"
+    },
+    {
+      "id": "mock-5",
+      "run_number": 995,
+      "timestamp": "2025-10-23T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 76494.2700934858,
+      "files_count": 5,
+      "total_size_bytes": 3153,
+      "source": "github_actions",
+      "workflow_run_id": "mock-5",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-5"
+    },
+    {
+      "id": "mock-6",
+      "run_number": 994,
+      "timestamp": "2025-10-22T21:12:00.381Z",
+      "status": "failure",
+      "duration_ms": 74862.43043121081,
+      "files_count": 12,
+      "total_size_bytes": 7522,
+      "source": "github_actions",
+      "workflow_run_id": "mock-6",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-6"
+    },
+    {
+      "id": "mock-7",
+      "run_number": 993,
+      "timestamp": "2025-10-21T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 62201.62018668042,
+      "files_count": 11,
+      "total_size_bytes": 8159,
+      "source": "github_actions",
+      "workflow_run_id": "mock-7",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-7"
+    },
+    {
+      "id": "mock-8",
+      "run_number": 992,
+      "timestamp": "2025-10-20T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 76713.3601687781,
+      "files_count": 3,
+      "total_size_bytes": 5518,
+      "source": "github_actions",
+      "workflow_run_id": "mock-8",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-8"
+    },
+    {
+      "id": "mock-9",
+      "run_number": 991,
+      "timestamp": "2025-10-19T21:12:00.381Z",
+      "status": "success",
+      "duration_ms": 30553.7511386722,
+      "files_count": 8,
+      "total_size_bytes": 1627,
+      "source": "github_actions",
+      "workflow_run_id": "mock-9",
+      "url": "https://github.com/Ic1558/02luka/actions/runs/mock-9"
+    }
+  ]
+}

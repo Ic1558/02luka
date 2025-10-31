@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>02luka Ops Mirror - Status Board</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background: #ecf0f1;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-label {
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .runs-table {
+            margin: 20px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .runs-table h3 {
+            margin: 0;
+            padding: 20px;
+            background: #34495e;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .status-success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-failure {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-running {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .refresh-info {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        @media (max-width: 768px) {
+            .charts {
+                grid-template-columns: 1fr;
+            }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 02luka Ops Mirror Status</h1>
+            <p>Live monitoring of mirror pipeline runs and performance</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">10</div>
+                <div class="stat-label">Total Runs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">9</div>
+                <div class="stat-label">Successful</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">62s</div>
+                <div class="stat-label">Avg Duration</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">6KB</div>
+                <div class="stat-label">Avg Size</div>
+            </div>
+        </div>
+        
+        <div class="charts">
+            <div class="chart-container">
+                <div class="chart-title">Duration Trends</div>
+                <canvas id="durationChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">File Count Trends</div>
+                <canvas id="filesChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="runs-table">
+            <h3>Recent Runs</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run #</th>
+                        <th>Status</th>
+                        <th>Duration</th>
+                        <th>Files</th>
+                        <th>Size</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-0" target="_blank">#1000</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>69s</td>
+                            <td>11</td>
+                            <td>9KB</td>
+                            <td>10/29/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-1" target="_blank">#999</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>34s</td>
+                            <td>7</td>
+                            <td>5KB</td>
+                            <td>10/28/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-2" target="_blank">#998</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>67s</td>
+                            <td>8</td>
+                            <td>10KB</td>
+                            <td>10/27/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-3" target="_blank">#997</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>44s</td>
+                            <td>3</td>
+                            <td>4KB</td>
+                            <td>10/26/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-4" target="_blank">#996</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>88s</td>
+                            <td>3</td>
+                            <td>2KB</td>
+                            <td>10/25/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-5" target="_blank">#995</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>76s</td>
+                            <td>5</td>
+                            <td>3KB</td>
+                            <td>10/24/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-6" target="_blank">#994</a></td>
+                            <td><span class="status-failure">FAILURE</span></td>
+                            <td>75s</td>
+                            <td>12</td>
+                            <td>7KB</td>
+                            <td>10/23/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-7" target="_blank">#993</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>62s</td>
+                            <td>11</td>
+                            <td>8KB</td>
+                            <td>10/22/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-8" target="_blank">#992</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>77s</td>
+                            <td>3</td>
+                            <td>5KB</td>
+                            <td>10/21/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                        <tr>
+                            <td><a href="https://github.com/Ic1558/02luka/actions/runs/mock-9" target="_blank">#991</a></td>
+                            <td><span class="status-success">SUCCESS</span></td>
+                            <td>31s</td>
+                            <td>8</td>
+                            <td>2KB</td>
+                            <td>10/20/2025, 4:12:00 AM</td>
+                        </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="refresh-info">
+            <p>🔄 Auto-refreshes every 60 seconds | Last updated: 10/29/2025, 4:12:00 AM</p>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js configuration
+        const jobs = {"last_updated":"2025-10-28T21:12:00.383Z","total_runs":10,"runs":[{"id":"mock-0","run_number":1000,"timestamp":"2025-10-28T21:12:00.381Z","status":"success","duration_ms":69001.11257233832,"files_count":11,"total_size_bytes":9218,"source":"github_actions","workflow_run_id":"mock-0","url":"https://github.com/Ic1558/02luka/actions/runs/mock-0"},{"id":"mock-1","run_number":999,"timestamp":"2025-10-27T21:12:00.381Z","status":"success","duration_ms":33622.368838825045,"files_count":7,"total_size_bytes":4740,"source":"github_actions","workflow_run_id":"mock-1","url":"https://github.com/Ic1558/02luka/actions/runs/mock-1"},{"id":"mock-2","run_number":998,"timestamp":"2025-10-26T21:12:00.381Z","status":"success","duration_ms":66582.60782638923,"files_count":8,"total_size_bytes":10455,"source":"github_actions","workflow_run_id":"mock-2","url":"https://github.com/Ic1558/02luka/actions/runs/mock-2"},{"id":"mock-3","run_number":997,"timestamp":"2025-10-25T21:12:00.381Z","status":"success","duration_ms":43982.46302816384,"files_count":3,"total_size_bytes":4294,"source":"github_actions","workflow_run_id":"mock-3","url":"https://github.com/Ic1558/02luka/actions/runs/mock-3"},{"id":"mock-4","run_number":996,"timestamp":"2025-10-24T21:12:00.381Z","status":"success","duration_ms":88175.66856016169,"files_count":3,"total_size_bytes":2494,"source":"github_actions","workflow_run_id":"mock-4","url":"https://github.com/Ic1558/02luka/actions/runs/mock-4"},{"id":"mock-5","run_number":995,"timestamp":"2025-10-23T21:12:00.381Z","status":"success","duration_ms":76494.2700934858,"files_count":5,"total_size_bytes":3153,"source":"github_actions","workflow_run_id":"mock-5","url":"https://github.com/Ic1558/02luka/actions/runs/mock-5"},{"id":"mock-6","run_number":994,"timestamp":"2025-10-22T21:12:00.381Z","status":"failure","duration_ms":74862.43043121081,"files_count":12,"total_size_bytes":7522,"source":"github_actions","workflow_run_id":"mock-6","url":"https://github.com/Ic1558/02luka/actions/runs/mock-6"},{"id":"mock-7","run_number":993,"timestamp":"2025-10-21T21:12:00.381Z","status":"success","duration_ms":62201.62018668042,"files_count":11,"total_size_bytes":8159,"source":"github_actions","workflow_run_id":"mock-7","url":"https://github.com/Ic1558/02luka/actions/runs/mock-7"},{"id":"mock-8","run_number":992,"timestamp":"2025-10-20T21:12:00.381Z","status":"success","duration_ms":76713.3601687781,"files_count":3,"total_size_bytes":5518,"source":"github_actions","workflow_run_id":"mock-8","url":"https://github.com/Ic1558/02luka/actions/runs/mock-8"},{"id":"mock-9","run_number":991,"timestamp":"2025-10-19T21:12:00.381Z","status":"success","duration_ms":30553.7511386722,"files_count":8,"total_size_bytes":1627,"source":"github_actions","workflow_run_id":"mock-9","url":"https://github.com/Ic1558/02luka/actions/runs/mock-9"}]};
+        const runs = jobs.runs.reverse(); // Show oldest first
+        
+        // Duration Chart
+        const durationCtx = document.getElementById('durationChart').getContext('2d');
+        new Chart(durationCtx, {
+            type: 'line',
+            data: {
+                labels: runs.map(r => new Date(r.timestamp).toLocaleDateString()),
+                datasets: [{
+                    label: 'Duration (seconds)',
+                    data: runs.map(r => Math.round(r.duration_ms / 1000)),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Files Chart
+        const filesCtx = document.getElementById('filesChart').getContext('2d');
+        new Chart(filesCtx, {
+            type: 'bar',
+            data: {
+                labels: runs.map(r => new Date(r.timestamp).toLocaleDateString()),
+                datasets: [{
+                    label: 'File Count',
+                    data: runs.map(r => r.files_count),
+                    backgroundColor: '#27ae60',
+                    borderColor: '#229954',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Auto-refresh every 60 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 60000);
+    </script>
+</body>
+</html>

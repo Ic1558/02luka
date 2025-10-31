@@ -1,0 +1,12 @@
+{
+  "folders": [
+    { "path": "." },                    // /workspaces/g  (repo)
+    { "path": "/host02luka", "name": "host02luka" }  // host mirror
+  ],
+  "settings": {
+    "git.autoRepositoryDetection": "openEditors",
+    "git.openRepositoryInParentFolders": "never",
+    "git.ignoredRepositories": ["/host02luka","/host02luka/*"],
+    "files.watcherExclude": { "/host02luka/**": true }
+  }
+}

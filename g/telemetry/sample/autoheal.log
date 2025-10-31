@@ -1,0 +1,5 @@
+{"ts":"2025-10-23T06:03:11Z","component":"bridge","action":"restart","reason":"health_fail","ok":true}
+{"ts":"2025-10-23T06:15:42Z","component":"cloudflared","action":"restart","reason":"process_not_found","ok":true}
+{"ts":"2025-10-23T07:22:18Z","component":"bridge","action":"monitor","reason":"health_check","ok":true}
+{"ts":"2025-10-23T08:05:33Z","component":"cloudflared","action":"restart","reason":"tunnel_lost","ok":true}
+{"ts":"2025-10-23T08:45:07Z","component":"bridge","action":"monitor","reason":"health_check","ok":true}
