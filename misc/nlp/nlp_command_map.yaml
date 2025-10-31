@@ -19,4 +19,5 @@
 "รีสตาร์ทแดชบอร์ด": deploy_dashboard
 "andy status": check_health
 "andy metrics": check_health
+"andy metrics prom": check_health
 "boss api status": check_health
