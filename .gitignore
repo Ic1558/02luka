@@ -42,3 +42,4 @@ g/reports/ops_atomic/heartbeat_*.md
 
 # Process IDs
 *.pid
+backups/

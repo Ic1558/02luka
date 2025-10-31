@@ -1,10 +1,6 @@
-แอนดี้ สถานะ: status_health_server
-andy status: status_health_server
-แอนดี้ รีสตาร์ท health: restart_health_server
-andy restart health: restart_health_server
-deploy dashboard: deploy_dashboard
-update docker yaml: update_docker_yaml
-แอนดี้ รีสตาร์ท บริดจ์: restart_bridge
-andy restart bridge: restart_bridge
-แอนดี้ ดีพลอย แดชบอร์ด: deploy_dashboard
-andy deploy dashboard: deploy_dashboard
+"แอนดี้ สถานะ": check_health
+"andy status": check_health
+"แอนดี้ รีสตาร์ท health": restart_health_server
+"andy restart health": restart_health_server
+"deploy dashboard": deploy_dashboard
+"update docker yaml": update_docker_yaml
