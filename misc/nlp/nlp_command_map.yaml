@@ -17,3 +17,6 @@
 "รีสตาร์ท boss api": deploy_dashboard
 "deploy dashboard": deploy_dashboard
 "รีสตาร์ทแดชบอร์ด": deploy_dashboard
+"andy status": check_health
+"andy metrics": check_health
+"boss api status": check_health

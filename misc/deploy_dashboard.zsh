@@ -96,3 +96,4 @@ restart_launchagent && did=1 || true
 health_check || true
 log "===== deploy_dashboard done (DRY_RUN=$DRY_RUN) ====="
 $LUKA_HOME/tools/smoke_dashboard.zsh || echo "WARN: health check failed"
+$LUKA_HOME/tools/smoke_dashboard_prom.zsh || echo "WARN: prom metrics failed"
