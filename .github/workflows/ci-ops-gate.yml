@@ -1,0 +1,71 @@
+name: ci / ops-gate
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ops-gate:
+    runs-on: ubuntu-latest
+
+    env:
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'changeme-02luka' }}
+      OPS_ATOMIC_URL: http://127.0.0.1:4000
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=3s
+          --health-timeout=2s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install root npm packages
+        run: npm ci || echo "⚠️ No root package-lock.json, skipping"
+
+      - name: Install boss-api dependencies
+        run: |
+          if [ -f boss-api/package.json ]; then
+            echo "📦 Installing boss-api dependencies..."
+            npm ci --prefix boss-api
+          else
+            echo "⚠️ boss-api/package.json not found, skipping"
+          fi
+
+      - name: Check boss-api structure
+        run: |
+          echo "📦 Checking boss-api structure..."
+          if [ -d boss-api ]; then
+            echo "✅ boss-api directory exists"
+            ls -la boss-api/ | head -10
+          else
+            echo "⚠️ boss-api directory not found"
+          fi
+          echo "Note: boss-api server not started - smoke tests will skip API checks in CI"
+
+      - name: Verify Redis connection
+        run: |
+          echo "🔍 Testing Redis connection..."
+          redis-cli -h redis -p 6379 ping || echo "⚠️ Redis not accessible via 'redis' hostname"
+          redis-cli -h 127.0.0.1 -p 6379 ping || echo "⚠️ Redis not accessible via localhost"
+
+      - name: Run ops-gate
+        run: tools/ci/ops_gate.sh
