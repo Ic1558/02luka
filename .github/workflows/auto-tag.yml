@@ -1,24 +1,37 @@
 name: auto-tag
 on:
   push:
-    branches:
-      - main
-      - '**/housekeeping/**'
-      - '**/ops/**'
-      - '**'
+    branches: [ main ]
+
+permissions:
+  contents: write
+
 jobs:
   tag:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - uses: actions/checkout@v4
-      - name: Create tag
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git user
         run: |
-          TS=$(date -u +'%Y.%m.%d-%H%M')
-          TAG="v${TS}"
-          echo "Creating tag $TAG"
-          git tag -a "$TAG" -m "Auto tag $TAG"
-          git push origin "$TAG" || echo "Tag push skipped (exists?)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Compute and push tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)"
+          ver="${latest#v}"
+          IFS=. read -r MA MI PA <<<"$ver"
+          : "${MA:=0}"; : "${MI:=0}"; : "${PA:=0}"
+          new="v${MA}.${MI}.$((PA+1))"
+          if git rev-parse -q --verify "refs/tags/$new" >/dev/null; then
+            new="${new}-$(date -u +%Y%m%d%H%M%S)"
+          fi
+          git tag -a "$new" -m "auto: tag $new"
+          git push origin "refs/tags/$new"
