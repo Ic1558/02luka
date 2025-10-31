@@ -81,7 +81,7 @@ steps:
     description: Surface latest deployment report in logs for awareness
     run: |
       set -euo pipefail
-      latest=$(ls -1t g/reports/deploy/lightrag_*.md 2>/dev/null | head -n1)
+      latest=$({ ls -1t g/reports/deploy/lightrag_*.md 2>/dev/null || true; } | head -n1)
       if [ -n "$latest" ]; then
         cat "$latest"
       else
