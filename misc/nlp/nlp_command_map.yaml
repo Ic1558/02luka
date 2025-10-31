@@ -4,3 +4,7 @@
 "andy restart health": restart_health_server
 "deploy dashboard": deploy_dashboard
 "update docker yaml": update_docker_yaml
+"สถานะแอนดี้": check_health
+"andy health": check_health
+"รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
+"restart andy health": restart_health_server
