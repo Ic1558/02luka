@@ -1,4 +1,3 @@
-version: '3.8'
 name: 02luka
 networks:
   02luka-net: {}
