@@ -1,0 +1,14 @@
+{"ts":"2025-10-20T18:54:13.166Z","task":"local_exec","pass":1,"warn":0,"fail":0,"duration_ms":24,"meta":{"id":"tsk_smoke_20251020","title":"Smoke Test - Phase 7.2 Delegation","steps_count":3,"acceptance_passed":true}}
+{"ts":"2025-10-20T18:59:36.392Z","task":"local_exec","pass":0,"warn":1,"fail":1,"duration_ms":0,"meta":{"reason":"policy_block","id":"tsk_git_deploy","policy_reason":"approval_required"}}
+{"ts":"2025-10-20T19:03:25.291Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
+{"ts":"2025-10-20T19:15:18.349Z","task":"local_exec","pass":1,"warn":0,"fail":0,"duration_ms":9,"meta":{"id":"test_bash","title":"Test Bash Skill","steps_count":1,"acceptance_passed":true}}
+{"ts":"2025-10-20T19:22:38.494Z","task":"local_exec","pass":1,"warn":0,"fail":0,"duration_ms":49,"meta":{"id":"test_node","title":"Test Node Skill","steps_count":1,"acceptance_passed":true}}
+{"ts":"2025-10-20T19:22:38.947Z","task":"local_exec","pass":1,"warn":0,"fail":0,"duration_ms":410,"meta":{"id":"test_git","title":"Test Git Skill","steps_count":1,"acceptance_passed":true}}
+{"ts":"2025-10-20T19:23:46.608Z","task":"local_exec","pass":0,"warn":0,"fail":1,"duration_ms":17,"meta":{"id":"test_dangerous","title":"Test Dangerous Command","step":"bash","exit_code":1}}
+{"ts":"2025-10-20T19:23:46.718Z","task":"local_exec","pass":0,"warn":1,"fail":1,"duration_ms":0,"meta":{"reason":"policy_block","id":"test_highrisk","policy_reason":"approval_required"}}
+{"ts":"2025-10-20T19:25:10.300Z","task":"local_exec","pass":1,"warn":0,"fail":0,"duration_ms":28,"meta":{"id":"test_optional","title":"Test Optional Steps","steps_count":3,"acceptance_passed":true}}
+{"ts":"2025-10-20T19:58:05.323Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
+{"ts":"2025-10-20T19:59:52.339Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
+{"ts":"2025-10-20T20:00:25.912Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
+{"ts":"2025-10-20T20:00:50.779Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
+{"ts":"2025-10-20T20:01:35.652Z","task":"smoke_api_ui","pass":0,"warn":4,"fail":3,"duration_ms":0}
