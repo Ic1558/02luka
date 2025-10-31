@@ -1,0 +1,6 @@
+แอนดี้ สถานะ: status_health_server
+andy status: status_health_server
+แอนดี้ รีสตาร์ท health: restart_health_server
+andy restart health: restart_health_server
+deploy dashboard: deploy_dashboard
+update docker yaml: update_docker_yaml
