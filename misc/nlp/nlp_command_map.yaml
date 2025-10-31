@@ -13,3 +13,7 @@
 "รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
 "restart andy health": restart_health_server
 "deploy boss api": deploy_dashboard
+"start boss api": deploy_dashboard
+"รีสตาร์ท boss api": deploy_dashboard
+"deploy dashboard": deploy_dashboard
+"รีสตาร์ทแดชบอร์ด": deploy_dashboard
