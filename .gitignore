@@ -45,3 +45,13 @@ g/reports/ops_atomic/heartbeat_*.md
 backups/
 skills/.tmp_router_patch.py
 tools/02luka_system_check.zsh
+
+# Authentication secrets (Local Auth v1)
+config/auth/users.json
+config/auth/.env.auth
+.env.auth
+*.secret
+.env/
+data/
+config/grafana/grafana.ini
+data/grafana/
