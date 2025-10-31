@@ -68,4 +68,9 @@ jobs:
           redis-cli -h 127.0.0.1 -p 6379 ping || echo "⚠️ Redis not accessible via localhost"
 
       - name: Run ops-gate
-        run: tools/ci/ops_gate.sh
+        run: |
+          if [ ! -f tools/ci/ops_gate.sh ]; then
+            echo "::error::tools/ci/ops_gate.sh is missing; ensure the ops gate script is checked in."
+            exit 1
+          fi
+          bash tools/ci/ops_gate.sh
