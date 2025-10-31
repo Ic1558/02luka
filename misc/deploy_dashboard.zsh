@@ -95,3 +95,4 @@ restart_launchagent && did=1 || true
 # Health check เสมอ (ถ้า dry-run ก็แค่ลองยิง)
 health_check || true
 log "===== deploy_dashboard done (DRY_RUN=$DRY_RUN) ====="
+$LUKA_HOME/tools/smoke_dashboard.zsh || echo "WARN: health check failed"

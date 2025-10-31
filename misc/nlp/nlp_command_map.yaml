@@ -8,3 +8,8 @@
 "andy health": check_health
 "รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
 "restart andy health": restart_health_server
+"สถานะแอนดี้": check_health
+"andy health": check_health
+"รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
+"restart andy health": restart_health_server
+"deploy boss api": deploy_dashboard
