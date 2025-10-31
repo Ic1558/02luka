@@ -21,3 +21,4 @@
 "andy metrics": check_health
 "andy metrics prom": check_health
 "boss api status": check_health
+"แอนดี้ เมตริกส์ โปรม": check_health
