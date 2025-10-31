@@ -1,0 +1,24 @@
+name: auto-tag
+on:
+  push:
+    branches:
+      - main
+      - '**/housekeeping/**'
+      - '**/ops/**'
+      - '**'
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TS=$(date -u +'%Y.%m.%d-%H%M')
+          TAG="v${TS}"
+          echo "Creating tag $TAG"
+          git tag -a "$TAG" -m "Auto tag $TAG"
+          git push origin "$TAG" || echo "Tag push skipped (exists?)"
