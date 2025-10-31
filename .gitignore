@@ -43,3 +43,5 @@ g/reports/ops_atomic/heartbeat_*.md
 # Process IDs
 *.pid
 backups/
+skills/.tmp_router_patch.py
+tools/02luka_system_check.zsh
