@@ -21,15 +21,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate health + manifest
+      - name: Build static site
         run: |
-          echo '<!doctype html><meta charset="utf-8"><title>OK</title><h1>02luka Health OK</h1>' > _health.html
-          echo '{"status":"ok","timestamp":"'$(date -u +%FT%TZ)'"}' > manifest.json
+          # Create clean dist directory
+          mkdir -p dist/ops
+          
+          # Copy only static content (not dynamic files)
+          cp 02luka.md dist/ 2>/dev/null || echo "No 02luka.md"
+          cp -r docs dist/ 2>/dev/null || echo "No docs directory"
+          
+          # Generate health page
+          cat > dist/_health.html << 'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>02luka Health</title>
+          <h1>02luka System Health</h1>
+          <p>Status: <strong style="color:green">OK</strong></p>
+          <p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>
+HTML
+          
+          # Generate manifest
+          cat > dist/manifest.json << JSON
+          {
+            "status": "ok",
+            "timestamp": "$(date -u +%FT%TZ)",
+            "version": "$(git rev-parse --short HEAD)",
+            "branch": "main"
+          }
+JSON
+          
+          # Generate ops status page
+          cat > dist/ops/status.html << 'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>02luka Ops Status</title>
+          <h1>02luka Operations</h1>
+          <p>System operational</p>
+HTML
+          
+          echo "✅ Static site built successfully"
+          ls -la dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: dist
 
   deploy:
     runs-on: ubuntu-latest
