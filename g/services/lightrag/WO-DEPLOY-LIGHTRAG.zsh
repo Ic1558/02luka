@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# NOTE: This script requires bash; run via `bash` not `zsh` to avoid container issues.
+
 
 timestamp() {
   date +"%H:%M:%S"
