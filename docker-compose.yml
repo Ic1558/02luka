@@ -60,6 +60,7 @@ services:
       - REDIS_URL=redis://02luka-redis:6379
       - BRIDGE_PORT=8788
       - NODE_ENV=production
+      - BRIDGE_TOKEN=${BRIDGE_TOKEN}
     volumes:
       - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g:ro  # Read-only
     working_dir: /app/g/tools/services
@@ -69,7 +70,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8788/health"]
+      test: ["CMD", "pgrep", "-f", "http_redis_bridge"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -162,17 +163,8 @@ services:
 # ========================================
 networks:
   02luka-net:
+    external: true
     name: 02luka-net
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.22.0.0/16
-          gateway: 172.22.0.1
-    driver_opts:
-      com.docker.network.bridge.name: br-02luka
-      com.docker.network.bridge.enable_icc: "true"
-      com.docker.network.bridge.enable_ip_masquerade: "true"
 
 # ========================================
 # Volume Configuration

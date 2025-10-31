@@ -671,3 +671,53 @@ For issues or questions:
 **Status**: ✅ Production Ready
 **Last Updated**: 2025-10-31
 **Maintainer**: 02luka Infrastructure Team
+
+
+## Environment Variables
+
+### BRIDGE_TOKEN Configuration
+
+The `http_redis_bridge` service requires a `BRIDGE_TOKEN` for authentication. This token is stored securely and must be loaded before deployment.
+
+**Location**: `~/.config/02luka/secrets/bridge.env`
+
+**Usage**:
+```bash
+# Load token before deployment
+source ~/.config/02luka/secrets/bridge.env
+export BRIDGE_TOKEN
+
+# Deploy with token
+docker-compose up -d
+```
+
+**Deployment Script**:
+The `compose-up.sh` script handles token loading automatically. However, for manual deployment:
+
+```bash
+# Manual deployment with token
+cd ~/LocalProjects/02luka_local_g/g
+source ~/.config/02luka/secrets/bridge.env
+export BRIDGE_TOKEN
+docker-compose up -d
+```
+
+**Security**:
+- File permissions: `600` (owner read/write only)
+- Never commit to git
+- Token is a 256-bit hex string (64 characters)
+- Used for HTTP Bearer authentication on port 8788
+
+**Regenerate Token** (if compromised):
+```bash
+TOKEN=$(openssl rand -hex 32)
+echo "BRIDGE_TOKEN=$TOKEN" > ~/.config/02luka/secrets/bridge.env
+chmod 600 ~/.config/02luka/secrets/bridge.env
+
+# Restart bridge service
+cd ~/LocalProjects/02luka_local_g/g
+source ~/.config/02luka/secrets/bridge.env
+export BRIDGE_TOKEN
+docker-compose restart http_redis_bridge
+```
+
