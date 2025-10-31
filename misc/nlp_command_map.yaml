@@ -1,0 +1,90 @@
+version: 1
+language: [th, en]
+routing:
+  channel_in: "gg:nlp"
+  allow_free_form: false
+  response_handler: "~/02luka/tools/nlp_response_summarizer.zsh"
+
+intents:
+  status_health_server:
+    description: Show health server status (pid/uptime/ports)
+    patterns:
+      - "status health server"
+      - "สถานะ health server"
+      - "andy status"
+      - "แอนดี้ สถานะ"
+    action:
+      type: shell
+      cmd: "~/02luka/tools/health_server_ctl.zsh status"
+    confirm: false
+    timeout_sec: 20
+
+  restart_health_server:
+    description: Restart the local health server on port 4000
+    patterns:
+      - "restart health server"
+      - "รีสตาร์ท health server"
+      - "แอนดี้ รีสตาร์ท health"
+      - "andy restart health"
+    action:
+      type: shell
+      cmd: "~/02luka/tools/health_server_ctl.zsh restart"
+      expect: ["✅ Health server running"]
+    confirm: true
+    timeout_sec: 60
+
+  deploy_dashboard:
+    description: Build and verify Ops Dashboard
+    patterns:
+      - "deploy dashboard"
+      - "ดีพลอยแดชบอร์ด"
+      - "อัปเดตแดชบอร์ด"
+      - "andy deploy dashboard"
+      - "แอนดี้ ดีพลอย แดชบอร์ด"
+    action:
+      type: shell
+      cmd: "~/02luka/tools/deploy_dashboard.zsh"
+      expect: ["✅ Dashboard online"]
+    confirm: true
+    timeout_sec: 300
+
+  update_docker_yaml:
+    description: Update/Sync docker-compose.yml to latest working config
+    patterns:
+      - "update docker yaml"
+      - "อัปเดต docker yaml"
+      - "ซิงค์ docker compose"
+      - "andy update docker"
+      - "แอนดี้ อัปเดต docker"
+    action:
+      type: shell
+      cmd: "~/02luka/tools/update_docker_yaml.zsh"
+      expect: ["✅ docker-compose.yml updated"]
+    confirm: true
+    timeout_sec: 90
+
+  restart_bridge:
+    description: Restart http_redis_bridge + clc_listener
+    patterns:
+      - "restart bridge"
+      - "รีสตาร์ทบริดจ์"
+      - "รีสตาร์ท clc listener"
+      - "andy restart bridge"
+      - "แอนดี้ รีสตาร์ท บริดจ์"
+    action:
+      type: shell
+      cmd: "~/02luka/tools/redis_bridge_ctl.zsh restart"
+      expect: ["✅ Redis connected"]
+    confirm: true
+    timeout_sec: 60
+
+fallback:
+  to: "rag"
+  when:
+    - not_intent_match
+    - begins_with: ["อะไร","สรุป","ทำไม","why","what","explain","log","report","สถานะล่าสุด"]
+
+policy:
+  safety:
+    require_confirm_for: [deploy_dashboard, update_docker_yaml, restart_bridge]
+  audit_log: "~/02luka/logs/nlp_router.log"
