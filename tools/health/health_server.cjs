@@ -49,9 +49,9 @@ process_memory_bytes{type="heapUsed"} ${process.memoryUsage().heapUsed}
   }
 });
 
-const PORT = 4000;
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`✅ Health server running on http://127.0.0.1:${PORT}`);
+const PORT = parseInt(process.env.HEALTH_PORT || process.env.PORT || '4000', 10);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Health server running on http://0.0.0.0:${PORT}`);
   console.log(`   /ping    - Health check`);
   console.log(`   /state   - System state`);
   console.log(`   /metrics - Prometheus metrics`);
