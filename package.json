@@ -9,7 +9,9 @@
     "validate": "make validate-zones",
     "proof": "make proof",
     "status": "make status",
-    "help": "make help"
+    "help": "make help",
+    "ui": "node run/local_ui_server.cjs",
+    "boss:stub": "node run/boss_api_stub.cjs"
   },
   "keywords": ["ai", "cls", "ops", "monitoring", "github-actions"],
   "author": "icmini",

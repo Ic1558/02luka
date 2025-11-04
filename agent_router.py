@@ -4,25 +4,86 @@ import sys
 import json
 import os
 import time
-import yaml
+try:
+    import yaml  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    yaml = None
 import subprocess
 from pathlib import Path
 from datetime import datetime
 
-# Constants
-LUKA_HOME = Path(os.getenv("LUKA_HOME", os.path.expanduser("~/LocalProjects/02luka_local_g/g")))
-SKILLS_DIR = LUKA_HOME / "skills"
-MAP_FILE = Path.home() / "02luka" / "core" / "nlp" / "nlp_command_map.yaml"
-RECEIPTS_DIR = Path.home() / "02luka" / "logs" / "agent" / "receipts"
-RESULTS_DIR = Path.home() / "02luka" / "logs" / "agent" / "results"
+# Paths & constants
+REPO_ROOT = Path(__file__).resolve().parent
+ENV_LUKA_HOME = os.getenv("LUKA_HOME")
+LUKA_HOME = Path(ENV_LUKA_HOME).expanduser() if ENV_LUKA_HOME else REPO_ROOT
+SKILLS_DIR = Path(os.getenv("LUKA_SKILLS_DIR", LUKA_HOME / "skills"))
+
+INTENT_MAP_CANDIDATES = [
+    Path(os.getenv("LUKA_INTENT_MAP")) if os.getenv("LUKA_INTENT_MAP") else None,
+    LUKA_HOME / "config" / "intent_map.json",
+    LUKA_HOME / "config" / "intent_map.yaml",
+    REPO_ROOT / "config" / "intent_map.json",
+    REPO_ROOT / "config" / "intent_map.yaml",
+    Path.home() / "02luka" / "core" / "nlp" / "nlp_command_map.yaml",
+]
+
+LOG_BASE = Path(os.getenv("LUKA_LOG_DIR", LUKA_HOME / "logs" / "agent"))
+RECEIPTS_DIR = LOG_BASE / "receipts"
+RESULTS_DIR = LOG_BASE / "results"
 DEFAULT_TIMEOUT = 120  # seconds
 
 def load_intent_map():
-    """Load nlp_command_map.yaml"""
-    if not MAP_FILE.exists():
-        return {}
-    with open(MAP_FILE, 'r') as f:
-        return yaml.safe_load(f) or {}
+    """Load the intent mapping from the first available candidate."""
+    for candidate in INTENT_MAP_CANDIDATES:
+        if not candidate:
+            continue
+        candidate_path = Path(candidate).expanduser()
+        if not candidate_path.exists():
+            continue
+        with open(candidate_path, 'r', encoding='utf-8') as handle:
+            suffix = candidate_path.suffix.lower()
+            if suffix in {'.yaml', '.yml'}:
+                if not yaml:
+                    continue
+                data = yaml.safe_load(handle) or {}
+            elif suffix == '.json':
+                data = json.load(handle) or {}
+            else:
+                continue
+            if isinstance(data, dict):
+                normalised = {}
+                for key, value in data.items():
+                    if isinstance(value, dict):
+                        normalised[key] = value
+                    elif isinstance(value, list):
+                        normalised[key] = {
+                            "skills": [
+                                item if isinstance(item, dict) else {"name": str(item)}
+                                for item in value
+                            ]
+                        }
+                if normalised:
+                    return normalised
+    return {}
+
+def resolve_skill_path(skill_name):
+    """Resolve a skill name to an executable path."""
+    name_path = Path(skill_name)
+    candidates = []
+
+    if name_path.is_absolute():
+        candidates.append(name_path)
+    else:
+        candidates.extend([
+            SKILLS_DIR / name_path,
+            REPO_ROOT / name_path,
+            REPO_ROOT / "skills" / name_path,
+        ])
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 def validate_params(params):
     """Block CloudStorage paths and validate params"""
@@ -38,9 +99,9 @@ def validate_params(params):
 
 def execute_skill(skill_name, params, timeout=DEFAULT_TIMEOUT):
     """Execute a skill with JSON input/output contract"""
-    skill_path = SKILLS_DIR / skill_name
+    skill_path = resolve_skill_path(skill_name)
 
-    if not skill_path.exists():
+    if not skill_path:
         return {"ok": False, "error": f"skill not found: {skill_name}"}
 
     # Build skill input
@@ -168,7 +229,8 @@ def main():
         sys.exit(1)
 
     # Get skill chain
-    skill_chain = intent_map[intent].get("skills", [])
+    intent_config = intent_map[intent]
+    skill_chain = intent_config.get("skills", []) if isinstance(intent_config, dict) else []
     if not skill_chain:
         print(json.dumps({"ok": False, "error": f"no skills defined for intent: {intent}"}))
         sys.exit(1)
@@ -178,9 +240,14 @@ def main():
     success = True
 
     for skill_def in skill_chain:
-        skill_name = skill_def.get("name", "")
-        skill_params = skill_def.get("params", {})
-        timeout = skill_def.get("timeout", DEFAULT_TIMEOUT)
+        if isinstance(skill_def, str):
+            skill_name = skill_def
+            skill_params = {}
+            timeout = DEFAULT_TIMEOUT
+        else:
+            skill_name = skill_def.get("name", "")
+            skill_params = skill_def.get("params", {})
+            timeout = skill_def.get("timeout", DEFAULT_TIMEOUT)
 
         # Merge global params with skill-specific params
         merged_params = {**params, **skill_params}
