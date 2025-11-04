@@ -1,0 +1,32 @@
+intents:
+  backup.now:
+    desc: "Run Google Drive 02luka backup once (fast, selective)"
+    cmd:  "$HOME/02luka/tools/backup_to_gdrive.zsh --once"
+
+  sync.expense:
+    desc: "Push expense tracker to gd sync path"
+    cmd:  "rsync -a --delete $HOME/02luka/g/expense/ $HOME/gd/02luka_sync/current/g/expense/"
+
+  restart.health:
+    desc: "Restart health_server service"
+    cmd:  "launchctl kickstart -k gui/$(id -u)/com.02luka.health_server || true"
+
+  deploy.dashboard:
+    desc: "Deploy static dashboard"
+    cmd:  "$HOME/02luka/tools/deploy_dashboard.zsh"
+
+  restart.filebridge:
+    desc: "Restart FileBridge"
+    cmd:  "launchctl kickstart -k gui/$(id -u)/com.02luka.filebridge"
+
+synonyms:
+  "backup now": backup.now
+  "สำรองข้อมูลตอนนี้": backup.now
+  "expense sync": sync.expense
+  "ซิงค์ค่าใช้จ่าย": sync.expense
+  "restart health": restart.health
+  "รีสตาร์ทเฮลธ์": restart.health
+  "deploy dashboard": deploy.dashboard
+  "รีลีสดาชบอร์ด": deploy.dashboard
+  "restart filebridge": restart.filebridge
+  "รีสตาร์ทไฟล์บริดจ์": restart.filebridge
