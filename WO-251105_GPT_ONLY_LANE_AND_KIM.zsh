@@ -172,15 +172,22 @@ python -m pip install --upgrade pip >/dev/null
 pip install "python-telegram-bot==21.6" "redis==5.0.1" >/dev/null
 
 ENVF="$CONFIG/kim.env"
-cat > "$ENVF" <<'ENV'
-TELEGRAM_BOT_TOKEN=REPLACE_ME
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_PASSWORD=gggclukaic
-REDIS_CHANNEL_IN=gg:nlp
+TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
+[[ -z "$TELEGRAM_BOT_TOKEN" ]] && { echo "ERROR: TELEGRAM_BOT_TOKEN must be set in the environment" >&2; exit 1; }
+REDIS_PASSWORD_VALUE="${REDIS_PASSWORD:-}"
+if [[ -z "$REDIS_PASSWORD_VALUE" ]]; then
+  echo "WARN: REDIS_PASSWORD not set; continuing without Redis authentication" >&2
+fi
+REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+REDIS_CHANNEL_IN="${REDIS_CHANNEL_IN:-gg:nlp}"
+cat > "$ENVF" <<ENV
+TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+REDIS_HOST=$REDIS_HOST
+REDIS_PORT=$REDIS_PORT
+REDIS_PASSWORD=$REDIS_PASSWORD_VALUE
+REDIS_CHANNEL_IN=$REDIS_CHANNEL_IN
 ENV
-# inject real token (from user)
-sed -i '' 's|TELEGRAM_BOT_TOKEN=REPLACE_ME|TELEGRAM_BOT_TOKEN=8412723056:AAHWPvOauQ4QHoz3v0mUM1ZCI2hWJc4uGcU|' "$ENVF"
 
 cat > "$KDIR/kim_telegram_bot.py" <<'PY'
 import os, sys, json, logging
