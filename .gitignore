@@ -1,0 +1,51 @@
+# 02luka Git Ignore
+# Created: 2025-11-05
+
+# Logs
+*.log
+logs/*.log
+telemetry/*.log
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Runtime state
+run/*.out
+run/*.err
+run/*.pid
+state/*.json
+
+# Large data files
+*.mp4
+*.mov
+*.avi
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+node_modules/
+dist/
+build/
+
+# Sensitive
+*.key
+*.pem
+credentials.json
+.env
+secrets/

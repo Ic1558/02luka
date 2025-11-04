@@ -1,0 +1,90 @@
+#!/usr/bin/env zsh
+# Dashboard API - Provides JSON data for system monitoring
+set -euo pipefail
+
+# Get all services status
+get_services() {
+  launchctl list | grep "com.02luka" | awk '{print "{\"name\":\""$3"\",\"pid\":\""$1"\",\"exit\":\""$2"\"}"}' | jq -s '.'
+}
+
+# Get recent log activity
+get_logs() {
+  find ~/02luka/logs -name "*.log" -type f -mtime -1 2>/dev/null | while read f; do
+    tail -5 "$f" 2>/dev/null | while read line; do
+      echo "{\"file\":\"$(basename "$f")\",\"line\":\"$line\",\"time\":\"$(date +%s)\"}"
+    done
+  done | jq -s 'sort_by(.time) | reverse | .[0:20]'
+}
+
+# Get WO progress
+get_wo_progress() {
+  phase1_log="$HOME/02luka/logs/WO-251105-gdrive_fresh_start_hybrid.log"
+  phase2_log="$HOME/02luka/logs/WO-251105-gdrive_twoway_sync_mobile.log"
+
+  phase1_status="pending"
+  phase2_status="pending"
+  phase1_progress=0
+  phase2_progress=0
+
+  if [[ -f "$phase1_log" ]]; then
+    if grep -q "SUCCESS - GOOGLE DRIVE SYNC OPERATIONAL" "$phase1_log" 2>/dev/null; then
+      phase1_status="completed"
+      phase1_progress=100
+    elif grep -q "GOOGLE DRIVE FRESH START" "$phase1_log" 2>/dev/null; then
+      phase1_status="in_progress"
+      # Estimate progress based on phases completed
+      phase_count=$(grep -c "Phase" "$phase1_log" 2>/dev/null || echo 0)
+      phase1_progress=$((phase_count * 16)) # 6 phases total = ~16% each
+    fi
+  fi
+
+  if [[ -f "$phase2_log" ]]; then
+    if grep -q "TWO-WAY SYNC + MOBILE ACCESS READY" "$phase2_log" 2>/dev/null; then
+      phase2_status="completed"
+      phase2_progress=100
+    elif grep -q "TWO-WAY SYNC + MOBILE ACCESS SETUP" "$phase2_log" 2>/dev/null; then
+      phase2_status="in_progress"
+      phase_count=$(grep -c "Phase" "$phase2_log" 2>/dev/null || echo 0)
+      phase2_progress=$((phase_count * 20)) # 5 phases total = 20% each
+    fi
+  fi
+
+  echo "{\"phase1\":{\"status\":\"$phase1_status\",\"progress\":$phase1_progress},\"phase2\":{\"status\":\"$phase2_status\",\"progress\":$phase2_progress}}"
+}
+
+# Get system stats
+get_stats() {
+  total=$(launchctl list | grep "com.02luka" | wc -l | tr -d ' ')
+  running=$(launchctl list | grep "com.02luka" | awk '$1 != "-" {print}' | wc -l | tr -d ' ')
+  ondemand=$(launchctl list | grep "com.02luka" | awk '$1 == "-" && $2 == "0" {print}' | wc -l | tr -d ' ')
+  stopped=$(launchctl list | grep "com.02luka" | awk '$2 > "0" {print}' | wc -l | tr -d ' ')
+
+  echo "{\"total\":$total,\"running\":$running,\"ondemand\":$ondemand,\"stopped\":$stopped}"
+}
+
+# Main API endpoint
+case "${1:-status}" in
+  services)
+    get_services
+    ;;
+  logs)
+    get_logs
+    ;;
+  wo-progress)
+    get_wo_progress
+    ;;
+  stats)
+    get_stats
+    ;;
+  all)
+    echo "{"
+    echo "\"services\":$(get_services),"
+    echo "\"stats\":$(get_stats),"
+    echo "\"wo_progress\":$(get_wo_progress),"
+    echo "\"logs\":$(get_logs)"
+    echo "}"
+    ;;
+  *)
+    echo "{\"services\":$(get_services),\"stats\":$(get_stats)}"
+    ;;
+esac

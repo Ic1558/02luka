@@ -1,0 +1,97 @@
+#!/usr/bin/env zsh
+# Dashboard API - Generate real-time data for dashboard
+set -euo pipefail
+
+ROOT="$HOME/02luka"
+OUTPUT="$ROOT/g/apps/dashboard/dashboard_data.json"
+
+# === Roadmap Progress ===
+ROADMAP_DATA="{}"
+if [[ -f "$ROOT/g/progress/current_progress.json" ]]; then
+  ROADMAP_DATA=$(cat "$ROOT/g/progress/current_progress.json")
+fi
+
+# === LaunchAgent Services ===
+SERVICES_JSON="[]"
+if command -v launchctl &> /dev/null; then
+  # Get all 02luka services
+  SERVICES_JSON=$(launchctl list | grep "com.02luka" | awk '{print $1, $2, $3}' | \
+    jq -R -s 'split("\n") | map(select(length > 0) | split(" ") | {
+      pid: (if .[0] == "-" then null else .[0] | tonumber end),
+      exit: (.[1] | tonumber),
+      name: .[2]
+    })')
+fi
+
+# === WO Execution History ===
+WO_HISTORY="[]"
+if [[ -d "$ROOT/telemetry" ]]; then
+  # Get last 10 WO executions
+  WO_HISTORY=$(find "$ROOT/telemetry" -name "wo_execution_*.log" -type f 2>/dev/null | \
+    sort -r | head -10 | \
+    xargs -I {} sh -c '
+      FILE="{}"
+      WO_NAME=$(basename "$FILE" .log | sed "s/wo_execution_//")
+      STARTED=$(grep "Started:" "$FILE" | head -1 | awk "{print \$2, \$3}" || echo "")
+      COMPLETED=$(grep "Completed:" "$FILE" | head -1 | awk "{print \$2, \$3}" || echo "")
+      RESULT=$(grep "Result:" "$FILE" | head -1 | awk "{print \$2}" || echo "unknown")
+      echo "$WO_NAME|$STARTED|$COMPLETED|$RESULT"
+    ' 2>/dev/null | \
+    jq -R -s 'split("\n") | map(select(length > 0) | split("|") | {
+      name: .[0],
+      started: .[1],
+      completed: .[2],
+      result: .[3]
+    })')
+fi
+
+# === MLS Stats ===
+MLS_TOTAL=0
+MLS_SOLUTIONS=0
+MLS_FAILURES=0
+if [[ -f "$ROOT/g/knowledge/mls_lessons.jsonl" ]]; then
+  MLS_TOTAL=$(cat "$ROOT/g/knowledge/mls_lessons.jsonl" | wc -l | tr -d ' ')
+  MLS_SOLUTIONS=$(cat "$ROOT/g/knowledge/mls_lessons.jsonl" | jq -s '[.[] | select(.type == "solution")] | length')
+  MLS_FAILURES=$(cat "$ROOT/g/knowledge/mls_lessons.jsonl" | jq -s '[.[] | select(.type == "failure")] | length')
+fi
+
+# === Active Tasks (from current_progress.json) ===
+CURRENT_TASKS="[]"
+if [[ -f "$ROOT/g/progress/current_progress.json" ]]; then
+  CURRENT_TASKS=$(jq -r '.current_tasks // []' "$ROOT/g/progress/current_progress.json")
+fi
+
+# === System Stats ===
+DISK_FREE=$(df -h ~ | awk 'NR==2 {print $4}')
+UPTIME=$(uptime | awk -F'up ' '{print $2}' | awk -F',' '{print $1}')
+
+# === Generate Dashboard Data JSON ===
+jq -n \
+  --argjson roadmap "$ROADMAP_DATA" \
+  --argjson services "$SERVICES_JSON" \
+  --argjson wo_history "$WO_HISTORY" \
+  --argjson current_tasks "$CURRENT_TASKS" \
+  --arg mls_total "$MLS_TOTAL" \
+  --arg mls_solutions "$MLS_SOLUTIONS" \
+  --arg mls_failures "$MLS_FAILURES" \
+  --arg disk_free "$DISK_FREE" \
+  --arg uptime "$UPTIME" \
+  --arg timestamp "$(date -Iseconds)" \
+  '{
+    timestamp: $timestamp,
+    roadmap: $roadmap,
+    services: $services,
+    wo_history: $wo_history,
+    current_tasks: $current_tasks,
+    mls: {
+      total: ($mls_total | tonumber),
+      solutions: ($mls_solutions | tonumber),
+      failures: ($mls_failures | tonumber)
+    },
+    system: {
+      disk_free: $disk_free,
+      uptime: $uptime
+    }
+  }' > "$OUTPUT"
+
+echo "✅ Dashboard data generated: $OUTPUT"

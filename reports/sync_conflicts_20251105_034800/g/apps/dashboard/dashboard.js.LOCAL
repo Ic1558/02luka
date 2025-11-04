@@ -1,0 +1,460 @@
+/**
+ * Dashboard Interactive Logic
+ * Makes the dashboard actually useful with proper error handling and state management
+ */
+
+// --- GLOBAL STATE (single source of truth) ---
+const state = {
+  wos: {
+    data: [],
+    filter: 'all',        // 'all'|'success'|'failed'|'pending'
+    loading: false,
+    error: null,
+    fetchController: null // AbortController for in-flight request
+  },
+  logs: {
+    lines: [],
+    cursor: null,
+    paused: false,
+    fetchController: null
+  },
+  autoRefreshEnabled: true,
+  refreshInterval: null,
+  logRefreshInterval: null
+};
+
+// Small utility: debounce to avoid double/rapid clicks
+function debounce(fn, ms = 300) {
+  let t = null;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+// Utility: Safe fetch with timeout
+async function safeFetch(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+}
+
+// Utility: Show error message
+function showError(elementId, message) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.innerHTML = `<div style="color: #f56565; padding: 12px; background: #fff5f5; border-radius: 6px; margin: 8px 0;">⚠️ ${message}</div>`;
+  }
+}
+
+// Utility: Show loading skeleton
+function showLoading(elementId) {
+  const el = document.getElementById(elementId);
+  if (el) {
+    el.innerHTML = '<div style="padding: 20px; text-align: center; color: #a0aec0;">Loading...</div>';
+  }
+}
+
+// Initialize WO filters (call once on boot)
+function initWOFilters() {
+  const buttons = [...document.querySelectorAll('[data-wo-filter]')];
+  const onClick = debounce(async (ev) => {
+    const next = ev.currentTarget.getAttribute('data-wo-filter');
+    if (next === state.wos.filter) return; // no-op
+
+    state.wos.filter = next;
+    updateWOFilterUI();   // sets aria-pressed + class
+    await loadWOs();      // fetch & render with proper abort
+  }, 200);
+
+  buttons.forEach(btn => btn.addEventListener('click', onClick));
+  updateWOFilterUI(); // initialize the visual state
+}
+
+function updateWOFilterUI() {
+  const buttons = document.querySelectorAll('[data-wo-filter]');
+  buttons.forEach(btn => {
+    const isActive = btn.getAttribute('data-wo-filter') === state.wos.filter;
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    btn.classList.toggle('is-active', isActive);
+  });
+}
+
+// Centralized WOs loader with abort controller
+async function loadWOs() {
+  // Cancel the previous fetch if it's still running
+  if (state.wos.fetchController) {
+    try { state.wos.fetchController.abort(); } catch {}
+  }
+  const ctrl = new AbortController();
+  state.wos.fetchController = ctrl;
+
+  // Render skeleton + reset error
+  state.wos.loading = true;
+  state.wos.error = null;
+  renderWOs();
+
+  try {
+    const url = state.wos.filter === 'all'
+      ? 'http://127.0.0.1:8767/api/wos'
+      : `http://127.0.0.1:8767/api/wos?status=${state.wos.filter}`;
+
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+    const data = await res.json();
+    state.wos.data = Array.isArray(data) ? data : [];
+
+  } catch (err) {
+    // If aborted, don't show error; another load is coming
+    if (err.name === 'AbortError') return;
+    state.wos.error = String(err);
+  } finally {
+    // Only clear controller if this load is the current one
+    if (state.wos.fetchController === ctrl) {
+      state.wos.fetchController = null;
+      state.wos.loading = false;
+      renderWOs();
+    }
+  }
+}
+
+// Render WOs with skeleton, empty-state, and error handling
+function renderWOs() {
+  const root = document.querySelector('#wo-list');
+  const errBox = document.querySelector('#wo-error');
+
+  if (!root) return;
+
+  // Show error if exists
+  if (errBox) {
+    errBox.textContent = state.wos.error ? `⚠️ ${state.wos.error}` : '';
+  }
+
+  // Loading skeleton
+  if (state.wos.loading) {
+    root.innerHTML = `
+      <div style="height: 1.25rem; background: linear-gradient(90deg, #eee, #f5f5f5, #eee); border-radius: 8px; animation: shimmer 1.2s infinite;"></div>
+      <div style="height: 1.25rem; background: linear-gradient(90deg, #eee, #f5f5f5, #eee); border-radius: 8px; margin-top: 8px; animation: shimmer 1.2s infinite;"></div>
+    `;
+    return;
+  }
+
+  // Error state with retry
+  if (state.wos.error) {
+    root.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <button onclick="loadWOs()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Retry</button>
+      </div>
+    `;
+    return;
+  }
+
+  // Empty state with helpful message
+  if (!state.wos.data.length) {
+    const messages = {
+      'success': 'No successful WOs in the last 24h.',
+      'failed': 'No failed or blocked WOs recorded.',
+      'pending': 'No pending WOs at the moment.',
+      'all': 'No work orders found.'
+    };
+    const why = messages[state.wos.filter] || 'No work orders found.';
+    root.innerHTML = `<div style="text-align: center; padding: 40px; color: #a0aec0;"><em>${why}</em></div>`;
+    return;
+  }
+
+  // Render data
+  root.innerHTML = state.wos.data.slice(0, 20).map(wo => renderWOCard(wo)).join('');
+
+  // Update completed count
+  const completedCount = state.wos.data.filter(w => w.status === 'success').length;
+  const completedEl = document.getElementById('completed-wos');
+  if (completedEl) completedEl.textContent = completedCount;
+}
+
+// Keep old function name for compatibility
+async function loadWOList(filter = 'all') {
+  state.wos.filter = filter;
+  updateWOFilterUI();
+  await loadWOs();
+}
+
+// Render single WO card
+function renderWOCard(wo) {
+  const statusColors = {
+    'success': '#48bb78',
+    'failed': '#f56565',
+    'pending': '#ed8936',
+    'running': '#4299e1',
+    'queued': '#a0aec0'
+  };
+
+  const statusIcons = {
+    'success': '✅',
+    'failed': '❌',
+    'pending': '⏳',
+    'running': '▶️',
+    'queued': '⚪'
+  };
+
+  const color = statusColors[wo.status] || '#a0aec0';
+  const icon = statusIcons[wo.status] || '⚪';
+  const duration = wo.duration_ms ? `${(wo.duration_ms / 1000).toFixed(1)}s` : '-';
+  const timestamp = wo.started_at || '';
+
+  return `
+    <div style="padding: 10px; margin-bottom: 6px; background: #f7fafc; border-radius: 6px; border-left: 3px solid ${color}; cursor: pointer; transition: background 0.2s;"
+         onclick="loadWODetail('${wo.id}')"
+         onmouseover="this.style.background='#edf2f7'"
+         onmouseout="this.style.background='#f7fafc'">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div style="font-weight: 600; color: #2d3748; font-size: 13px;">${icon} ${wo.id}</div>
+          <div style="font-size: 11px; color: #718096; margin-top: 2px;">${wo.goal || 'No description'}</div>
+        </div>
+        <div style="text-align: right; font-size: 11px; color: #a0aec0;">
+          <div>${timestamp}</div>
+          <div>${duration}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Load WO detail
+async function loadWODetail(woId) {
+  const detailEl = document.getElementById('wo-detail');
+  if (!detailEl) return;
+
+  detailEl.innerHTML = '<div style="padding: 20px; text-align: center;">Loading details...</div>';
+
+  try {
+    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=100`);
+    detailEl.innerHTML = renderWODetail(wo);
+    detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (error) {
+    showError('wo-detail', `Failed to load WO details: ${error.message}`);
+  }
+}
+
+// Render WO detail panel
+function renderWODetail(wo) {
+  const statusColor = wo.status === 'success' ? '#48bb78' :
+                     wo.status === 'failed' ? '#f56565' : '#a0aec0';
+
+  let logSection = '';
+  if (wo.log_tail && wo.log_tail.length > 0) {
+    const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    logSection = `
+      <details open style="margin-top: 12px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #2d3748; padding: 8px 0;">📜 Log Tail</summary>
+        <pre style="margin-top: 8px; padding: 12px; background: #1a202c; color: #48bb78; border-radius: 6px; font-size: 11px; max-height: 300px; overflow-y: auto; font-family: monospace;">${logLines}</pre>
+      </details>
+    `;
+  }
+
+  let errorSection = '';
+  if (wo.error) {
+    errorSection = `
+      <div style="padding: 10px; background: #fed7d7; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #f56565;">
+        <strong style="color: #742a2a;">Error:</strong>
+        <div style="font-size: 12px; color: #742a2a; margin-top: 4px;">${wo.error.message || 'Unknown error'}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div style="padding: 16px; background: #edf2f7; border-radius: 8px; border-left: 4px solid ${statusColor}; margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+        <h3 style="font-size: 16px; color: #1a202c; margin: 0;">${wo.id}</h3>
+        <button onclick="closeWODetail()" style="padding: 4px 12px; font-size: 12px; background: #cbd5e0; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+
+      <div style="font-size: 13px; color: #2d3748; margin-bottom: 12px;">
+        <strong>Goal:</strong> ${wo.goal || 'No description'}
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px; color: #4a5568; margin-bottom: 12px;">
+        <div><strong>Owner:</strong> ${wo.owner}</div>
+        <div><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${wo.status}</span></div>
+        <div><strong>Operation:</strong> ${wo.op || '-'}</div>
+        <div><strong>Duration:</strong> ${wo.duration_ms ? (wo.duration_ms / 1000).toFixed(1) + 's' : '-'}</div>
+      </div>
+
+      ${errorSection}
+
+      <details style="margin-top: 12px;">
+        <summary style="cursor: pointer; font-weight: 600; color: #2d3748; padding: 8px 0;">⚙️ Inputs/Outputs</summary>
+        <pre style="margin-top: 8px; padding: 10px; background: #f7fafc; border-radius: 6px; font-size: 11px; overflow-x: auto;">${JSON.stringify({inputs: wo.inputs, outputs: wo.outputs}, null, 2)}</pre>
+      </details>
+
+      ${logSection}
+
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #cbd5e0; font-size: 11px; color: #a0aec0;">
+        Script: <code style="background: #f7fafc; padding: 2px 6px; border-radius: 3px;">${wo.script_path || '-'}</code>
+      </div>
+    </div>
+  `;
+}
+
+// Close WO detail
+function closeWODetail() {
+  const detailEl = document.getElementById('wo-detail');
+  if (detailEl) detailEl.innerHTML = '';
+}
+
+// Load system logs
+async function loadSystemLogs() {
+  const logsEl = document.getElementById('live-logs');
+  if (!logsEl) return;
+
+  try {
+    const data = await safeFetch('http://127.0.0.1:8767/api/health/logs?lines=200');
+    const lines = data.lines || [];
+
+    if (lines.length === 0) {
+      logsEl.innerHTML = '<div class="log-line" style="color: #a0aec0;">No logs available</div>';
+      return;
+    }
+
+    const html = lines.map(line => {
+      let className = 'log-line';
+      const lower = line.toLowerCase();
+      if (lower.includes('error') || lower.includes('failed')) {
+        return `<div class="${className}" style="color: #fc8181;">${escapeHtml(line)}</div>`;
+      } else if (lower.includes('warn')) {
+        return `<div class="${className}" style="color: #f6ad55;">${escapeHtml(line)}</div>`;
+      }
+      return `<div class="${className}">${escapeHtml(line)}</div>`;
+    }).join('');
+
+    logsEl.innerHTML = html;
+
+  } catch (error) {
+    showError('live-logs', `Failed to load logs: ${error.message}`);
+  }
+}
+
+// Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Refresh all dashboard data
+async function refreshAllData() {
+  const timestamp = new Date().toLocaleTimeString();
+  const updateEl = document.getElementById('last-update');
+  if (updateEl) {
+    updateEl.textContent = `Last updated: ${timestamp}`;
+  }
+
+  // Load dashboard data (roadmap progress)
+  try {
+    const response = await fetch('./dashboard_data.json');
+    if (response.ok) {
+      const data = await response.json();
+
+      // Update roadmap progress
+      if (data.roadmap) {
+        const roadmapProgressEl = document.getElementById('roadmap-progress');
+        const phaseProgressEl = document.getElementById('phase-progress');
+        if (roadmapProgressEl) roadmapProgressEl.textContent = `${data.roadmap.overall_progress_pct}%`;
+        if (phaseProgressEl) phaseProgressEl.textContent = `${data.roadmap.current_phase_pct}%`;
+      }
+
+      // Update services
+      if (data.services) {
+        const runningEl = document.getElementById('running-count');
+        if (runningEl) runningEl.textContent = data.services.running;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error);
+  }
+
+  // Reload WO list
+  await loadWOList(state.woFilter);
+}
+
+// Setup auto-refresh
+function setupAutoRefresh() {
+  if (state.refreshInterval) {
+    clearInterval(state.refreshInterval);
+  }
+
+  if (state.autoRefreshEnabled) {
+    state.refreshInterval = setInterval(refreshAllData, 30000); // 30 seconds
+  }
+}
+
+// Setup log auto-refresh
+function setupLogAutoRefresh() {
+  if (state.logRefreshInterval) {
+    clearInterval(state.logRefreshInterval);
+  }
+
+  const checkbox = document.getElementById('auto-refresh-logs');
+  const enabled = checkbox ? checkbox.checked : true;
+
+  if (enabled) {
+    state.logRefreshInterval = setInterval(loadSystemLogs, 5000); // 5 seconds
+  }
+}
+
+// Initialize dashboard
+async function initDashboard() {
+  console.log('🚀 Initializing dashboard...');
+
+  // Initialize filter buttons
+  initWOFilters();
+
+  // Initial load
+  await refreshAllData();
+  await loadSystemLogs();
+
+  // Setup auto-refresh
+  setupAutoRefresh();
+  setupLogAutoRefresh();
+
+  // Handle visibility change (pause when hidden)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (state.refreshInterval) clearInterval(state.refreshInterval);
+      if (state.logRefreshInterval) clearInterval(state.logRefreshInterval);
+    } else {
+      setupAutoRefresh();
+      setupLogAutoRefresh();
+    }
+  });
+
+  console.log('✅ Dashboard initialized');
+}
+
+// Wait for DOM to be ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDashboard);
+} else {
+  initDashboard();
+}

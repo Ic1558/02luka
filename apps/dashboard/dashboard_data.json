@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-11-05T06:30:00+07:00",
+  "roadmap": {
+    "name": "Autonomous 02luka System",
+    "overall_progress_pct": 70,
+    "current_phase_name": "Phase 3: Local AI Integration",
+    "current_phase_pct": 50,
+    "tasks": [
+      {
+        "name": "Integrate Ollama with expense OCR workflow",
+        "status": "in_progress"
+      },
+      {
+        "name": "Build keyword extraction pipeline",
+        "status": "pending"
+      },
+      {
+        "name": "Performance tuning and production testing",
+        "status": "pending"
+      }
+    ]
+  },
+  "services": {
+    "total": 20,
+    "running": 4,
+    "ondemand": 12,
+    "stopped": 4,
+    "mls": {
+      "total": 15,
+      "solutions": 10,
+      "failures": 3
+    }
+  },
+  "wo_history": [
+    {"name": "WO-251105-gdrive_twoway_sync_mobile", "result": "success", "completed": "2025-11-05 05:22:50"},
+    {"name": "WO-251105-gdrive_fresh_start_hybrid", "result": "success", "completed": "2025-11-05 05:22:43"},
+    {"name": "WO-251105-gdrive_dryrun", "result": "success", "completed": "2025-11-05 05:22:40"},
+    {"name": "WO-251105-test_auto_pickup", "result": "success", "completed": "2025-11-05 02:31:56"}
+  ],
+  "system": {
+    "disk_free": "102Gi",
+    "uptime": " 2 days"
+  }
+}
