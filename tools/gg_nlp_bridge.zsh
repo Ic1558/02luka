@@ -8,6 +8,19 @@ LOG="$LOGS/gg_nlp_bridge.$(date +%Y%m%d_%H%M%S).log"
 CHANNEL_IN="gg:nlp"
 CHANNEL_OUT="shell"
 TASK_PREFIX="gg-nlp"
+
+if [[ -f "$CONFIG/kim.env" ]]; then
+  set -a
+  source "$CONFIG/kim.env"
+  set +a
+fi
+
+REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
+REDIS_PORT="${REDIS_PORT:-6379}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
+CHANNEL_IN="${REDIS_CHANNEL_IN:-$CHANNEL_IN}"
+redis_args=(-h "$REDIS_HOST" -p "$REDIS_PORT")
+[[ -n "$REDIS_PASSWORD" ]] && redis_args+=(-a "$REDIS_PASSWORD")
 exec > >(tee -a "$LOG") 2>&1
 echo "== [gg_nlp_bridge] PID $$ =="
 
@@ -52,12 +65,12 @@ publish_shell_task() {
   json="$(jq -n --arg tid "$tid" --arg cmd "$cmd" \
     '{task_id:$tid, type:"shell", cmd:$cmd, timeout_sec:3600 }')"
   echo "Dispatch → $CHANNEL_OUT: $json"
-  redis-cli PUBLISH "$CHANNEL_OUT" "$json" >/dev/null
+  redis-cli "${redis_args[@]}" PUBLISH "$CHANNEL_OUT" "$json" >/dev/null
   echo "$tid"
 }
 
 echo "Subscribing to $CHANNEL_IN …"
-redis-cli --raw SUBSCRIBE "$CHANNEL_IN" | while read -r line; do
+redis-cli --raw "${redis_args[@]}" SUBSCRIBE "$CHANNEL_IN" | while read -r line; do
   if [[ "$line" == "message" ]]; then
     read -r chan
     read -r payload
