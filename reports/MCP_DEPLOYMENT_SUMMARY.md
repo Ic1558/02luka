@@ -1,7 +1,8 @@
 # MCP Native Deployment – Summary Report
 
 **Date:** 2025-11-06
-**Maintainer:** GG Core (02LUKA Automation)
+**Agent:** CLC (Claude Code)
+**Maintainer:** CLC
 **Version:** v1.0-native-memory
 **Status:** ✅ COMPLETE
 
@@ -107,7 +108,8 @@ This principle led to replacing fragile text manipulation (awk/sed) with robust 
 ---
 
 **Classification:** Safe Idempotent Patch (SIP) Deployment
-**Maintainer:** GG Core (02LUKA Automation)
+**Deployed by:** CLC (Claude Code)
+**Maintainer:** CLC
 **Version:** v1.0-native-memory
 **Phase:** 13 – Native MCP Expansion
 **Verified by:** CDC / CLC / GG SOT Audit Layer

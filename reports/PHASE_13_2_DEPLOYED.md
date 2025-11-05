@@ -1,7 +1,8 @@
 # Phase 13.2 – Cross-Agent MCP Binding DEPLOYED
 
 **Date:** 2025-11-06
-**Maintainer:** GG Core (02LUKA Automation)
+**Agent:** CLC (Claude Code)
+**Maintainer:** CLC
 **Phase:** 13.2 – Cross-Agent Binding
 **Status:** ✅ DEPLOYED (1 known issue)
 

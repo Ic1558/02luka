@@ -1,6 +1,8 @@
 # Repository Size Blocker – Git Push Limit Exceeded
 
 **Date:** 2025-11-06
+**Agent:** CLC (Claude Code)
+**Maintainer:** CLC
 **Status:** 🔶 Open (Non-blocking)
 **Impact:** Parent repo push blocked; g/ submodule pushes OK
 **Severity:** Medium (does not affect system operation)
