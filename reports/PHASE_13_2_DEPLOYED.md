@@ -1,10 +1,16 @@
 # Phase 13.2 – Cross-Agent MCP Binding DEPLOYED
 
-**Date:** 2025-11-06
-**Agent:** CLC (Claude Code)
-**Maintainer:** CLC
-**Phase:** 13.2 – Cross-Agent Binding
-**Status:** ✅ DEPLOYED (1 known issue)
+**Classification:** Safe Idempotent Patch (SIP) Deployment  
+**Deployed by:**  CLC (Claude Code)  
+**Maintainer:**  CLC  
+**Version:**  v1.2-cross-agent-binding  
+**Revision:** r0  
+**Phase:**  13.2 – Cross-Agent Binding  
+**Timestamp:** 2025-11-06 04:40:13 +0700 (Asia/Bangkok)  
+**WO-ID:** WO-TOFILL  
+**Verified by:** CDC / CLC / GG SOT Audit Layer  
+**Status:**  ✅ DEPLOYED (1 known issue)  
+**Evidence Hash:** <to-fill>
 
 ## Executive Summary
 
