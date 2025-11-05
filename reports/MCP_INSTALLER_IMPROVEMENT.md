@@ -1,6 +1,9 @@
 # MCP Installer Improvement - Robust JSON Merger
 
 **Date:** 2025-11-06
+**Agent:** CLC (Claude Code)
+**Maintainer:** CLC
+**Version:** v1.0-native-memory
 **Issue:** awk-based JSON editing failed
 **Solution:** jq/Python JSON merger (idempotent, safe)
 
@@ -214,3 +217,12 @@ jq '.servers.memory = {...}' config.json
 
 **Status:** COMPLETE - Robust installer ready for production use
 **Lesson:** Always prefer structure editing (jq/Python) over text editing (sed/awk) for config files
+
+---
+
+**Classification:** Safe Idempotent Patch (SIP) Deployment
+**Deployed by:** CLC (Claude Code)
+**Maintainer:** CLC
+**Version:** v1.0-native-memory
+**Phase:** 13 – Native MCP Expansion
+**Verified by:** CDC / CLC / GG SOT Audit Layer

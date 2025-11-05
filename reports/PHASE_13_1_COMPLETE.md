@@ -1,7 +1,8 @@
 # Phase 13.1 – Native MCP Expansion COMPLETE
 
 **Date:** 2025-11-06
-**Maintainer:** GG Core (02LUKA Automation)
+**Agent:** CLC (Claude Code)
+**Maintainer:** CLC
 **Phase:** 13.1 – Native MCP Expansion
 **Status:** ✅ COMPLETE
 
@@ -372,7 +373,8 @@ lsof -nP -iTCP:5340 -sTCP:LISTEN
 ---
 
 **Classification:** Safe Idempotent Patch (SIP) Deployment
-**Maintainer:** GG Core (02LUKA Automation)
+**Deployed by:** CLC (Claude Code)
+**Maintainer:** CLC
 **Version:** v1.1-search-expansion (Phase 13.1 Complete)
 **Phase:** 13.1 – Native MCP Expansion
 **Verified by:** CDC / CLC / GG SOT Audit Layer
