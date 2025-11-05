@@ -10,7 +10,7 @@ jobs:
     env:
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'changeme-02luka' }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || '' }}
       OPS_ATOMIC_URL: http://127.0.0.1:4000
 
     services:
