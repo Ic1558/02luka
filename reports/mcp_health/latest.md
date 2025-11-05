@@ -1,11 +1,11 @@
-## MCP Health @ 2025-11-06 02:03:44 +07
-
+## MCP Health @ 2025-11-06 02:56:41 +07
 ### com.02luka.mcp.fs
-	state = spawn scheduled
+	state = running
+	pid = 26067
 	last exit code = 0
 		state = active
 		state = active
-	job state = exited
+	job state = running
 
 ### com.02luka.mcp.puppeteer
 	state = spawn scheduled
@@ -14,12 +14,12 @@
 		state = active
 	job state = exited
 
-### Logs (tail -5)
-- mcp_fs.stderr.log:
-Secure MCP Filesystem Server running on stdio
-Secure MCP Filesystem Server running on stdio
-Secure MCP Filesystem Server running on stdio
-Secure MCP Filesystem Server running on stdio
-Secure MCP Filesystem Server running on stdio
+### com.02luka.mcp.memory
+	state = running
+	pid = 26047
+		state = active
+		state = active
+	job state = running
 
-- mcp_puppeteer.stderr.log:
+### Logs (tail -5)
+- mcp_memory.stderr.log:
