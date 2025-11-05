@@ -1,13 +1,128 @@
-{
-  // 02luka workspace rules
-  "agents": {
-    "CLS": {
-      "role": "System Orchestrator",
-      "instructions": "You are CLS. Orchestrate tasks within 02luka. You MAY write to: bridge/inbox/**, memory/cls/**, g/telemetry/**, logs/**, tmp/**. You MUST NOT write to SOT zones (core, CLC, docs, config). All SOT changes via Work Orders to CLC using ~/tools/bridge_cls_clc.zsh. Follow AI/OP-001 governance. Always log actions with SHA256 checksums. Prefer idempotent, atomic operations.",
-      "memoryPath": "memory/cls",
-      "allowListPath": "memory/cls/ALLOWLIST.paths",
-      "workOrderTool": "~/tools/bridge_cls_clc.zsh",
-      "auditLog": "g/telemetry/cls_audit.jsonl"
-    }
-  }
-}
+# 02LUKA System - Cursor AI Rules
+# Updated: 2025-11-05
+# SOT Path: /Users/icmini/02luka
+
+## System Architecture
+
+**Single Source of Truth (SOT):**
+- Main: `/Users/icmini/02luka`
+- Working: `/Users/icmini/02luka/g`
+- Legacy symlink: `/Users/icmini/LocalProjects/02luka_local_g` → `/Users/icmini/02luka`
+
+**Key Directories:**
+- Tools: `~/02luka/tools/`
+- Agents: `~/02luka/agents/`
+- Config: `~/02luka/config/`
+- Logs: `~/02luka/logs/`
+- Reports: `~/02luka/g/reports/`
+- Sessions: `~/02luka/g/reports/sessions/`
+
+## Environment Variables
+
+Always use these paths:
+```bash
+LUKA_SOT="/Users/icmini/02luka"
+LUKA_HOME="/Users/icmini/02luka/g"
+SOT_PATH="/Users/icmini/02luka/g"
+```
+
+## Coding Guidelines
+
+1. **File Operations:**
+   - Always use absolute paths starting with `/Users/icmini/02luka`
+   - Never use relative paths across major directories
+   - Check file existence before operations
+
+2. **Scripting:**
+   - Use `#!/usr/bin/env zsh` for shell scripts
+   - Always include `set -euo pipefail` for safety
+   - Store executables in `~/02luka/tools/`
+
+3. **LaunchAgents:**
+   - Store plists in `~/Library/LaunchAgents/`
+   - Use naming: `com.02luka.<service>.plist`
+   - Always include: KeepAlive, RunAtLoad, ThrottleInterval
+   - Logs to: `~/02luka/logs/<service>.stdout.log`
+
+4. **Documentation:**
+   - Session reports: `~/02luka/g/reports/sessions/`
+   - System docs: `~/02luka/02luka.md`
+   - Roadmaps: `~/02luka/g/roadmaps/`
+   - MLS lessons: `~/02luka/g/knowledge/mls_lessons.jsonl`
+
+## Redis Infrastructure
+
+- Server: Homebrew (homebrew.mxcl.redis), NOT Docker
+- Host: 127.0.0.1:6379
+- Password: gggclukaic
+- Channels: shell, gg:nlp
+- Monitoring: `~/02luka/tools/redis_status.zsh`
+
+## Agent System
+
+**Active Agents:**
+- shell_subscriber: Executes commands from Redis shell channel
+- gg_nlp_bridge: Maps NLP intents to shell commands
+- redis_chain_status: Monitors Redis pub/sub health
+
+**LaunchAgents Requirements:**
+- KeepAlive: true (for long-running subscribers)
+- ThrottleInterval: 30 (prevent feedback loops)
+- RunAtLoad: true (start on boot)
+
+## Whitelist Patterns
+
+**Intent Mapping:** Always check `~/02luka/config/nlp_command_map.yaml` for whitelisted intents.
+
+**Safe Commands:**
+- backup.now, sync.expense, restart.health
+- deploy.dashboard, restart.filebridge
+
+## File Structure Best Practices
+
+```
+~/02luka/
+├── 02luka.md                 # Master SOT documentation
+├── paths.env                  # Environment variables
+├── tools/                     # Executable utilities
+├── agents/                    # Agent implementations
+├── config/                    # Configuration files
+├── logs/                      # All system logs
+└── g/                         # Main working directory
+    ├── reports/               # Generated reports
+    │   ├── sessions/          # Session documentation
+    │   └── redis_chain/       # Redis monitoring
+    ├── roadmaps/              # Development roadmaps
+    └── knowledge/             # MLS lessons
+```
+
+## MLS (Memory & Learning System)
+
+Capture lessons with:
+```bash
+~/02luka/tools/mls_capture.zsh <type> "<title>" "<problem>" "<solution>"
+```
+
+Types: solution, failure, pattern, improvement
+
+## Testing & Verification
+
+Before claiming success:
+1. Run the actual command/script
+2. Verify output/logs
+3. Check system health: `~/02luka/tools/system_health_check.zsh`
+4. Test Redis: `~/02luka/tools/redis_status.zsh`
+
+## Common Pitfalls
+
+❌ **Don't:**
+- Use old paths (`/Users/icmini/LocalProjects/02luka_local_g`)
+- Assume Docker for Redis (it's Homebrew!)
+- Skip ThrottleInterval in LaunchAgents
+- Use KeepAlive: false for subscribers
+
+✅ **Do:**
+- Use new SOT paths (`/Users/icmini/02luka`)
+- Test before claiming success
+- Capture MLS lessons
+- Document in session reports
