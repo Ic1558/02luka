@@ -1,57 +1,52 @@
-# Node
-node_modules/
-npm-debug.log*
-package-lock.json
-
-# Logs
+# Logs (but keep directory structure)
+logs/*.log
+logs/**/*.log
 *.log
-logs/
-local_logs/
 
-# Temporary files
-tmp/
-.tmp/
-*.tmp
-
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# IDE
-.vscode/
+# Editor (but keep our .vscode/settings.json)
+.vscode/*
+!.vscode/settings.json
 .idea/
 
-# Build outputs
+# Temp
+tmp/
+*.tmp
+*.swp
+*.bak
+
+# Secrets
+.env
+*.pem
+*.key
+credentials.json
+
+# Build
 dist/
 build/
-*.tsbuildinfo
+node_modules/
 
-# Archives and backups
-archive/
-backups/
-*.bak
-*.backup
+# Safety snapshots (too large)
+_safety_snapshots/
+_plists_quarantine_*/
+_import_stage/
+_log_archives/
 
-# System-specific
-02luka
-hostbridge/
-services/
+# Devcontainer disabled
+.devcontainer.disabled/
 
-# CLS heartbeats (auto-generated)
-g/reports/ops_atomic/heartbeat_*.md
-
-# Process IDs
+# Runtime files
+g/.devcontainer.disabled/
 *.pid
-backups/
-skills/.tmp_router_patch.py
-tools/02luka_system_check.zsh
+run/*.lock
 
-# Authentication secrets (Local Auth v1)
-config/auth/users.json
-config/auth/.env.auth
-.env.auth
-*.secret
-.env/
-data/
-config/grafana/grafana.ini
-data/grafana/
+# Telemetry (large files)
+telemetry/*.log
+g/telemetry/*.log
+
+# Conflict backups
+*.backup.*
+sync_conflicts_*/

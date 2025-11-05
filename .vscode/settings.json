@@ -1,16 +1,46 @@
 {
-  "git.enabled": true,
-  "git.path": "git",
-  "git.autorefresh": true,
-  "git.detectSubmodules": true,
-  "github.gitProtocol": "ssh",
-  "remote.SSH.remotePlatform": {
-    "02luka-dev": "linux"
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/_safety_snapshots": true,
+    "**/_plists_quarantine_*": true,
+    "**/node_modules": true,
+    "**/__pycache__": true,
+    "**/*.pyc": true
   },
-  "terminal.integrated.defaultProfile.linux": "bash",
   "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
     "**/node_modules/**": true,
+    "**/_safety_snapshots/**": true,
+    "**/logs/**/*.log": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
     "**/logs/**": true,
-    "**/.tmp/**": true
+    "**/_safety_snapshots/**": true
+  },
+  "terminal.integrated.cwd": "${workspaceFolder}/g",
+  "terminal.integrated.env.osx": {
+    "LUKA_SOT": "/Users/icmini/02luka",
+    "LUKA_HOME": "/Users/icmini/02luka/g",
+    "SOT_PATH": "/Users/icmini/02luka/g"
+  },
+  "files.associations": {
+    "*.zsh": "shellscript",
+    "*.env": "properties"
+  },
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+  "[shellscript]": {
+    "editor.defaultFormatter": "foxundermoon.shell-format"
   }
 }
