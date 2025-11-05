@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>02luka System Dashboard v2.1.0</title>
-  <script src="dashboard.js?v=2.1.0" defer></script>
+  <title>02luka System Dashboard v2.2.0</title>
+  <script src="dashboard.js?v=2.2.0" defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -690,6 +690,21 @@
     <div class="wo-drawer-content" id="wo-drawer-content">
       <div style="text-align: center; padding: 40px; color: #a0aec0;">
         Select a work order to view details
+      </div>
+    </div>
+  </div>
+
+  <!-- Service Detail Drawer (v2.2.0) -->
+  <div class="wo-drawer-backdrop" id="service-drawer-backdrop"></div>
+  <div class="wo-drawer" id="service-drawer">
+    <div class="wo-drawer-header">
+      <button class="wo-drawer-close" id="service-drawer-close" aria-label="Close service drawer">×</button>
+      <h2 id="service-drawer-title">Service Status</h2>
+      <div class="subtitle" id="service-drawer-subtitle">Loading...</div>
+    </div>
+    <div class="wo-drawer-content" id="service-drawer-content">
+      <div style="text-align: center; padding: 40px; color: #a0aec0;">
+        Loading services...
       </div>
     </div>
   </div>

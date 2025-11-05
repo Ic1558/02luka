@@ -267,6 +267,10 @@ class APIHandler(BaseHTTPRequestHandler):
         elif path.startswith('/api/wos/'):
             wo_id = path.split('/')[-1]
             self.handle_get_wo(wo_id, query)
+        elif path == '/api/services':
+            self.handle_list_services(query)
+        elif path == '/api/mls':
+            self.handle_list_mls(query)
         elif path == '/api/health/logs':
             self.handle_get_logs(query)
         else:
@@ -324,6 +328,176 @@ class APIHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, f"WO {wo_id} not found")
 
+    def handle_list_services(self, query):
+        """Handle GET /api/services - list all 02luka LaunchAgent services"""
+        try:
+            # Run launchctl list and filter for 02luka services
+            result = subprocess.run(
+                ['launchctl', 'list'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode != 0:
+                raise Exception(f"launchctl failed: {result.stderr}")
+
+            # Parse launchctl output
+            services = []
+            lines = result.stdout.strip().split('\n')[1:]  # Skip header
+
+            for line in lines:
+                parts = line.split('\t')
+                if len(parts) < 3:
+                    continue
+
+                pid = parts[0].strip()
+                status_code = parts[1].strip()
+                label = parts[2].strip()
+
+                # Only include 02luka services
+                if '02luka' not in label.lower():
+                    continue
+
+                # Determine status
+                if pid == '-':
+                    status = 'stopped'
+                elif status_code != '0' and status_code != '-':
+                    status = 'failed'
+                else:
+                    # Check if it's on-demand (WatchPaths trigger)
+                    status = 'running'
+
+                service = {
+                    'label': label,
+                    'pid': int(pid) if pid.isdigit() else None,
+                    'status': status,
+                    'exit_code': int(status_code) if status_code.isdigit() else None,
+                    'type': self._get_service_type(label)
+                }
+
+                services.append(service)
+
+            # Filter by status if requested
+            status_filter = query.get('status', [''])[0]
+            if status_filter:
+                services = [s for s in services if s['status'] == status_filter]
+
+            # Sort by label
+            services.sort(key=lambda s: s['label'])
+
+            # Add summary
+            response = {
+                'services': services,
+                'summary': {
+                    'total': len(services),
+                    'running': len([s for s in services if s['status'] == 'running']),
+                    'stopped': len([s for s in services if s['status'] == 'stopped']),
+                    'failed': len([s for s in services if s['status'] == 'failed'])
+                }
+            }
+
+            self.send_json_response(response)
+
+        except subprocess.TimeoutExpired:
+            self.send_error(500, "launchctl command timed out")
+        except Exception as e:
+            self.send_error(500, f"Failed to get services: {str(e)}")
+
+    def _get_service_type(self, label):
+        """Determine service type from label"""
+        label_lower = label.lower()
+        if 'bridge' in label_lower or 'telegram' in label_lower:
+            return 'bridge'
+        elif 'worker' in label_lower or 'processor' in label_lower:
+            return 'worker'
+        elif 'autopilot' in label_lower or 'scanner' in label_lower:
+            return 'automation'
+        elif 'health' in label_lower or 'watchdog' in label_lower:
+            return 'monitoring'
+        else:
+            return 'other'
+
+    def handle_list_mls(self, query):
+        """Handle GET /api/mls - list all MLS lessons"""
+        try:
+            mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
+
+            if not mls_file.exists():
+                # Return empty response if file doesn't exist
+                self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
+                return
+
+            # Read multi-line JSONL file (pretty-printed JSON objects separated by newlines)
+            entries = []
+            with open(mls_file, 'r') as f:
+                content = f.read().strip()
+
+            # Split by "}\n{" to separate pretty-printed JSON objects
+            json_objects = []
+            if content:
+                # Add back the braces that were removed by split
+                parts = content.split('}\n{')
+                for i, part in enumerate(parts):
+                    if i == 0:
+                        json_str = part + '}'
+                    elif i == len(parts) - 1:
+                        json_str = '{' + part
+                    else:
+                        json_str = '{' + part + '}'
+                    json_objects.append(json_str)
+
+            # Parse each JSON object
+            for json_str in json_objects:
+                try:
+                    entry = json.loads(json_str)
+                    # Normalize the entry for frontend
+                    entries.append({
+                        'id': entry.get('id', 'MLS-UNKNOWN'),
+                        'type': entry.get('type', 'other'),
+                        'title': entry.get('title', 'Untitled'),
+                        'details': entry.get('description', ''),
+                        'context': entry.get('context', ''),
+                        'time': entry.get('timestamp', ''),
+                        'related_wo': entry.get('related_wo'),
+                        'related_session': entry.get('related_session'),
+                        'tags': entry.get('tags', []),
+                        'verified': entry.get('verified', False),
+                        'score': entry.get('usefulness_score', 0)
+                    })
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {e}")
+                    continue
+
+            # Filter by type if requested
+            type_filter = query.get('type', [''])[0]
+            filtered_entries = entries
+            if type_filter:
+                filtered_entries = [e for e in entries if e['type'] == type_filter]
+
+            # Sort by timestamp descending (newest first)
+            filtered_entries.sort(key=lambda e: e['time'], reverse=True)
+
+            # Calculate summary from all entries
+            summary = {
+                'total': len(entries),
+                'solutions': len([e for e in entries if e['type'] == 'solution']),
+                'failures': len([e for e in entries if e['type'] == 'failure']),
+                'patterns': len([e for e in entries if e['type'] == 'pattern']),
+                'improvements': len([e for e in entries if e['type'] == 'improvement'])
+            }
+
+            response = {
+                'entries': filtered_entries,
+                'summary': summary
+            }
+
+            self.send_json_response(response)
+
+        except Exception as e:
+            print(f"Error reading MLS lessons: {e}")
+            self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
+
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""
         lines = int(query.get('lines', ['200'])[0])
@@ -364,6 +538,10 @@ def run_server(port=8767):
     print(f"🚀 Dashboard API server running on http://127.0.0.1:{port}")
     print(f"   - GET /api/wos - List all WOs")
     print(f"   - GET /api/wos/:id - Get WO details")
+    print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
+    print(f"   - GET /api/services?status=stopped - Filter services by status")
+    print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
+    print(f"   - GET /api/mls?type=solution - Filter MLS by type")
     print(f"   - GET /api/health/logs?lines=200 - Get system logs")
     server.serve_forever()
 

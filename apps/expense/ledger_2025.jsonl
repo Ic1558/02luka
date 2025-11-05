@@ -2,3 +2,19 @@
 {"id":"EXP-2025-0002","date":"2025-11-03","payee":"Makro","project":"PRJ-SKV49-1","category":"Consumables","amount":320.00,"currency":"THB","vat":0,"note":"water & snacks","attachment":""}
 {"id":"EXP-2025-0003","date":"2025-11-04","payee":"Contractor - Somchai","project":"PRJ-DIP110","category":"Labor","amount":5000.00,"currency":"THB","vat":0,"note":"day labor (2p)","attachment":""}
 {"id": "EXP-e3b0c44298fc", "date": "2025-11-05", "payee": "slip_demo", "project": "", "category": "Uncategorized", "amount": 0.0, "currency": "THB", "vat": 0.0, "confidence": 0.0, "reviewed": false, "note": "Auto-OCR import", "attachment": "/Users/icmini/02luka/g/inbox/expense_slips/slip_demo.jpg", "attachment_basename": "slip_demo.jpg"}
+{
+  "id": "EXP-e3b0c44298fc",
+  "date": "2025-11-05",
+  "payee": "new_slip",
+  "project": "",
+  "category": "Materials",
+  "amount": 0.0,
+  "currency": "THB",
+  "vat": 0.0,
+  "confidence": 0.0,
+  "reviewed": false,
+  "note": "Auto-OCR import",
+  "attachment": "/Users/icmini/02luka/g/inbox/expense_slips/new_slip.jpg",
+  "attachment_basename": "new_slip.jpg",
+  "ai_categorized": true
+}

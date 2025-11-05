@@ -1,116 +1,483 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>02luka MLS Report</title>
+  <title>MLS Live Report - Master Learning System</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 40px; background: #f5f7fa; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .stat-card { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .stat-value { font-size: 48px; font-weight: bold; margin-bottom: 8px; }
-    .stat-label { color: #64748b; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-    .lesson { background: white; padding: 24px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid #667eea; }
-    .lesson.solution { border-left-color: #10b981; }
-    .lesson.failure { border-left-color: #ef4444; }
-    .lesson.pattern { border-left-color: #3b82f6; }
-    .lesson.antipattern { border-left-color: #f59e0b; }
-    .lesson.improvement { border-left-color: #8b5cf6; }
-    .lesson-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .lesson-title { font-size: 20px; font-weight: 600; }
-    .lesson-type { padding: 4px 12px; border-radius: 4px; font-size: 12px; text-transform: uppercase; font-weight: 600; }
-    .lesson-type.solution { background: #d1fae5; color: #065f46; }
-    .lesson-type.failure { background: #fee2e2; color: #991b1b; }
-    .lesson-type.pattern { background: #dbeafe; color: #1e40af; }
-    .lesson-type.antipattern { background: #fef3c7; color: #92400e; }
-    .lesson-type.improvement { background: #ede9fe; color: #5b21b6; }
-    .lesson-meta { color: #64748b; font-size: 14px; margin-bottom: 12px; }
-    .lesson-desc { line-height: 1.6; margin-bottom: 12px; }
-    .lesson-context { background: #f1f5f9; padding: 12px; border-radius: 4px; font-size: 14px; font-family: 'Monaco', monospace; }
-    h2 { color: #1e293b; margin-top: 40px; margin-bottom: 20px; }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;padding:20px;}
+    h1{text-align:center;margin-bottom:30px;color:#60a5fa;}
+    .summary{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+    .summary div{padding:10px 20px;background:#1e293b;border-radius:6px;font-size:13px;}
+    .summary div b{display:block;font-size:20px;color:#60a5fa;}
+    .controls{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+    .controls button,.controls input{padding:8px 16px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;border-radius:4px;cursor:pointer;font-size:13px;}
+    .controls button:hover{background:#334155;}
+    .controls button.active{background:#3b82f6;border-color:#3b82f6;}
+    .controls input{flex:1;max-width:300px;}
+    #table{width:100%;border-collapse:collapse;margin-top:10px;}
+    #table thead{background:#1e293b;position:sticky;top:0;z-index:10;}
+    #table th{padding:12px;text-align:left;font-weight:600;border-bottom:2px solid #334155;}
+    #table tbody tr{cursor:pointer;border-bottom:1px solid #1e293b;transition:background 0.2s;}
+    #table tbody tr:hover{background:#1e293b;}
+    #table tbody tr.expanded{background:#1e293b;}
+    #table td{padding:12px;vertical-align:top;}
+    .type-badge{display:inline-block;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;}
+    .type-solution{background:#10b981;color:#fff;}
+    .type-failure{background:#ef4444;color:#fff;}
+    .type-pattern{background:#8b5cf6;color:#fff;}
+    .type-improvement{background:#f59e0b;color:#fff;}
+    .detail-row{display:none;background:#0f172a;border-left:4px solid #3b82f6;}
+    .detail-row.show{display:table-row;}
+    .detail-content{padding:20px;font-size:13px;line-height:1.6;}
+    .detail-content h4{color:#60a5fa;margin-bottom:10px;}
+    .detail-content p{margin-bottom:15px;color:#cbd5e1;}
+    .detail-content .meta{display:flex;gap:20px;flex-wrap:wrap;font-size:12px;color:#94a3b8;margin-top:15px;}
+    .detail-content .meta div{display:flex;align-items:center;gap:5px;}
+    .copy-btn{padding:4px 10px;background:#334155;border:1px solid #475569;border-radius:4px;color:#e2e8f0;cursor:pointer;font-size:11px;margin-left:10px;}
+    .copy-btn:hover{background:#475569;}
+    #status{text-align:center;padding:20px;color:#94a3b8;font-size:14px;}
+    .link-btn{color:#60a5fa;text-decoration:none;font-size:12px;margin-right:10px;}
+    .link-btn:hover{text-decoration:underline;}
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>🧠 Machine Learning System (MLS)</h1>
-    <p>Lessons Learned - Auto-captured from R&D Autopilot</p>
-    <p style="opacity: 0.8;">Generated: $(date '+%Y-%m-%d %H:%M:%S')</p>
+  <h1>📚 MLS Live Report - Master Learning System</h1>
+  <div class="summary" id="summary">
+    <div><b id="stat-total">0</b>Total</div>
+    <div><b id="stat-solutions">0</b>Solutions</div>
+    <div><b id="stat-patterns">0</b>Patterns</div>
+    <div><b id="stat-improvements">0</b>Improvements</div>
+    <div><b id="stat-failures">0</b>Failures</div>
+  </div>
+  <div class="controls">
+    <button id="btn-all" class="active">All</button>
+    <button id="btn-solution">Solutions</button>
+    <button id="btn-pattern">Patterns</button>
+    <button id="btn-improvement">Improvements</button>
+    <button id="btn-failure">Failures</button>
+    <input type="text" id="search" placeholder="🔍 Search by title, details, context...">
+  </div>
+  <div id="status">Loading MLS data...</div>
+  <table id="table" style="display:none;">
+    <thead>
+      <tr>
+        <th style="width:120px;">ID</th>
+        <th style="width:100px;">Type</th>
+        <th>Title</th>
+        <th style="width:180px;">Timestamp</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+    let allData = [];
+    let filteredData = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+    let expandedRows = new Set();
+
+    // Load expanded state from localStorage
+    try {
+      const saved = localStorage.getItem('mls-expanded');
+      if (saved) expandedRows = new Set(JSON.parse(saved));
+    } catch (e) {}
+
+    async function tryFetchJSON(){
+      try{
+        const res = await fetch('http://127.0.0.1:8767/api/mls?__=' + Date.now(), {cache:'no-store'});
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        return data;
+      }catch(err){
+        console.error('Fetch error:', err);
+        $('#status').textContent = '❌ Failed to load MLS data: ' + err.message;
+        return null;
+      }
+    }
+
+    function updateSummary(summary){
+      console.log('[DEBUG] updateSummary called with:', summary);
+      $('#stat-total').textContent = summary.total || 0;
+      $('#stat-solutions').textContent = summary.solutions || 0;
+      $('#stat-patterns').textContent = summary.patterns || 0;
+      $('#stat-improvements').textContent = summary.improvements || 0;
+      $('#stat-failures').textContent = summary.failures || 0;
+      console.log('[DEBUG] Summary updated - Total:', summary.total, 'Solutions:', summary.solutions, 'Patterns:', summary.patterns);
+    }
+
+    function updatePillCounts(){
+      console.log('[DEBUG] updatePillCounts called - allData length:', allData.length);
+
+      // Count entries by type from allData
+      const counts = {
+        solution: allData.filter(e => e.type === 'solution').length,
+        failure: allData.filter(e => e.type === 'failure').length,
+        pattern: allData.filter(e => e.type === 'pattern').length,
+        improvement: allData.filter(e => e.type === 'improvement').length
+      };
+
+      console.log('[DEBUG] Pill counts calculated:', counts);
+      console.log('[DEBUG] Total from counts:', counts.solution + counts.failure + counts.pattern + counts.improvement);
+
+      // Update button text with counts
+      const buttons = [
+        {id: '#btn-solution', type: 'solution', label: 'Solutions'},
+        {id: '#btn-pattern', type: 'pattern', label: 'Patterns'},
+        {id: '#btn-improvement', type: 'improvement', label: 'Improvements'},
+        {id: '#btn-failure', type: 'failure', label: 'Failures'}
+      ];
+
+      buttons.forEach(btn => {
+        const el = $(btn.id);
+        if(el){
+          el.textContent = `${btn.label} (${counts[btn.type] || 0})`;
+          console.log(`[DEBUG] Updated button ${btn.id}: ${btn.label} (${counts[btn.type] || 0})`);
+        }
+      });
+    }
+
+    function applyFilters(){
+      let result = allData;
+
+      // Filter by type
+      if(currentFilter !== 'all'){
+        result = result.filter(e => e.type === currentFilter);
+      }
+
+      // Filter by search
+      if(currentSearch){
+        const q = currentSearch.toLowerCase();
+        result = result.filter(e =>
+          (e.title && e.title.toLowerCase().includes(q)) ||
+          (e.details && e.details.toLowerCase().includes(q)) ||
+          (e.context && e.context.toLowerCase().includes(q)) ||
+          (e.id && e.id.toLowerCase().includes(q))
+        );
+      }
+
+      filteredData = result;
+      renderTable();
+    }
+
+    function renderTable(){
+      const tbody = $('#tbody');
+      tbody.innerHTML = '';
+
+      if(filteredData.length === 0){
+        $('#status').textContent = '🔍 No entries found';
+        $('#status').style.display = 'block';
+        $('#table').style.display = 'none';
+        return;
+      }
+
+      $('#status').style.display = 'none';
+      $('#table').style.display = 'table';
+
+      filteredData.forEach((entry, idx) => {
+        const isExpanded = expandedRows.has(entry.id);
+
+        // Header row
+        const tr = document.createElement('tr');
+        tr.className = isExpanded ? 'expanded' : '';
+        tr.innerHTML = `
+          <td>
+            ${entry.id}
+            <button class="copy-btn" onclick="copyToClipboard('${entry.id}', event)">Copy</button>
+          </td>
+          <td><span class="type-badge type-${entry.type}">${entry.type}</span></td>
+          <td><strong>${escapeHtml(entry.title || 'Untitled')}</strong></td>
+          <td>${formatTime(entry.time)}</td>
+        `;
+        tr.onclick = () => toggleRow(entry.id);
+        tbody.appendChild(tr);
+
+        // Detail row
+        const detailTr = document.createElement('tr');
+        detailTr.className = 'detail-row' + (isExpanded ? ' show' : '');
+        detailTr.innerHTML = `
+          <td colspan="4">
+            <div class="detail-content">
+              <h4>📝 Description</h4>
+              <p>${escapeHtml(entry.details || 'No description')}</p>
+
+              <h4>🔍 Context</h4>
+              <p>${escapeHtml(entry.context || 'No context provided')}</p>
+
+              <div class="meta">
+                ${entry.related_wo ? `<div>📋 WO: <a href="#" class="link-btn" onclick="alert('Deep link: ${entry.related_wo}'); return false;">${entry.related_wo}</a></div>` : ''}
+                ${entry.related_session ? `<div>📄 Session: <a href="#" class="link-btn" onclick="alert('Deep link: ${entry.related_session}'); return false;">${entry.related_session}</a></div>` : ''}
+                ${entry.verified ? '<div>✅ Verified</div>' : '<div>⏳ Unverified</div>'}
+                ${entry.score ? `<div>⭐ Score: ${entry.score}</div>` : ''}
+                ${entry.tags && entry.tags.length > 0 ? `<div>🏷️ ${entry.tags.join(', ')}</div>` : ''}
+              </div>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(detailTr);
+      });
+    }
+
+    function toggleRow(id){
+      if(expandedRows.has(id)){
+        expandedRows.delete(id);
+      }else{
+        expandedRows.add(id);
+      }
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('mls-expanded', JSON.stringify([...expandedRows]));
+      } catch (e) {}
+
+      renderTable();
+    }
+
+    function escapeHtml(str){
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatTime(iso){
+      if(!iso) return 'N/A';
+      try{
+        const d = new Date(iso);
+        return d.toLocaleString();
+      }catch(e){
+        return iso;
+      }
+    }
+
+    function copyToClipboard(text, event){
+      event.stopPropagation();
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copied';
+        setTimeout(() => btn.textContent = orig, 1500);
+      }).catch(err => {
+        alert('Copy failed: ' + err.message);
+      });
+    }
+
+    // Filter buttons
+    $('#btn-all').onclick = () => {
+      currentFilter = 'all';
+      $$('.controls button').forEach(b => b.classList.remove('active'));
+      $('#btn-all').classList.add('active');
+      applyFilters();
+    };
+
+    $('#btn-solution').onclick = () => {
+      currentFilter = 'solution';
+      $$('.controls button').forEach(b => b.classList.remove('active'));
+      $('#btn-solution').classList.add('active');
+      applyFilters();
+    };
+
+    $('#btn-pattern').onclick = () => {
+      currentFilter = 'pattern';
+      $$('.controls button').forEach(b => b.classList.remove('active'));
+      $('#btn-pattern').classList.add('active');
+      applyFilters();
+    };
+
+    $('#btn-improvement').onclick = () => {
+      currentFilter = 'improvement';
+      $$('.controls button').forEach(b => b.classList.remove('active'));
+      $('#btn-improvement').classList.add('active');
+      applyFilters();
+    };
+
+    $('#btn-failure').onclick = () => {
+      currentFilter = 'failure';
+      $$('.controls button').forEach(b => b.classList.remove('active'));
+      $('#btn-failure').classList.add('active');
+      applyFilters();
+    };
+
+    // Search input
+    $('#search').oninput = (e) => {
+      currentSearch = e.target.value;
+      applyFilters();
+    };
+
+    // Deep linking - handle hash navigation
+    function handleHash(){
+      const hash = window.location.hash.slice(1);
+      if(hash){
+        const entry = allData.find(e => e.id === hash);
+        if(entry){
+          expandedRows.add(hash);
+          renderTable();
+          setTimeout(() => {
+            const rows = $$('#tbody tr');
+            const idx = filteredData.findIndex(e => e.id === hash);
+            if(idx >= 0 && rows[idx * 2]){
+              rows[idx * 2].scrollIntoView({behavior: 'smooth', block: 'center'});
+            }
+          }, 100);
+        }
+      }
+    }
+
+    window.addEventListener('hashchange', handleHash);
+
+    // Initial load and 30s refresh
+    async function loadData(){
+      const data = await tryFetchJSON();
+      console.log('[DEBUG] loadData - Raw API response:', data);
+      if(data){
+        allData = data.entries || [];
+        console.log('[DEBUG] loadData - allData set to:', allData.length, 'entries');
+        console.log('[DEBUG] loadData - API summary:', data.summary);
+        updateSummary(data.summary || {});
+        updatePillCounts();
+        applyFilters();
+        handleHash();
+      }
+    }
+
+    loadData();
+    setInterval(loadData, 30000); // Auto-refresh every 30 seconds
+  </script>
+
+  <!-- Chatbox Panel (Kim Integration) -->
+  <style>
+    .chat-toggle{position:fixed; right:18px; bottom:18px; z-index:30; background:#1f6feb; color:white; border:none; padding:10px 14px; border-radius:999px; cursor:pointer; box-shadow:0 10px 24px #00000066}
+    .chat{position:fixed; right:18px; bottom:78px; width:360px; max-height:70vh; display:flex; flex-direction:column; background:#0e141b; border:1px solid #223041; border-radius:14px; overflow:hidden; z-index:30; box-shadow:0 12px 28px #00000088}
+    .chat.hidden{display:none}
+    .chat h3{margin:0; padding:10px 12px; font-size:13px; background:#0b1016; border-bottom:1px solid #1b2633}
+    .chatlog{padding:10px; overflow:auto; flex:1}
+    .msg{margin:8px 0; display:flex; gap:8px}
+    .msg .b{padding:8px 10px; border-radius:10px; max-width:78%; line-height:1.4}
+    .me .b{background:#1f6feb22; border:1px solid #274c7a; margin-left:auto}
+    .ai .b{background:#17202b; border:1px solid #263446}
+    .chat form{display:flex; gap:8px; padding:10px; border-top:1px solid #1b2633}
+    .chat input, .chat textarea{flex:1; background:#0f1318; border:1px solid #21262d; color:#e6edf3; padding:8px 10px; border-radius:10px; resize:none; height:40px; font-family:inherit}
+    .chat button{background:#238636; color:white; border:none; padding:0 12px; border-radius:10px; cursor:pointer; font-size:13px}
+    .chat button:hover{background:#2ea043}
+    .mini{font-size:11px; color:#9fb7d1; padding:8px; border-top:1px dashed #243140}
+    .chip{display:inline-block; font-size:10px; border:1px solid #2a3545; color:#9fb7d1; background:#0e141b; padding:2px 6px; border-radius:999px; margin-right:4px; cursor:pointer}
+    .chip:hover{background:#1b2633}
+    .chip.active{background:#1f6feb; color:white; border-color:#1f6feb}
+  </style>
+
+  <button id="chat-toggle" class="chat-toggle">💬 Chat</button>
+  <div id="chat" class="chat hidden">
+    <h3>💬 Chat with Kim (Local AI)</h3>
+    <div id="chatlog" class="chatlog"></div>
+    <div class="mini">
+      Context: <span id="chip-current" class="chip active">Current</span> <span id="chip-all" class="chip">All entries</span>
+    </div>
+    <form id="chat-form">
+      <textarea id="chat-input" placeholder="Ask Kim, or say 'add solution: ...'"></textarea>
+      <button type="submit">Send</button>
+    </form>
   </div>
 
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-value">${TOTAL}</div>
-      <div class="stat-label">Total Lessons</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color: #10b981;">${SOLUTIONS}</div>
-      <div class="stat-label">Solutions</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color: #ef4444;">${FAILURES}</div>
-      <div class="stat-label">Failures</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color: #3b82f6;">${PATTERNS}</div>
-      <div class="stat-label">Patterns</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color: #f59e0b;">${ANTIPATTERNS}</div>
-      <div class="stat-label">Anti-patterns</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-value" style="color: #8b5cf6;">${IMPROVEMENTS}</div>
-      <div class="stat-label">Improvements</div>
-    </div>
-  </div>
-  <h2>📚 SOLUTIONS (2)</h2>
-<div class="lesson solution">
-  <div class="lesson-header">
-    <div class="lesson-title">Two-Phase GD Sync Deployment</div>
-    <span class="lesson-type solution">solution</span>
-  </div>
-  <div class="lesson-meta">MLS-1762282996 • 2025-11-05T02:03:16+07:00</div>
-  <div class="lesson-desc">Breaking GD sync into 2 phases (fresh sync + two-way upgrade) worked perfectly. Phase 1 establishes baseline, Phase 2 adds mobile access without risk.</div>
-  <div class="lesson-context">Context: 89GB archive + 21MB sync + conflict resolution system. Automated via CLC autopilot with comprehensive safety checks.</div>
-</div>
-<div class="lesson solution">
-  <div class="lesson-header">
-    <div class="lesson-title">Automatic Conflict Resolution Strategy</div>
-    <span class="lesson-type solution">solution</span>
-  </div>
-  <div class="lesson-meta">MLS-1762283055 • 2025-11-05T02:04:15+07:00</div>
-  <div class="lesson-desc">Two-way sync conflicts resolved by keeping newer version (by timestamp). Both versions saved to sync_conflicts_* directory with .LOCAL and .REMOTE extensions for manual review.</div>
-  <div class="lesson-context">Context: Handles 99% of conflicts automatically while preserving ability to manually review edge cases. Implemented in resolve_gdrive_conflicts.zsh</div>
-</div>
-  <h2>📚 PATTERNS (1)</h2>
-<div class="lesson pattern">
-  <div class="lesson-header">
-    <div class="lesson-title">Archive with README Pattern</div>
-    <span class="lesson-type pattern">pattern</span>
-  </div>
-  <div class="lesson-meta">MLS-1762283023 • 2025-11-05T02:03:43+07:00</div>
-  <div class="lesson-desc">When archiving large files (89GB diagnostics), always create README explaining: what they are, why so large, cleanup options (keep/compress/delete), and 60-day review reminder.</div>
-  <div class="lesson-context">Context: Implemented in WO-251105-gdrive_fresh_start_hybrid.zsh. Creates auto-generated README with file manifest and calendar reminder.</div>
-</div>
-  <h2>📚 IMPROVEMENTS (1)</h2>
-<div class="lesson improvement">
-  <div class="lesson-header">
-    <div class="lesson-title">Real-Time Monitoring Dashboard</div>
-    <span class="lesson-type improvement">improvement</span>
-  </div>
-  <div class="lesson-meta">MLS-1762283240 • 2025-11-05T02:07:20+07:00</div>
-  <div class="lesson-desc">Created live HTML dashboard for monitoring 41 services, WO progress, activity feed, and logs. Auto-refreshes every 30s. Provides immediate visibility into system health.</div>
-  <div class="lesson-context">Context: Running at http://127.0.0.1:8766 with beautiful gradient UI, color-coded status, and smooth animations. Complements existing CLI tools.</div>
-</div>
-  <h2>📚 FAILURES (1)</h2>
-<div class="lesson failure">
-  <div class="lesson-header">
-    <div class="lesson-title">Direct Complex Merge Approach</div>
-    <span class="lesson-type failure">failure</span>
-  </div>
-  <div class="lesson-meta">MLS-1762283044 • 2025-11-05T02:04:04+07:00</div>
-  <div class="lesson-desc">Attempted to merge 89GB local + 6.5GB GD folders with completely different structures. Too complex, high risk of data loss.</div>
-  <div class="lesson-context">Context: Chose fresh start instead: archive old data, sync clean 21MB. Lesson: When structures diverge significantly, prefer clean slate over complex merge.</div>
-</div>
+  <script>
+  // === Kim Chat Adapter (HTTP → Redis → Kim) ===
+  const KimAdapter = {
+    endpoint: 'http://127.0.0.1:8770/kim/chat',
+    async send(payload){
+      try{
+        const res = await fetch(this.endpoint, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      }catch(e){
+        return {role:'assistant', content:`❌ Error: ${e.message}`};
+      }
+    }
+  };
+
+  // === UI wiring ===
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatEl = document.getElementById('chat');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const chatlog = document.getElementById('chatlog');
+  const chipAll = document.getElementById('chip-all');
+  const chipCurrent = document.getElementById('chip-current');
+
+  let useAllEntries = false; // false -> only expanded entries
+
+  function appendChatMsg(role, content){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + (role==='user'?'me':'ai');
+    const b = document.createElement('div');
+    b.className='b';
+    b.textContent = content;
+    wrap.appendChild(b);
+    chatlog.appendChild(wrap);
+    chatlog.scrollTop = chatlog.scrollHeight;
+  }
+
+  function collectChatContext(){
+    const entries = useAllEntries ? allData : allData.filter(e => expandedRows.has(e.id));
+    return { entries };
+  }
+
+  function parseIntent(text){
+    const t = text.trim();
+    if(/^add\s+solution\s*:/i.test(t)) return 'add_solution';
+    if(/^add\s+failure\s*:/i.test(t)) return 'add_failure';
+    if(/^add\s+pattern\s*:/i.test(t)) return 'add_pattern';
+    if(/^add\s+improvement\s*:/i.test(t)) return 'add_improvement';
+    if(/^search\s*:/i.test(t)) return 'search';
+    return 'chat';
+  }
+
+  chatToggle.addEventListener('click', ()=> {
+    chatEl.classList.toggle('hidden');
+    if(!chatEl.classList.contains('hidden')){
+      chatInput.focus();
+    }
+  });
+
+  chipCurrent.addEventListener('click', ()=>{
+    useAllEntries=false;
+    chipCurrent.classList.add('active');
+    chipAll.classList.remove('active');
+  });
+
+  chipAll.addEventListener('click', ()=>{
+    useAllEntries=true;
+    chipAll.classList.add('active');
+    chipCurrent.classList.remove('active');
+  });
+
+  chatForm.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const text = chatInput.value.trim();
+    if(!text) return;
+
+    appendChatMsg('user', text);
+    chatInput.value='';
+
+    const payload = {
+      text,
+      intent: parseIntent(text),
+      context: collectChatContext(),
+      meta: { source:'mls_live_ui', ts: Date.now() }
+    };
+
+    try{
+      const res = await KimAdapter.send(payload);
+      appendChatMsg(res.role||'assistant', res.content || JSON.stringify(res));
+    }catch(e){
+      appendChatMsg('assistant','❌ '+ (e?.message||e));
+    }
+  });
+  </script>
 </body>
 </html>

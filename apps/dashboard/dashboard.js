@@ -6,7 +6,7 @@
 // --- IMMEDIATE HEARTBEAT (proves script loaded) ---
 (function immediateHeartbeat() {
   const timestamp = new Date().toISOString();
-  const version = '2.1.0'; // Phase 3: WO Detail Drawer with tabs and actions
+  const version = '2.2.0'; // Phase 3.1: Service detail drawer + clickable service cards
   console.log(`🔥 DASHBOARD.JS LOADED @ ${timestamp} (v${version})`);
   console.log(`🔍 DOM state: ${document.readyState}`);
   console.log(`🔍 Scripts in page: ${document.scripts.length}`);
@@ -369,12 +369,15 @@ function initKPICards() {
     element.style.cursor = 'pointer';
     element.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
 
-    const onClick = () => {
+    const onClick = async () => {
       console.log(`⚙️ Service card clicked: ${type}`);
       state.viewScope = 'services';
       state.serviceFilter = type;
       updateURL('services', type);
       updateKPICardsUI();
+
+      // v2.2.0: Open service drawer with filtered services
+      await openServiceDrawer(type);
     };
 
     element.addEventListener('click', onClick);
@@ -1025,6 +1028,183 @@ function tailWorkOrderLog(woId) {
   // 2. Show a modal with live log updates
   // 3. Replace drawer content with live streaming view
 }
+
+// ========== SERVICE DRAWER FUNCTIONS (v2.2.0) ==========
+
+// Open service drawer with filtered services
+async function openServiceDrawer(statusFilter = 'all') {
+  console.log(`🔧 Opening service drawer, filter: ${statusFilter}`);
+
+  const drawer = document.getElementById('service-drawer');
+  const backdrop = document.getElementById('service-drawer-backdrop');
+  const titleEl = document.getElementById('service-drawer-title');
+  const subtitleEl = document.getElementById('service-drawer-subtitle');
+  const contentEl = document.getElementById('service-drawer-content');
+
+  if (!drawer || !backdrop || !contentEl) {
+    console.error('Service drawer elements not found');
+    return;
+  }
+
+  // Show drawer immediately with loading state
+  const filterLabels = {
+    'running': 'Running Services',
+    'stopped': 'Stopped Services',
+    'ondemand': 'On-Demand Services',
+    'failed': 'Failed Services',
+    'all': 'All Services'
+  };
+
+  titleEl.textContent = filterLabels[statusFilter] || 'Services';
+  subtitleEl.textContent = 'Loading...';
+  contentEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #a0aec0;">Loading services...</div>';
+
+  backdrop.classList.add('open');
+  drawer.classList.add('open');
+
+  // Fetch services from API
+  try {
+    const url = statusFilter === 'all' || statusFilter === 'ondemand'
+      ? 'http://127.0.0.1:8767/api/services'
+      : `http://127.0.0.1:8767/api/services?status=${statusFilter}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+    const data = await res.json();
+
+    // For ondemand, we need to filter client-side (API doesn't have this status)
+    let services = data.services || [];
+    if (statusFilter === 'ondemand') {
+      // Ondemand services are those not running and not failed
+      services = services.filter(s => s.status === 'stopped' && s.exit_code === 0);
+    }
+
+    // Update subtitle with count
+    subtitleEl.textContent = `${services.length} service${services.length !== 1 ? 's' : ''}`;
+
+    // Render service list
+    contentEl.innerHTML = renderServiceList(services, statusFilter);
+
+  } catch (error) {
+    console.error('Failed to load services:', error);
+    contentEl.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: #f56565;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <div style="font-weight: 600; margin-bottom: 8px;">Failed to load services</div>
+        <div style="font-size: 13px; opacity: 0.8;">${error.message}</div>
+      </div>
+    `;
+  }
+}
+
+// Close service drawer
+function closeServiceDrawer() {
+  console.log('🔧 Closing service drawer');
+  const drawer = document.getElementById('service-drawer');
+  const backdrop = document.getElementById('service-drawer-backdrop');
+
+  if (drawer) drawer.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+// Render service list
+function renderServiceList(services, filterType) {
+  if (!services || services.length === 0) {
+    const emptyMessages = {
+      'running': { icon: '✅', title: 'No Running Services', hint: 'All services are currently stopped or on-demand' },
+      'stopped': { icon: '🛑', title: 'No Stopped Services', hint: 'All services are currently running' },
+      'failed': { icon: '✨', title: 'No Failed Services', hint: 'All services are running smoothly!' },
+      'ondemand': { icon: '💤', title: 'No On-Demand Services', hint: 'All services are either running or stopped' }
+    };
+
+    const msg = emptyMessages[filterType] || { icon: '🔍', title: 'No Services Found', hint: 'No services match the current filter' };
+
+    return `
+      <div style="text-align: center; padding: 60px 20px; color: #718096;">
+        <div style="font-size: 48px; margin-bottom: 16px;">${msg.icon}</div>
+        <div style="font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 8px;">${msg.title}</div>
+        <div style="font-size: 13px; color: #cbd5e0; font-style: italic;">${msg.hint}</div>
+      </div>
+    `;
+  }
+
+  let html = '<div style="padding: 16px;">';
+
+  services.forEach(service => {
+    const statusColors = {
+      'running': '#48bb78',
+      'stopped': '#a0aec0',
+      'failed': '#f56565'
+    };
+
+    const statusIcons = {
+      'running': '✅',
+      'stopped': '⏸️',
+      'failed': '❌'
+    };
+
+    const color = statusColors[service.status] || '#a0aec0';
+    const icon = statusIcons[service.status] || '⚪';
+
+    // Extract readable name from label
+    const displayName = service.label.replace('com.02luka.', '').replace(/\./g, ' ');
+
+    html += `
+      <div style="padding: 12px; margin-bottom: 8px; background: #f7fafc; border-radius: 6px; border-left: 3px solid ${color};">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #2d3748; font-size: 14px;">${icon} ${displayName}</div>
+            <div style="font-size: 11px; color: #718096; margin-top: 4px; font-family: monospace;">${service.label}</div>
+            ${service.type !== 'other' ? `<div style="font-size: 10px; color: #a0aec0; margin-top: 2px;">Type: ${service.type}</div>` : ''}
+          </div>
+          <div style="text-align: right; font-size: 11px; color: #a0aec0;">
+            ${service.pid ? `<div style="color: ${color}; font-weight: 600;">PID: ${service.pid}</div>` : ''}
+            ${service.exit_code !== null ? `<div>Exit: ${service.exit_code}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += '</div>';
+  return html;
+}
+
+// Initialize service drawer
+function initServiceDrawer() {
+  const closeBtn = document.getElementById('service-drawer-close');
+  const backdrop = document.getElementById('service-drawer-backdrop');
+
+  // Close button click
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeServiceDrawer();
+    });
+  }
+
+  // Backdrop click to close
+  if (backdrop) {
+    backdrop.addEventListener('click', () => {
+      closeServiceDrawer();
+    });
+  }
+
+  // ESC key to close (reuse keyboard handler for both drawers)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const serviceDrawer = document.getElementById('service-drawer');
+      if (serviceDrawer && serviceDrawer.classList.contains('open')) {
+        closeServiceDrawer();
+      }
+    }
+  });
+
+  console.log('✅ Service drawer initialized');
+}
+
+// ========== END SERVICE DRAWER FUNCTIONS ==========
 
 // Render WO detail panel
 function renderWODetail(wo) {
@@ -1792,6 +1972,9 @@ async function initDashboard() {
 
   // Initialize WO drawer (Phase 3)
   initWODrawer();
+
+  // Initialize service drawer (v2.2.0)
+  initServiceDrawer();
 
   // Initial load
   await refreshAllData();
