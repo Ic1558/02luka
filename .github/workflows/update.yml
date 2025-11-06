@@ -1,0 +1,302 @@
+---
+name: update
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode: full or quick'
+        required: false
+        default: 'quick'
+      debug:
+        description: 'Enable debug mode'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  rnd-vector-index:
+    name: R&D - Vector Index Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install vector index dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy faiss-cpu sentence-transformers
+
+      - name: Validate vector_index.py syntax
+        run: |
+          python -m py_compile tools/vector_index.py
+          echo "✓ vector_index.py syntax valid"
+
+      - name: Run vector index unit tests
+        run: |
+          # Test import
+          python -c "from tools.vector_index import VectorIndex; print('✓ Import successful')"
+
+          # Test basic functionality
+          python << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+          from tools.vector_index import VectorIndex
+
+          # Create small test index
+          idx = VectorIndex(index_type='flat')
+          docs = [
+              {'id': 'test1', 'text': 'This is a test document'},
+              {'id': 'test2', 'text': 'Another test document here'}
+          ]
+          idx.add_documents(docs)
+
+          # Search
+          results = idx.search('test document', k=2)
+          assert len(results) == 2, f"Expected 2 results, got {len(results)}"
+          assert results[0].score > 0, "Expected positive score"
+
+          # Stats
+          stats = idx.get_stats()
+          assert stats['num_documents'] == 2, f"Expected 2 docs, got {stats['num_documents']}"
+
+          print('✓ All vector index tests passed')
+          EOF
+
+      - name: Run HNSW-specific tests
+        run: |
+          python << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+          from tools.vector_index import VectorIndex
+
+          # Test HNSW index
+          idx = VectorIndex(index_type='hnsw', M=16, ef_construction=100)
+          docs = [
+              {'id': f'doc{i}', 'text': f'Test document number {i}'}
+              for i in range(10)
+          ]
+          idx.add_documents(docs)
+
+          results = idx.search('document 5', k=3)
+          assert len(results) > 0, "Expected search results"
+
+          print('✓ HNSW index tests passed')
+          EOF
+
+  rnd-kim-proxy:
+    name: R&D - Kim Gateway Proxy Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install kim proxy dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Validate kim_proxy.py syntax
+        run: |
+          python -m py_compile tools/kim_proxy.py
+          echo "✓ kim_proxy.py syntax valid"
+
+      - name: Run kim proxy unit tests
+        run: |
+          # Test import
+          python -c "from tools.kim_proxy import KimGatewayProxy; print('✓ Import successful')"
+
+          # Test initialization
+          python << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+          from tools.kim_proxy import KimGatewayProxy, SearchRequest
+
+          # Test proxy initialization
+          proxy = KimGatewayProxy(base_url="http://localhost:5340")
+          assert proxy.search_endpoint == "http://localhost:5340/search"
+
+          # Test request object
+          req = SearchRequest(query="test", limit=5)
+          assert req.query == "test"
+          assert req.limit == 5
+
+          # Test stats
+          stats = proxy.get_stats()
+          assert stats['endpoint'] == "http://localhost:5340/search"
+          assert 'cache_enabled' in stats
+
+          print('✓ All kim proxy tests passed')
+          EOF
+
+      - name: Test kim proxy error handling
+        run: |
+          python << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+          from tools.kim_proxy import KimGatewayProxy
+
+          # Test connection to unavailable service
+          proxy = KimGatewayProxy(base_url="http://localhost:9999", max_retries=1)
+          health = proxy.health_check()
+          assert health['status'] == 'unhealthy', "Expected unhealthy status"
+
+          print('✓ Error handling tests passed')
+          EOF
+
+  rnd-integration:
+    name: R&D - Integration Tests
+    runs-on: ubuntu-latest
+    needs: [rnd-vector-index, rnd-kim-proxy]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install all R&D dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy faiss-cpu sentence-transformers requests
+
+      - name: Test combined R&D components
+        run: |
+          python << 'EOF'
+          import sys
+          import json
+          sys.path.insert(0, '.')
+
+          from tools.vector_index import VectorIndex
+          from tools.kim_proxy import KimGatewayProxy
+
+          print("=== R&D Integration Test ===")
+
+          # Create vector index
+          print("\n1. Testing Vector Index...")
+          idx = VectorIndex(index_type='hnsw')
+          docs = [
+              {'id': f'integration_doc_{i}', 'text': f'Integration test document {i}'}
+              for i in range(5)
+          ]
+          idx.add_documents(docs)
+          results = idx.search('integration test', k=3)
+          print(f"   Vector index: {len(results)} results")
+
+          # Initialize Kim proxy
+          print("\n2. Testing Kim Proxy...")
+          proxy = KimGatewayProxy()
+          stats = proxy.get_stats()
+          print(f"   Kim proxy stats: {json.dumps(stats, indent=2)}")
+
+          # Combined stats
+          print("\n3. Combined R&D Component Stats:")
+          print(f"   - Vector Index: {idx.get_stats()['num_documents']} documents")
+          print(f"   - Kim Proxy: {stats['endpoint']}")
+
+          print("\n✓ Integration tests passed!")
+          EOF
+
+      - name: Validate R&D documentation
+        run: |
+          # Check that R&D tools have proper docstrings
+          python << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+
+          from tools.vector_index import VectorIndex
+          from tools.kim_proxy import KimGatewayProxy
+
+          # Check docstrings exist
+          assert VectorIndex.__doc__, "VectorIndex missing docstring"
+          assert KimGatewayProxy.__doc__, "KimGatewayProxy missing docstring"
+          assert VectorIndex.search.__doc__, "VectorIndex.search missing docstring"
+          assert KimGatewayProxy.search.__doc__, "KimGatewayProxy.search missing docstring"
+
+          print("✓ All R&D components have documentation")
+          EOF
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile tools/vector_index.py
+          python -m py_compile tools/kim_proxy.py
+          echo "✓ All Python files have valid syntax"
+
+      - name: Check file permissions
+        run: |
+          # Check that Python files are executable if they have shebang
+          for file in tools/vector_index.py tools/kim_proxy.py; do
+            if head -n1 "$file" | grep -q '^#!'; then
+              if [ ! -x "$file" ]; then
+                echo "Warning: $file has shebang but is not executable"
+              fi
+            fi
+          done
+          echo "✓ File permissions checked"
+
+  summary:
+    name: R&D Test Summary
+    runs-on: ubuntu-latest
+    needs: [rnd-vector-index, rnd-kim-proxy, rnd-integration, code-quality]
+    if: always()
+    steps:
+      - name: Summary report
+        run: |
+          echo "=== R&D Track C - Test Summary ==="
+          echo ""
+          echo "Test Results:"
+          echo "  - Vector Index Tests: ${{ needs.rnd-vector-index.result }}"
+          echo "  - Kim Proxy Tests: ${{ needs.rnd-kim-proxy.result }}"
+          echo "  - Integration Tests: ${{ needs.rnd-integration.result }}"
+          echo "  - Code Quality: ${{ needs.code-quality.result }}"
+          echo ""
+
+          # Check if all passed
+          if [ "${{ needs.rnd-vector-index.result }}" = "success" ] && \
+             [ "${{ needs.rnd-kim-proxy.result }}" = "success" ] && \
+             [ "${{ needs.rnd-integration.result }}" = "success" ] && \
+             [ "${{ needs.code-quality.result }}" = "success" ]; then
+            echo "✓ All R&D tests passed!"
+            exit 0
+          else
+            echo "✗ Some R&D tests failed"
+            exit 1
+          fi
