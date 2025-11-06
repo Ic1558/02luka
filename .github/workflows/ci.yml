@@ -30,7 +30,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
       - name: Install dependencies
         run: |
           # Install jq, yq, redis-tools
@@ -44,8 +43,13 @@ jobs:
           yq --version
           redis-cli --version
 
-      - name: Install npm packages
-        run: npm ci
+      - name: Install npm packages (skip if no lockfile)
+        run: |
+          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
+            npm ci
+          else
+            echo "No Node lockfile found; skipping npm install"
+          fi
 
       - name: Set script permissions
         run: chmod +x tools/ci/*.sh scripts/*.sh
@@ -68,7 +72,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install dependencies
         run: |
@@ -82,8 +85,13 @@ jobs:
           jq --version
           yq --version
 
-      - name: Install npm packages
-        run: npm ci
+      - name: Install npm packages (skip if no lockfile)
+        run: |
+          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
+            npm ci
+          else
+            echo "No Node lockfile found; skipping npm install"
+          fi
 
       - name: Set script permissions
         run: chmod +x tools/ci/*.sh scripts/*.sh
