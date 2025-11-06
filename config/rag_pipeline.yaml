@@ -1,0 +1,36 @@
+# Phase 14.4 – Minimal Retrieval-Augmented Generation Pipeline
+# Classification: Tactical Activation Patch (TAP)
+# Owner: GG Core (02LUKA Automation)
+# Timestamp: 2025-11-07T12:00:00Z
+# WO-ID: WO-251107-PR-BUNDLE
+# Notes: Bootstrap wiring for query/probe scripts + telemetry hooks.
+
+pipeline:
+  name: phase14.4-minimal
+  description: "Lightweight RAG pipeline used for verification exercises."
+  embeddings:
+    model: text-embedding-3-small
+    batch_size: 16
+  retriever:
+    backend: vectordb
+    index_path: ~/02luka/memory/vector/index
+    top_k: 8
+  generator:
+    model: gpt-4.1-mini
+    temperature: 0.3
+
+probes:
+  interval_minutes: 30
+  command: "${LUKA_HOME:-$HOME/02luka}/tools/rag_probe.zsh"
+
+telemetry:
+  namespace: rag
+  streams:
+    - rag.ctx.session
+    - rag.ctx.latency
+    - rag.probe.status
+    - rag.probe.latency
+  export:
+    type: jsonl
+    path: ~/02luka/telemetry_unified/rag
+
