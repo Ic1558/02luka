@@ -55,7 +55,7 @@ sync_conflicts_*/
 logs/*.log
 logs/**/*.log
 
-# ---- General Hygiene ----
+# ---- CI / local automation noise ----
 logs/
 *.out
 *.err
