@@ -122,11 +122,12 @@ process_one(){
   fi
 }
 
-# Scan inbox for OCR approvals
+# Scan inbox for OCR approvals (using portable find pattern)
 found=0
-for f in "$INBOX"/OCR_APPROVED_*.json(NN); do
-  (( found++ ))
-  process_one "$f" || true
-done
+find "$INBOX" -maxdepth 1 -type f -name 'OCR_APPROVED_*.json' -print0 2>/dev/null \
+| while IFS= read -r -d '' f; do
+    (( found++ ))
+    process_one "$f" || true
+  done || true
 
 log "SCAN: complete (found=$found)"

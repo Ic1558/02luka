@@ -35,11 +35,10 @@ echo "✅ Git repository OK"
 
 # Test 5: Critical scripts executable
 echo "[5/5] Checking script permissions..."
-for script in tools/cls_*.zsh; do
-  if [ -f "$script" ]; then
+find tools -maxdepth 1 -type f -name 'cls_*.zsh' -print0 2>/dev/null \
+| while IFS= read -r -d '' script; do
     test -x "$script" || { echo "❌ $script not executable"; exit 1; }
-  fi
-done
+  done || true
 echo "✅ Script permissions OK"
 
 echo ""

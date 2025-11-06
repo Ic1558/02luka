@@ -15,10 +15,10 @@ log(){ echo "[$(ts)] $*" | tee -a "$LOG"; }
 
 log "START: OCR Consumer scan"
 
-# Process files
+# Process files (using portable find pattern)
 found=0
-for json in "$INBOX"/OCR_APPROVED_*.json; do
-  [[ -f "$json" ]] || continue
+find "$INBOX" -maxdepth 1 -type f -name 'OCR_APPROVED_*.json' -print0 2>/dev/null \
+| while IFS= read -r -d '' json; do
   (( found++ ))
   
   base=$(basename "$json")
