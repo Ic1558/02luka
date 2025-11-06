@@ -1,0 +1,79 @@
+[
+  {
+    "number": 169,
+    "title": "Fix workflow trigger regressions caused by retention env blocks",
+    "author": "Ic1558",
+    "branch": "codex/fix-critical-and-high-priority-ci-bugs",
+    "checks": "SUCCESS"
+  },
+  {
+    "number": 164,
+    "title": "Handle Redis instances without auth in ops gate check",
+    "author": "Ic1558",
+    "branch": "codex/fix-redis-authentication-bug-in-ops_gate.sh",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 129,
+    "title": "Fix reportbot summary fetch for custom webhook URLs",
+    "author": "Ic1558",
+    "branch": "codex/fix-p1-issue-with-webhook-url-handling-0bkuoz",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 128,
+    "title": "Fix reportbot summary fetch for custom webhook URLs",
+    "author": "Ic1558",
+    "branch": "codex/fix-p1-issue-with-webhook-url-handling",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 127,
+    "title": "fix: handle reportbot webhooks over http and custom ports",
+    "author": "Ic1558",
+    "branch": "codex/fix-webhook-handling-for-http-ports",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 126,
+    "title": "Fix reportbot HTTP request to respect URL protocol and port",
+    "author": "Ic1558",
+    "branch": "codex/fix-high-priority-webhook-request-issue",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 125,
+    "title": "fix: handle http and custom ports in webhook relay",
+    "author": "Ic1558",
+    "branch": "codex/fix-high-priority-bug-in-reportbot",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 124,
+    "title": "fix: support non-https discord webhooks",
+    "author": "Ic1558",
+    "branch": "codex/fix-http-webhook-handling-issue",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 123,
+    "title": "Fix reportbot webhook protocol handling",
+    "author": "Ic1558",
+    "branch": "codex/fix-webhook-handling-for-http-and-ports",
+    "checks": "FAILURE,SUCCESS"
+  },
+  {
+    "number": 114,
+    "title": "docs: clarify phase 4 roadmap status",
+    "author": "Ic1558",
+    "branch": "codex/fix-unimplemented-mcp/linear-lite-endpoints-documentation-un9xnq",
+    "checks": "SUCCESS"
+  },
+  {
+    "number": 113,
+    "title": "docs: clarify phase 4 roadmap status",
+    "author": "Ic1558",
+    "branch": "codex/fix-unimplemented-mcp/linear-lite-endpoints-documentation",
+    "checks": "SUCCESS"
+  }
+]
