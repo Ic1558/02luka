@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.02luka.ci-observer</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>bash</string>
+    <string>-lc</string>
+    <string>export LUKA_REDIS_URL=${LUKA_REDIS_URL:-redis://127.0.0.1:6379} &amp;&amp; cd "$HOME/02luka" &amp;&amp; node tools/ci_observer.cjs</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>$HOME/02luka/g/reports/ci/observer.launchd.out</string>
+  <key>StandardErrorPath</key><string>$HOME/02luka/g/reports/ci/observer.launchd.err</string>
+  <key>WorkingDirectory</key><string>$HOME/02luka</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LUKA_REDIS_URL</key><string>redis://127.0.0.1:6379</string>
+  </dict>
+</dict>
+</plist>
