@@ -5,8 +5,8 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🧪 Validation Script - Smoke Tests"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-echo "🔥 Running smoke tests (managed server)..."
-bash scripts/smoke_with_server.sh
+echo "🔥 Running smoke tests..."
+bash scripts/smoke.sh
 
 echo ""
 echo "✅ Validation complete"
