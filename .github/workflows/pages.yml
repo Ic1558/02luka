@@ -32,33 +32,33 @@ jobs:
           cp -r docs dist/ 2>/dev/null || echo "No docs directory"
           
           # Generate health page
-          cat > dist/_health.html << 'HTML'
+          cat > dist/_health.html <<'HEALTH_EOF'
           <!doctype html>
           <meta charset="utf-8">
           <title>02luka Health</title>
           <h1>02luka System Health</h1>
           <p>Status: <strong style="color:green">OK</strong></p>
           <p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>
-HTML
+          HEALTH_EOF
           
           # Generate manifest
-          cat > dist/manifest.json << JSON
+          cat > dist/manifest.json <<'JSON_EOF'
           {
             "status": "ok",
             "timestamp": "$(date -u +%FT%TZ)",
             "version": "$(git rev-parse --short HEAD)",
             "branch": "main"
           }
-JSON
+          JSON_EOF
           
           # Generate ops status page
-          cat > dist/ops/status.html << 'HTML'
+          cat > dist/ops/status.html <<'OPS_EOF'
           <!doctype html>
           <meta charset="utf-8">
           <title>02luka Ops Status</title>
           <h1>02luka Operations</h1>
           <p>System operational</p>
-HTML
+          OPS_EOF
           
           echo "✅ Static site built successfully"
           ls -la dist/

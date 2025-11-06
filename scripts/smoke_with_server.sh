@@ -23,6 +23,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# shellcheck disable=SC2329
 check_health() {
   curl -fsS -m 2 "${BASE_URL}/healthz" >/dev/null 2>&1
 }

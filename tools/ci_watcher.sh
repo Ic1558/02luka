@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+# shellcheck shell=bash
 set -euo pipefail
 
 # CI Watcher — Auto rerun failing PRs and log results
