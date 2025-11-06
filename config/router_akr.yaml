@@ -1,0 +1,205 @@
+# Router AKR Configuration
+# Phase 15 - Intent-based Agent Router
+# Version: 1.0.0
+
+router:
+  id: router_akr
+  name: "AKR Intent Router"
+  version: 1.0.0
+  description: "Agent routing system with intent classification and circular delegation prevention"
+  phase: "15"
+  work_order: "WO-251107-PHASE-15-AKR"
+
+# Confidence thresholds for routing decisions
+thresholds:
+  intent_min: 0.75           # Minimum confidence to route a request
+  high_confidence: 0.85      # High confidence threshold
+  ambiguous_max: 0.50        # Below this is considered ambiguous
+  fallback_agent: kim        # Default agent when confidence is below intent_min
+
+# Delegation rules: from_agent -> to_agent: [intent patterns]
+delegation_rules:
+  kim:
+    to_andy:
+      - code.implement
+      - code.review
+      - code.fix
+      - code.test
+      - code.refactor
+      - code.debug
+      - code.deploy
+      - git.commit
+      - git.push
+      - git.pr
+      - file.write
+      - file.modify
+      - build.run
+      - test.run
+
+  andy:
+    to_kim:
+      - query.explain
+      - query.clarify
+      - query.translate
+      - query.help
+      - query.documentation
+      - conversation.chat
+      - intent.classify
+      - user.support
+      - translation.request
+
+# Circular delegation prevention
+max_hops: 3                  # Maximum delegation chain depth
+prevent_circular: true       # Enable circular delegation detection
+
+# Intent pattern definitions for matching
+intent_patterns:
+  # Code-related intents (route to Andy)
+  code:
+    - pattern: "code\\.(implement|review|fix|test|refactor|debug|deploy)"
+      confidence_boost: 0.10
+      keywords:
+        - code
+        - implement
+        - function
+        - class
+        - component
+        - fix
+        - bug
+        - test
+        - refactor
+        - debug
+        - deploy
+
+    - pattern: "git\\.(commit|push|pr|merge|branch)"
+      confidence_boost: 0.10
+      keywords:
+        - git
+        - commit
+        - push
+        - pull request
+        - merge
+        - branch
+
+    - pattern: "file\\.(write|modify|create|update)"
+      confidence_boost: 0.05
+      keywords:
+        - write file
+        - edit file
+        - modify file
+        - create file
+        - update code
+
+    - pattern: "(build|test)\\.run"
+      confidence_boost: 0.05
+      keywords:
+        - build
+        - compile
+        - run test
+        - execute test
+
+  # Query-related intents (route to Kim)
+  query:
+    - pattern: "query\\.(explain|clarify|translate|help|documentation)"
+      confidence_boost: 0.10
+      keywords:
+        - explain
+        - what
+        - why
+        - how
+        - clarify
+        - translate
+        - แปล
+        - help
+        - documentation
+
+    - pattern: "conversation\\.chat"
+      confidence_boost: 0.05
+      keywords:
+        - chat
+        - talk
+        - conversation
+        - คุย
+
+    - pattern: "intent\\.classify"
+      confidence_boost: 0.10
+      keywords:
+        - classify
+        - understand
+        - interpret
+        - detect intent
+
+    - pattern: "translation\\.request"
+      confidence_boost: 0.10
+      keywords:
+        - translate
+        - แปล
+        - translation
+        - language
+
+# Thai keyword mappings for intent classification
+thai_keywords:
+  code_related:
+    - แก้ไข
+    - เขียนโค้ด
+    - สร้างฟังก์ชัน
+    - แก้บั๊ก
+    - ทดสอบ
+    - รีแฟคเตอร์
+    - deploy
+    - คอมมิต
+
+  query_related:
+    - อธิบาย
+    - ช่วย
+    - แปล
+    - ชี้แจง
+    - สอบถาม
+    - ข้อมูล
+    - เอกสาร
+    - คำถาม
+
+# Telemetry configuration
+telemetry:
+  enabled: true
+  sink: g/telemetry_unified/unified.jsonl
+  events:
+    - router.start        # Router starts processing
+    - router.decision     # Routing decision made
+    - router.delegate     # Delegation executed
+    - router.end          # Router completes processing
+    - router.error        # Error occurred
+    - router.circular     # Circular delegation detected
+    - router.max_hops     # Max hops exceeded
+
+  schema_version: "1.0.0"
+
+  metadata:
+    phase: "15"
+    work_order: "WO-251107-PHASE-15-AKR"
+    component: "router_akr"
+
+# Agent configuration paths
+agent_configs:
+  andy: config/agents/andy.yaml
+  kim: config/agents/kim.yaml
+
+# Error handling
+error_handling:
+  on_missing_config: warn_and_use_fallback
+  on_low_confidence: route_to_fallback
+  on_circular_delegation: reject_with_error
+  on_max_hops: reject_with_error
+  on_invalid_input: reject_with_error
+
+# Dry-run mode configuration
+dry_run:
+  enabled_by_flag: true    # Can be enabled via --dry-run flag
+  skip_telemetry: false    # Still write telemetry in dry-run
+  return_decision_only: true
+
+version_info:
+  created: "2025-11-06"
+  last_modified: "2025-11-06"
+  schema_version: "1.0.0"
+  phase: "15"
