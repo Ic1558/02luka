@@ -28,6 +28,9 @@ credentials.json
 dist/
 build/
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
 
 # Safety snapshots (too large)
 _safety_snapshots/
