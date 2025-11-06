@@ -32,7 +32,7 @@ jobs:
           cp -r docs dist/ 2>/dev/null || echo "No docs directory"
           
           # Generate health page
-          cat > dist/_health.html <<'HEALTH_EOF'
+          cat > dist/_health.html <<HEALTH_EOF
           <!doctype html>
           <meta charset="utf-8">
           <title>02luka Health</title>
@@ -42,7 +42,7 @@ jobs:
           HEALTH_EOF
           
           # Generate manifest
-          cat > dist/manifest.json <<'JSON_EOF'
+          cat > dist/manifest.json <<JSON_EOF
           {
             "status": "ok",
             "timestamp": "$(date -u +%FT%TZ)",
@@ -52,7 +52,7 @@ jobs:
           JSON_EOF
           
           # Generate ops status page
-          cat > dist/ops/status.html <<'OPS_EOF'
+          cat > dist/ops/status.html <<OPS_EOF
           <!doctype html>
           <meta charset="utf-8">
           <title>02luka Ops Status</title>
