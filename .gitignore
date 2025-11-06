@@ -24,6 +24,12 @@ tmp/
 *.key
 credentials.json
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
 # Build
 dist/
 build/
