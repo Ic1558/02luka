@@ -1,10 +1,23 @@
-# intent → skill chain (รันตามลำดับ)
 check_health:
-  - skills/http_fetch.py
-  - skills/run_shell.zsh
+  description: "Query the local Boss API stub to verify service status."
+  skills:
+    - name: http_fetch.py
+      params:
+        url: http://localhost:4000/api/status
+        method: GET
 
 deploy_dashboard:
-  - misc/deploy_dashboard.zsh
+  description: "Demonstrate a dashboard deployment through a stubbed workflow."
+  skills:
+    - name: ui_emit.py
+      params:
+        title: "Dashboard deployment (stub)"
+        notes: "Use this to confirm that automation intents are being routed correctly before invoking real infrastructure scripts."
 
 update_docker_yaml:
-  - misc/update_docker_yaml.zsh
+  description: "Preview docker-compose updates by echoing the intended parameters."
+  skills:
+    - name: ui_emit.py
+      params:
+        title: "Docker Compose update (stub)"
+        notes: "Review the generated configuration before applying changes to persistent services."
