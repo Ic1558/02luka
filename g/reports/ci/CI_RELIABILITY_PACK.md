@@ -31,3 +31,26 @@
 - Add label/title gating to opt-in heavy smoke (`[run-smoke]` or `run-smoke` label).
 
 - Move boss-api health wait into the script with SKIP_BOSS_API guard.
+
+## Opt-in Label/Title Gating
+
+Heavy jobs (`ops-gate`, `rag-vector-selftest`) now run only when:
+- PR has label `run-smoke` OR
+- PR title contains `[run-smoke]` OR
+- Event is `push` (always runs on push to main/develop)
+
+### Usage
+
+To run heavy smoke tests on a PR:
+1. Add label `run-smoke` to the PR, OR
+2. Include `[run-smoke]` in the PR title
+
+Example PR titles:
+- `feat: new feature [run-smoke]`
+- `fix: critical bug [run-smoke]`
+
+### Benefits
+
+- Default: PRs are quiet (only `validate` runs)
+- Opt-in: Heavy tests run only when explicitly requested
+- Push: Always runs full suite on push to main/develop
