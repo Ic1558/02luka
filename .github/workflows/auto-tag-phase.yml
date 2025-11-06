@@ -1,6 +1,7 @@
+---
 name: Auto-Tag Phase Releases
 
-on:
+on:  # yamllint disable-line rule:truthy
   pull_request:
     types: [closed]
     branches:
