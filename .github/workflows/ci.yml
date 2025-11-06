@@ -1,14 +1,4 @@
 name: ci
-true:
-  push:
-    branches:
-    - main
-    - develop
-    - ci/**
-  pull_request:
-    branches:
-    - main
-    - develop
 permissions:
   contents: read
   pull-requests: read
@@ -71,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: validate
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.title, '[run-smoke]') || contains(join(github.event.pull_request.labels.*.name, ','), 'run-smoke') }}
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.title, '[run-smoke]') || contains(join(github.event.pull_request.labels.*.name, ','), 'run-smoke') }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -117,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: validate
-    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.title, '[run-smoke]') || contains(join(github.event.pull_request.labels.*.name, ','), 'run-smoke') }}
+    if: ${{ github.event_name != 'pull_request' || contains(github.event.pull_request.title, '[run-smoke]') || contains(join(github.event.pull_request.labels.*.name, ','), 'run-smoke') }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -174,3 +164,13 @@ jobs:
     if: ${{ always() }}
     steps:
     - run: 'echo CI summary: validate is REQUIRED; other jobs are non-blocking (continue-on-error).'
+'on':
+  push:
+    branches:
+    - main
+    - develop
+    - ci/**
+  pull_request:
+    branches:
+    - main
+    - develop
