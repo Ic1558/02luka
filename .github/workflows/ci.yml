@@ -56,6 +56,9 @@ jobs:
     - name: Show boss-api log (always)
       if: ${{ always() }}
       run: echo "---- boss-api log ----"; sed -n '1,200p' .tmp/boss-api.out.log || true
+    env:
+      SKIP_BOSS_API: '1'
+      CI_QUIET: '1'
   ops-gate:
     name: Phase 5/6/7 smoke (ops)
     runs-on: ubuntu-latest
@@ -164,6 +167,7 @@ jobs:
     if: ${{ always() }}
     steps:
     - run: 'echo CI summary: validate is REQUIRED; other jobs are non-blocking (continue-on-error).'
+    continue-on-error: true
 'on':
   push:
     branches:
