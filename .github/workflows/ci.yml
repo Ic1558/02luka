@@ -30,6 +30,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+        continue-on-error: true  # Skip cache failure if no lockfile
+
       - name: Install dependencies
         run: |
           # Install jq, yq, redis-tools
@@ -72,6 +74,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+        continue-on-error: true  # Skip cache failure if no lockfile
 
       - name: Install dependencies
         run: |
