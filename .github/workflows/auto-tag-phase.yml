@@ -1,3 +1,5 @@
+---
+# yamllint disable-line rule:truthy
 name: Auto-Tag Phase Releases
 
 on:
@@ -90,17 +92,19 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           MERGED_BY="${{ github.event.pull_request.merged_by.login }}"
           MERGED_AT="${{ github.event.pull_request.merged_at }}"
+          PR_BODY="${{ github.event.pull_request.body }}"
+          REPO="${{ github.repository }}"
 
-          # Create release body
-          cat > /tmp/release-body.md <<'EOF'
-          ## Phase ${{ steps.extract.outputs.phase_number }} Release
+          # Create release body with proper variable expansion
+          cat > /tmp/release-body.md <<EOF
+          ## Phase ${PHASE_NUM} Release
 
-          **Merged PR**: #${{ github.event.pull_request.number }} - ${{ github.event.pull_request.title }}
-          **Merged by**: @${{ github.event.pull_request.merged_by.login }}
-          **Merged at**: ${{ github.event.pull_request.merged_at }}
+          **Merged PR**: #${PR_NUM} - ${PR_TITLE}
+          **Merged by**: @${MERGED_BY}
+          **Merged at**: ${MERGED_AT}
 
           ### Changes
-          ${{ github.event.pull_request.body }}
+          ${PR_BODY}
 
           ---
 
@@ -111,7 +115,7 @@ jobs:
           gh release create "$TAG_NAME" \
             --title "Phase ${PHASE_NUM}" \
             --notes-file /tmp/release-body.md \
-            --repo ${{ github.repository }}
+            --repo "$REPO"
 
           echo "✅ Release created for $TAG_NAME"
 
