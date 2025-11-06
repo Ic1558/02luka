@@ -1,3 +1,5 @@
+---
+# yamllint disable-line rule:truthy
 name: ci / ops-gate
 on:
   pull_request:
