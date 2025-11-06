@@ -54,7 +54,9 @@ jobs:
           fi
 
       - name: Set script permissions
-        run: chmod +x tools/ci/*.sh scripts/*.sh
+        run: |
+          chmod +x tools/ci/*.sh || true
+          chmod +x scripts/*.sh 2>/dev/null || true
 
       - name: Run validation
         run: bash tools/ci/validate.sh
@@ -97,7 +99,9 @@ jobs:
           fi
 
       - name: Set script permissions
-        run: chmod +x tools/ci/*.sh scripts/*.sh
+        run: |
+          chmod +x tools/ci/*.sh || true
+          chmod +x scripts/*.sh 2>/dev/null || true
 
       - name: Run ops gate
         run: bash tools/ci/ops_gate.sh
