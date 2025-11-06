@@ -1,7 +1,11 @@
-# Logs (but keep directory structure)
-logs/*.log
-logs/**/*.log
+# Logs — ignore contents, keep directory structure
+logs/**
+!logs/.gitkeep
+
+# Generic runtime logs (outside logs/)
 *.log
+*.out
+*.err
 
 # OS files
 .DS_Store
@@ -49,17 +53,7 @@ g/telemetry/*.log
 
 # Conflict backups
 *.backup.*
-sync_conflicts_*/
+sync_conflicts_/
 
-# local logs
-logs/*.log
-logs/**/*.log
-
-
-# logs
-logs/
-*.log
-*.out
-*.err
-logs/*.out
-logs/*.err
+# Python virtual environment
+.venv/
