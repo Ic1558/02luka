@@ -61,9 +61,7 @@ mkdir -p g/memory g/reports g/telemetry
 
 echo ""
 echo "🔥 Running smoke tests..."
-if [[ -x scripts/smoke_with_server.sh ]]; then
-  bash scripts/smoke_with_server.sh
-elif [[ -x scripts/smoke.sh ]]; then
+if [[ -x scripts/smoke.sh ]]; then
   bash scripts/smoke.sh
 else
   echo "⚠️  No smoke script found; skipping"
