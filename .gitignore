@@ -1,7 +1,9 @@
-# Logs (but keep directory structure)
-logs/*.log
-logs/**/*.log
+# ---- Logs (canonical pattern - keep directory structure) ----
+logs/**
+!logs/.gitkeep
 *.log
+*.out
+*.err
 
 # OS files
 .DS_Store
@@ -14,6 +16,7 @@ Thumbs.db
 
 # Temp
 tmp/
+.tmp/
 *.tmp
 *.swp
 *.bak
@@ -39,7 +42,6 @@ _log_archives/
 .devcontainer.disabled/
 
 # Runtime files
-g/.devcontainer.disabled/
 *.pid
 run/*.lock
 
@@ -51,13 +53,6 @@ g/telemetry/*.log
 *.backup.*
 sync_conflicts_*/
 
-# local logs
-logs/*.log
-logs/**/*.log
-
-# ---- CI / local automation noise ----
-*.out
-*.err
-.tmp/
+# CI / automation noise
 tools/puppeteer/.logs/
 

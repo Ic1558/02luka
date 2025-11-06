@@ -123,11 +123,11 @@ cat > "$PUBLIC/index.html" <<'INDEXEOF'
       <ul id="doc-list">
 INDEXEOF
 
-# List all HTML files except index
-for html in "$PUBLIC"/*.html(N); do
-  [[ "$(basename "$html")" == "index.html" ]] && continue
+# List all HTML files except index (portable - works in zsh/bash/sh/dash)
+find "$PUBLIC" -maxdepth 1 -type f -name '*.html' 2>/dev/null | while IFS= read -r html; do
   fname=$(basename "$html")
-  title=$(grep -m1 '<title>' "$html" | sed 's/<[^>]*>//g' || echo "$fname")
+  [ "$fname" = "index.html" ] && continue
+  title=$(grep -m1 '<title>' "$html" 2>/dev/null | sed 's/<[^>]*>//g' || echo "$fname")
   echo "        <li><a href=\"/$fname\">$title</a></li>" >> "$PUBLIC/index.html"
 done
 
