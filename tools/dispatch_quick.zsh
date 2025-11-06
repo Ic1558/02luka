@@ -194,6 +194,18 @@ case "$task" in
 
   ci:bus:rerun)    ci:bus:rerun "$@";;
 
+  ci:health)       "${BASE:-$HOME/02luka}/tools/ci_health.zsh" "${1:-20}";;
+
+  ci:health:open)  "${BASE:-$HOME/02luka}/tools/ci_health_open.zsh" "${1:-}";;
+
+  ci:health:tail)  "${BASE:-$HOME/02luka}/tools/ci_health_tail.zsh";;
+
+  ci:health:list)  limit="${1:-10}"; "${BASE:-$HOME/02luka}/tools/ci_health_list.zsh" "$limit";;
+
+  ci:health:prune) days="${1:-14}"; flag="${2:-dry}"; if [ "$flag" = "--force" ]; then flag="force"; fi; "${BASE:-$HOME/02luka}/tools/ci_health_prune.zsh" "$days" "$flag";;
+
+  ci:health:gc)    days="${1:-7}"; [[ $# -gt 0 ]] && shift || true; "${BASE:-$HOME/02luka}/tools/ci_health_gc.zsh" "$days" "$@";;
+
   auto:merge)      auto:merge "$@";;
 
   auto:rerun)      auto:rerun "$@";;
@@ -210,7 +222,7 @@ case "$task" in
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
 
-  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
+  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|ci:health|ci:health:open|ci:health:tail|ci:health:list|ci:health:prune|ci:health:gc|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
 
 esac
 

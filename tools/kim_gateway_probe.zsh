@@ -1,0 +1,196 @@
+#!/usr/bin/env zsh
+# Phase 15 – Kim Proxy Gateway Probe
+# Health check and status probe for Kim Proxy Gateway
+# WO-ID: WO-251107-PHASE-15-KIM-PROXY
+
+set -euo pipefail
+
+BASE="${BASE:-$HOME/02luka}"
+KIM_URL="${KIM_URL:-http://127.0.0.1:8767}"
+REPORT_DIR="${BASE}/g/reports/ci"
+REPORT_FILE="${REPORT_DIR}/kim_gateway_probe_$(date -u +%Y%m%dT%H%M%SZ).md"
+
+mkdir -p "$REPORT_DIR"
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "=========================================="
+echo "Kim Proxy Gateway Probe"
+echo "=========================================="
+echo
+
+# Test function
+run_test() {
+    local test_name="$1"
+    local command="$2"
+    local expected_status="${3:-200}"
+
+    echo -n "Testing: $test_name ... "
+
+    if output=$(eval "$command" 2>&1); then
+        echo -e "${GREEN}PASS${NC}"
+        return 0
+    else
+        echo -e "${RED}FAIL${NC}"
+        echo "  Error: $output"
+        return 1
+    fi
+}
+
+# Generate report
+{
+    echo "# Kim Proxy Gateway Probe Report"
+    echo ""
+    echo "**Timestamp:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo "**Gateway URL:** $KIM_URL"
+    echo ""
+    echo "## Health Checks"
+    echo ""
+} > "$REPORT_FILE"
+
+# 1. Health check
+echo "1. Health Check..."
+echo "-----------------"
+
+if curl -sf "$KIM_URL/health" > /tmp/kim_health.json 2>&1; then
+    echo -e "${GREEN}✓ Gateway is healthy${NC}"
+    {
+        echo "### Health Status"
+        echo ""
+        echo "\`\`\`json"
+        cat /tmp/kim_health.json | jq '.' 2>/dev/null || cat /tmp/kim_health.json
+        echo "\`\`\`"
+        echo ""
+    } >> "$REPORT_FILE"
+else
+    echo -e "${RED}✗ Gateway is not responding${NC}"
+    {
+        echo "### Health Status"
+        echo ""
+        echo "**Status:** ❌ Not responding"
+        echo ""
+        echo "**Error:**"
+        echo "\`\`\`"
+        cat /tmp/kim_health.json 2>&1 || echo "Connection failed"
+        echo "\`\`\`"
+        echo ""
+    } >> "$REPORT_FILE"
+fi
+
+echo
+
+# 2. Stats endpoint
+echo "2. Statistics..."
+echo "----------------"
+
+if curl -sf "$KIM_URL/stats" > /tmp/kim_stats.json 2>&1; then
+    echo -e "${GREEN}✓ Stats endpoint accessible${NC}"
+    {
+        echo "### Statistics"
+        echo ""
+        echo "\`\`\`json"
+        cat /tmp/kim_stats.json | jq '.' 2>/dev/null || cat /tmp/kim_stats.json
+        echo "\`\`\`"
+        echo ""
+    } >> "$REPORT_FILE"
+else
+    echo -e "${YELLOW}⚠ Stats endpoint not accessible${NC}"
+    {
+        echo "### Statistics"
+        echo ""
+        echo "**Status:** ⚠️ Not accessible"
+        echo ""
+    } >> "$REPORT_FILE"
+fi
+
+echo
+
+# 3. Intent classification test
+echo "3. Intent Classification..."
+echo "----------------------------"
+
+if curl -sf -X POST "$KIM_URL/classify" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "explain vector search"}' > /tmp/kim_classify.json 2>&1; then
+    echo -e "${GREEN}✓ Intent classification working${NC}"
+    intent=$(jq -r '.classification.intent' /tmp/kim_classify.json 2>/dev/null || echo "unknown")
+    route=$(jq -r '.classification.route' /tmp/kim_classify.json 2>/dev/null || echo "unknown")
+    echo "  Intent: $intent, Route: $route"
+    {
+        echo "### Intent Classification Test"
+        echo ""
+        echo "**Query:** \"explain vector search\""
+        echo ""
+        echo "\`\`\`json"
+        cat /tmp/kim_classify.json | jq '.' 2>/dev/null || cat /tmp/kim_classify.json
+        echo "\`\`\`"
+        echo ""
+    } >> "$REPORT_FILE"
+else
+    echo -e "${YELLOW}⚠ Intent classification not working${NC}"
+    {
+        echo "### Intent Classification Test"
+        echo ""
+        echo "**Status:** ⚠️ Not working"
+        echo ""
+    } >> "$REPORT_FILE"
+fi
+
+echo
+
+# 4. Query routing test
+echo "4. Query Routing..."
+echo "-------------------"
+
+if curl -sf -X POST "$KIM_URL/query" \
+    -H "Content-Type: application/json" \
+    -d '{"query": "what is Phase 14 about?"}' > /tmp/kim_query.json 2>&1; then
+    echo -e "${GREEN}✓ Query routing working${NC}"
+    route=$(jq -r '.route' /tmp/kim_query.json 2>/dev/null || echo "unknown")
+    backend=$(jq -r '.backend' /tmp/kim_query.json 2>/dev/null || echo "unknown")
+    echo "  Route: $route, Backend: $backend"
+    {
+        echo "### Query Routing Test"
+        echo ""
+        echo "**Query:** \"what is Phase 14 about?\""
+        echo ""
+        echo "\`\`\`json"
+        cat /tmp/kim_query.json | jq '.' 2>/dev/null || cat /tmp/kim_query.json
+        echo "\`\`\`"
+        echo ""
+    } >> "$REPORT_FILE"
+else
+    echo -e "${YELLOW}⚠ Query routing not working${NC}"
+    {
+        echo "### Query Routing Test"
+        echo ""
+        echo "**Status:** ⚠️ Not working"
+        echo ""
+    } >> "$REPORT_FILE"
+fi
+
+echo
+
+# Summary
+{
+    echo "## Summary"
+    echo ""
+    echo "**Report generated:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo ""
+    echo "**Gateway URL:** $KIM_URL"
+    echo ""
+    echo "---"
+    echo ""
+    echo "*Report generated by tools/kim_gateway_probe.zsh*"
+} >> "$REPORT_FILE"
+
+echo "=========================================="
+echo "Probe Complete"
+echo "=========================================="
+echo "Report: $REPORT_FILE"
+echo
+
