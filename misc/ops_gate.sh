@@ -31,6 +31,9 @@ elif command -v redis-cli >/dev/null 2>&1; then
   redis_args=("-h" "$REDIS_HOST" "-p" "$REDIS_PORT")
   if [[ -n "$REDIS_PASSWORD" ]]; then
     redis_args+=("-a" "$REDIS_PASSWORD")
+    echo "   Using Redis authentication"
+  else
+    echo "   ℹ️  No Redis authentication (REDIS_PASSWORD not set)"
   fi
   if redis-cli "${redis_args[@]}" PING | grep -q PONG; then
     echo "✅ Redis responded to PING"
