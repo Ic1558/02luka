@@ -17,7 +17,8 @@ log_report() {
   local pr_num="$1"
   local status="$2"
   local details="${3:-}"
-  local timestamp=$(date -u +%Y%m%d_%H%M%SZ)
+  local timestamp
+  timestamp=$(date -u +%Y%m%d_%H%M%SZ)
   local report_file="${REPORT_DIR}/watcher_${pr_num}_${timestamp}.md"
   
   cat > "$report_file" <<EOF
@@ -55,7 +56,8 @@ if [[ $# -eq 0 ]]; then
   fi
   
   echo "📋 Found failing PRs: $FAILING_PRS"
-  PR_NUMBERS=($(echo $FAILING_PRS | tr '\n' ' '))
+  # shellcheck disable=SC2207
+  read -ra PR_NUMBERS <<< "$(echo "$FAILING_PRS" | tr '\n' ' ')"
 else
   # Validate PR numbers are numeric
   for arg in "$@"; do
@@ -99,12 +101,14 @@ for pr_num in "${PR_NUMBERS[@]}"; do
   fi
   
   echo "❌ Failing checks:"
-  echo "$FAILING_CHECKS" | while read check; do
+  echo "$FAILING_CHECKS" | while IFS= read -r check; do
     echo "  - $check"
   done
   
   # Check backoff: skip if rerun within configured minutes
-  LATEST_REPORT=$(ls -t "${REPORT_DIR}/watcher_${pr_num}_"*.md 2>/dev/null | head -1)
+  # shellcheck disable=SC2012
+  # Use find for portability, fallback to ls if find fails
+  LATEST_REPORT=$(find "${REPORT_DIR}" -maxdepth 1 -name "watcher_${pr_num}_*.md" -type f -print0 2>/dev/null | xargs -0 stat -f "%m %N" 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || find "${REPORT_DIR}" -maxdepth 1 -name "watcher_${pr_num}_*.md" -type f -exec stat -c "%Y %n" {} \; 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || ls -t "${REPORT_DIR}/watcher_${pr_num}_"*.md 2>/dev/null | head -1)
   
   if [[ -n "$LATEST_REPORT" ]]; then
     REPORT_TIME=$(stat -f "%m" "$LATEST_REPORT" 2>/dev/null || stat -c "%Y" "$LATEST_REPORT" 2>/dev/null || echo "0")

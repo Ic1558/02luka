@@ -12,6 +12,7 @@ mkdir -p "${LOG_DIR}"
 started_server=0
 server_pid=""
 
+# shellcheck disable=SC2329
 cleanup() {
   if [[ "${started_server}" -eq 1 ]] && [[ -n "${server_pid}" ]]; then
     if kill -0 "${server_pid}" 2>/dev/null; then
