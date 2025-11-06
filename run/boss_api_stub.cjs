@@ -1,7 +1,21 @@
 #!/usr/bin/env node
 // Boss API Stub - Minimal development server
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const PORT = process.env.BOSS_PORT || 4000;
+const ROOT = path.resolve(__dirname, '..');
+const MODELS_FILE = path.join(ROOT, 'config', 'ui_models.json');
+
+function loadModels() {
+  try {
+    const raw = fs.readFileSync(MODELS_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (error) {
+    console.warn(`[boss-api-stub] unable to load models: ${error.message}`);
+    return [];
+  }
+}
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -47,6 +61,15 @@ const server = http.createServer((req, res) => {
       ok: true,
       capabilities: ['health', 'status'],
       version: 'stub-1.0.0'
+    }));
+  }
+
+  if (url.pathname === '/api/models') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({
+      ok: true,
+      models: loadModels(),
+      source: 'local-config'
     }));
   }
 
