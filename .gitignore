@@ -55,3 +55,7 @@ sync_conflicts_*/
 logs/*.log
 logs/**/*.log
 
+
+# logs
+logs/
+*.log
