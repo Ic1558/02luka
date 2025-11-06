@@ -50,3 +50,8 @@ g/telemetry/*.log
 # Conflict backups
 *.backup.*
 sync_conflicts_*/
+
+# local logs
+logs/*.log
+logs/**/*.log
+
