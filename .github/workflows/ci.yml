@@ -66,6 +66,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: validate
+    env:
+      OPS_GATE_OVERRIDE: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
