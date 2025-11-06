@@ -27,8 +27,10 @@ try:
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
 except ImportError as e:
-    print(f"Warning: Missing dependencies. Install with: pip install requests")
-    raise e
+    import sys
+    print(f"Error: Missing dependencies. Install with: pip install requests", file=sys.stderr)
+    print(f"ImportError: {e}", file=sys.stderr)
+    sys.exit(1)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
