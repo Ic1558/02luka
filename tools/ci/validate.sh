@@ -5,8 +5,14 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🧪 Validation Script - Smoke Tests"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-echo "🔥 Running smoke tests (managed server)..."
-bash scripts/smoke_with_server.sh
+# Check if SKIP_BOSS_API is set to skip server start
+if [[ "${SKIP_BOSS_API:-0}" == "1" ]]; then
+  echo "🔥 Running smoke tests (server-less mode, SKIP_BOSS_API=1)..."
+  bash scripts/smoke.sh
+else
+  echo "🔥 Running smoke tests (managed server)..."
+  bash scripts/smoke_with_server.sh
+fi
 
 echo ""
 echo "✅ Validation complete"
