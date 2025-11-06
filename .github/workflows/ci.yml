@@ -1,118 +1,92 @@
----
 name: ci
-
 on:
   push:
-    branches: [ main ]
+    branches: [main, develop, 'ci/**']
   pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-    inputs:
-      debug:
-        description: 'Enable debug mode'
-        required: false
-        default: 'false'
+    branches: [main, develop]
 
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  pull-requests: read
+  actions: read
 
 env:
   NODE_VERSION: '20'
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
 jobs:
   validate:
-    name: validate
+    name: Phase 4/5/6 smoke (local)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: 'package.json'
-
-      - name: Install dependencies (if needed)
+      - name: Install dependencies
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            echo "No package-lock.json, skipping npm ci"
-          fi
+          # Install jq, yq, redis-tools
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
-      - name: Smoke tests
-        run: bash scripts/smoke.sh
+          # Verify installations
+          jq --version
+          yq --version
+          redis-cli --version
 
-  docs-links:
-    name: docs-links
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Install npm packages
+        run: npm ci
 
-      - name: Link check (docs)
-        run: |
-          set -euo pipefail
-          if [ -d docs ]; then
-            while IFS= read -r file; do
-              echo "Checking ${file}"
-              npx -y markdown-link-check@3.11.2 -q "${file}" || true
-            done < <(find docs -type f -name '*.md' | sort)
-          fi
+      - name: Set script permissions
+        run: chmod +x tools/ci/*.sh scripts/*.sh
 
-      - name: Governance presence
-        run: |
-          test -f docs/SECURITY_GOVERNANCE.md
-          test -f docs/ARCH_OVERVIEW.md
-          test -f docs/PROMPTS_STANDARD.md
-          test -f docs/DEPLOY.md
+      - name: Run validation
+        run: bash tools/ci/validate.sh
 
   ops-gate:
-    name: ops-gate
+    name: Phase 5/6/7 smoke (ops)
     runs-on: ubuntu-latest
-    env:
-      OPS_ATOMIC_URL: ${{ secrets.OPS_ATOMIC_URL }}
-      OPS_ATOMIC_TOKEN: ${{ secrets.OPS_ATOMIC_TOKEN }}
-      OPS_GATE_OVERRIDE: ${{ vars.OPS_GATE_OVERRIDE }}
+    timeout-minutes: 5
+    needs: validate
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Validate gate configuration
-        run: |
-          set -euo pipefail
-          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
-            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
-          if [ -z "${OPS_ATOMIC_URL}" ]; then
-            echo "OPS_ATOMIC_URL secret missing" >&2; exit 1; fi
-          if [ -z "${OPS_ATOMIC_TOKEN}" ]; then
-            echo "OPS_ATOMIC_TOKEN secret missing" >&2; exit 1; fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: Ping Ops Atomic
+      - name: Install dependencies
         run: |
-          set -euo pipefail
-          if [ "${OPS_GATE_OVERRIDE:-0}" = "1" ]; then
-            echo "Gate override enabled via OPS_GATE_OVERRIDE"; exit 0; fi
-          code=$(curl -s -o /tmp/ops-atomic.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${OPS_ATOMIC_TOKEN}" \
-            "${OPS_ATOMIC_URL}/api/reports/summary" || true)
-          if [ "${code}" != "200" ]; then
-            echo "Ops Atomic endpoint returned status ${code}" >&2
-            cat /tmp/ops-atomic.json >&2 || true
-            exit 1
-          fi
+          # Install jq, yq
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
 
-      - name: Phase 5/6/7 smoke (local)
-        run: |
-          set -euo pipefail
-          bash scripts/smoke.sh
-          # Skip self_review if not available
-          if [ -f agents/reflection/self_review.cjs ]; then
-            node agents/reflection/self_review.cjs --days=7 >/dev/null || true
-          fi
+          # Verify installations
+          jq --version
+          yq --version
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Set script permissions
+        run: chmod +x tools/ci/*.sh scripts/*.sh
+
+      - name: Run ops gate
+        run: bash tools/ci/ops_gate.sh
