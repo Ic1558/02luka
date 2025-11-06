@@ -1,0 +1,77 @@
+name: Telemetry Validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate-ok:
+    name: Validate Test Fixtures (OK)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq
+
+      - name: Make scripts executable
+        run: |
+          chmod +x tools/telemetry_validate.zsh tools/telemetry_emit.zsh || true
+
+      - name: Validate ok_sample.jsonl (strict mode)
+        run: |
+          bash tools/telemetry_validate.zsh --path tests/telemetry/fixtures/ok_sample.jsonl --strict --report g/reports/telemetry/validate_ok.md
+
+      - name: Display validation report
+        if: always()
+        run: |
+          if [ -f g/reports/telemetry/validate_ok.md ]; then
+            echo "=== Validation Report ==="
+            cat g/reports/telemetry/validate_ok.md
+          fi
+
+      - name: Validate unified.jsonl (non-blocking)
+        continue-on-error: true
+        run: |
+          if [ -f g/telemetry_unified/unified.jsonl ]; then
+            bash tools/telemetry_validate.zsh --path g/telemetry_unified/unified.jsonl --strict --report g/reports/telemetry/validate_unified.md
+          else
+            echo "ℹ️  No unified.jsonl found; skipping validation"
+          fi
+
+  expect-fail:
+    name: Validate Bad Fixtures (Expect Fail)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq
+
+      - name: Make scripts executable
+        run: |
+          chmod +x tools/telemetry_validate.zsh || true
+
+      - name: Expect failure on bad_sample.jsonl
+        run: |
+          if [ -f tests/telemetry/fixtures/bad_sample.jsonl ]; then
+            echo "Testing bad_sample.jsonl (should fail)..."
+            if bash tools/telemetry_validate.zsh --path tests/telemetry/fixtures/bad_sample.jsonl --strict; then
+              echo "❌ ERROR: Validation passed when it should have failed!"
+              exit 1
+            else
+              echo "✅ Validation correctly failed as expected"
+              exit 0
+            fi
+          else
+            echo "ℹ️  No bad_sample.jsonl found; skipping expect-fail test"
+            exit 0
+          fi

@@ -1,0 +1,3 @@
+{"event":"rag.ctx.hit","component":"rag","data":{"hits":1}}
+{"ts":"not-a-valid-timestamp","event":"test.invalid.ts","component":"gg","event_id":"invalid"}
+{"component":"bridge","level":"info","data":{},"event_id":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
