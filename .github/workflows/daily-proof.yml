@@ -8,6 +8,14 @@ on:
         description: 'Run full validation'
         required: false
         default: 'true'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/daily-proof.yml'
+      - 'g/reports/**'
+
+permissions:
+  contents: read
 
 jobs:
   daily-proof:
