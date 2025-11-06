@@ -65,14 +65,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          TAG_MESSAGE="Phase ${PHASE_NUM} Release
+          cat > /tmp/tag-message.txt <<EOF
+          Phase ${PHASE_NUM} Release
 
-Automatically created from PR #${PR_NUM}: ${PR_TITLE}
-Merged at: ${TIMESTAMP}
+          Automatically created from PR #${PR_NUM}: ${PR_TITLE}
+          Merged at: ${TIMESTAMP}
 
-Co-Authored-By: 02LUKA System <system@02luka.local>"
+          Co-Authored-By: 02LUKA System <system@02luka.local>
+          EOF
 
-          git tag -a "$TAG_NAME" -m "$TAG_MESSAGE"
+          git tag -a "$TAG_NAME" -F /tmp/tag-message.txt
           git push origin "$TAG_NAME"
 
           echo "✅ Tag $TAG_NAME created and pushed"
