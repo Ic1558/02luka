@@ -63,6 +63,8 @@ jobs:
           chmod +x scripts/*.sh 2>/dev/null || true
 
       - name: Run validation
+        env:
+          SKIP_BOSS_API: 1
         run: bash tools/ci/validate.sh
 
   # ============================================================
