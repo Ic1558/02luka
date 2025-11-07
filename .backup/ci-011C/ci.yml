@@ -16,17 +16,10 @@ env:
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
 jobs:
-  # ============================================================
-  # REQUIRED JOB: validate (phase 4/5/6 smoke)
-  # This is the only job required to pass for PRs to be green
-  # ============================================================
   validate:
-    name: Phase 4/5/6 smoke (local) [REQUIRED]
+    name: Phase 4/5/6 smoke (local)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
-    env:
-      SKIP_BOSS_API: '1'
-      CI_QUIET: '1'
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -68,21 +61,11 @@ jobs:
       - name: Run validation
         run: bash tools/ci/validate.sh
 
-  # ============================================================
-  # OPTIONAL JOB: ops-gate (phase 5/6/7 smoke)
-  # Skipped on forks and when [skip-smoke] is in PR title
-  # Runs with continue-on-error to not block PRs
-  # ============================================================
   ops-gate:
-    name: Phase 5/6/7 smoke (ops) [OPTIONAL]
+    name: Phase 5/6/7 smoke (ops)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     needs: validate
-    continue-on-error: true
-    if: |
-      github.event.pull_request.head.repo.fork == false &&
-      !contains(github.event.pull_request.title, '[skip-smoke]') &&
-      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,21 +106,11 @@ jobs:
       - name: Run ops gate
         run: bash tools/ci/ops_gate.sh
 
-  # ============================================================
-  # OPTIONAL JOB: RAG Vector Search (phase 15)
-  # Skipped on forks and when [skip-smoke] is in PR title
-  # Runs with continue-on-error to not block PRs
-  # ============================================================
   rag-vector-selftest:
-    name: Phase 15 RAG Vector Search [OPTIONAL]
+    name: Phase 15 RAG Vector Search
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     needs: validate
-    continue-on-error: true
-    if: |
-      github.event.pull_request.head.repo.fork == false &&
-      !contains(github.event.pull_request.title, '[skip-smoke]') &&
-      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -183,37 +156,3 @@ jobs:
           name: rag-vector-selftest-report
           path: g/reports/phase15/rag_vector_selftest.md
           if-no-files-found: warn
-
-  # ============================================================
-  # SUMMARY JOB: Always runs to show overall status
-  # ============================================================
-  ci-summary:
-    name: CI Summary
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    if: always()
-    needs: [validate, ops-gate, rag-vector-selftest]
-    steps:
-      - name: Check required jobs
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "CI Summary"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo ""
-          echo "Required jobs:"
-          echo "  validate: ${{ needs.validate.result }}"
-          echo ""
-          echo "Optional jobs (continue-on-error):"
-          echo "  ops-gate: ${{ needs.ops-gate.result }}"
-          echo "  rag-vector-selftest: ${{ needs.rag-vector-selftest.result }}"
-          echo ""
-
-          if [ "${{ needs.validate.result }}" != "success" ]; then
-            echo "❌ REQUIRED job 'validate' failed"
-            exit 1
-          fi
-
-          echo "✅ All required jobs passed"
-          echo ""
-          echo "Note: Optional jobs may fail without blocking PR merge."
-          echo "To run optional jobs, add the 'run-smoke' label to your PR."
