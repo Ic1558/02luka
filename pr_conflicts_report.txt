@@ -1,0 +1,19 @@
+PR Conflict Analysis Report
+Generated: Tue Nov  4 17:43:26 UTC 2025
+=========================================
+
+✗ CONFLICT: codex/add-user-authentication-feature
+
+✗ CONFLICT: codex/add-user-authentication-feature-hhs830
+
+✗ CONFLICT: codex/add-user-authentication-feature-not1zo
+
+✗ CONFLICT: codex/add-user-authentication-feature-yiytty
+
+
+=========================================
+Summary:
+  Total branches checked: 193
+  Branches with conflicts: 4
+  Branches without conflicts: 189
+
