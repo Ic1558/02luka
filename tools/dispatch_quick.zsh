@@ -2,7 +2,7 @@
 # Quick Dispatch Tool
 # Provides shortcuts for common CI and monitoring operations
 
-set -euo pipefail
+set -eo pipefail
 
 SCRIPT_DIR="${0:A:h}"
 ROOT="${ROOT:-$HOME/02luka}"

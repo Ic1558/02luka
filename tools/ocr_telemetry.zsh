@@ -2,7 +2,7 @@
 # OCR Telemetry Viewer
 # Displays OCR SHA256 failure statistics from telemetry log
 
-set -euo pipefail
+set -eo pipefail
 
 TELEM_LOG="${HOME}/logs/ocr_telemetry.log"
 
@@ -17,22 +17,21 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 # Show summary statistics
 echo ""
 echo "Failure Summary:"
-tail -n 50 "$TELEM_LOG" \
+while IFS= read -r count type; do
+  case "$type" in
+    sha_fail) echo "  ❌ Invalid SHA256 format: $count" ;;
+    sha_mismatch) echo "  ⚠️  SHA256 mismatch: $count" ;;
+    *) echo "  ❓ $type: $count" ;;
+  esac
+done < <(tail -n 50 "$TELEM_LOG" \
   | awk '{print $3}' \
   | sort \
   | uniq -c \
-  | sort -nr \
-  | while read count type; do
-      case "$type" in
-        sha_fail) echo "  ❌ Invalid SHA256 format: $count" ;;
-        sha_mismatch) echo "  ⚠️  SHA256 mismatch: $count" ;;
-        *) echo "  ❓ $type: $count" ;;
-      esac
-    done
+  | sort -nr) || true
 
 echo ""
 echo "Recent Events:"
-tail -n 10 "$TELEM_LOG" | while IFS= read -r line; do
+while IFS= read -r line; do
   timestamp=$(echo "$line" | awk '{print $1}')
   filepath=$(echo "$line" | awk '{print $2}')
   event=$(echo "$line" | awk '{print $3}')
@@ -42,7 +41,7 @@ tail -n 10 "$TELEM_LOG" | while IFS= read -r line; do
     sha_mismatch) echo "  ⚠️  [$timestamp] Mismatch: $(basename "$filepath")" ;;
     *) echo "  ❓ [$timestamp] $event: $(basename "$filepath")" ;;
   esac
-done
+done < <(tail -n 10 "$TELEM_LOG") || true
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
