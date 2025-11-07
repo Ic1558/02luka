@@ -14,6 +14,11 @@ else
   bash scripts/smoke_with_server.sh
 fi
 
+# Guard: enforce pinned faiss-cpu
+if [ -x "tools/ci/guard_faiss_pin.zsh" ]; then
+  tools/ci/guard_faiss_pin.zsh
+fi
+
 echo ""
 echo "✅ Validation complete"
 

@@ -1,0 +1,4 @@
+# Global constraints to keep builds reproducible
+# This file enforces pinned versions to prevent dependency drift
+faiss-cpu==1.7.4
+
