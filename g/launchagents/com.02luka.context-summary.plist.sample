@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.02luka.context-summary</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>source ~/02luka/paths.env 2>/dev/null || true; ~/02luka/tools/generate_context_summary.zsh >> ~/02luka/g/logs/context_summary.log 2>&1</string>
+  </array>
+  <key>StartInterval</key><integer>21600</integer>
+  <!-- Every 6 hours (21600 seconds) -->
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>$HOME/02luka/g/logs/context_summary.launchd.out</string>
+  <key>StandardErrorPath</key><string>$HOME/02luka/g/logs/context_summary.launchd.err</string>
+  <key>WorkingDirectory</key><string>$HOME/02luka</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LUKA_HOME</key><string>$HOME/02luka</string>
+    <key>LUKA_REDIS_URL</key><string>redis://127.0.0.1:6379</string>
+  </dict>
+</dict>
+</plist>
