@@ -55,28 +55,9 @@ sync_conflicts_*/
 logs/*.log
 logs/**/*.log
 
-
-# logs
-logs/
-*.log
-# === Phase 19: CI hygiene ===
-
-# Logs & temp
-logs/
-*.log
+# ---- CI / local automation noise ----
 *.out
 *.err
 .tmp/
-.tmp/**
-
-# Reports generated locally
-g/reports/ci/health_*.md
-g/reports/**/*.json
-g/reports/ci/ops_sandbox_*.log
-
-# Puppeteer cache/logs
 tools/puppeteer/.logs/
-tools/puppeteer/.cache/
 
-# macOS cruft
-.DS_Store

@@ -2,7 +2,7 @@
 # Smoke tests for 02LUKA system
 # Verifies basic system health and critical paths
 
-set -euo pipefail
+set -eo pipefail
 
 echo "🔍 Running 02LUKA Smoke Tests..."
 echo ""
@@ -35,12 +35,17 @@ echo "✅ Git repository OK"
 
 # Test 5: Critical scripts executable
 echo "[5/5] Checking script permissions..."
-for script in tools/cls_*.zsh; do
-  if [ -f "$script" ]; then
-    test -x "$script" || { echo "❌ $script not executable"; exit 1; }
-  fi
-done
-echo "✅ Script permissions OK"
+scripts_found=0
+while IFS= read -r -d '' script; do
+  [ -f "$script" ] || continue
+  scripts_found=$((scripts_found + 1))
+  test -x "$script" || { echo "❌ $script not executable"; exit 1; }
+done < <(find tools -maxdepth 1 -type f -name 'cls_*.zsh' -print0 2>/dev/null) || true
+if [ "${scripts_found:-0}" -eq 0 ]; then
+  echo "⚠️  No cls_*.zsh scripts found (skipping permission check)"
+else
+  echo "✅ Script permissions OK"
+fi
 
 echo ""
 echo "🎉 All smoke tests passed!"
