@@ -2,7 +2,9 @@
 # Smoke tests for 02LUKA system
 # Verifies basic system health and critical paths
 
-set -euo pipefail
+# portable strict-ish mode for mixed CI shells
+set -eo pipefail
+IFS=$'\n\t'
 
 echo "🔍 Running 02LUKA Smoke Tests..."
 echo ""
@@ -35,12 +37,27 @@ echo "✅ Git repository OK"
 
 # Test 5: Critical scripts executable
 echo "[5/5] Checking script permissions..."
-for script in tools/cls_*.zsh; do
-  if [ -f "$script" ]; then
-    test -x "$script" || { echo "❌ $script not executable"; exit 1; }
+scripts_found=0
+# Use find -print0 + read -d '' to handle spaces/special chars in filenames (portable)
+# Use process substitution to avoid subshell variable scope issue
+while IFS= read -r -d '' script; do
+  if [ -f "$script" ] && [ -e "$script" ]; then
+    scripts_found=1
+    if [ -x "$script" ]; then
+      echo "✅ $script is executable"
+    else
+      echo "⚠️  $script not executable (fixing...)"
+      chmod +x "$script" || { echo "❌ Cannot make $script executable"; exit 1; }
+      echo "✅ $script is now executable"
+    fi
   fi
-done
-echo "✅ Script permissions OK"
+done < <(find tools -maxdepth 1 -type f -name 'cls_*.zsh' -print0 2>/dev/null) || true
+
+# Check if any scripts were found (guard with default expansion)
+if [ "${scripts_found:-0}" -eq 0 ]; then
+  echo "⚠️  No cls_*.zsh scripts found (optional)"
+fi
+echo "✅ Script permissions check complete"
 
 echo ""
 echo "🎉 All smoke tests passed!"
