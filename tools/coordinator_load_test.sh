@@ -84,8 +84,8 @@ for i in $(seq 1 "$TOTAL"); do
     ((failed++))
   fi
   
-  # Small delay between events
-  sleep "0.${DELAY_MS}"
+  # Small delay between events (convert milliseconds to seconds)
+  sleep "$(awk "BEGIN {printf \"%.3f\", $DELAY_MS/1000}")"
   
   # Progress indicator
   if ((i % 10 == 0)); then
