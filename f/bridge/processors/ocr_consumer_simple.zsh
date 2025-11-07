@@ -34,20 +34,32 @@ for json in "$INBOX"/OCR_APPROVED_*.json; do
   
   # Verify files exist and match hashes
   all_ok=true
-  jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null | while IFS=$'\t' read -r fpath expect; do
+  while IFS=$'\t' read -r fpath expect; do
     if [[ ! -f "$fpath" ]]; then
       log "ERR: missing file $fpath"
       all_ok=false
     else
       have=$(shasum -a 256 "$fpath" | awk '{print $1}')
+
+      # Validate SHA256 hash format
+      if [[ -z "$have" || ${#have} -ne 64 ]]; then
+        log "ERR: Invalid SHA256 hash for $fpath"
+        mkdir -p "$HOME/logs"
+        echo "$(date -u +%FT%TZ) $fpath sha_fail" >> "$HOME/logs/ocr_telemetry.log"
+        all_ok=false
+        continue
+      fi
+
       if [[ "$have" == "$expect" ]]; then
-        log "OK: sha256 verified $fpath"
+        log "OK: sha256 verified $fpath (hash=$have)"
       else
         log "ERR: sha256 mismatch $fpath"
+        mkdir -p "$HOME/logs"
+        echo "$(date -u +%FT%TZ) $fpath sha_mismatch" >> "$HOME/logs/ocr_telemetry.log"
         all_ok=false
       fi
     fi
-  done
+  done < <(jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null)
   
   # Execute action
   rc=0
