@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 # WO-CLS-0005: OCR Approval Consumer (Simplified)
+set -euo pipefail
 setopt NULL_GLOB EXTENDED_GLOB
 
 ROOT="$HOME/02luka"
@@ -32,23 +33,39 @@ for json in "$INBOX"/OCR_APPROVED_*.json; do
   wo_id=$(jq -r '.wo_id // "unknown"' "$WORK/$base")
   action=$(jq -r '.action // "unknown"' "$WORK/$base")
   
-  # Verify files exist and match hashes
-  all_ok=true
-  jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null | while IFS=$'\t' read -r fpath expect; do
+  # Verify files exist and match hashes (using process substitution to avoid subshell)
+  all_ok=0
+  while IFS=$'\t' read -r fpath expect; do
     if [[ ! -f "$fpath" ]]; then
       log "ERR: missing file $fpath"
-      all_ok=false
+      all_ok=1
     else
       have=$(shasum -a 256 "$fpath" | awk '{print $1}')
+      # Validate SHA256 hash integrity
+      if [[ -z "$have" || ${#have} -ne 64 ]]; then
+        log "❌ Invalid SHA256 hash for $fpath (hash=${have:-empty})"
+        echo "$(date -u +%FT%TZ) $fpath sha_fail ${#have}" >> "$ROOT/g/logs/ocr_telemetry.log"
+        all_ok=1
+        continue
+      fi
       if [[ "$have" == "$expect" ]]; then
-        log "OK: sha256 verified $fpath"
+        log "✅ Verified SHA256: $have for $fpath"
       else
-        log "ERR: sha256 mismatch $fpath"
-        all_ok=false
+        log "ERR: sha256 mismatch $fpath (have=$have expect=$expect)"
+        echo "$(date -u +%FT%TZ) $fpath sha_mismatch" >> "$ROOT/g/logs/ocr_telemetry.log"
+        all_ok=1
       fi
     fi
-  done
-  
+  done < <(jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null)
+
+  # Skip action if hash validation failed
+  if [[ "${all_ok:-0}" -ne 0 ]]; then
+    log "ERR: hash validation failed for $wo_id, skipping action"
+    mv "$WORK/$base" "$FAIL/$base"
+    echo "{\"kind\":\"ocr_execution\",\"wo_id\":\"$wo_id\",\"status\":\"failed\",\"action\":\"$action\",\"reason\":\"sha256_validation\",\"when\":\"$(ts)\"}" >> "$TELEM/ocr_execution_$(date +%Y%m%d).ndjson"
+    continue
+  fi
+
   # Execute action
   rc=0
   case "$action" in
