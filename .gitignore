@@ -68,3 +68,4 @@ run/*.err
 g/reports/sync_conflicts_*/
 *.cache/
 _trash/
+hub/node_modules/
