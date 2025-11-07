@@ -55,7 +55,9 @@ sync_conflicts_*/
 logs/*.log
 logs/**/*.log
 
+# ---- CI / local automation noise ----
+*.out
+*.err
+.tmp/
+tools/puppeteer/.logs/
 
-# logs
-logs/
-*.log
