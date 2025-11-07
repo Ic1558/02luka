@@ -1,19 +1,32 @@
 PR Conflict Analysis Report
-Generated: Tue Nov  4 17:43:26 UTC 2025
+Generated: Thu Nov  6 23:54:37 UTC 2025
 =========================================
 
-✗ CONFLICT: codex/add-user-authentication-feature
+✗ CONFLICT: chore/auto-update-branch
 
-✗ CONFLICT: codex/add-user-authentication-feature-hhs830
+✗ CONFLICT: chore/ci-docs-links
 
-✗ CONFLICT: codex/add-user-authentication-feature-not1zo
+✗ CONFLICT: claude/ci-optin-smoke-011C
 
-✗ CONFLICT: codex/add-user-authentication-feature-yiytty
+✗ CONFLICT: claude/ci-reliability-pack-011C
 
+✗ CONFLICT: claude/exploration-and-research-011CUrRfU1hPvBmZXZqjgN9M
 
-=========================================
-Summary:
-  Total branches checked: 193
-  Branches with conflicts: 4
-  Branches without conflicts: 189
+✗ CONFLICT: claude/fix-ci-node-lockfile-check-011CUrjUCx7jV39sFNDLkRMo
+
+✗ CONFLICT: claude/fix-dangling-symlink-chmod-011CUrnthGyres339RYKRCTj
+
+✗ CONFLICT: claude/phase-16-bus
+
+✗ CONFLICT: claude/phase-17-ci-observer
+
+✗ CONFLICT: claude/phase-18-ops-sandbox-runner
+
+✗ CONFLICT: claude/phase-19-ci-hygiene-health
+
+✗ CONFLICT: claude/phase-19.1-gc-hardening
+
+✗ CONFLICT: claude/phase15-rag-faiss-prod-011CUrwXGH2CAhL3tptUTayj
+
+✗ CONFLICT: claude/phase15-router-core-akr-011CUrtXLeMoxBZqCMowpFz8
 
