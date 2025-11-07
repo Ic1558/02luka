@@ -66,25 +66,30 @@ process_one(){
   approved_by=$(jq -r '.approved_by' "$tmp")
   approved_at=$(jq -r '.approved_at' "$tmp")
 
-  # Verify file hashes
+  # Verify file hashes (using process substitution to avoid subshell)
   local bad=0
-  jq -r '.files[] | [.path,.sha256] | @tsv' "$tmp" | while IFS=$'\t' read -r p expect; do
+  while IFS=$'\t' read -r p expect; do
     if [[ ! -f "$p" ]]; then
       log "ERR: missing file: $p"
       bad=1
       continue
     fi
     have=$(sha256_of "$p")
+    if [[ -z "$have" || ${#have} -ne 64 ]]; then
+      log "ERR: invalid SHA256 hash for: $p (hash=${have:-empty})"
+      bad=1
+      continue
+    fi
     if [[ "$have" != "$expect" ]]; then
       log "ERR: sha256 mismatch: $p have=$have expect=$expect"
       bad=1
     else
       log "OK : sha256 $p"
     fi
-  done
+  done < <(jq -r '.files[] | [.path,.sha256] | @tsv' "$tmp")
 
   # If any hash failed → move to failed
-  if [[ "$bad" == "1" ]]; then
+  if [[ "${bad:-0}" -ne 0 ]]; then
     mv "$tmp" "$FAIL/$base"
     jq -c --arg status "failed" --arg reason "sha256" \
       --arg when "$(ts)" --arg wo "$wo_id" \
