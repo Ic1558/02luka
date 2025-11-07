@@ -12,7 +12,8 @@ mkdir -p "$TEST_DIR/inbox/CLC" "$TEST_DIR/processing" "$TEST_DIR/processed" "$TE
 TEST_FILE="$TEST_DIR/test_doc.txt"
 echo "Test document content" > "$TEST_FILE"
 
-# Calculate correct hash
+# Calculate correct hash (unused but kept for reference)
+# shellcheck disable=SC2034
 CORRECT_HASH=$(sha256sum "$TEST_FILE" | awk '{print $1}')
 
 # Create OCR approval JSON with INCORRECT hash

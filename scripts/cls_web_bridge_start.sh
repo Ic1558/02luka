@@ -42,7 +42,7 @@ nohup node "$SERVICE_SCRIPT" \
 
 echo $! > "$PID_FILE"
 
-echo "CLS Web Bridge started (PID: $(cat $PID_FILE))"
+echo "CLS Web Bridge started (PID: $(cat "$PID_FILE"))"
 echo "Service: http://127.0.0.1:8778"
 echo "Health check: curl http://127.0.0.1:8778/health"
 

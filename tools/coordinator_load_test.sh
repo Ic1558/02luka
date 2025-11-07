@@ -23,6 +23,7 @@ mkdir -p "$REPORT_DIR"
 # Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
+# shellcheck disable=SC2034
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
@@ -73,7 +74,7 @@ success=0
 failed=0
 
 # Generate test PR numbers (use random numbers in valid range)
-for i in $(seq 1 $TOTAL); do
+for i in $(seq 1 "$TOTAL"); do
   pr=$((200 + (RANDOM % 50)))  # PR numbers 200-250
   event=$(generate_event "$pr" "pr.rerun.request")
   
