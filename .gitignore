@@ -50,3 +50,14 @@ g/telemetry/*.log
 # Conflict backups
 *.backup.*
 sync_conflicts_*/
+
+# local logs
+logs/*.log
+logs/**/*.log
+
+# ---- CI / local automation noise ----
+*.out
+*.err
+.tmp/
+tools/puppeteer/.logs/
+
