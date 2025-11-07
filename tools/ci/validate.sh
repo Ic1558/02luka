@@ -16,7 +16,10 @@ fi
 
 # Guard: enforce pinned faiss-cpu
 if [ -x "tools/ci/guard_faiss_pin.zsh" ]; then
-  tools/ci/guard_faiss_pin.zsh
+  zsh tools/ci/guard_faiss_pin.zsh || {
+    echo "❌ faiss-cpu guard failed" >&2
+    exit 1
+  }
 fi
 
 echo ""
