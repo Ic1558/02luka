@@ -514,6 +514,213 @@ dialog kbd {
   font-family: ui-monospace, monospace;
 }
 
+/* ======== AI ANALYSIS ======== */
+.card-wide {
+  grid-column: 1 / -1;
+}
+
+.ai-content {
+  padding: 12px;
+}
+
+.ai-placeholder {
+  color: var(--muted);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.ai-quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--hover);
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.stat-value.ok {
+  color: var(--ok);
+}
+
+.stat-value.warn {
+  color: var(--warn);
+}
+
+.stat-value.err {
+  color: var(--err);
+}
+
+#ai-analysis-text {
+  background: var(--hover);
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.8;
+  max-height: 50vh;
+}
+
+.ai-btn {
+  background: var(--accent) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.ai-btn:hover {
+  background: var(--ok) !important;
+  transform: translateY(-1px);
+}
+
+/* AI Settings Modal */
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.help-text {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 16px 0;
+}
+
+.setting-input {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 6px;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--fg);
+  font-size: 13px;
+  transition: all var(--transition);
+}
+
+.setting-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.settings-section label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.preset-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.preset-btn {
+  padding: 10px 14px;
+  background: var(--hover);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all var(--transition);
+  font-size: 13px;
+}
+
+.preset-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.btn-primary,
+.btn-success {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4a90e2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+}
+
+.btn-success {
+  background: var(--ok);
+  color: white;
+}
+
+.btn-success:hover {
+  background: #1ea34a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+#loading-ai span {
+  margin-left: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 /* ======== ACCESSIBILITY ======== */
 :focus-visible {
   outline: 2px solid var(--accent);

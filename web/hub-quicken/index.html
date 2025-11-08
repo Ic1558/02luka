@@ -35,6 +35,7 @@
     </div>
     <button id="export" title="Export all data (Ctrl+E)" aria-label="Export data">💾 export</button>
     <button id="history" title="View history (Ctrl+H)" aria-label="View history">📜</button>
+    <button id="ai-settings" title="AI Settings" aria-label="AI settings">🤖 AI</button>
   </div>
 </header>
 
@@ -103,6 +104,29 @@
       <pre id="diff-view" aria-live="polite">no previous snapshot</pre>
     </div>
   </section>
+
+  <section class="card card-wide" id="card-ai">
+    <div class="card-head">
+      <h2>🤖 AI Analysis</h2>
+      <div class="card-actions">
+        <span id="ai-badge" class="badge">—</span>
+        <button id="ai-analyze" class="mini-btn ai-btn" title="Run AI Analysis">🔍 Analyze</button>
+        <button class="mini-btn" data-copy="ai-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-ai" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading" id="loading-ai" style="display: none;">
+        <div class="spinner"></div>
+        <span>Analyzing with AI...</span>
+      </div>
+      <div id="ai-view" class="ai-content">
+        <p class="ai-placeholder">Click "Analyze" to generate AI-powered insights about your hub health, performance trends, and anomalies.</p>
+        <div class="ai-quick-stats" id="ai-quick-stats" style="display: none;"></div>
+        <pre id="ai-analysis-text" style="display: none;"></pre>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="bar" role="contentinfo">
@@ -147,6 +171,71 @@
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close modals</td></tr>
     </table>
+  </div>
+</dialog>
+
+<!-- AI Settings -->
+<dialog id="ai-settings-modal" aria-labelledby="ai-settings-title">
+  <div class="modal-header">
+    <h2 id="ai-settings-title">🤖 AI Settings</h2>
+    <button class="close-modal" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="settings-section">
+      <h3>Local AI Endpoint</h3>
+      <p class="help-text">Connect to local AI (Ollama, LM Studio, etc.)</p>
+
+      <label>
+        <strong>API Endpoint:</strong>
+        <input type="text" id="ai-endpoint" placeholder="http://localhost:11434/api/generate" class="setting-input"/>
+      </label>
+
+      <label>
+        <strong>Model Name:</strong>
+        <input type="text" id="ai-model" placeholder="llama3.2:latest" class="setting-input"/>
+      </label>
+
+      <label>
+        <strong>API Key (optional):</strong>
+        <input type="password" id="ai-api-key" placeholder="Leave empty for local AI" class="setting-input"/>
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-auto-analyze"/>
+        <span>Auto-analyze on data refresh</span>
+      </label>
+    </div>
+
+    <div class="settings-section">
+      <h3>Quick Presets</h3>
+      <div class="preset-buttons">
+        <button class="preset-btn" data-preset="ollama">Ollama (default)</button>
+        <button class="preset-btn" data-preset="lmstudio">LM Studio</button>
+        <button class="preset-btn" data-preset="openai">OpenAI API</button>
+        <button class="preset-btn" data-preset="custom">Custom</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Analysis Options</h3>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-detect-anomalies" checked/>
+        <span>Detect anomalies</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-trend-analysis" checked/>
+        <span>Trend analysis</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-recommendations" checked/>
+        <span>Generate recommendations</span>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button id="ai-test-connection" class="btn-primary">Test Connection</button>
+      <button id="ai-save-settings" class="btn-success">Save Settings</button>
+    </div>
   </div>
 </dialog>
 

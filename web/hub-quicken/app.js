@@ -3,6 +3,7 @@ const Q = sel => document.querySelector(sel);
 const QA = sel => document.querySelectorAll(sel);
 const SKEY = "02luka.hub.quicken.snapshot.v1";
 const HKEY = "02luka.hub.quicken.history.v1";
+const AI_SETTINGS_KEY = "02luka.hub.quicken.ai.v1";
 const MAX_HISTORY = 50;
 
 const ENDPOINTS = {
@@ -11,8 +12,32 @@ const ENDPOINTS = {
   health: "../../hub/mcp_health.json"
 };
 
+const AI_PRESETS = {
+  ollama: {
+    endpoint: "http://localhost:11434/api/generate",
+    model: "llama3.2:latest",
+    apiKey: ""
+  },
+  lmstudio: {
+    endpoint: "http://localhost:1234/v1/chat/completions",
+    model: "local-model",
+    apiKey: ""
+  },
+  openai: {
+    endpoint: "https://api.openai.com/v1/chat/completions",
+    model: "gpt-4o-mini",
+    apiKey: ""
+  },
+  custom: {
+    endpoint: "",
+    model: "",
+    apiKey: ""
+  }
+};
+
 let useRegex = false;
 let lastData = {};
+let aiSettings = null;
 
 // Debounce helper
 function debounce(fn, delay) {
@@ -258,6 +283,11 @@ async function render() {
 
   // Save snapshot
   saveSnapshot(payload);
+
+  // Auto-analyze if enabled
+  if (aiSettings && aiSettings.autoAnalyze) {
+    setTimeout(() => runAIAnalysis(), 1000); // Delay to let data settle
+  }
 }
 
 // Debounced render for search
@@ -455,6 +485,300 @@ function initCollapsible() {
   });
 }
 
+// ======== AI ANALYSIS ========
+function loadAISettings() {
+  try {
+    const saved = localStorage.getItem(AI_SETTINGS_KEY);
+    if (saved) {
+      aiSettings = JSON.parse(saved);
+    } else {
+      // Default to Ollama
+      aiSettings = {
+        ...AI_PRESETS.ollama,
+        autoAnalyze: false,
+        detectAnomalies: true,
+        trendAnalysis: true,
+        recommendations: true
+      };
+    }
+    return aiSettings;
+  } catch (e) {
+    console.error("Failed to load AI settings:", e);
+    return AI_PRESETS.ollama;
+  }
+}
+
+function saveAISettings(settings) {
+  try {
+    localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+    aiSettings = settings;
+    toast("AI settings saved", "success");
+  } catch (e) {
+    toast("Failed to save AI settings", "error");
+  }
+}
+
+function applyAIPreset(presetName) {
+  const preset = AI_PRESETS[presetName];
+  if (!preset) return;
+
+  Q("#ai-endpoint").value = preset.endpoint;
+  Q("#ai-model").value = preset.model;
+  Q("#ai-api-key").value = preset.apiKey;
+  toast(`Applied ${presetName} preset`, "info");
+}
+
+async function testAIConnection() {
+  const endpoint = Q("#ai-endpoint").value;
+  const model = Q("#ai-model").value;
+  const apiKey = Q("#ai-api-key").value;
+
+  if (!endpoint) {
+    toast("Please enter an AI endpoint", "error");
+    return;
+  }
+
+  toast("Testing connection...", "info");
+
+  try {
+    const testPrompt = "Respond with 'OK' if you can read this.";
+    const response = await callAI(testPrompt, { endpoint, model, apiKey });
+
+    if (response) {
+      toast("✓ Connection successful!", "success");
+    } else {
+      toast("Connection failed - check endpoint and model", "error");
+    }
+  } catch (e) {
+    toast(`Connection error: ${e.message}`, "error");
+  }
+}
+
+async function callAI(prompt, settings = null) {
+  const config = settings || aiSettings;
+  if (!config || !config.endpoint) {
+    throw new Error("AI endpoint not configured");
+  }
+
+  try {
+    // Detect API type by endpoint
+    const isOllama = config.endpoint.includes("ollama") || config.endpoint.includes("11434");
+    const isOpenAI = config.endpoint.includes("openai.com") || config.endpoint.includes("/v1/chat/completions");
+
+    let requestBody, headers;
+
+    if (isOllama) {
+      // Ollama format
+      requestBody = {
+        model: config.model,
+        prompt: prompt,
+        stream: false
+      };
+      headers = { "Content-Type": "application/json" };
+    } else if (isOpenAI) {
+      // OpenAI/compatible format
+      requestBody = {
+        model: config.model,
+        messages: [
+          { role: "system", content: "You are a helpful AI assistant analyzing hub monitoring data." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7
+      };
+      headers = {
+        "Content-Type": "application/json"
+      };
+      if (config.apiKey) {
+        headers["Authorization"] = `Bearer ${config.apiKey}`;
+      }
+    } else {
+      // Generic format (try OpenAI-compatible)
+      requestBody = {
+        model: config.model,
+        messages: [{ role: "user", content: prompt }]
+      };
+      headers = { "Content-Type": "application/json" };
+      if (config.apiKey) {
+        headers["Authorization"] = `Bearer ${config.apiKey}`;
+      }
+    }
+
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    // Extract response based on format
+    if (isOllama) {
+      return data.response;
+    } else if (data.choices && data.choices[0]) {
+      return data.choices[0].message?.content || data.choices[0].text;
+    } else {
+      return JSON.stringify(data);
+    }
+  } catch (e) {
+    console.error("AI call failed:", e);
+    throw e;
+  }
+}
+
+function generateAnalysisPrompt(data) {
+  const { idx, reg, hlt } = data;
+
+  const prompt = `Analyze this hub monitoring data and provide insights:
+
+HUB INDEX:
+- Total items: ${idx?._meta?.total || 0}
+- Source: ${idx?._meta?.source || "unknown"}
+
+MCP REGISTRY:
+- Total servers: ${reg?._meta?.total || 0}
+- Servers: ${JSON.stringify((reg?.servers || []).slice(0, 5))}
+
+MCP HEALTH:
+- Healthy: ${hlt?._meta?.healthy || 0}
+- Total: ${hlt?._meta?.total || 0}
+- Health rate: ${hlt?._meta?.total ? Math.round((hlt._meta.healthy / hlt._meta.total) * 100) : 0}%
+- Results: ${JSON.stringify((hlt?.results || []).slice(0, 10))}
+
+Please provide:
+1. Overall health assessment
+2. Any anomalies or concerns detected
+3. Performance trends (if data shows patterns)
+4. Specific recommendations for improvement
+5. Risk assessment (low/medium/high)
+
+Format your response in clear sections with bullet points.`;
+
+  return prompt;
+}
+
+async function runAIAnalysis() {
+  if (!aiSettings || !aiSettings.endpoint) {
+    toast("AI not configured. Click 🤖 AI to set up.", "warn");
+    Q("#ai-settings-modal").showModal();
+    return;
+  }
+
+  const loadingEl = Q("#loading-ai");
+  const placeholderEl = Q(".ai-placeholder");
+  const quickStatsEl = Q("#ai-quick-stats");
+  const analysisEl = Q("#ai-analysis-text");
+
+  try {
+    // Show loading
+    loadingEl.style.display = "flex";
+    if (placeholderEl) placeholderEl.style.display = "none";
+
+    // Generate prompt
+    const prompt = generateAnalysisPrompt(lastData);
+
+    // Call AI
+    const response = await callAI(prompt);
+
+    // Hide loading
+    loadingEl.style.display = "none";
+
+    // Show results
+    quickStatsEl.style.display = "block";
+    analysisEl.style.display = "block";
+
+    // Update quick stats
+    const healthRate = lastData.hlt?._meta?.total
+      ? Math.round((lastData.hlt._meta.healthy / lastData.hlt._meta.total) * 100)
+      : 0;
+
+    quickStatsEl.innerHTML = `
+      <div class="stat-item">
+        <span class="stat-label">Health Score</span>
+        <span class="stat-value ${healthRate >= 80 ? 'ok' : healthRate >= 50 ? 'warn' : 'err'}">${healthRate}%</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Servers</span>
+        <span class="stat-value">${lastData.reg?._meta?.total || 0}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Items</span>
+        <span class="stat-value">${lastData.idx?._meta?.total || 0}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Analyzed</span>
+        <span class="stat-value">${new Date().toLocaleTimeString()}</span>
+      </div>
+    `;
+
+    // Show AI response
+    analysisEl.textContent = response;
+
+    // Update badge
+    Q("#ai-badge").textContent = "analyzed";
+    Q("#ai-badge").className = "badge ok";
+
+    toast("AI analysis complete!", "success");
+  } catch (e) {
+    loadingEl.style.display = "none";
+    analysisEl.style.display = "block";
+    analysisEl.textContent = `Error: ${e.message}\n\nPlease check your AI settings and ensure the endpoint is accessible.`;
+    Q("#ai-badge").textContent = "error";
+    Q("#ai-badge").className = "badge err";
+    toast("AI analysis failed", "error");
+  }
+}
+
+function initAISettings() {
+  // Load settings
+  loadAISettings();
+
+  // Apply to form
+  if (aiSettings) {
+    Q("#ai-endpoint").value = aiSettings.endpoint || "";
+    Q("#ai-model").value = aiSettings.model || "";
+    Q("#ai-api-key").value = aiSettings.apiKey || "";
+    Q("#ai-auto-analyze").checked = aiSettings.autoAnalyze || false;
+    Q("#ai-detect-anomalies").checked = aiSettings.detectAnomalies !== false;
+    Q("#ai-trend-analysis").checked = aiSettings.trendAnalysis !== false;
+    Q("#ai-recommendations").checked = aiSettings.recommendations !== false;
+  }
+
+  // Settings button
+  Q("#ai-settings").onclick = () => Q("#ai-settings-modal").showModal();
+
+  // Analyze button
+  Q("#ai-analyze").onclick = runAIAnalysis;
+
+  // Preset buttons
+  QA(".preset-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      applyAIPreset(btn.dataset.preset);
+    });
+  });
+
+  // Test connection
+  Q("#ai-test-connection").onclick = testAIConnection;
+
+  // Save settings
+  Q("#ai-save-settings").onclick = () => {
+    const settings = {
+      endpoint: Q("#ai-endpoint").value,
+      model: Q("#ai-model").value,
+      apiKey: Q("#ai-api-key").value,
+      autoAnalyze: Q("#ai-auto-analyze").checked,
+      detectAnomalies: Q("#ai-detect-anomalies").checked,
+      trendAnalysis: Q("#ai-trend-analysis").checked,
+      recommendations: Q("#ai-recommendations").checked
+    };
+    saveAISettings(settings);
+    Q("#ai-settings-modal").close();
+  };
+}
+
 // ======== SETUP ========
 function setup() {
   // Theme
@@ -532,6 +856,7 @@ function setup() {
   initKeyboardShortcuts();
   initCollapsible();
   initPullRefresh();
+  initAISettings();
 
   // Service worker
   if ("serviceWorker" in navigator) {
