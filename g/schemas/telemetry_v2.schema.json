@@ -4,11 +4,20 @@
   "title": "System Telemetry v2",
   "description": "Unified telemetry schema for MCP health, delegation watchdog, and bridge self-checks",
   "type": "object",
-  "required": ["metadata", "sources", "timestamp"],
+  "required": [
+    "metadata",
+    "sources",
+    "timestamp"
+  ],
   "properties": {
     "metadata": {
       "type": "object",
-      "required": ["version", "repository", "component", "phase"],
+      "required": [
+        "version",
+        "repository",
+        "component",
+        "phase"
+      ],
       "properties": {
         "version": {
           "type": "string",
@@ -17,7 +26,9 @@
         },
         "repository": {
           "type": "string",
-          "enum": ["02luka"],
+          "enum": [
+            "02luka"
+          ],
           "description": "Repository identifier"
         },
         "component": {
@@ -53,15 +64,28 @@
     },
     "sources": {
       "type": "object",
-      "required": ["mcp_health", "delegation_watchdog", "bridge_selfcheck"],
+      "required": [
+        "mcp_health",
+        "delegation_watchdog",
+        "bridge_selfcheck"
+      ],
       "properties": {
         "mcp_health": {
           "type": "object",
-          "required": ["status", "timestamp", "services"],
+          "required": [
+            "status",
+            "timestamp",
+            "services"
+          ],
           "properties": {
             "status": {
               "type": "string",
-              "enum": ["ok", "degraded", "error", "unavailable"],
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ],
               "description": "Overall MCP health status"
             },
             "timestamp": {
@@ -72,7 +96,10 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "state"],
+                "required": [
+                  "name",
+                  "state"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -80,16 +107,26 @@
                   },
                   "state": {
                     "type": "string",
-                    "enum": ["running", "not running", "unknown"],
+                    "enum": [
+                      "running",
+                      "not running",
+                      "unknown"
+                    ],
                     "description": "Service state"
                   },
                   "pid": {
-                    "type": ["integer", "null"],
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 1,
                     "description": "Process ID if running"
                   },
                   "last_exit_code": {
-                    "type": ["integer", "null"],
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "description": "Last exit code"
                   },
                   "error_logs": {
@@ -107,11 +144,20 @@
         },
         "delegation_watchdog": {
           "type": "object",
-          "required": ["status", "timestamp", "agents"],
+          "required": [
+            "status",
+            "timestamp",
+            "agents"
+          ],
           "properties": {
             "status": {
               "type": "string",
-              "enum": ["ok", "degraded", "error", "unavailable"]
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ]
             },
             "timestamp": {
               "type": "string",
@@ -121,7 +167,10 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "state"],
+                "required": [
+                  "name",
+                  "state"
+                ],
                 "properties": {
                   "name": {
                     "type": "string",
@@ -129,14 +178,25 @@
                   },
                   "state": {
                     "type": "string",
-                    "enum": ["running", "stopped", "failed", "unknown"]
+                    "enum": [
+                      "running",
+                      "stopped",
+                      "failed",
+                      "unknown"
+                    ]
                   },
                   "pid": {
-                    "type": ["integer", "null"],
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
                     "minimum": 1
                   },
                   "last_exit_code": {
-                    "type": ["integer", "null"]
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
                   },
                   "respawn_count": {
                     "type": "integer",
@@ -150,29 +210,46 @@
         },
         "bridge_selfcheck": {
           "type": "object",
-          "required": ["status", "timestamp"],
+          "required": [
+            "status",
+            "timestamp"
+          ],
           "properties": {
             "status": {
               "type": "string",
-              "enum": ["ok", "degraded", "error", "unavailable"]
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ]
             },
             "timestamp": {
               "type": "string",
               "format": "date-time"
             },
             "http_status": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "minimum": 100,
               "maximum": 599,
               "description": "HTTP status code from health endpoint"
             },
             "response_time_ms": {
-              "type": ["number", "null"],
+              "type": [
+                "number",
+                "null"
+              ],
               "minimum": 0,
               "description": "Response time in milliseconds"
             },
             "service_health": {
-              "type": "object",
+              "type": [
+                "object",
+                "null"
+              ],
               "properties": {
                 "containers": {
                   "type": "object",
@@ -196,14 +273,21 @@
                   "properties": {
                     "status": {
                       "type": "string",
-                      "enum": ["connected", "disconnected", "unknown"]
+                      "enum": [
+                        "connected",
+                        "disconnected",
+                        "unknown"
+                      ]
                     }
                   }
                 }
               }
             },
             "error_message": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "description": "Error message if check failed"
             }
           }
@@ -214,7 +298,12 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "severity", "message", "timestamp"],
+        "required": [
+          "name",
+          "severity",
+          "message",
+          "timestamp"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -222,7 +311,11 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["info", "warning", "critical"],
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
             "description": "Alert severity level"
           },
           "message": {
@@ -235,7 +328,11 @@
           },
           "source": {
             "type": "string",
-            "enum": ["mcp_health", "delegation_watchdog", "bridge_selfcheck"],
+            "enum": [
+              "mcp_health",
+              "delegation_watchdog",
+              "bridge_selfcheck"
+            ],
             "description": "Source that triggered the alert"
           },
           "context": {
@@ -250,7 +347,11 @@
       "properties": {
         "overall_status": {
           "type": "string",
-          "enum": ["ok", "degraded", "error"],
+          "enum": [
+            "ok",
+            "degraded",
+            "error"
+          ],
           "description": "Overall system health status"
         },
         "total_sources": {
