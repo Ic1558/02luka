@@ -40,10 +40,11 @@ jobs:
         run: |
           npm install -g ajv-cli@5 ajv-formats@3
           if ! command -v yq >/dev/null 2>&1; then
-            YQ_VER=v4.44.3
+            YQ_VER=v4.48.1
             sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VER}/yq_linux_amd64"
             sudo chmod +x /usr/local/bin/yq || true
           fi
+          yq --version || echo "yq version check failed"
 
       - name: Verify required files exist
         run: |
@@ -57,11 +58,17 @@ jobs:
       - name: Validate RAG pipeline schema
         run: |
           echo "🔍 Validating config/rag_pipeline.yaml against schema..."
-          # Convert YAML to JSON for ajv validation (strip comments)
-          yq eval -o=json --no-doc config/rag_pipeline.yaml > /tmp/rag_pipeline.json || {
+          # Convert YAML to JSON for ajv validation
+          # Use eval to parse YAML and output as JSON (yq handles comments automatically)
+          yq eval -o=json config/rag_pipeline.yaml > /tmp/rag_pipeline.json || {
             echo "❌ Failed to convert YAML to JSON"
             exit 1
           }
+          # Verify JSON was created and has content
+          if [ ! -s /tmp/rag_pipeline.json ]; then
+            echo "❌ JSON file is empty"
+            exit 1
+          fi
           ajv validate -c ajv-formats --strict=true \
             -s config/schemas/rag_pipeline.schema.json -d /tmp/rag_pipeline.json || exit 1
           echo "✅ RAG pipeline schema validation passed"
@@ -70,11 +77,16 @@ jobs:
         run: |
           if [ -f config/schemas/kim_proxy_gateway.schema.json ] && [ -f config/kim_proxy_gateway.yaml ]; then
             echo "🔍 Validating config/kim_proxy_gateway.yaml against schema..."
-            # Convert YAML to JSON for ajv validation (strip comments)
-            yq eval -o=json --no-doc config/kim_proxy_gateway.yaml > /tmp/kim_proxy_gateway.json || {
+            # Convert YAML to JSON for ajv validation
+            yq eval -o=json config/kim_proxy_gateway.yaml > /tmp/kim_proxy_gateway.json || {
               echo "❌ Failed to convert YAML to JSON"
               exit 1
             }
+            # Verify JSON was created and has content
+            if [ ! -s /tmp/kim_proxy_gateway.json ]; then
+              echo "❌ JSON file is empty"
+              exit 1
+            fi
             ajv validate -c ajv-formats --strict=true \
               -s config/schemas/kim_proxy_gateway.schema.json -d /tmp/kim_proxy_gateway.json || exit 1
             echo "✅ Kim proxy gateway schema validation passed"
