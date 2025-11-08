@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Heartbeat Map",
+  "type": "object",
+  "required": ["timestamp", "agents", "alerts"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the heartbeat map was generated"
+    },
+    "agents": {
+      "type": "object",
+      "description": "Map of agent statuses keyed by agent ID",
+      "patternProperties": {
+        "^[a-z_]+$": {
+          "type": "object",
+          "required": ["id", "name", "status", "last_heartbeat", "seconds_since_heartbeat"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Agent identifier"
+            },
+            "name": {
+              "type": "string",
+              "description": "Human-readable agent name"
+            },
+            "status": {
+              "type": "string",
+              "enum": ["online", "offline", "unknown"],
+              "description": "Current agent status"
+            },
+            "last_heartbeat": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp of last received heartbeat"
+            },
+            "seconds_since_heartbeat": {
+              "type": "number",
+              "description": "Seconds elapsed since last heartbeat"
+            },
+            "channel": {
+              "type": "string",
+              "description": "Redis channel for agent heartbeats"
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Additional agent metadata"
+            }
+          }
+        }
+      }
+    },
+    "alerts": {
+      "type": "array",
+      "description": "List of active alerts for offline agents",
+      "items": {
+        "type": "object",
+        "required": ["agent_id", "agent_name", "seconds_offline", "alert_time"],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "description": "Agent identifier"
+          },
+          "agent_name": {
+            "type": "string",
+            "description": "Human-readable agent name"
+          },
+          "seconds_offline": {
+            "type": "number",
+            "description": "Seconds since last heartbeat"
+          },
+          "alert_time": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the alert was triggered"
+          },
+          "message": {
+            "type": "string",
+            "description": "Alert message"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "description": "Summary statistics",
+      "properties": {
+        "total_agents": {
+          "type": "integer"
+        },
+        "online_agents": {
+          "type": "integer"
+        },
+        "offline_agents": {
+          "type": "integer"
+        },
+        "unknown_agents": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}
