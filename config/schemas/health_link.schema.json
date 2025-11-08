@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://02luka.gg-agent.com/schemas/health_link.schema.json",
+  "title": "Health Link Schema",
+  "description": "Unified health dashboard linking MCP servers, health checks, and artifact index (Phase 20.3)",
+  "type": "object",
+  "required": ["_meta", "summary", "mcp", "artifacts"],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "required": ["created_by", "created_at", "source", "inputs"],
+      "properties": {
+        "created_by": {
+          "type": "string",
+          "pattern": "^GG_Agent_"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "string",
+          "const": "health_link.mjs"
+        },
+        "inputs": {
+          "type": "object",
+          "required": ["registry", "health", "index"],
+          "properties": {
+            "registry": {
+              "type": "boolean"
+            },
+            "health": {
+              "type": "boolean"
+            },
+            "index": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "summary": {
+      "type": "object",
+      "required": ["mcp_servers_total", "mcp_healthy", "artifacts_total"],
+      "properties": {
+        "mcp_servers_total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mcp_healthy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "artifacts_total": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "required": ["registry", "health"],
+      "properties": {
+        "registry": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "health": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "ok"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "latency_ms": {
+                "type": "number",
+                "minimum": 0
+              },
+              "error": {
+                "type": "string"
+              },
+              "checked_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rel"],
+        "properties": {
+          "rel": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

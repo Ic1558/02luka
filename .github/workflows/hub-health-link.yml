@@ -1,0 +1,115 @@
+name: hub-health-link
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hub/**'
+      - '.github/workflows/hub-health-link.yml'
+  pull_request:
+    paths:
+      - 'hub/**'
+      - '.github/workflows/hub-health-link.yml'
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  health-link:
+    name: Generate Unified Health Link
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install validation tools
+        run: |
+          npm install -g ajv-cli ajv-formats
+
+      - name: Ensure source files exist
+        run: |
+          # Create hub directory if needed
+          mkdir -p hub
+
+          # Create stub files if they don't exist (for MVP testing)
+          if [ ! -f hub/mcp_registry.json ]; then
+            echo '{"servers":[]}' > hub/mcp_registry.json
+          fi
+
+          if [ ! -f hub/mcp_health.json ]; then
+            echo '{"checks":[],"checked_at":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > hub/mcp_health.json
+          fi
+
+          if [ ! -f hub/index.json ]; then
+            echo '{"artifacts":[],"indexed_at":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > hub/index.json
+          fi
+
+      - name: Run health linker
+        run: |
+          node hub/health_link.mjs
+
+      - name: Validate health_link.json
+        run: |
+          if [ -f hub/health_link.json ]; then
+            ajv validate \
+              -s config/schemas/health_link.schema.json \
+              -d hub/health_link.json \
+              --spec=draft7 \
+              --strict=false \
+              --allow-union-types \
+              -c ajv-formats
+            echo "✅ Validation passed"
+          else
+            echo "❌ hub/health_link.json not found"
+            exit 1
+          fi
+
+      - name: Upload artifact (PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-link
+          path: hub/health_link.json
+          retention-days: 7
+
+      - name: Commit to main (main branch only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet hub/health_link.json; then
+            echo "✅ No changes to health_link.json"
+          else
+            git add hub/health_link.json
+            git commit -m "chore(hub): update health_link.json [skip ci]"
+            git push
+            echo "✅ Committed health_link.json"
+          fi
+
+      - name: Display summary
+        if: always()
+        run: |
+          if [ -f hub/health_link.json ]; then
+            echo "## 📊 Health Link Summary" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            jq '.summary' hub/health_link.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi

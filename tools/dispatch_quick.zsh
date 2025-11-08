@@ -167,6 +167,80 @@ auto:quiet() {
   echo "   (Puppeteer remove label feature may need to be added)"
 }
 
+# --- Hub shortcuts (Phase 20.3) ---
+hub:link() {
+  local dry_run="${DRY_RUN:-0}"
+  if [[ "$dry_run" == "1" ]]; then
+    echo "🔍 [DRY_RUN] Would run: node $HOME/02luka/hub/health_link.mjs"
+    return 0
+  fi
+  echo "🔗 Running unified health linker..."
+  node "$HOME/02luka/hub/health_link.mjs"
+}
+
+hub:serve() {
+  local dry_run="${DRY_RUN:-0}"
+  local pid_file="$HOME/02luka/.hub_server.pid"
+  local port="${PORT:-8787}"
+
+  if [[ "$dry_run" == "1" ]]; then
+    echo "🔍 [DRY_RUN] Would start: node $HOME/02luka/hub/http_server.mjs on port $port"
+    return 0
+  fi
+
+  if [[ -f "$pid_file" ]]; then
+    local old_pid=$(cat "$pid_file")
+    if kill -0 "$old_pid" 2>/dev/null; then
+      echo "⚠️  Server already running (PID: $old_pid)"
+      echo "   Use 'hub:serve:stop' to stop it first"
+      return 1
+    fi
+  fi
+
+  echo "🚀 Starting Health API server on port $port..."
+  PORT="$port" node "$HOME/02luka/hub/http_server.mjs" &
+  local pid=$!
+  echo "$pid" > "$pid_file"
+  echo "✅ Server started (PID: $pid)"
+  echo "📡 Endpoints:"
+  echo "   http://127.0.0.1:$port/api/health"
+  echo "   http://127.0.0.1:$port/api/health/raw"
+  echo "   http://127.0.0.1:$port/healthz"
+}
+
+hub:serve:stop() {
+  local dry_run="${DRY_RUN:-0}"
+  local pid_file="$HOME/02luka/.hub_server.pid"
+
+  if [[ ! -f "$pid_file" ]]; then
+    echo "⚠️  Server not running (no PID file)"
+    return 0
+  fi
+
+  local pid=$(cat "$pid_file")
+  if [[ "$dry_run" == "1" ]]; then
+    echo "🔍 [DRY_RUN] Would stop server (PID: $pid)"
+    return 0
+  fi
+
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "🛑 Stopping server (PID: $pid)..."
+    kill "$pid"
+    rm -f "$pid_file"
+    echo "✅ Server stopped"
+  else
+    echo "⚠️  Server process not found (cleaning up PID file)"
+    rm -f "$pid_file"
+  fi
+}
+
+hub:serve:restart() {
+  echo "♻️  Restarting Health API server..."
+  hub:serve:stop
+  sleep 1
+  hub:serve
+}
+
 task="${1:-}"
 if [[ $# -gt 0 ]]; then
   shift
@@ -210,7 +284,15 @@ case "$task" in
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
 
-  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
+  hub:link)        hub:link "$@";;
+
+  hub:serve)       hub:serve "$@";;
+
+  hub:serve:stop)  hub:serve:stop "$@";;
+
+  hub:serve:restart) hub:serve:restart "$@";;
+
+  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe|hub:link|hub:serve|hub:serve:stop|hub:serve:restart}"; exit 2;;
 
 esac
 
