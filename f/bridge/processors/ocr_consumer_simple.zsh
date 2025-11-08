@@ -46,16 +46,22 @@ for json in "$INBOX"/OCR_APPROVED_*.json; do
         log "ERR: Invalid SHA256 hash for $fpath"
         mkdir -p "$HOME/logs"
         echo "$(date -u +%FT%TZ) $fpath sha_fail" >> "$HOME/logs/ocr_telemetry.log"
+      # unified telemetry (sha_fail)
+      tools/telemetry_unified.zsh ocr sha256_validation false "{\"file\":\""$(date\",\"note\":\"sha_fail\"}" || true
         all_ok=false
         continue
       fi
 
       if [[ "$have" == "$expect" ]]; then
         log "OK: sha256 verified $fpath (hash=$have)"
+      # unified telemetry (ok)
+      tools/telemetry_unified.zsh ocr sha256_validation true "{\"file\":\""OK:\"}" || true
       else
         log "ERR: sha256 mismatch $fpath"
         mkdir -p "$HOME/logs"
         echo "$(date -u +%FT%TZ) $fpath sha_mismatch" >> "$HOME/logs/ocr_telemetry.log"
+      # unified telemetry (sha_mismatch)
+      tools/telemetry_unified.zsh ocr sha256_validation false "{\"file\":\""$(date\",\"note\":\"sha_mismatch\"}" || true
         all_ok=false
       fi
     fi
