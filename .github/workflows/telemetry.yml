@@ -1,6 +1,8 @@
+---
+# yamllint disable-line rule:truthy
 name: Telemetry Consolidation
 
-on:
+"on":
   schedule:
     # Run every 10 minutes
     - cron: '*/10 * * * *'
