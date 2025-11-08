@@ -9,6 +9,7 @@ const net = require('net');
 
 // Environment defaults
 const PORT = parseInt(process.env.PORT || process.env.BOSS_PORT || '4000', 10);
+let CURRENT_PORT = PORT; // Track actual port in use (may change if PORT is in use)
 const REDIS_HOST = process.env.REDIS_HOST || '127.0.0.1';
 const REDIS_PORT = parseInt(process.env.REDIS_PORT || '6379', 10);
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || '';
@@ -71,12 +72,12 @@ function loadModels() {
 }
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const url = new URL(req.url, `http://localhost:${CURRENT_PORT}`);
 
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -90,7 +91,7 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: 'boss-api',
       timestamp: new Date().toISOString(),
-      port: PORT,
+      port: CURRENT_PORT,
       env: NODE_ENV
     }));
   }
@@ -136,6 +137,7 @@ const server = http.createServer((req, res) => {
 async function startServer() {
   try {
     const actualPort = await findAvailablePort(PORT);
+    CURRENT_PORT = actualPort;
     
     server.listen(actualPort, () => {
       console.log(`[${new Date().toISOString()}] Boss API listening on port ${actualPort}`);
