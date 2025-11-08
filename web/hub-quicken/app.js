@@ -64,14 +64,23 @@ function toast(message, type = "info") {
 }
 
 // ======== DATA FETCHING ========
-async function fetchJSON(url) {
-  try {
-    const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-    return await r.json();
-  } catch (e) {
-    toast(`Failed to fetch ${url.split('/').pop()}: ${e.message}`, "error");
-    return { _error: String(e), _url: url };
+async function fetchJSON(url, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+      return await r.json();
+    } catch (e) {
+      if (attempt === retries) {
+        console.error(`Failed to fetch ${url} after ${retries} attempts:`, e);
+        toast(`Failed to fetch ${url.split('/').pop()}: ${e.message}`, "error");
+        return { _error: String(e), _url: url };
+      }
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      console.warn(`Fetch attempt ${attempt} failed for ${url}, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 }
 
@@ -554,78 +563,93 @@ async function testAIConnection() {
   }
 }
 
-async function callAI(prompt, settings = null) {
+async function callAI(prompt, settings = null, retries = 2) {
   const config = settings || aiSettings;
   if (!config || !config.endpoint) {
     throw new Error("AI endpoint not configured");
   }
 
-  try {
-    // Detect API type by endpoint
-    const isOllama = config.endpoint.includes("ollama") || config.endpoint.includes("11434");
-    const isOpenAI = config.endpoint.includes("openai.com") || config.endpoint.includes("/v1/chat/completions");
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Detect API type by endpoint
+      const isOllama = config.endpoint.includes("ollama") || config.endpoint.includes("11434");
+      const isOpenAI = config.endpoint.includes("openai.com") || config.endpoint.includes("/v1/chat/completions");
 
-    let requestBody, headers;
+      let requestBody, headers;
 
-    if (isOllama) {
-      // Ollama format
-      requestBody = {
-        model: config.model,
-        prompt: prompt,
-        stream: false
-      };
-      headers = { "Content-Type": "application/json" };
-    } else if (isOpenAI) {
-      // OpenAI/compatible format
-      requestBody = {
-        model: config.model,
-        messages: [
-          { role: "system", content: "You are a helpful AI assistant analyzing hub monitoring data." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.7
-      };
-      headers = {
-        "Content-Type": "application/json"
-      };
-      if (config.apiKey) {
-        headers["Authorization"] = `Bearer ${config.apiKey}`;
+      if (isOllama) {
+        // Ollama format
+        requestBody = {
+          model: config.model,
+          prompt: prompt,
+          stream: false
+        };
+        headers = { "Content-Type": "application/json" };
+      } else if (isOpenAI) {
+        // OpenAI/compatible format
+        requestBody = {
+          model: config.model,
+          messages: [
+            { role: "system", content: "You are a helpful AI assistant analyzing hub monitoring data." },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.7
+        };
+        headers = {
+          "Content-Type": "application/json"
+        };
+        if (config.apiKey) {
+          headers["Authorization"] = `Bearer ${config.apiKey}`;
+        }
+      } else {
+        // Generic format (try OpenAI-compatible)
+        requestBody = {
+          model: config.model,
+          messages: [{ role: "user", content: prompt }]
+        };
+        headers = { "Content-Type": "application/json" };
+        if (config.apiKey) {
+          headers["Authorization"] = `Bearer ${config.apiKey}`;
+        }
       }
-    } else {
-      // Generic format (try OpenAI-compatible)
-      requestBody = {
-        model: config.model,
-        messages: [{ role: "user", content: prompt }]
-      };
-      headers = { "Content-Type": "application/json" };
-      if (config.apiKey) {
-        headers["Authorization"] = `Bearer ${config.apiKey}`;
+
+      const response = await fetch(config.endpoint, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(60000) // 60s timeout
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => response.statusText);
+        throw new Error(`API returned ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+
+      // Extract response based on format
+      if (isOllama) {
+        return data.response;
+      } else if (data.choices && data.choices[0]) {
+        return data.choices[0].message?.content || data.choices[0].text;
+      } else {
+        return JSON.stringify(data);
+      }
+    } catch (e) {
+      if (attempt === retries) {
+        console.error(`AI call failed after ${retries} attempts:`, e);
+        throw e;
+      }
+      // Retry with backoff for network errors
+      if (e.name === 'TypeError' || e.name === 'NetworkError' || e.message.includes('fetch')) {
+        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s
+        console.warn(`AI attempt ${attempt} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // Don't retry for API errors (auth, rate limit, etc)
+        throw e;
       }
     }
-
-    const response = await fetch(config.endpoint, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Extract response based on format
-    if (isOllama) {
-      return data.response;
-    } else if (data.choices && data.choices[0]) {
-      return data.choices[0].message?.content || data.choices[0].text;
-    } else {
-      return JSON.stringify(data);
-    }
-  } catch (e) {
-    console.error("AI call failed:", e);
-    throw e;
   }
 }
 
