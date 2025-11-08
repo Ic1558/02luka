@@ -1,2 +1,0 @@
-{"timestamp":"2025-10-19T22:18:11.735Z","action":"stats","outcome":"ok","meta":{"totalMemories":4,"byKind":{"plan":2,"solution":1,"insight":1},"vocabularySize":57,"indexFile":"/workspace/02luka/g/memory/vector_index.json"}}
-{"timestamp":"2025-10-19T22:18:11.849Z","action":"stats","outcome":"ok","meta":{"totalMemories":4,"byKind":{"plan":2,"solution":1,"insight":1},"vocabularySize":57,"indexFile":"/workspace/02luka/g/memory/vector_index.json"}}
