@@ -1,0 +1,50 @@
+name: _reusable-smoke-ops
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        type: string
+        required: false
+        default: '20'
+
+jobs:
+  ops-gate:
+    name: Phase 5/6/7 smoke (ops) [OPTIONAL]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+        continue-on-error: true
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          jq --version
+          yq --version
+
+      - name: Install npm packages (skip if no lockfile)
+        run: |
+          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
+            npm ci
+          else
+            echo "No Node lockfile found; skipping npm install"
+          fi
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/ci/*.sh || true
+          chmod +x scripts/*.sh 2>/dev/null || true
+
+      - name: Run ops gate
+        run: bash tools/ci/ops_gate.sh

@@ -1,0 +1,30 @@
+---
+name: ops-gate
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tools/ci/ops_gate.sh'
+      - 'config/**'
+      - '.github/workflows/ops-gate.yml'
+      - '.github/workflows/_reusable/smoke-ops.yml'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+jobs:
+  ops-gate:
+    # Skip on forks
+    if: |
+      github.event.pull_request.head.repo.fork == false &&
+      !contains(github.event.pull_request.title, '[skip-smoke]') &&
+      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
+    uses: ./.github/workflows/_reusable/smoke-ops.yml
+    with:
+      node_version: '20'
