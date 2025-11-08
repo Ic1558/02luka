@@ -1,0 +1,161 @@
+name: Telemetry Consolidation
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_alert:
+        description: 'Force alert generation for testing'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: |
+          npm install -g ajv-cli js-yaml glob redis
+          npm install --no-save ajv ajv-formats js-yaml glob redis
+
+      - name: ✅ Validate telemetry rules config
+        run: |
+          echo "Validating config/telemetry_rules.yaml against schema..."
+
+          # Convert YAML to JSON for validation
+          node -e "
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            const config = yaml.load(fs.readFileSync('config/telemetry_rules.yaml', 'utf8'));
+            fs.writeFileSync('/tmp/telemetry_rules.json', JSON.stringify(config, null, 2));
+          "
+
+          # Validate with ajv
+          ajv validate \
+            -s config/schemas/telemetry_rules.schema.json \
+            -d /tmp/telemetry_rules.json \
+            --strict=true \
+            --all-errors
+
+          echo "✅ Configuration is valid"
+
+      - name: 🔄 Run telemetry consolidator
+        env:
+          LUKA_HOME: ${{ github.workspace }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST || 'localhost' }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || 'gggclukaic' }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "Running telemetry consolidator..."
+          node hub/telemetry_consolidator.mjs
+
+          # Show summary
+          if [ -f hub/telemetry_snapshot.json ]; then
+            echo "📊 Telemetry Summary:"
+            cat hub/telemetry_snapshot.json | jq -r '.summary'
+
+            # Check for alerts
+            ALERT_COUNT=$(cat hub/telemetry_snapshot.json | jq '[.alerts[] | select(.fired == true)] | length')
+            if [ "$ALERT_COUNT" -gt 0 ]; then
+              echo "🚨 $ALERT_COUNT alert(s) fired"
+              cat hub/telemetry_snapshot.json | jq '.alerts[] | select(.fired == true)'
+            else
+              echo "✅ No alerts fired"
+            fi
+          fi
+
+      - name: ✅ Validate output snapshot
+        run: |
+          if [ ! -f hub/telemetry_snapshot.json ]; then
+            echo "❌ Telemetry snapshot not created"
+            exit 1
+          fi
+
+          # Validate JSON structure
+          cat hub/telemetry_snapshot.json | jq empty || {
+            echo "❌ Invalid JSON in telemetry snapshot"
+            exit 1
+          }
+
+          # Check required fields
+          for field in _meta summary alerts; do
+            if ! cat hub/telemetry_snapshot.json | jq -e ".$field" > /dev/null; then
+              echo "❌ Missing required field: $field"
+              exit 1
+            fi
+          done
+
+          echo "✅ Telemetry snapshot is valid"
+
+      - name: 📝 Commit telemetry snapshot (main only)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if [ -f hub/telemetry_snapshot.json ]; then
+            git add hub/telemetry_snapshot.json
+
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "chore(telemetry): update snapshot $(date -u +"%Y-%m-%d %H:%M UTC")"
+              git push
+              echo "✅ Telemetry snapshot committed"
+            fi
+          fi
+
+      - name: 📤 Upload telemetry snapshot artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: telemetry-snapshot-${{ github.run_number }}
+          path: hub/telemetry_snapshot.json
+          retention-days: 7
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          echo "## Telemetry Consolidation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f hub/telemetry_snapshot.json ]; then
+            echo "### 📊 Metrics" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+            cat hub/telemetry_snapshot.json | jq '.summary' >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+
+            ALERT_COUNT=$(cat hub/telemetry_snapshot.json | jq '[.alerts[] | select(.fired == true)] | length')
+            if [ "$ALERT_COUNT" -gt 0 ]; then
+              echo "### 🚨 Alerts ($ALERT_COUNT)" >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+              cat hub/telemetry_snapshot.json | jq '.alerts[] | select(.fired == true)' >> $GITHUB_STEP_SUMMARY
+              echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "### ✅ No Alerts" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "⚠️ Telemetry snapshot not found" >> $GITHUB_STEP_SUMMARY
+          fi

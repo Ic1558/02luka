@@ -1,0 +1,27 @@
+# Telemetry Consolidation & Alert Rules
+# Phase 20.4 — กำหนดเกณฑ์แจ้งเตือนและ routing
+
+# Thresholds for alert triggers
+thresholds:
+  mcp_unhealthy: 1        # MCP unhealthy count ≥ 1 → alert
+  error_count: 3          # Error count ≥ 3 in window → alert
+  warn_count: 10          # Warning count ≥ 10 in window → alert
+
+# Alert routing configuration
+routing:
+  redis_channel: "hub:alerts"
+  telegram:
+    enabled: true
+    chat_id: "${TELEGRAM_CHAT_ID}"
+    # Token is read from env TELEGRAM_TOKEN
+
+# Time window for telemetry aggregation (minutes)
+window_minutes: 10
+
+# Optional: severity mapping
+severity:
+  critical:
+    - mcp_unhealthy
+  warning:
+    - error_count
+    - warn_count

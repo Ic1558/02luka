@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://02luka.local/schemas/telemetry_rules.schema.json",
+  "title": "Telemetry Rules Configuration Schema",
+  "description": "Strict validation schema for telemetry consolidation and alert routing configuration",
+  "type": "object",
+  "required": ["thresholds", "routing", "window_minutes"],
+  "additionalProperties": true,
+  "properties": {
+    "thresholds": {
+      "type": "object",
+      "description": "Alert threshold values for different metrics",
+      "required": ["mcp_unhealthy", "error_count"],
+      "properties": {
+        "mcp_unhealthy": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of unhealthy MCP services to trigger alert"
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of errors in window to trigger alert"
+        },
+        "warn_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of warnings in window to trigger alert"
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "description": "Alert routing configuration",
+      "required": ["redis_channel"],
+      "properties": {
+        "redis_channel": {
+          "type": "string",
+          "pattern": "^[a-z0-9:_-]+$",
+          "description": "Redis pub/sub channel for alerts"
+        },
+        "telegram": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Telegram notifications"
+            },
+            "chat_id": {
+              "type": "string",
+              "description": "Telegram chat ID (supports env var interpolation)"
+            }
+          },
+          "required": ["enabled"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "window_minutes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1440,
+      "description": "Time window in minutes for telemetry aggregation"
+    },
+    "severity": {
+      "type": "object",
+      "description": "Optional severity mapping for alerts",
+      "properties": {
+        "critical": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["mcp_unhealthy", "error_count", "warn_count"]
+          }
+        },
+        "warning": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["mcp_unhealthy", "error_count", "warn_count"]
+          }
+        },
+        "info": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["mcp_unhealthy", "error_count", "warn_count"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
