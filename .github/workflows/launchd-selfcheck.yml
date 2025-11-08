@@ -1,0 +1,59 @@
+name: LaunchAgent Self-Recovery Check
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/launchd_selfcheck.zsh"
+      - ".github/workflows/launchd-selfcheck.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: launchd-selfcheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  selfcheck:
+    name: LaunchAgent Health Snapshot
+    runs-on: macos-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Ensure hub dir
+        run: mkdir -p hub
+
+      - name: Run selfcheck (allow empty, no self-heal in CI)
+        shell: bash
+        run: |
+          chmod +x tools/launchd_selfcheck.zsh
+          ALLOW_EMPTY=1 SELF_HEAL=0 OUT=hub/selfcheck_report.json tools/launchd_selfcheck.zsh
+          test -f hub/selfcheck_report.json
+          node -e "JSON.parse(require('fs').readFileSync('hub/selfcheck_report.json','utf8'))"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: launchd-selfcheck
+          path: hub/selfcheck_report.json
+
+      - name: Commit snapshot (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          if ! git diff --quiet -- hub/selfcheck_report.json; then
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            git config user.name  "02LUKA Bot"
+            git config user.email "bot@02luka.local"
+            git add hub/selfcheck_report.json
+            git commit -m "chore(hub): update LaunchAgent selfcheck snapshot"
+            git push
+          else
+            echo "No changes to commit."
+          fi
