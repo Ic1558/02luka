@@ -126,6 +126,7 @@ function fetchApiSummary(urlString) {
     const isHttps = parsed.protocol === 'https:';
     const requester = isHttps ? https : http;
     const requestOptions = {
+      protocol: parsed.protocol,
       hostname: parsed.hostname,
       port: parsed.port || (isHttps ? 443 : 80),
       path: `${parsed.pathname || '/'}${parsed.search || ''}`,
@@ -153,16 +154,15 @@ function fetchApiSummary(urlString) {
             resolve(null);
           }
         });
-      }
-    );
-    request.on('timeout', () => {
-      request.destroy();
-      resolve(null);
+      });
+      request.on('timeout', () => {
+        request.destroy();
+        resolve(null);
+      });
+      request.on('error', () => resolve(null));
+      request.end();
     });
-    request.on('error', () => resolve(null));
-    request.end();
-  });
-}
+  }
 
 function readLatestMarker() {
   try {
