@@ -57,8 +57,8 @@ jobs:
       - name: Validate RAG pipeline schema
         run: |
           echo "🔍 Validating config/rag_pipeline.yaml against schema..."
-          # Convert YAML to JSON for ajv validation
-          yq eval -o=json config/rag_pipeline.yaml > /tmp/rag_pipeline.json || {
+          # Convert YAML to JSON for ajv validation (strip comments)
+          yq eval -o=json --no-doc config/rag_pipeline.yaml > /tmp/rag_pipeline.json || {
             echo "❌ Failed to convert YAML to JSON"
             exit 1
           }
@@ -70,8 +70,8 @@ jobs:
         run: |
           if [ -f config/schemas/kim_proxy_gateway.schema.json ] && [ -f config/kim_proxy_gateway.yaml ]; then
             echo "🔍 Validating config/kim_proxy_gateway.yaml against schema..."
-            # Convert YAML to JSON for ajv validation
-            yq eval -o=json config/kim_proxy_gateway.yaml > /tmp/kim_proxy_gateway.json || {
+            # Convert YAML to JSON for ajv validation (strip comments)
+            yq eval -o=json --no-doc config/kim_proxy_gateway.yaml > /tmp/kim_proxy_gateway.json || {
               echo "❌ Failed to convert YAML to JSON"
               exit 1
             }
