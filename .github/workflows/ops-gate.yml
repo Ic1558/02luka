@@ -20,11 +20,13 @@ permissions:
 
 jobs:
   ops-gate:
-    # Skip on forks
+    # Skip on forks and when [skip-smoke] in PR title
+    # Run on push or when PR has run-smoke label
     if: |
-      github.event.pull_request.head.repo.fork == false &&
-      !contains(github.event.pull_request.title, '[skip-smoke]') &&
-      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.fork == false &&
+       !contains(github.event.pull_request.title, '[skip-smoke]') &&
+       contains(github.event.pull_request.labels.*.name, 'run-smoke'))
     uses: ./.github/workflows/_reusable/smoke-ops.yml
     with:
       node_version: '20'
