@@ -7,12 +7,32 @@ BASE_URL="http://127.0.0.1:${PORT}"
 LOG_DIR="${ROOT_DIR}/.tmp"
 LOG_FILE="${LOG_DIR}/boss-api.out.log"
 
+# Try to discover the effective port from the boss-api log and update BASE_URL/PORT
+discover_port_from_log() {
+  local p=""
+  # JSON style: {"port": 8787}
+  if [[ -f "${LOG_FILE}" ]]; then
+    p=$(grep -Eo '"port"[[:space:]]*:[[:space:]]*[0-9]+' "${LOG_FILE}" | tail -1 | grep -Eo '[0-9]+')
+    if [[ -z "${p}" ]]; then
+      # Text style: Listening on 127.0.0.1:8787
+      p=$(grep -Eo 'Listening on [^:]*:([0-9]{2,5})' "${LOG_FILE}" | tail -1 | grep -Eo '[0-9]{2,5}')
+    fi
+    if [[ -n "${p}" ]]; then
+      PORT="${p}"
+      BASE_URL="http://127.0.0.1:${PORT}"
+      export PORT
+      echo "[smoke-with-server] Detected boss-api port from logs: ${PORT}"
+      return 0
+    fi
+  fi
+  return 1
+}
+
 mkdir -p "${LOG_DIR}"
 
 started_server=0
 server_pid=""
 
-# shellcheck disable=SC2329
 cleanup() {
   if [[ "${started_server}" -eq 1 ]] && [[ -n "${server_pid}" ]]; then
     if kill -0 "${server_pid}" 2>/dev/null; then
@@ -24,7 +44,6 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# shellcheck disable=SC2329
 check_health() {
   curl -fsS -m 2 "${BASE_URL}/healthz" >/dev/null 2>&1
 }
@@ -51,6 +70,19 @@ else
     sleep 0.25
   done
 
+  # If health is not yet OK on the expected port, attempt to detect a fallback port from logs and retry
+  if ! check_health; then
+    if discover_port_from_log; then
+      for attempt in $(seq 1 20); do
+        if check_health; then
+          echo "[smoke-with-server] boss-api ready on discovered port ${PORT} (attempt ${attempt})"
+          break
+        fi
+        sleep 0.25
+      done
+    fi
+  fi
+
   if ! check_health; then
     echo "[smoke-with-server] ERROR: boss-api not healthy after wait (see ${LOG_FILE})" >&2
     exit 1
@@ -75,5 +107,3 @@ else
 fi
 
 exit ${result}
-
-

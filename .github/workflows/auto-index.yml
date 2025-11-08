@@ -1,0 +1,131 @@
+name: Auto-Index Memory Repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hub/**'
+      - '.github/workflows/auto-index.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  repository_dispatch:
+    types: [memory-repo-updated]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-index-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auto-index:
+    if: ${{ !(github.event_name == 'push' && github.actor == 'github-actions[bot]') }}
+    name: Auto-Index Memory Repo
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: code-repo
+
+      - name: 'Preflight: check MEM_REPO_TOKEN'
+        run: |
+          TOKEN="${{ secrets.MEM_REPO_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            echo '::error title=Missing secret::MEM_REPO_TOKEN is not configured in repo secrets'
+            echo 'Go to Settings → Secrets and variables → Actions → New repository secret'
+            echo 'Name: MEM_REPO_TOKEN (fine‑grained PAT with Contents: Read/Write on Ic1558/02luka-memory)'
+            exit 1
+          else
+            echo '✅ MEM_REPO_TOKEN present (value is masked)'
+          fi
+
+      - name: Checkout memory repository
+        uses: actions/checkout@v4
+        with:
+          repository: Ic1558/02luka-memory
+          path: memory-repo
+          token: ${{ secrets.MEM_REPO_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: code-repo/hub
+        run: |
+          if [ -f package.json ]; then
+            npm ci --no-audit --no-fund
+          else
+            echo "No package.json found, skipping npm install"
+          fi
+
+      - name: Run auto-indexer
+        working-directory: code-repo
+        env:
+          LUKA_MEM_REPO_ROOT: ${{ github.workspace }}/memory-repo
+          HUB_INDEX_PATH: ${{ github.workspace }}/code-repo/hub/index.json
+        run: |
+          export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
+          node hub/hub_autoindex.mjs
+
+      - name: Generate MCP registry
+        working-directory: code-repo
+        run: |
+          node hub/mcp_discovery.mjs
+          test -f hub/mcp_registry.json || { echo "❌ mcp_registry.json not generated"; exit 1; }
+          echo "✅ MCP registry generated"
+
+      - name: Assert MCP registry
+        working-directory: code-repo
+        run: |
+          jq -e '._meta.source=="mcp_discovery.mjs"' hub/mcp_registry.json >/dev/null || { echo "❌ Invalid source"; exit 1; }
+          jq -e '.servers | length >= 0' hub/mcp_registry.json >/dev/null || { echo "❌ Invalid servers array"; exit 1; }
+          echo "✅ MCP registry structure valid"
+          # Note: local_02luka might not exist in CI (uses HOME fallback)
+          CFG=$(jq -r '._meta.config_path // empty' hub/mcp_registry.json)
+          if [ -n "$CFG" ] && [ ! -f "$CFG" ]; then
+            echo "⚠️  Warning: _meta.config_path points to a non-existent file in CI: $CFG"
+          fi
+
+      - name: Commit and push index.json
+        working-directory: code-repo
+        run: |
+          git config user.name "02LUKA Bot"
+          git config user.email "bot@02luka.local"
+          
+          # Stage without modifying index to detect changes against HEAD
+          git add -N hub/index.json hub/mcp_registry.json 2>/dev/null || true
+          if git status --porcelain hub/index.json hub/mcp_registry.json | grep -q .; then
+            git add hub/index.json hub/mcp_registry.json
+            git commit -m "chore(hub): Auto-update index & MCP registry [skip ci]" -m "🤖 Automated update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
+            git push origin main
+          else
+            echo "No changes to hub files"
+          fi
+
+      - name: Update memory repo symlinks
+        working-directory: memory-repo
+        run: |
+          git config user.name "02LUKA Bot"
+          git config user.email "bot@02luka.local"
+          
+          # Create/update symlinks for latest index
+          INDEX_FILE="${{ github.workspace }}/code-repo/hub/index.json"
+          if [ -f "$INDEX_FILE" ]; then
+            mkdir -p GG/context
+            ln -sf "$INDEX_FILE" GG/context/LATEST.index.json || true
+            echo "Updated symlink: GG/context/LATEST.index.json"
+          fi
+          
+          # Commit if there are changes
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "chore: Update index symlinks" -m "🤖 Automated symlink update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
+            git push origin main || true
+          fi

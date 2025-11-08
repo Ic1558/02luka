@@ -1,0 +1,82 @@
+name: MCP Health
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # ทุก 10 นาที
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mcp-health-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mcp-health:
+    name: MCP Health Snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Assert required files exist
+        run: |
+          set -euo pipefail
+          test -f hub/mcp_health.mjs
+          test -f config/schemas/mcp_health.schema.json
+          # mcp_registry.json may be generated in next step, so don't assert it here
+
+      - name: Generate MCP registry (if missing)
+        run: |
+          set -euo pipefail
+          if [ ! -f hub/mcp_registry.json ]; then
+            node hub/mcp_discovery.mjs
+          else
+            echo "hub/mcp_registry.json already present"
+          fi
+
+      - name: Run MCP health
+        run: |
+          set -euo pipefail
+          node hub/mcp_health.mjs
+          test -f hub/mcp_health.json
+          node -e "JSON.parse(require('fs').readFileSync('hub/mcp_health.json','utf8'))"
+
+      - name: Install ajv-cli & ajv-formats
+        run: |
+          npm i -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate health schema
+        run: |
+          ajv validate --strict=true -s config/schemas/mcp_health.schema.json -d hub/mcp_health.json
+
+      - name: Commit health snapshot (if changed)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- hub/mcp_health.json; then
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            git config user.name  "02LUKA Bot"
+            git config user.email "bot@02luka.local"
+            git add hub/mcp_health.json
+            git commit -m "chore(hub): update MCP health snapshot"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-health
+          path: hub/mcp_health.json
