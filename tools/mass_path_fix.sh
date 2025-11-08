@@ -1,1 +1,0 @@
-/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g/tools/mass_path_fix.sh
