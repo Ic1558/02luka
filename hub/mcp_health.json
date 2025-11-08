@@ -1,0 +1,100 @@
+{
+  "generated_at": "2025-11-08T15:42:07.520556+00:00",
+  "source": "reports/mcp_health/latest.md",
+  "overall_status": "degraded",
+  "status_breakdown": {
+    "offline": 2,
+    "online": 2
+  },
+  "services": [
+    {
+      "name": "com.02luka.mcp.fs",
+      "state": "active",
+      "job_state": "exited",
+      "status": "offline",
+      "last_exit_code": 0,
+      "raw": [
+        "\tstate = spawn scheduled",
+        "\tlast exit code = 0",
+        "\t\tstate = active",
+        "\t\tstate = active",
+        "\tjob state = exited"
+      ],
+      "details": {
+        "primary_state": "active",
+        "job_state": "exited",
+        "pid": null,
+        "last_exit_code": 0
+      }
+    },
+    {
+      "name": "com.02luka.mcp.puppeteer",
+      "state": "active",
+      "job_state": "exited",
+      "status": "offline",
+      "last_exit_code": 0,
+      "raw": [
+        "\tstate = spawn scheduled",
+        "\tlast exit code = 0",
+        "\t\tstate = active",
+        "\t\tstate = active",
+        "\tjob state = exited"
+      ],
+      "details": {
+        "primary_state": "active",
+        "job_state": "exited",
+        "pid": null,
+        "last_exit_code": 0
+      }
+    },
+    {
+      "name": "com.02luka.mcp.memory",
+      "state": "running",
+      "job_state": "running",
+      "status": "online",
+      "pid": 26047,
+      "port": {
+        "number": 5330,
+        "label": "Memory",
+        "process": "node    26063 icmini   12u  IPv6 0x1e5c9b8dbcac48d1      0t0  TCP *:5330 (LISTEN)"
+      },
+      "raw": [
+        "\tstate = running",
+        "\tpid = 26047",
+        "\t\tstate = active",
+        "\t\tstate = active",
+        "\tjob state = running"
+      ],
+      "details": {
+        "primary_state": "running",
+        "job_state": "running",
+        "pid": 26047,
+        "last_exit_code": null
+      }
+    },
+    {
+      "name": "com.02luka.mcp.search",
+      "state": "running",
+      "job_state": null,
+      "status": "online",
+      "pid": 59847,
+      "port": {
+        "number": 5340,
+        "label": "Search",
+        "process": "node    59847 icmini   12u  IPv6 0xdf82d9d30fd8e62c      0t0  TCP *:5340 (LISTEN)"
+      },
+      "raw": [
+        "\tstate = running",
+        "\tpid = 59847",
+        "\t\tstate = active",
+        "\t\tstate = active"
+      ],
+      "details": {
+        "primary_state": "running",
+        "job_state": null,
+        "pid": 59847,
+        "last_exit_code": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "generated_at": "2025-11-08T15:42:07.525971+00:00",
+  "launchagents": [
+    {
+      "file": "LaunchAgents/com.02luka.clc.local.plist",
+      "label": "com.02luka.clc.local",
+      "keepalive": true,
+      "program": [
+        "/bin/zsh",
+        "-lc",
+        "~/bin/clc.zsh start"
+      ],
+      "program_status": "missing",
+      "working_directory": null,
+      "status": "ok"
+    },
+    {
+      "file": "LaunchAgents/com.02luka.gg.nlp-bridge.plist",
+      "label": "com.02luka.gg.nlp-bridge",
+      "keepalive": true,
+      "program": [
+        "$HOME/02luka/tools/gg_nlp_bridge.zsh"
+      ],
+      "program_status": "missing",
+      "working_directory": null,
+      "status": "ok"
+    },
+    {
+      "file": "LaunchAgents/com.02luka.health_server.plist",
+      "label": "com.02luka.health_server",
+      "keepalive": null,
+      "program": [
+        "/bin/zsh",
+        "-lc",
+        "cd \"$HOME/LocalProjects/02luka_local_g/g/compose\" || cd \"/workspaces/g/compose\";\ndocker compose up -d health_server"
+      ],
+      "program_status": "missing",
+      "working_directory": null,
+      "status": "warn"
+    },
+    {
+      "file": "LaunchAgents/com.02luka.kim.bot.plist",
+      "label": "com.02luka.kim.bot",
+      "keepalive": true,
+      "program": [
+        "$HOME/02luka/agents/kim_bot/run.sh"
+      ],
+      "program_status": "missing",
+      "working_directory": null,
+      "status": "ok"
+    },
+    {
+      "file": "LaunchAgents/com.02luka.rag.probe.plist",
+      "label": "com.02luka.rag.probe",
+      "keepalive": null,
+      "program": [
+        "/bin/zsh",
+        "-lc",
+        "~/02luka/tools/rag_probe.zsh"
+      ],
+      "program_status": "missing",
+      "working_directory": null,
+      "status": "warn"
+    }
+  ],
+  "checks": [
+    {
+      "path": "agent_listener.py",
+      "status": "ok"
+    },
+    {
+      "path": "agent_router.py",
+      "status": "ok"
+    },
+    {
+      "path": "scripts/smoke.sh",
+      "status": "ok"
+    }
+  ]
+}

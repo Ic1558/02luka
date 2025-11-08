@@ -1,0 +1,13 @@
+{
+  "generated_at": "2025-11-08T15:42:07.523630+00:00",
+  "manifest": {
+    "schema": "telemetry_unified",
+    "items": 20,
+    "timestamp": "2025-11-06 05:12:27 +0700"
+  },
+  "telemetry_file": "telemetry_unified/unified.jsonl",
+  "total_events": 1,
+  "event_types": {},
+  "latest_timestamp": "2025-11-06 05:13:28 +0700",
+  "alert_route_dry_run": []
+}

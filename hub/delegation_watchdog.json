@@ -1,0 +1,76 @@
+{
+  "generated_at": "2025-11-08T15:42:07.527309+00:00",
+  "work_orders": [
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-MERGE-RERANK-V2.md",
+      "size_bytes": 489,
+      "modified": "2025-11-08T15:35:38.721636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-MERGE-RERANK-V2_COMPLETE.md",
+      "size_bytes": 7151,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-PERF-GRAFANA.md",
+      "size_bytes": 9063,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-PERF-PARQUET.md",
+      "size_bytes": 7632,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-PERF-ROLLUP-CSV.md",
+      "size_bytes": 2853,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-PERF-ROLLUP-WEEKLY.md",
+      "size_bytes": 4183,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-PERF-ROLLUP.md",
+      "size_bytes": 3289,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-SMART-MERGE-CONTROLLER-v2.md",
+      "size_bytes": 1303,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251022-GG-VDB-AGENT-INTEGRATION-v2.md",
+      "size_bytes": 1549,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251028-OPS-ACTIVATE-MONITOR.md",
+      "size_bytes": 176,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251029-OPS-PHASE4-HARDEN.md",
+      "size_bytes": 11520,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251029-PARQUET-EXPORTER.md",
+      "size_bytes": 2532,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    },
+    {
+      "file": "bridge/inbox/CLC/WO-251030-PHASE5_CONTINUOUS_OPS.md",
+      "size_bytes": 349,
+      "modified": "2025-11-08T15:35:38.725636+00:00"
+    }
+  ],
+  "dry_run": {
+    "action": "drop",
+    "target": "bridge/inbox/CLC/WO-251022-GG-MERGE-RERANK-V2.md",
+    "status": "simulated",
+    "timestamp": "2025-11-08T15:42:07.527304+00:00"
+  }
+}

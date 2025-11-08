@@ -1,0 +1,68 @@
+{
+  "generated_at": "2025-11-08T15:42:07.522966+00:00",
+  "sources": {
+    "mcp_registry": {
+      "file": "reports/mcp_health/latest.md",
+      "service_count": 4
+    },
+    "ops_health_metrics": {
+      "file": "metrics/ops_health.json",
+      "summary": {
+        "last_check": "2025-10-31T17:30:51.102Z",
+        "total_checks": 76,
+        "recent_success_rate": 0,
+        "recent_avg_latency_ms": 0,
+        "uptime_hours": 3
+      },
+      "checks_total": 76
+    }
+  },
+  "links": [
+    {
+      "service": "com.02luka.mcp.fs",
+      "status": "offline",
+      "port": null,
+      "port_label": null
+    },
+    {
+      "service": "com.02luka.mcp.puppeteer",
+      "status": "offline",
+      "port": null,
+      "port_label": null
+    },
+    {
+      "service": "com.02luka.mcp.memory",
+      "status": "online",
+      "port": 5330,
+      "port_label": "Memory"
+    },
+    {
+      "service": "com.02luka.mcp.search",
+      "status": "online",
+      "port": 5340,
+      "port_label": "Search"
+    },
+    {
+      "service": "ops_api",
+      "status": "offline",
+      "failing_endpoints": [
+        {
+          "endpoint": "ping",
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/ping\"\n/bin/sh: curl: not found\n",
+          "latency_ms": 4
+        },
+        {
+          "endpoint": "state",
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/state\"\n/bin/sh: curl: not found\n",
+          "latency_ms": 2
+        },
+        {
+          "endpoint": "metrics",
+          "error": "Command failed: curl -sS -m 10 \"https://ops.theedges.work/api/metrics\"\n/bin/sh: curl: not found\n",
+          "latency_ms": 1
+        }
+      ],
+      "last_check": "2025-10-31T17:30:51.102Z"
+    }
+  ]
+}
