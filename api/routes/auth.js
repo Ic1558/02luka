@@ -3,14 +3,23 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { body, validationResult } from 'express-validator'
 import { protect } from '../middleware/auth.js'
+import { validatePasswordStrength } from '../utils/passwordValidator.js'
+import {
+  recordFailedAttempt,
+  isAccountLocked,
+  clearFailedAttempts
+} from '../middleware/accountLockout.js'
 
 const router = express.Router()
 
 // Mock user database (replace with actual database models)
 const users = []
 
-// Generate JWT token
-function generateToken(user) {
+// Refresh token storage (replace with Redis in production)
+const refreshTokens = new Map()
+
+// Generate Access JWT token (short-lived)
+function generateAccessToken(user) {
   return jwt.sign(
     {
       id: user.id,
@@ -19,7 +28,22 @@ function generateToken(user) {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRE || '7d'
+      expiresIn: process.env.JWT_EXPIRE || '1h' // Changed to 1 hour for better security
+    }
+  )
+}
+
+// Generate Refresh token (long-lived)
+function generateRefreshToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      type: 'refresh'
+    },
+    process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+    {
+      expiresIn: '7d'
     }
   )
 }
@@ -30,9 +54,8 @@ function generateToken(user) {
 router.post(
   '/register',
   [
-    body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-    body('full_name').notEmpty().withMessage('Full name is required'),
+    body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
+    body('full_name').trim().isLength({ min: 2, max: 255 }).withMessage('Full name must be between 2 and 255 characters'),
     body('role').isIn(['admin', 'architect', 'interior_designer', 'contractor', 'project_manager', 'client'])
       .withMessage('Invalid role')
   ],
@@ -45,6 +68,16 @@ router.post(
     try {
       const { email, password, full_name, role, phone, company } = req.body
 
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password)
+      if (!passwordValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password does not meet security requirements',
+          errors: passwordValidation.errors
+        })
+      }
+
       // Check if user exists
       const existingUser = users.find(u => u.email === email)
       if (existingUser) {
@@ -52,7 +85,7 @@ router.post(
       }
 
       // Hash password
-      const salt = await bcrypt.genSalt(10)
+      const salt = await bcrypt.genSalt(12) // Increased from 10 to 12 for better security
       const password_hash = await bcrypt.hash(password, salt)
 
       // Create user
@@ -71,8 +104,15 @@ router.post(
 
       users.push(user)
 
-      // Generate token
-      const token = generateToken(user)
+      // Generate tokens
+      const accessToken = generateAccessToken(user)
+      const refreshToken = generateRefreshToken(user)
+
+      // Store refresh token
+      refreshTokens.set(refreshToken, {
+        userId: user.id,
+        createdAt: new Date()
+      })
 
       res.status(201).json({
         success: true,
@@ -84,7 +124,8 @@ router.post(
           phone: user.phone,
           company: user.company
         },
-        token
+        token: accessToken,
+        refreshToken
       })
     } catch (error) {
       res.status(500).json({ success: false, message: 'Server error', error: error.message })
@@ -98,7 +139,7 @@ router.post(
 router.post(
   '/login',
   [
-    body('email').isEmail().withMessage('Please provide a valid email'),
+    body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
     body('password').notEmpty().withMessage('Password is required')
   ],
   async (req, res) => {
@@ -109,21 +150,69 @@ router.post(
 
     try {
       const { email, password } = req.body
+      const ip = req.ip
+
+      // Check if account is locked
+      const lockStatus = isAccountLocked(email, ip)
+      if (lockStatus.locked) {
+        return res.status(429).json({
+          success: false,
+          message: `Account temporarily locked due to too many failed login attempts. Please try again in ${lockStatus.remainingMinutes} minutes.`,
+          lockUntil: lockStatus.lockUntil
+        })
+      }
 
       // Find user
       const user = users.find(u => u.email === email)
       if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' })
+        // Record failed attempt
+        const attemptResult = recordFailedAttempt(email, ip)
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials',
+          remainingAttempts: attemptResult.remainingAttempts
+        })
       }
 
       // Check password
       const isMatch = await bcrypt.compare(password, user.password_hash)
       if (!isMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' })
+        // Record failed attempt
+        const attemptResult = recordFailedAttempt(email, ip)
+        if (attemptResult.locked) {
+          return res.status(429).json({
+            success: false,
+            message: `Too many failed login attempts. Account locked for 15 minutes.`,
+            lockUntil: attemptResult.lockUntil
+          })
+        }
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials',
+          remainingAttempts: attemptResult.remainingAttempts
+        })
       }
 
-      // Generate token
-      const token = generateToken(user)
+      // Check if user is active
+      if (!user.is_active) {
+        return res.status(403).json({
+          success: false,
+          message: 'Account has been deactivated. Please contact support.'
+        })
+      }
+
+      // Clear failed attempts on successful login
+      clearFailedAttempts(email, ip)
+
+      // Generate tokens
+      const accessToken = generateAccessToken(user)
+      const refreshToken = generateRefreshToken(user)
+
+      // Store refresh token
+      refreshTokens.set(refreshToken, {
+        userId: user.id,
+        createdAt: new Date()
+      })
 
       res.json({
         success: true,
@@ -135,7 +224,8 @@ router.post(
           phone: user.phone,
           company: user.company
         },
-        token
+        token: accessToken,
+        refreshToken
       })
     } catch (error) {
       res.status(500).json({ success: false, message: 'Server error', error: error.message })
@@ -169,6 +259,101 @@ router.get('/me', protect, async (req, res) => {
         phone: user.phone,
         company: user.company
       }
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+})
+
+// @route   POST /api/auth/refresh
+// @desc    Refresh access token using refresh token
+// @access  Public
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Refresh token is required'
+      })
+    }
+
+    // Check if refresh token exists in storage
+    if (!refreshTokens.has(refreshToken)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid refresh token'
+      })
+    }
+
+    // Verify refresh token
+    try {
+      const decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+      )
+
+      if (decoded.type !== 'refresh') {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token type'
+        })
+      }
+
+      // Find user
+      const user = users.find(u => u.id === decoded.id)
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        })
+      }
+
+      // Generate new access token
+      const accessToken = generateAccessToken(user)
+
+      res.json({
+        success: true,
+        token: accessToken
+      })
+    } catch (error) {
+      // Remove invalid refresh token
+      refreshTokens.delete(refreshToken)
+
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired refresh token'
+      })
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
+})
+
+// @route   POST /api/auth/logout
+// @desc    Logout user and invalidate refresh token
+// @access  Private
+router.post('/logout', protect, async (req, res) => {
+  try {
+    const { refreshToken } = req.body
+
+    if (refreshToken) {
+      // Remove refresh token from storage
+      refreshTokens.delete(refreshToken)
+    }
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
     })
   } catch (error) {
     res.status(500).json({
