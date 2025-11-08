@@ -1,7 +1,7 @@
 ---
 name: Deploy to GitHub Pages
 
-on:
+on:  # yamllint disable-line rule:truthy
   push:
     branches: [ main ]
   workflow_dispatch:
@@ -26,11 +26,11 @@ jobs:
         run: |
           # Create clean dist directory
           mkdir -p dist/ops
-          
+
           # Copy only static content (not dynamic files)
           cp 02luka.md dist/ 2>/dev/null || echo "No 02luka.md"
           cp -r docs dist/ 2>/dev/null || echo "No docs directory"
-          
+
           # Generate health page
           printf '%s\n' \
             '<!doctype html>' \
@@ -40,7 +40,7 @@ jobs:
             '<p>Status: <strong style="color:green">OK</strong></p>' \
             "<p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>" \
             > dist/_health.html
-          
+
           # Generate manifest
           printf '%s\n' \
             '{' \
@@ -50,7 +50,7 @@ jobs:
             '  "branch": "main"' \
             '}' \
             > dist/manifest.json
-          
+
           # Generate ops status page
           printf '%s\n' \
             '<!doctype html>' \
@@ -59,7 +59,7 @@ jobs:
             '<h1>02luka Operations</h1>' \
             '<p>System operational</p>' \
             > dist/ops/status.html
-          
+
           echo "✅ Static site built successfully"
           ls -la dist/
 
