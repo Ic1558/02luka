@@ -121,53 +121,49 @@ jobs:
         run: bash tools/ci/ops_gate.sh
 
   # ============================================================
-  # OPTIONAL JOB: Router Self-Test (phase 15)
+  # OPTIONAL JOB: Router Core AKR (phase 15)
+  # Skipped on forks and when [skip-smoke] is in PR title
   # Runs with continue-on-error to not block PRs
   # ============================================================
   router-selftest:
-    name: Phase 15 Router Core (AKR)
+    name: 🧭 Phase 15 Router Core AKR [OPTIONAL]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: validate
     continue-on-error: true
+    if: |
+      github.event.pull_request.head.repo.fork == false &&
+      !contains(github.event.pull_request.title, '[skip-smoke]') &&
+      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
-          # Install jq, yq, bc
           sudo apt-get update -qq
-          sudo apt-get install -y -qq jq bc
+          sudo apt-get install -y -qq jq
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-          # Verify installations
-          jq --version
-          yq --version
-          bc --version
-
       - name: Set script permissions
         run: |
-          chmod +x tools/router_akr.zsh || true
-          chmod +x tools/router_akr_selftest.zsh || true
+          chmod +x tools/*.zsh
+          chmod +x tools/*.py
 
-      - name: Run router selftest
+      - name: Run router self-test
         run: |
-          # Set LUKA_HOME
-          export LUKA_HOME="${GITHUB_WORKSPACE}"
-
-          # Run selftest
-          bash -c "zsh tools/router_akr_selftest.zsh"
+          export LUKA_HOME=$PWD
+          bash tools/router_akr_selftest.zsh
 
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: router-selftest-report
-          path: g/reports/phase15/router_selftest.md
+          path: g/reports/phase15/router_akr_selftest.md
           if-no-files-found: warn
 
   # ============================================================

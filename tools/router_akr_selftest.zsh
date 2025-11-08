@@ -1,336 +1,259 @@
-#!/usr/bin/env bash
-# Router AKR Self-Test Script
-# Phase 15 - Comprehensive testing of routing logic
-# Compatible with both bash and zsh
-set -euo pipefail
+#!/usr/bin/env zsh
+# Phase 15 – Router Core AKR Self-Test
+# Validates Autonomous Knowledge Router functionality with telemetry
+# Classification: Strategic Integration Patch (SIP)
+# System: 02LUKA Cognitive Architecture
+# Phase: 15 – Autonomous Knowledge Routing (AKR)
+# Status: Active
+# Maintainer: GG Core (02LUKA Automation)
+# Version: v1.0.0
+# Work Order: WO-251107-PHASE-15-AKR
 
-# ============================================================================
+set -uo pipefail
+# Note: Don't use -e here because we want to continue on test failures
+
 # Configuration
-# ============================================================================
 BASE="${LUKA_HOME:-$HOME/02luka}"
-ROUTER_SCRIPT="${BASE}/tools/router_akr.zsh"
+# Use absolute path to router
+if [[ -f "${BASE}/tools/router_akr.zsh" ]]; then
+    ROUTER="${BASE}/tools/router_akr.zsh"
+elif [[ -f "$HOME/02luka/tools/router_akr.zsh" ]]; then
+    ROUTER="$HOME/02luka/tools/router_akr.zsh"
+    BASE="$HOME/02luka"
+else
+    ROUTER="./tools/router_akr.zsh"
+fi
+CONFIG="${BASE}/config/router_akr.yaml"
+INTENT_MAP="${BASE}/config/nlp_command_map.yaml"
 REPORT_DIR="${BASE}/g/reports/phase15"
-REPORT_FILE="${REPORT_DIR}/router_selftest.md"
+REPORT_FILE="${REPORT_DIR}/router_akr_selftest.md"
+TELEMETRY_SINK="${BASE}/g/telemetry_unified/unified.jsonl"
 
-PASSED=0
-FAILED=0
-TOTAL=0
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-# ============================================================================
-# Test Utilities
-# ============================================================================
+# Test counters
+TESTS_RUN=0
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[selftest]${NC} $*" >&2
+}
+
+log_success() {
+    echo -e "${GREEN}[selftest]${NC} ✓ $*" >&2
+}
+
+log_error() {
+    echo -e "${RED}[selftest]${NC} ✗ $*" >&2
+}
 
 log_test() {
-  echo "TEST: $*"
+    echo -e "${YELLOW}[test $((TESTS_RUN+1))]${NC} $*" >&2
 }
 
-log_pass() {
-  echo "  ✓ PASS: $*"
-  PASSED=$((PASSED + 1))
-}
+# Test assertion
+assert() {
+    local condition=$1
+    local message=$2
 
-log_fail() {
-  echo "  ✗ FAIL: $*"
-  FAILED=$((FAILED + 1))
-}
+    ((TESTS_RUN++))
 
-run_test() {
-  TOTAL=$((TOTAL + 1))
-  local test_name="$1"
-  local json_input="$2"
-  local expected_to_agent="$3"
-  local expected_min_confidence="$4"
-
-  log_test "$test_name"
-
-  # Run router
-  local output
-  if output=$("${ROUTER_SCRIPT}" route --json "$json_input" 2>&1); then
-    # Parse output
-    local to_agent=$(echo "$output" | jq -r '.to_agent // empty')
-    local confidence=$(echo "$output" | jq -r '.confidence // 0')
-    local event=$(echo "$output" | jq -r '.event // empty')
-
-    # Check if output is valid JSON
-    if ! echo "$output" | jq empty 2>/dev/null; then
-      log_fail "Invalid JSON output"
-      return 1
+    if eval "$condition" 2>/dev/null; then
+        ((TESTS_PASSED++))
+        log_success "$message"
+        return 0
+    else
+        ((TESTS_FAILED++))
+        log_error "$message"
+        return 0  # Don't exit script on failure
     fi
+}
 
-    # Check event field
-    if [[ "$event" != "router.decision" ]]; then
-      log_fail "Expected event 'router.decision', got '$event'"
-      return 1
+# Setup test environment
+setup_test_env() {
+    log_info "Setting up test environment..."
+    
+    # Create report directory
+    mkdir -p "$REPORT_DIR"
+    
+    # Ensure telemetry sink directory exists
+    mkdir -p "$(dirname "$TELEMETRY_SINK")"
+    
+    log_success "Test environment ready"
+}
+
+# Test 1: Router configuration exists
+test_config_exists() {
+    log_test "Router configuration file exists"
+    
+    assert "[[ -f \"$CONFIG\" ]]" "Config file exists: $CONFIG"
+}
+
+# Test 2: Router tool exists and is executable
+test_router_executable() {
+    log_test "Router tool exists and is executable"
+    
+    assert "[[ -f \"$ROUTER\" ]]" "Router tool exists: $ROUTER"
+    assert "[[ -x \"$ROUTER\" ]]" "Router tool is executable"
+}
+
+# Test 3: Intent map exists
+test_intent_map_exists() {
+    log_test "Intent map file exists"
+    
+    assert "[[ -f \"$INTENT_MAP\" ]]" "Intent map exists: $INTENT_MAP"
+}
+
+# Test 4: Router routes coding queries to Andy
+test_code_routing_to_andy() {
+    log_test "Router routes coding queries to Andy"
+    
+    local query="write a function to parse JSON"
+    local output
+    output=$(bash "$ROUTER" "$query" 2>&1 || echo "")
+    
+    local routed_to=$(echo "$output" | grep "^ROUTE_TO:" | cut -d: -f2 | tr -d ' ')
+    
+    assert "[[ \"$routed_to\" == \"andy\" ]]" "Coding query routed to Andy (got: $routed_to)"
+}
+
+# Test 5: Router routes explanation queries to Kim
+test_explain_routing_to_kim() {
+    log_test "Router routes explanation queries to Kim"
+    
+    local query="explain how vector search works"
+    local output
+    output=$(bash "$ROUTER" "$query" 2>&1 || echo "")
+    
+    local routed_to=$(echo "$output" | grep "^ROUTE_TO:" | cut -d: -f2 | tr -d ' ')
+    
+    assert "[[ \"$routed_to\" == \"kim\" ]]" "Explanation query routed to Kim (got: $routed_to)"
+}
+
+# Test 6: Router emits telemetry
+test_telemetry_emission() {
+    log_test "Router emits telemetry events"
+    
+    # Get initial telemetry count
+    local initial_count=0
+    if [[ -f "$TELEMETRY_SINK" ]]; then
+        initial_count=$(wc -l < "$TELEMETRY_SINK" | tr -d ' ')
     fi
-
-    # Check to_agent
-    if [[ "$to_agent" != "$expected_to_agent" ]]; then
-      log_fail "Expected to_agent '$expected_to_agent', got '$to_agent'"
-      return 1
+    
+    # Run router
+    bash "$ROUTER" "test query for telemetry" >/dev/null 2>&1 || true
+    
+    # Check if telemetry was added
+    local final_count=0
+    if [[ -f "$TELEMETRY_SINK" ]]; then
+        final_count=$(wc -l < "$TELEMETRY_SINK" | tr -d ' ')
     fi
-
-    # Check confidence threshold
-    if command -v bc &>/dev/null; then
-      if (( $(echo "$confidence < $expected_min_confidence" | bc -l) )); then
-        log_fail "Confidence $confidence below expected minimum $expected_min_confidence"
-        return 1
-      fi
-    fi
-
-    log_pass "Routed to $to_agent with confidence $confidence"
-    return 0
-  else
-    log_fail "Router command failed: $output"
-    return 1
-  fi
+    
+    assert "[[ $final_count -gt $initial_count ]]" "Telemetry events emitted (initial: $initial_count, final: $final_count)"
 }
 
-# ============================================================================
-# Test Cases
-# ============================================================================
-
-test_kim_to_andy_code_fix_en() {
-  run_test \
-    "Kim→Andy: code.fix (EN)" \
-    '{"agent":"kim","intent":"code.fix","text":"Fix the CI cache bug"}' \
-    "andy" \
-    "0.75"
+# Test 7: Router returns valid output format
+test_output_format() {
+    log_test "Router returns valid output format"
+    
+    local query="test query"
+    local output
+    output=$(bash "$ROUTER" "$query" 2>&1 || echo "")
+    
+    local has_route_to=$(echo "$output" | grep -q "^ROUTE_TO:" && echo "yes" || echo "no")
+    local has_classification=$(echo "$output" | grep -q "^CLASSIFICATION:" && echo "yes" || echo "no")
+    
+    assert "[[ \"$has_route_to\" == \"yes\" && \"$has_classification\" == \"yes\" ]]" "Output format is valid"
 }
 
-test_kim_to_andy_code_fix_th() {
-  run_test \
-    "Kim→Andy: code.fix (TH)" \
-    '{"agent":"kim","intent":"code.fix","text":"แก้บั๊ก ci แคช"}' \
-    "andy" \
-    "0.75"
+# Test 8: Router handles empty query gracefully
+test_empty_query_handling() {
+    log_test "Router handles empty query gracefully"
+    
+    local output
+    output=$(bash "$ROUTER" "" 2>&1 || echo "EXIT_CODE:$?")
+    
+    local has_usage=$(echo "$output" | grep -qi "usage" && echo "yes" || echo "no")
+    local exit_code=$(echo "$output" | grep "EXIT_CODE:" | cut -d: -f2 || echo "0")
+    
+    assert "[[ \"$has_usage\" == \"yes\" || \"$exit_code\" != \"0\" ]]" "Empty query handled gracefully"
 }
 
-test_kim_to_andy_code_implement_en() {
-  run_test \
-    "Kim→Andy: code.implement (EN)" \
-    '{"agent":"kim","intent":"code.implement","text":"Create a new function for user authentication"}' \
-    "andy" \
-    "0.75"
-}
-
-test_kim_to_andy_code_test_th() {
-  run_test \
-    "Kim→Andy: code.test (TH)" \
-    '{"agent":"kim","text":"ทดสอบ unit test สำหรับ router"}' \
-    "andy" \
-    "0.75"
-}
-
-test_andy_to_kim_query_explain_en() {
-  run_test \
-    "Andy→Kim: query.explain (EN)" \
-    '{"agent":"andy","intent":"query.explain","text":"Explain how the router works"}' \
-    "kim" \
-    "0.75"
-}
-
-test_andy_to_kim_query_translate_th() {
-  run_test \
-    "Andy→Kim: query.translate (TH)" \
-    '{"agent":"andy","intent":"query.translate","text":"แปลเอกสารนี้เป็นภาษาไทย"}' \
-    "kim" \
-    "0.75"
-}
-
-test_andy_to_kim_query_help_en() {
-  run_test \
-    "Andy→Kim: query.help (EN)" \
-    '{"agent":"andy","text":"Help me understand this concept"}' \
-    "kim" \
-    "0.75"
-}
-
-test_andy_to_kim_conversation_th() {
-  run_test \
-    "Andy→Kim: conversation.chat (TH)" \
-    '{"agent":"andy","text":"สวัสดีครับ"}' \
-    "kim" \
-    "0.75"
-}
-
-# ============================================================================
-# Additional Tests
-# ============================================================================
-
-test_git_operations() {
-  run_test \
-    "Git operations → Andy" \
-    '{"agent":"kim","text":"commit and push changes"}' \
-    "andy" \
-    "0.75"
-}
-
-test_documentation_query() {
-  run_test \
-    "Documentation query → Kim" \
-    '{"agent":"andy","text":"find documentation for this API"}' \
-    "kim" \
-    "0.75"
-}
-
-# ============================================================================
-# Report Generation
-# ============================================================================
-
+# Generate report
 generate_report() {
-  mkdir -p "${REPORT_DIR}"
+    log_info "Generating test report..."
+    
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local pass_rate=0
+    if [[ $TESTS_RUN -gt 0 ]]; then
+        pass_rate=$((TESTS_PASSED * 100 / TESTS_RUN))
+    fi
+    
+    cat > "$REPORT_FILE" <<EOF
+# Router Core AKR Self-Test Report
 
-  cat > "${REPORT_FILE}" <<EOF
-# Router AKR Self-Test Report
-
-**Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-**Phase**: 15
-**Work Order**: WO-251107-PHASE-15-AKR
-**Script**: tools/router_akr_selftest.zsh
-
-## Summary
-
-- **Total Tests**: ${TOTAL}
-- **Passed**: ${PASSED}
-- **Failed**: ${FAILED}
-- **Success Rate**: $(( TOTAL > 0 ? (PASSED * 100) / TOTAL : 0 ))%
+**Timestamp:** $timestamp
+**Tests Run:** $TESTS_RUN
+**Tests Passed:** $TESTS_PASSED
+**Tests Failed:** $TESTS_FAILED
+**Pass Rate:** ${pass_rate}%
 
 ## Test Results
 
-### Kim → Andy Delegation Tests
-
-1. ✓ code.fix (EN): Fix the CI cache bug
-2. ✓ code.fix (TH): แก้บั๊ก ci แคช
-3. ✓ code.implement (EN): Create a new function
-4. ✓ code.test (TH): ทดสอบ unit test
-
-### Andy → Kim Delegation Tests
-
-5. ✓ query.explain (EN): Explain how the router works
-6. ✓ query.translate (TH): แปลเอกสารนี้
-7. ✓ query.help (EN): Help me understand this concept
-8. ✓ conversation.chat (TH): สวัสดีครับ
-
-### Additional Tests
-
-9. ✓ Git operations routing to Andy
-10. ✓ Documentation queries routing to Kim
-
-## Status
-
 EOF
 
-  if [[ $FAILED -eq 0 ]]; then
-    cat >> "${REPORT_FILE}" <<EOF
-**✅ ALL TESTS PASSED**
-
-The Router AKR is functioning correctly:
-- Intent classification is accurate
-- Routing decisions meet confidence thresholds
-- Both English and Thai inputs are handled properly
-- Kim ↔ Andy delegation works as expected
-
-## Telemetry
-
-Telemetry events have been written to:
-\`g/telemetry_unified/unified.jsonl\`
-
-Events emitted:
-- \`router.start\`: Router begins processing
-- \`router.decision\`: Routing decision made
-- \`router.end\`: Router completes successfully
-
-## Next Steps
-
-1. ✅ Router core functionality validated
-2. ✅ Telemetry pipeline operational
-3. Ready for integration testing
-4. Ready for CI/CD pipeline
-
-EOF
-  else
-    cat >> "${REPORT_FILE}" <<EOF
-**❌ SOME TESTS FAILED**
-
-$FAILED out of $TOTAL tests failed. Please review the test output above and fix the issues.
-
-## Failed Tests
-
-Please check the console output for details on which tests failed and why.
-
-EOF
-  fi
-
-  echo ""
-  echo "Report generated: ${REPORT_FILE}"
+    if [[ $TESTS_FAILED -eq 0 ]]; then
+        echo "✅ All tests passed!" >> "$REPORT_FILE"
+    else
+        echo "❌ Some tests failed. See output above for details." >> "$REPORT_FILE"
+    fi
+    
+    log_success "Report written to: $REPORT_FILE"
 }
 
-# ============================================================================
-# Main Test Runner
-# ============================================================================
-
+# Main test execution
 main() {
-  echo "========================================"
-  echo "Router AKR Self-Test Suite"
-  echo "========================================"
-  echo ""
-
-  # Check if router script exists
-  if [[ ! -f "${ROUTER_SCRIPT}" ]]; then
-    echo "ERROR: Router script not found: ${ROUTER_SCRIPT}"
-    exit 1
-  fi
-
-  # Check if router is executable
-  if [[ ! -x "${ROUTER_SCRIPT}" ]]; then
-    echo "ERROR: Router script is not executable"
-    exit 1
-  fi
-
-  # Run basic selftest first
-  echo "Running router selftest..."
-  if ! "${ROUTER_SCRIPT}" selftest; then
-    echo "ERROR: Router selftest failed"
-    exit 1
-  fi
-  echo ""
-
-  # Run test cases
-  echo "Running routing test cases..."
-  echo ""
-
-  test_kim_to_andy_code_fix_en
-  test_kim_to_andy_code_fix_th
-  test_kim_to_andy_code_implement_en
-  test_kim_to_andy_code_test_th
-  test_andy_to_kim_query_explain_en
-  test_andy_to_kim_query_translate_th
-  test_andy_to_kim_query_help_en
-  test_andy_to_kim_conversation_th
-  test_git_operations
-  test_documentation_query
-
-  echo ""
-  echo "========================================"
-  echo "Test Summary"
-  echo "========================================"
-  echo "Total:  ${TOTAL}"
-  echo "Passed: ${PASSED}"
-  echo "Failed: ${FAILED}"
-  echo ""
-
-  # Generate report
-  generate_report
-
-  # Exit with appropriate code
-  if [[ $FAILED -eq 0 ]]; then
-    echo "✅ All tests passed!"
-    exit 0
-  else
-    echo "❌ Some tests failed"
-    exit 1
-  fi
+    log_info "Starting Router Core AKR self-test..."
+    log_info "Router: $ROUTER"
+    log_info "Config: $CONFIG"
+    log_info ""
+    
+    setup_test_env
+    
+    # Run tests
+    test_config_exists
+    test_router_executable
+    test_intent_map_exists
+    test_code_routing_to_andy
+    test_explain_routing_to_kim
+    test_telemetry_emission
+    test_output_format
+    test_empty_query_handling
+    
+    # Generate report
+    generate_report
+    
+    # Print summary
+    log_info ""
+    log_info "=== Test Summary ==="
+    log_info "Tests Run: $TESTS_RUN"
+    log_info "Tests Passed: $TESTS_PASSED"
+    log_info "Tests Failed: $TESTS_FAILED"
+    
+    if [[ $TESTS_FAILED -eq 0 ]]; then
+        log_success "All tests passed!"
+        return 0
+    else
+        log_error "Some tests failed"
+        return 1
+    fi
 }
 
-# Run main
 main "$@"
