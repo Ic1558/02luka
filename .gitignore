@@ -61,3 +61,6 @@ logs/**/*.log
 .tmp/
 tools/puppeteer/.logs/
 
+# Generated health snapshots (managed by workflow)
+hub/mcp_health.json
+
