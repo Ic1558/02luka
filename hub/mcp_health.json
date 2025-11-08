@@ -1,0 +1,23 @@
+[
+  {
+    "name": "kim-proxy-gateway",
+    "status": "healthy",
+    "lastCheck": "2025-11-08T10:30:00Z",
+    "endpoint": "http://127.0.0.1:4000/healthz",
+    "responseTime": 45
+  },
+  {
+    "name": "faiss-vector-service",
+    "status": "healthy",
+    "lastCheck": "2025-11-08T10:30:00Z",
+    "endpoint": "http://127.0.0.1:5000/health",
+    "responseTime": 32
+  },
+  {
+    "name": "redis-event-bus",
+    "status": "healthy",
+    "lastCheck": "2025-11-08T10:30:00Z",
+    "endpoint": "redis://127.0.0.1:6379",
+    "responseTime": 12
+  }
+]
