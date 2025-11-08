@@ -18,8 +18,13 @@ jobs:
         with:
           node-version: 18
       - name: Install dependencies
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         run: npm ci --omit=dev
+      - name: Skip scoring for forked PR
+        if: ${{ github.event.pull_request.head.repo.fork }}
+        run: echo "Skipping readiness scoring for forks due to read-only token permissions."
       - name: Score pull request
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         run: node tools/pr_score.mjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
