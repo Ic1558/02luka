@@ -1,5 +1,66 @@
 #!/usr/bin/env zsh
-set -euo pipefail
+
+# Robust flags for zsh (avoid bash-only "set -euo pipefail" form)
+
+set -e
+set -u
+set -o pipefail
+
+# --- Helper: paths & deps ---
+_PUPPETEER_RUN="$HOME/02luka/tools/puppeteer/run.mjs"
+_CI_COORDINATOR="$HOME/02luka/tools/ci/ci_coordinator.cjs"
+_REDIS_PUB="$HOME/02luka/tools/ci/redis_pub.zsh"
+
+require() {
+  local bin="$1"
+  if ! command -v "$bin" >/dev/null 2>&1; then
+    echo "❌ missing dependency: $bin" >&2
+    return 127
+  fi
+}
+
+have_node_tool() {
+  local path="$1"
+  [[ -f "$path" ]] || { echo "❌ missing node tool: $path" >&2; return 2; }
+}
+
+# --- Helper: smart label operations (gh → fallback puppeteer) ---
+_label_add() {
+  local pr="$1"; local label="$2"
+  if gh pr edit "$pr" --add-label "$label" >/dev/null 2>&1; then
+    echo "✅ added label '$label' via gh"
+    return 0
+  fi
+  echo "⚠️ gh add-label failed, trying Puppeteer..."
+  have_node_tool "$_PUPPETEER_RUN" || return 1
+  node "$_PUPPETEER_RUN" pr-label \
+    --url "https://github.com/Ic1558/02luka/pull/$pr" \
+    --label "$label" 2>/dev/null || return 1
+  echo "✅ added label '$label' via Puppeteer"
+}
+
+_label_remove() {
+  local pr="$1"; local label="$2"
+  if gh pr edit "$pr" --remove-label "$label" >/dev/null 2>&1; then
+    echo "✅ removed label '$label' via gh"
+    return 0
+  fi
+  echo "⚠️ gh remove-label failed, trying Puppeteer..."
+  have_node_tool "$_PUPPETEER_RUN" || return 1
+  node "$_PUPPETEER_RUN" pr-label \
+    --url "https://github.com/Ic1558/02luka/pull/$pr" \
+    --label "$label" --remove 2>/dev/null || return 1
+  echo "✅ removed label '$label' via Puppeteer"
+}
+
+# --- Helper: require gh login (nice error if missing scopes) ---
+require_gh_auth() {
+  require gh || return 127
+  if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ gh not authenticated. Run: gh auth login" >&2
+    return 1
+  fi
+}
 
 # --- CI Opt-in shortcuts ---
 ci:optin-on() {
@@ -9,10 +70,11 @@ ci:optin-on() {
     return 1
   fi
   echo "🟢 adding label run-smoke to PR #$pr"
-  node "$HOME/02luka/tools/puppeteer/run.mjs" pr-label \
-    --url "https://github.com/Ic1558/02luka/pull/$pr" --label run-smoke
-  node "$HOME/02luka/tools/puppeteer/run.mjs" pr-title-optin \
-    --url "https://github.com/Ic1558/02luka/pull/$pr" --prefix "[run-smoke]"
+  _label_add "$pr" "run-smoke"
+  if have_node_tool "$_PUPPETEER_RUN"; then
+    node "$_PUPPETEER_RUN" pr-title-optin \
+      --url "https://github.com/Ic1558/02luka/pull/$pr" --prefix "[run-smoke]"
+  fi
 }
 
 ci:optin-off() {
@@ -21,8 +83,8 @@ ci:optin-off() {
     echo "usage: ci:optin-off <PR_NUMBER>"
     return 1
   fi
-  echo "🔵 removing run-smoke label from PR #$pr (manual only via UI for now)"
-  echo "เปิด PR แล้วเอา label ออกทาง sidebar ได้เลย"
+  echo "🔵 removing label run-smoke from PR #$pr"
+  _label_remove "$pr" "run-smoke"
 }
 
 # --- CI Rerun shortcut ---
@@ -33,7 +95,8 @@ ci:rerun() {
     return 1
   fi
   echo "♻️  Re-running all jobs for PR #$pr"
-  node "$HOME/02luka/tools/puppeteer/run.mjs" pr-rerun \
+  have_node_tool "$_PUPPETEER_RUN" || return 2
+  node "$_PUPPETEER_RUN" pr-rerun \
     --url "https://github.com/Ic1558/02luka/pull/$pr"
 }
 
@@ -47,7 +110,8 @@ ci:merge() {
     return 1
   fi
   echo "✅ Merging PR #$pr (mode=$mode, deleteBranch=$del)"
-  node "$HOME/02luka/tools/puppeteer/run.mjs" pr-merge \
+  have_node_tool "$_PUPPETEER_RUN" || return 2
+  node "$_PUPPETEER_RUN" pr-merge \
     --url "https://github.com/Ic1558/02luka/pull/$pr" \
     --mode "$mode" \
     --delete-branch "$del"
@@ -80,9 +144,9 @@ ci:bus:rerun() {
     return 2
   fi
   # Ensure coordinator is running (idempotent if already running)
-  node "$HOME/02luka/tools/ci/ci_coordinator.cjs" &>/dev/null &
+  have_node_tool "$_CI_COORDINATOR" && node "$_CI_COORDINATOR" &>/dev/null &
   # Publish rerun request event
-  "$HOME/02luka/tools/ci/redis_pub.zsh" ci:events "$(jq -n \
+  "$_REDIS_PUB" ci:events "$(jq -n \
     --arg repo "Ic1558/02luka" \
     --argjson pr "$pr" \
     --arg type "pr.rerun.request" \
@@ -118,24 +182,30 @@ auto:fix-conflict() {
     echo "usage: auto:fix-conflict <PR_NUMBER>"
     return 1
   fi
-  echo "🔧 Auto-fixing conflicts for PR #$pr"
-  # Checkout PR branch
-  gh pr checkout "$pr" || return 1
-  # Fetch and merge main
-  git fetch origin
-  if git merge origin/main 2>&1 | grep -q "CONFLICT"; then
-    echo "⚠️  Conflicts detected - resolving..."
-    # Resolve: workflows from main, feature files from PR
-    git checkout --theirs .github/workflows 2>/dev/null || true
-    git add .github/workflows 2>/dev/null || true
-    git checkout --ours tools/ci tools/dispatch_quick.zsh g/schemas tools/ci_watcher.sh 2>/dev/null || true
-    git add -A
-    git commit -m "ci: resolve conflicts (workflows from main; feature files from PR)" || true
-    git push --force-with-lease
-    echo "✅ Conflicts resolved and pushed"
+  echo "⚠️ auto:fix-conflict is not implemented in this wrapper."
+  if [[ -x "$HOME/02luka/tools/auto_fix_conflict.zsh" ]]; then
+    echo "↪︎ Delegating to tools/auto_fix_conflict.zsh..."
+    "$HOME/02luka/tools/auto_fix_conflict.zsh" "$pr"
   else
-    echo "✅ No conflicts found"
+    echo "❌ tools/auto_fix_conflict.zsh not found — aborting."
+    return 2
   fi
+}
+
+# --- Smart merge (ตรวจ→ตัดสินใจ→merge) ---
+pr:smart-merge() {
+  local pr="${1:-}"
+  local admin="${2:-}"
+  if [[ -z "$pr" ]]; then
+    echo "usage: pr:smart-merge <PR_NUMBER> [--admin]"
+    return 1
+  fi
+  "$HOME/02luka/tools/pr_smart_merge.zsh" "$pr" "$admin"
+}
+
+pr:merge() {
+  # Alias for pr:smart-merge
+  pr:smart-merge "$@"
 }
 
 auto:label() {
@@ -146,11 +216,7 @@ auto:label() {
     return 1
   fi
   echo "🏷️  Adding label '$label' to PR #$pr"
-  gh pr edit "$pr" --add-label "$label" 2>&1 || {
-    echo "⚠️  Label add failed, trying Puppeteer..."
-    node "$HOME/02luka/tools/puppeteer/run.mjs" pr-label \
-      --url "https://github.com/Ic1558/02luka/pull/$pr" --label "$label" 2>/dev/null || true
-  }
+  _label_add "$pr" "$label"
   echo "✅ Label '$label' added to PR #$pr"
 }
 
@@ -160,17 +226,31 @@ auto:quiet() {
     echo "usage: auto:quiet <PR_NUMBER>"
     return 1
   fi
-  echo "🔇 Removing run-smoke label from PR #$pr (quiet mode)"
-  # Note: gh CLI doesn't support removing labels directly, use Puppeteer or manual
-  echo "⚠️  Use GitHub UI to remove 'run-smoke' label, or:"
-  echo "   node ~/02luka/tools/puppeteer/run.mjs pr-label --url 'https://github.com/Ic1558/02luka/pull/$pr' --label run-smoke --remove"
-  echo "   (Puppeteer remove label feature may need to be added)"
+  echo "🔇 Removing 'run-smoke' label from PR #$pr (quiet mode)"
+  _label_remove "$pr" "run-smoke"
 }
 
 task="${1:-}"
 if [[ $# -gt 0 ]]; then
   shift
 fi
+
+usage() {
+  cat <<'USAGE'
+usage: tools/dispatch_quick.zsh <task> [args...]
+
+Tasks:
+  pr:quickcheck | pr:smart-merge | pr:merge
+  ci:quiet | ci:optin-on | ci:optin-off | ci:rerun | ci:merge
+  ci:watch | ci:watch:on | ci:watch:off | ci:bus:rerun
+  auto:merge | auto:rerun | auto:fix-conflict | auto:label | auto:quiet | auto:decision
+  rag:faiss | kim:probe
+
+Notes:
+  - Requires: gh (authenticated), jq, node (for Puppeteer tools)
+  - Falls back to Puppeteer when gh label operations fail
+USAGE
+}
 
 case "$task" in
 
@@ -200,6 +280,10 @@ case "$task" in
 
   auto:fix-conflict) auto:fix-conflict "$@";;
 
+  pr:smart-merge)   pr:smart-merge "$@";;
+
+  pr:merge)         pr:smart-merge "$@";;
+
   auto:label)      auto:label "$@";;
 
   auto:quiet)      auto:quiet "$@";;
@@ -210,7 +294,36 @@ case "$task" in
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
 
-  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
+  *) usage; exit 2;;
 
 esac
 
+
+# ── Phase 20: Hub Index Shortcuts ─────────────────
+
+if [[ "${1:-}" == "hub:index" ]]; then
+  shift || true
+  exec ./tools/hub_index_now.zsh "$@"
+fi
+
+if [[ "${1:-}" == "hub:sync:on" ]]; then
+  shift || true
+  cp g/launchagents/com.02luka.hub-autoindex.plist ~/Library/LaunchAgents/
+  launchctl unload ~/Library/LaunchAgents/com.02luka.hub-autoindex.plist 2>/dev/null || true
+  launchctl load ~/Library/LaunchAgents/com.02luka.hub-autoindex.plist
+  launchctl list | grep hub-autoindex || true
+  exit 0
+fi
+
+if [[ "${1:-}" == "hub:sync:off" ]]; then
+  shift || true
+  launchctl unload ~/Library/LaunchAgents/com.02luka.hub-autoindex.plist 2>/dev/null || true
+  exit 0
+fi
+
+# ── Session Save Shortcut ─────────────────────────
+
+if [[ "${1:-}" == "save" ]]; then
+  shift || true
+  exec ~/02luka/tools/session_save.zsh "$@"
+fi
