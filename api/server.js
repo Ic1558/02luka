@@ -16,6 +16,8 @@ import teamRoutes from './routes/team.js'
 import materialRoutes from './routes/materials.js'
 import documentRoutes from './routes/documents.js'
 import notificationRoutes from './routes/notifications.js'
+import contextRoutes from './routes/contexts.js'
+import sketchRoutes from './routes/sketches.js'
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js'
@@ -87,13 +89,15 @@ app.use('/api/team', teamRoutes)
 app.use('/api/materials', materialRoutes)
 app.use('/api/documents', documentRoutes)
 app.use('/api/notifications', notificationRoutes)
+app.use('/api/contexts', contextRoutes)
+app.use('/api/sketches', sketchRoutes)
 
 // API info endpoint
 app.get('/api', (req, res) => {
   res.json({
     name: 'ProBuild API',
-    version: '1.0.0',
-    description: 'Architecture & Construction Project Management API',
+    version: '1.1.0',
+    description: 'Architecture & Construction Project Management API - Phase 22.1',
     endpoints: {
       auth: '/api/auth',
       projects: '/api/projects',
@@ -101,7 +105,9 @@ app.get('/api', (req, res) => {
       team: '/api/team',
       materials: '/api/materials',
       documents: '/api/documents',
-      notifications: '/api/notifications'
+      notifications: '/api/notifications',
+      contexts: '/api/contexts',
+      sketches: '/api/sketches'
     }
   })
 })

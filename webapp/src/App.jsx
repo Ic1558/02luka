@@ -20,6 +20,12 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
+// Phase 22.1: Context & Sketch Pages
+import ContextList from './pages/Contexts/ContextList'
+import ContextDetail from './pages/Contexts/ContextDetail'
+import SketchList from './pages/Sketches/SketchList'
+import SketchBoard from './pages/Sketches/SketchBoard'
+
 // Hooks
 import { useAuthStore } from './store/authStore'
 
@@ -40,6 +46,8 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
+            <Route path="/contexts" element={isAuthenticated ? <ContextList /> : <Navigate to="/login" />} />
+            <Route path="/contexts/:id" element={isAuthenticated ? <ContextDetail /> : <Navigate to="/login" />} />
             <Route path="/projects" element={isAuthenticated ? <Projects /> : <Navigate to="/login" />} />
             <Route path="/projects/:id" element={isAuthenticated ? <ProjectDetail /> : <Navigate to="/login" />} />
             <Route path="/tasks" element={isAuthenticated ? <Tasks /> : <Navigate to="/login" />} />
@@ -50,6 +58,11 @@ function App() {
             <Route path="/reports" element={isAuthenticated ? <Reports /> : <Navigate to="/login" />} />
             <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" />} />
           </Route>
+
+          {/* Sketch routes - full screen without sidebar */}
+          <Route path="/sketches/new" element={isAuthenticated ? <SketchBoard /> : <Navigate to="/login" />} />
+          <Route path="/sketches/:id" element={isAuthenticated ? <SketchBoard /> : <Navigate to="/login" />} />
+          <Route path="/sketches" element={isAuthenticated ? <SketchList /> : <Navigate to="/login" />} />
 
           {/* 404 */}
           <Route path="*" element={<Navigate to="/" />} />

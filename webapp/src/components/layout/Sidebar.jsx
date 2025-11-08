@@ -9,12 +9,16 @@ import {
   FiCalendar,
   FiBarChart2,
   FiSettings,
-  FiX
+  FiX,
+  FiMap,
+  FiEdit3
 } from 'react-icons/fi'
 
 const Sidebar = ({ mobile, onClose }) => {
   const navItems = [
     { name: 'Dashboard', icon: FiHome, path: '/dashboard' },
+    { name: 'Contexts', icon: FiMap, path: '/contexts', badge: 'NEW' },
+    { name: 'Sketches', icon: FiEdit3, path: '/sketches', badge: 'NEW' },
     { name: 'Projects', icon: FiFolder, path: '/projects' },
     { name: 'Tasks', icon: FiCheckSquare, path: '/tasks' },
     { name: 'Team', icon: FiUsers, path: '/team' },
@@ -62,7 +66,10 @@ const Sidebar = ({ mobile, onClose }) => {
               }
             >
               <item.icon className="w-5 h-5" />
-              <span>{item.name}</span>
+              <span className="flex-1">{item.name}</span>
+              {item.badge && (
+                <span className="badge badge-primary text-xs">{item.badge}</span>
+              )}
             </NavLink>
           ))}
         </nav>
