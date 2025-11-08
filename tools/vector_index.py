@@ -76,6 +76,9 @@ class VectorIndex:
         """
         logger.info(f"Initializing VectorIndex with model: {model_name}")
 
+        # Store model name for persistence
+        self.model_name = model_name
+
         # Load embedding model
         self.model = SentenceTransformer(model_name)
         self.dimension = dimension or self.model.get_sentence_embedding_dimension()
@@ -187,14 +190,23 @@ class VectorIndex:
                 'documents': self.documents,
                 'doc_id_map': self.doc_id_map,
                 'dimension': self.dimension,
-                'index_type': self.index_type
+                'index_type': self.index_type,
+                'model_name': self.model_name
             }, f)
 
         logger.info(f"Index saved to {path}")
 
     @classmethod
-    def load(cls, path: str, model_name: str = 'all-MiniLM-L6-v2') -> 'VectorIndex':
-        """Load index from disk"""
+    def load(cls, path: str, model_name: Optional[str] = None) -> 'VectorIndex':
+        """
+        Load index from disk.
+        
+        Args:
+            path: Path to saved index directory
+            model_name: Optional model name. If not provided, uses the model_name
+                       from saved metadata. If provided, validates it matches
+                       the saved model_name (raises ValueError if mismatch).
+        """
         path_obj = Path(path)
 
         # Load metadata
@@ -202,9 +214,23 @@ class VectorIndex:
         with open(meta_file, 'rb') as f:
             metadata = pickle.load(f)
 
+        # Get saved model_name from metadata (for backward compatibility, default to old default)
+        saved_model_name = metadata.get('model_name', 'all-MiniLM-L6-v2')
+        
+        # If model_name provided, validate it matches saved model
+        if model_name is not None and model_name != saved_model_name:
+            raise ValueError(
+                f"Model name mismatch: saved index uses '{saved_model_name}', "
+                f"but '{model_name}' was provided. Use model_name='{saved_model_name}' "
+                f"or omit model_name to use the saved model."
+            )
+        
+        # Use saved model_name
+        model_name_to_use = saved_model_name
+
         # Create instance
         instance = cls(
-            model_name=model_name,
+            model_name=model_name_to_use,
             index_type=metadata['index_type'],
             dimension=metadata['dimension']
         )
@@ -289,8 +315,10 @@ def demo():
     save_path = "/tmp/faiss_index_demo"
     index.save(save_path)
 
+    # Load without specifying model_name - should use saved model_name
     loaded_index = VectorIndex.load(save_path)
     logger.info(f"\nReloaded index with {loaded_index.index.ntotal} vectors")
+    logger.info(f"Loaded index uses model: {loaded_index.model_name}")
 
 
 if __name__ == '__main__':
