@@ -1,5 +1,7 @@
+---
 name: ci
-on:
+
+on:  # yamllint disable-line rule:truthy
   push:
     branches: [main, develop, 'ci/**']
   pull_request:
@@ -36,7 +38,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-        continue-on-error: true  # Skip cache failure if no lockfile
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
         run: |

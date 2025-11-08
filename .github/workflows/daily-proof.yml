@@ -1,6 +1,7 @@
+---
 name: Daily Proof (Option C)
 
-on:
+on:  # yamllint disable-line rule:truthy
   schedule: [{ cron: "12 1 * * *" }]  # 08:12 ICT daily
   workflow_dispatch:
     inputs:

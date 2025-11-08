@@ -1,7 +1,7 @@
 ---
 name: Docs Publisher
 
-on:
+on:  # yamllint disable-line rule:truthy
   schedule:
     # 03:20 Asia/Bangkok (UTC+7) = 20:20 UTC
     - cron: '20 20 * * *'
@@ -26,7 +26,7 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
