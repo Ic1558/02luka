@@ -41,15 +41,17 @@ function postDiscordWebhook(url, payload) {
       return reject(new Error(`Invalid URL: ${err.message}`));
     }
 
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return reject(new Error(`Unsupported webhook protocol: ${parsedUrl.protocol || 'unknown'}`));
+    if (!parsedUrl.protocol || !['https:', 'http:'].includes(parsedUrl.protocol)) {
+      return reject(new Error(`Unsupported protocol: ${parsedUrl.protocol || 'unknown'}`));
     }
 
-    const requester = parsedUrl.protocol === 'https:' ? https : http;
+    const isHttps = parsedUrl.protocol === 'https:';
+    const requester = isHttps ? https : http;
+
     const options = {
       hostname: parsedUrl.hostname,
       port: parsedUrl.port || undefined,
-      path: `${parsedUrl.pathname || ''}${parsedUrl.search || ''}` || '/',
+      path: (parsedUrl.pathname || '/') + (parsedUrl.search || ''),
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
