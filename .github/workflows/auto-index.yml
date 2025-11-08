@@ -104,7 +104,18 @@ jobs:
           if git status --porcelain hub/index.json hub/mcp_registry.json | grep -q .; then
             git add hub/index.json hub/mcp_registry.json
             git commit -m "chore(hub): Auto-update index & MCP registry [skip ci]" -m "🤖 Automated update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
-            git push origin main
+
+            # Retry push with pull-rebase on race condition
+            for i in 1 2 3; do
+              if git push origin main; then
+                echo "✅ Push succeeded on attempt $i"
+                break
+              else
+                echo "⚠️  Push failed on attempt $i, pulling latest changes..."
+                git pull --rebase origin main || { echo "❌ Rebase failed"; exit 1; }
+                [ $i -lt 3 ] && sleep 2
+              fi
+            done
           else
             echo "No changes to hub files"
           fi
