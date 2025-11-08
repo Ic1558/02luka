@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=./schemas/delegation_watchdog.schema.json
+stuck_timeout_ms: 900000     # 15 นาที
+max_pending: 20              # เกินนี้ถือว่าแออัด
+inbox: ${LUKA_HOME:-$HOME/02luka}/bridge/inbox/CLC
+history: ${LUKA_HOME:-$HOME/02luka}/logs/wo_drop_history
