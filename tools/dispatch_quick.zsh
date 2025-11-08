@@ -320,3 +320,10 @@ if [[ "${1:-}" == "hub:sync:off" ]]; then
   launchctl unload ~/Library/LaunchAgents/com.02luka.hub-autoindex.plist 2>/dev/null || true
   exit 0
 fi
+
+# ── Session Save Shortcut ─────────────────────────
+
+if [[ "${1:-}" == "save" ]]; then
+  shift || true
+  exec ~/02luka/tools/session_save.zsh "$@"
+fi
