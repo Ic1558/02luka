@@ -245,6 +245,7 @@ Tasks:
   ci:watch | ci:watch:on | ci:watch:off | ci:bus:rerun
   auto:merge | auto:rerun | auto:fix-conflict | auto:label | auto:quiet | auto:decision
   rag:faiss | kim:probe
+  watchdog:run | cls:force-wo
 
 Notes:
   - Requires: gh (authenticated), jq, node (for Puppeteer tools)
@@ -293,6 +294,15 @@ case "$task" in
   rag:faiss)       ./tools/vector_build.zsh build && ./tools/rag_vector_selftest.zsh;;
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
+
+  watchdog:run)
+    LUKA_HOME="${LUKA_HOME:-$HOME/02luka}" node "$HOME/02luka/hub/delegation_watchdog.mjs"
+    ;;
+
+  cls:force-wo)
+    chmod +x "$HOME/02luka/tools/cls_force_wo_hook.zsh"
+    DRY_RUN="${DRY_RUN:-0}" LUKA_HOME="${LUKA_HOME:-$HOME/02luka}" "$HOME/02luka/tools/cls_force_wo_hook.zsh" "${1:-}"
+    ;;
 
   *) usage; exit 2;;
 
