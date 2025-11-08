@@ -13,7 +13,13 @@
     "ui": "node run/local_ui_server.cjs",
     "boss:stub": "node run/boss_api_stub.cjs"
   },
-  "keywords": ["ai", "cls", "ops", "monitoring", "github-actions"],
+  "keywords": [
+    "ai",
+    "cls",
+    "ops",
+    "monitoring",
+    "github-actions"
+  ],
   "author": "icmini",
   "license": "UNLICENSED",
   "engines": {
@@ -22,5 +28,8 @@
   "repository": {
     "type": "git",
     "url": "git@github.com:Ic1558/02luka.git"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
   }
 }

@@ -24,10 +24,19 @@ tmp/
 *.key
 credentials.json
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
 # Build
 dist/
 build/
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
 
 # Safety snapshots (too large)
 _safety_snapshots/
@@ -47,6 +56,11 @@ run/*.lock
 telemetry/*.log
 g/telemetry/*.log
 
+# Memory audit generated reports
+hub/memory_audit.json
+g/telemetry/memory_audit.jsonl
+g/reports/memory_audit.log
+
 # Conflict backups
 *.backup.*
 sync_conflicts_*/
@@ -56,8 +70,18 @@ logs/*.log
 logs/**/*.log
 
 # ---- CI / local automation noise ----
+logs/
 *.out
 *.err
 .tmp/
+coverage/
 tools/puppeteer/.logs/
 
+.venv/
+g/rag/.venv/
+__pycache__/
+run/*.err
+g/reports/sync_conflicts_*/
+*.cache/
+_trash/
+hub/node_modules/

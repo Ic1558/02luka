@@ -1,7 +1,6 @@
 ---
-# yamllint disable-line rule:truthy
 name: ci / ops-gate
-on:
+on:  # yamllint disable-line rule:truthy
   pull_request:
   workflow_dispatch:
 

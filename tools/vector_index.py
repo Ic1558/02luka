@@ -1,313 +1,325 @@
 #!/usr/bin/env python3
 """
-Phase 15 – FAISS/HNSW Vector Index Management
-Supports: build, query, stats operations
+FAISS/HNSW Vector Index Driver
+R&D Experiment for 02luka Track C - Exploration & R&D
+
+This module provides a vectorization and semantic search interface
+using FAISS (Facebook AI Similarity Search) with HNSW indexing.
+
+Features:
+- Document embedding using sentence transformers
+- HNSW index for fast approximate nearest neighbor search
+- Batch indexing and real-time search
+- Persistence and loading of indexes
 """
 
-import argparse
-import json
 import os
-import sys
-import time
+import json
+import pickle
+import logging
+from typing import List, Dict, Tuple, Optional
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Optional
 
 try:
-    import faiss
     import numpy as np
+    import faiss
     from sentence_transformers import SentenceTransformer
 except ImportError as e:
-    print(json.dumps({
-        "error": "missing_dependency",
-        "message": f"Failed to import required package: {e}",
-        "install": "pip install faiss-cpu sentence-transformers"
-    }), file=sys.stderr)
+    import sys
+    print(f"Error: Missing dependencies. Install with: pip install faiss-cpu sentence-transformers numpy", file=sys.stderr)
+    print(f"ImportError: {e}", file=sys.stderr)
     sys.exit(1)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SearchResult:
+    """Container for search results"""
+    doc_id: str
+    text: str
+    score: float
+    metadata: Optional[Dict] = None
 
 
 class VectorIndex:
-    """FAISS vector index with HNSW support."""
+    """
+    FAISS-based vector index with HNSW algorithm for efficient similarity search.
+
+    HNSW (Hierarchical Navigable Small World) provides:
+    - Sub-linear search complexity
+    - Good recall/speed tradeoff
+    - Scalable to millions of vectors
+    """
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-        dim: int = 384,
-        index_type: str = "hnsw"
+        model_name: str = 'all-MiniLM-L6-v2',
+        index_type: str = 'hnsw',
+        dimension: Optional[int] = None,
+        M: int = 32,  # HNSW connections per layer
+        ef_construction: int = 200,  # HNSW construction time search
+        ef_search: int = 50  # HNSW search time search
     ):
+        """
+        Initialize the vector index.
+
+        Args:
+            model_name: HuggingFace sentence transformer model
+            index_type: 'hnsw' or 'flat' (exact search)
+            dimension: Vector dimension (auto-detected if None)
+            M: HNSW M parameter (connections per layer)
+            ef_construction: HNSW build-time exploration factor
+            ef_search: HNSW search-time exploration factor
+        """
+        logger.info(f"Initializing VectorIndex with model: {model_name}")
+
+        # Store model name for persistence
         self.model_name = model_name
-        self.dim = dim
+
+        # Load embedding model
+        self.model = SentenceTransformer(model_name)
+        self.dimension = dimension or self.model.get_sentence_embedding_dimension()
+
+        # Initialize FAISS index
         self.index_type = index_type
-        self.model: Optional[SentenceTransformer] = None
-        self.index: Optional[faiss.Index] = None
-        self.mapping: List[Dict[str, Any]] = []
-
-    def load_model(self):
-        """Load sentence transformer model."""
-        if self.model is None:
-            self.model = SentenceTransformer(self.model_name)
-
-    def build_index(
-        self,
-        documents: List[Dict[str, Any]],
-        text_field: str = "content",
-        id_field: str = "id",
-        M: int = 32,
-        ef_construction: int = 200
-    ) -> Dict[str, Any]:
-        """Build FAISS index from documents."""
-        self.load_model()
-
-        # Extract texts and build mapping
-        texts = []
-        self.mapping = []
-
-        for doc in documents:
-            if text_field not in doc:
-                continue
-            texts.append(doc[text_field])
-            self.mapping.append({
-                "id": doc.get(id_field, f"doc_{len(self.mapping)}"),
-                "text": doc[text_field],
-                **{k: v for k, v in doc.items() if k not in [text_field, id_field]}
-            })
-
-        if not texts:
-            return {
-                "status": "error",
-                "message": "No documents with text field found",
-                "count": 0
-            }
-
-        # Generate embeddings
-        embeddings = self.model.encode(texts, show_progress_bar=True)
-        embeddings = np.array(embeddings).astype('float32')
-
-        # Normalize for cosine similarity
-        faiss.normalize_L2(embeddings)
-
-        # Build index
-        if self.index_type == "hnsw":
-            self.index = faiss.IndexHNSWFlat(self.dim, M)
+        if index_type == 'hnsw':
+            self.index = faiss.IndexHNSWFlat(self.dimension, M)
             self.index.hnsw.efConstruction = ef_construction
-        else:  # flat
-            self.index = faiss.IndexFlatIP(self.dim)
-
-        self.index.add(embeddings)
-
-        return {
-            "status": "success",
-            "count": len(self.mapping),
-            "dim": self.dim,
-            "index_type": self.index_type,
-            "model": self.model_name
-        }
-
-    def save(self, index_path: str, mapping_path: str):
-        """Save index and mapping to disk."""
-        if self.index is None:
-            raise ValueError("No index to save")
-
-        Path(index_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(mapping_path).parent.mkdir(parents=True, exist_ok=True)
-
-        faiss.write_index(self.index, index_path)
-
-        with open(mapping_path, 'w') as f:
-            json.dump(self.mapping, f, indent=2)
-
-    def load(self, index_path: str, mapping_path: str):
-        """Load index and mapping from disk."""
-        if not os.path.exists(index_path):
-            raise FileNotFoundError(f"Index not found: {index_path}")
-        if not os.path.exists(mapping_path):
-            raise FileNotFoundError(f"Mapping not found: {mapping_path}")
-
-        self.index = faiss.read_index(index_path)
-
-        with open(mapping_path, 'r') as f:
-            self.mapping = json.load(f)
-
-    def query(
-        self,
-        query_text: str,
-        top_k: int = 24,
-        ef_search: Optional[int] = None,
-        min_score: float = 0.0
-    ) -> List[Dict[str, Any]]:
-        """Query the index."""
-        if self.index is None:
-            raise ValueError("No index loaded")
-
-        self.load_model()
-
-        # Set ef_search for HNSW
-        if ef_search is not None and hasattr(self.index, 'hnsw'):
             self.index.hnsw.efSearch = ef_search
+            logger.info(f"Created HNSW index: M={M}, ef_construction={ef_construction}, ef_search={ef_search}")
+        elif index_type == 'flat':
+            self.index = faiss.IndexFlatL2(self.dimension)
+            logger.info("Created Flat (exact) index")
+        else:
+            raise ValueError(f"Unknown index_type: {index_type}")
 
-        # Encode query
-        query_embedding = self.model.encode([query_text])
-        query_embedding = np.array(query_embedding).astype('float32')
-        faiss.normalize_L2(query_embedding)
+        # Document storage
+        self.documents: List[Dict] = []
+        self.doc_id_map: Dict[int, str] = {}
 
-        # Search
-        scores, indices = self.index.search(query_embedding, top_k)
+    def add_documents(self, documents: List[Dict[str, str]], batch_size: int = 32):
+        """
+        Add documents to the index.
 
-        # Format results
+        Args:
+            documents: List of dicts with 'id', 'text', and optional 'metadata'
+            batch_size: Embedding batch size
+        """
+        logger.info(f"Adding {len(documents)} documents to index")
+
+        # Extract texts and embed
+        texts = [doc['text'] for doc in documents]
+        embeddings = self.model.encode(
+            texts,
+            batch_size=batch_size,
+            show_progress_bar=True,
+            convert_to_numpy=True
+        )
+
+        # Add to FAISS index
+        start_idx = len(self.documents)
+        self.index.add(embeddings.astype('float32'))
+
+        # Store documents and mapping
+        for i, doc in enumerate(documents):
+            self.documents.append(doc)
+            self.doc_id_map[start_idx + i] = doc.get('id', f"doc_{start_idx + i}")
+
+        logger.info(f"Index now contains {self.index.ntotal} vectors")
+
+    def search(
+        self,
+        query: str,
+        k: int = 10,
+        return_metadata: bool = True
+    ) -> List[SearchResult]:
+        """
+        Search for similar documents.
+
+        Args:
+            query: Search query string
+            k: Number of results to return
+            return_metadata: Include document metadata in results
+
+        Returns:
+            List of SearchResult objects
+        """
+        if self.index.ntotal == 0:
+            logger.warning("Index is empty")
+            return []
+
+        # Embed query
+        query_vec = self.model.encode([query], convert_to_numpy=True)
+
+        # Search index
+        distances, indices = self.index.search(query_vec.astype('float32'), k)
+
+        # Build results
         results = []
-        for score, idx in zip(scores[0], indices[0]):
-            if idx < 0 or idx >= len(self.mapping):
-                continue
-            if score < min_score:
+        for dist, idx in zip(distances[0], indices[0]):
+            if idx == -1:  # FAISS returns -1 for missing results
                 continue
 
-            result = {
-                "score": float(score),
-                "index": int(idx),
-                **self.mapping[idx]
-            }
+            doc = self.documents[idx]
+            result = SearchResult(
+                doc_id=self.doc_id_map[idx],
+                text=doc['text'],
+                score=float(1.0 / (1.0 + dist)),  # Convert distance to similarity
+                metadata=doc.get('metadata') if return_metadata else None
+            )
             results.append(result)
 
         return results
 
-    def stats(self, index_path: str, mapping_path: str) -> Dict[str, Any]:
-        """Get index statistics."""
-        stats = {
-            "index_exists": os.path.exists(index_path),
-            "mapping_exists": os.path.exists(mapping_path)
+    def save(self, path: str):
+        """Save index and documents to disk"""
+        path_obj = Path(path)
+        path_obj.mkdir(parents=True, exist_ok=True)
+
+        # Save FAISS index
+        index_file = path_obj / "index.faiss"
+        faiss.write_index(self.index, str(index_file))
+
+        # Save documents and metadata
+        meta_file = path_obj / "metadata.pkl"
+        with open(meta_file, 'wb') as f:
+            pickle.dump({
+                'documents': self.documents,
+                'doc_id_map': self.doc_id_map,
+                'dimension': self.dimension,
+                'index_type': self.index_type,
+                'model_name': self.model_name
+            }, f)
+
+        logger.info(f"Index saved to {path}")
+
+    @classmethod
+    def load(cls, path: str, model_name: Optional[str] = None) -> 'VectorIndex':
+        """
+        Load index from disk.
+        
+        Args:
+            path: Path to saved index directory
+            model_name: Optional model name. If not provided, uses the model_name
+                       from saved metadata. If provided, validates it matches
+                       the saved model_name (raises ValueError if mismatch).
+        """
+        path_obj = Path(path)
+
+        # Load metadata
+        meta_file = path_obj / "metadata.pkl"
+        with open(meta_file, 'rb') as f:
+            metadata = pickle.load(f)
+
+        # Get saved model_name from metadata (for backward compatibility, default to old default)
+        saved_model_name = metadata.get('model_name', 'all-MiniLM-L6-v2')
+        
+        # If model_name provided, validate it matches saved model
+        if model_name is not None and model_name != saved_model_name:
+            raise ValueError(
+                f"Model name mismatch: saved index uses '{saved_model_name}', "
+                f"but '{model_name}' was provided. Use model_name='{saved_model_name}' "
+                f"or omit model_name to use the saved model."
+            )
+        
+        # Use saved model_name
+        model_name_to_use = saved_model_name
+
+        # Create instance
+        instance = cls(
+            model_name=model_name_to_use,
+            index_type=metadata['index_type'],
+            dimension=metadata['dimension']
+        )
+
+        # Load FAISS index
+        index_file = path_obj / "index.faiss"
+        instance.index = faiss.read_index(str(index_file))
+
+        # Restore documents
+        instance.documents = metadata['documents']
+        instance.doc_id_map = metadata['doc_id_map']
+
+        logger.info(f"Index loaded from {path} with {instance.index.ntotal} vectors")
+        return instance
+
+    def get_stats(self) -> Dict:
+        """Get index statistics"""
+        return {
+            'num_documents': len(self.documents),
+            'num_vectors': self.index.ntotal,
+            'dimension': self.dimension,
+            'index_type': self.index_type,
+            'memory_usage_mb': self.index.ntotal * self.dimension * 4 / (1024 * 1024)
         }
 
-        if stats["index_exists"]:
-            stats["index_size_bytes"] = os.path.getsize(index_path)
-            stats["index_modified"] = time.ctime(os.path.getmtime(index_path))
 
-            # Load index for more details
-            try:
-                idx = faiss.read_index(index_path)
-                stats["ntotal"] = idx.ntotal
-                stats["dim"] = idx.d
-            except Exception as e:
-                stats["load_error"] = str(e)
+def demo():
+    """Demo usage of the vector index"""
+    logger.info("=== FAISS/HNSW Vector Index Demo ===")
 
-        if stats["mapping_exists"]:
-            stats["mapping_size_bytes"] = os.path.getsize(mapping_path)
-            try:
-                with open(mapping_path, 'r') as f:
-                    mapping = json.load(f)
-                stats["mapping_count"] = len(mapping)
-            except Exception as e:
-                stats["mapping_load_error"] = str(e)
+    # Sample documents
+    sample_docs = [
+        {
+            'id': 'doc1',
+            'text': 'Machine learning is a subset of artificial intelligence',
+            'metadata': {'category': 'AI', 'date': '2025-01-01'}
+        },
+        {
+            'id': 'doc2',
+            'text': 'Deep learning uses neural networks with multiple layers',
+            'metadata': {'category': 'AI', 'date': '2025-01-02'}
+        },
+        {
+            'id': 'doc3',
+            'text': 'Python is a popular programming language for data science',
+            'metadata': {'category': 'Programming', 'date': '2025-01-03'}
+        },
+        {
+            'id': 'doc4',
+            'text': 'Vector databases enable semantic search capabilities',
+            'metadata': {'category': 'Database', 'date': '2025-01-04'}
+        },
+        {
+            'id': 'doc5',
+            'text': 'FAISS provides efficient similarity search algorithms',
+            'metadata': {'category': 'Database', 'date': '2025-01-05'}
+        }
+    ]
 
-        return stats
+    # Create and populate index
+    index = VectorIndex(index_type='hnsw')
+    index.add_documents(sample_docs)
 
+    # Show stats
+    stats = index.get_stats()
+    logger.info(f"Index stats: {json.dumps(stats, indent=2)}")
 
-def cmd_build(args):
-    """Build index from JSONL source."""
-    # Load documents
-    documents = []
-    with open(args.source, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                documents.append(json.loads(line))
+    # Search
+    queries = [
+        "What is artificial intelligence?",
+        "Tell me about vector search",
+        "Programming languages for ML"
+    ]
 
-    # Build index
-    index = VectorIndex(
-        model_name=args.model,
-        dim=args.dim,
-        index_type=args.index_type
-    )
+    for query in queries:
+        logger.info(f"\nQuery: '{query}'")
+        results = index.search(query, k=3)
+        for i, result in enumerate(results, 1):
+            logger.info(f"  {i}. [{result.score:.3f}] {result.doc_id}: {result.text[:60]}...")
 
-    result = index.build_index(
-        documents,
-        text_field=args.text_field,
-        id_field=args.id_field,
-        M=args.M,
-        ef_construction=args.ef_construction
-    )
+    # Save and reload
+    save_path = "/tmp/faiss_index_demo"
+    index.save(save_path)
 
-    if result["status"] == "success":
-        index.save(args.index, args.mapping)
-
-    print(json.dumps(result))
-    return 0 if result["status"] == "success" else 1
-
-
-def cmd_query(args):
-    """Query the index."""
-    index = VectorIndex()
-    index.load(args.index, args.mapping)
-
-    results = index.query(
-        args.query,
-        top_k=args.top_k,
-        ef_search=args.ef_search,
-        min_score=args.min_score
-    )
-
-    # Output as JSON lines
-    for result in results:
-        print(json.dumps(result))
-
-    return 0
-
-
-def cmd_stats(args):
-    """Get index statistics."""
-    index = VectorIndex()
-    stats = index.stats(args.index, args.mapping)
-    print(json.dumps(stats, indent=2))
-    return 0
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="FAISS/HNSW Vector Index Management"
-    )
-    subparsers = parser.add_subparsers(dest='command', help='Command to run')
-
-    # Build command
-    build_parser = subparsers.add_parser('build', help='Build index')
-    build_parser.add_argument('--source', required=True, help='JSONL source file')
-    build_parser.add_argument('--index', required=True, help='Output index path')
-    build_parser.add_argument('--mapping', required=True, help='Output mapping path')
-    build_parser.add_argument('--model', default='sentence-transformers/all-MiniLM-L6-v2')
-    build_parser.add_argument('--dim', type=int, default=384)
-    build_parser.add_argument('--text-field', default='content')
-    build_parser.add_argument('--id-field', default='id')
-    build_parser.add_argument('--index-type', default='hnsw', choices=['hnsw', 'flat'])
-    build_parser.add_argument('--M', type=int, default=32)
-    build_parser.add_argument('--ef-construction', type=int, default=200)
-
-    # Query command
-    query_parser = subparsers.add_parser('query', help='Query index')
-    query_parser.add_argument('--index', required=True, help='Index path')
-    query_parser.add_argument('--mapping', required=True, help='Mapping path')
-    query_parser.add_argument('--query', required=True, help='Query text')
-    query_parser.add_argument('--top-k', type=int, default=24)
-    query_parser.add_argument('--ef-search', type=int, default=50)
-    query_parser.add_argument('--min-score', type=float, default=0.0)
-
-    # Stats command
-    stats_parser = subparsers.add_parser('stats', help='Get index statistics')
-    stats_parser.add_argument('--index', required=True, help='Index path')
-    stats_parser.add_argument('--mapping', required=True, help='Mapping path')
-
-    args = parser.parse_args()
-
-    if not args.command:
-        parser.print_help()
-        return 1
-
-    if args.command == 'build':
-        return cmd_build(args)
-    elif args.command == 'query':
-        return cmd_query(args)
-    elif args.command == 'stats':
-        return cmd_stats(args)
-    else:
-        parser.print_help()
-        return 1
+    # Load without specifying model_name - should use saved model_name
+    loaded_index = VectorIndex.load(save_path)
+    logger.info(f"\nReloaded index with {loaded_index.index.ntotal} vectors")
+    logger.info(f"Loaded index uses model: {loaded_index.model_name}")
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    demo()
