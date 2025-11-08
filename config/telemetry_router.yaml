@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=./schemas/telemetry_router.schema.json
+metadata:
+  schema_version: "1.0.0"
+  created_by: GG_Agent_02luka
+  created_at: "2025-11-08T00:00:00Z"
+
+sinks:
+  file_unified:
+    type: file
+    path: "${LUKA_HOME:-$HOME/02luka}/g/telemetry_unified/unified.jsonl"
+    rotation:
+      max_bytes: 10485760
+      keep: 5
+  redis_events:
+    type: redis
+    host: "${REDIS_HOST:-127.0.0.1}"
+    port: ${REDIS_PORT:-6379}
+    channel: "telemetry:events"
+    auth: "${REDIS_PASS:-}"
+  telegram:
+    type: telegram
+    bot_token: "${TG_BOT_TOKEN:-}"
+    chat_id: "${TG_CHAT_ID:-}"
+
+rules:
+  - match:
+      level: ["error","fatal"]
+    route: ["file_unified","redis_events","telegram"]
+  - match:
+      level: ["warn"]
+    route: ["file_unified","redis_events"]
+  - match:
+      level: ["info","debug"]
+    route: ["file_unified"]
+
+ingest:
+  inputs:
+    - "${LUKA_HOME:-$HOME/02luka}/hub/mcp_health.json"
+    - "${LUKA_HOME:-$HOME/02luka}/hub/bridge_selfcheck.json"
+    - "${LUKA_HOME:-$HOME/02luka}/hub/index.json"
+  schema: telemetry_v1
+
+performance:
+  batch_size: 200
+  flush_ms: 800
+
+health_check:
+  enabled: true
+  sample_sinks: ["file_unified","redis_events"]

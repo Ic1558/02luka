@@ -1,0 +1,99 @@
+{
+  "$id": "file:config/schemas/telemetry_router.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Telemetry Router Config",
+  "type": "object",
+  "required": ["metadata","sinks","rules","ingest"],
+  "properties": {
+    "metadata": {
+      "type":"object",
+      "required":["schema_version","created_by","created_at"],
+      "properties":{
+        "schema_version":{"type":"string"},
+        "created_by":{"type":"string"},
+        "created_at":{"type":"string","format":"date-time"}
+      },
+      "additionalProperties":false
+    },
+    "sinks": {
+      "type":"object",
+      "minProperties":1,
+      "additionalProperties":{
+        "type":"object",
+        "properties":{
+          "type":{"type":"string","enum":["file","redis","telegram"]},
+          "path":{"type":"string"},
+          "rotation":{
+            "type":"object",
+            "properties":{
+              "max_bytes":{"type":"integer","minimum":1024},
+              "keep":{"type":"integer","minimum":1}
+            },
+            "additionalProperties":false
+          },
+          "host":{"type":"string"},
+          "port":{"type":"integer","minimum":1},
+          "channel":{"type":"string"},
+          "auth":{"type":"string"},
+          "bot_token":{"type":"string"},
+          "chat_id":{"type":"string"}
+        },
+        "required":["type"],
+        "additionalProperties":true
+      }
+    },
+    "rules": {
+      "type":"array",
+      "minItems":1,
+      "items":{
+        "type":"object",
+        "required":["match","route"],
+        "properties":{
+          "match":{
+            "type":"object",
+            "properties":{
+              "level":{
+                "type":"array",
+                "items":{"type":"string","enum":["debug","info","warn","error","fatal"]},
+                "minItems":1
+              }
+            },
+            "additionalProperties":true
+          },
+          "route":{
+            "type":"array",
+            "minItems":1,
+            "items":{"type":"string"}
+          }
+        },
+        "additionalProperties":false
+      }
+    },
+    "ingest": {
+      "type":"object",
+      "required":["inputs","schema"],
+      "properties":{
+        "inputs":{"type":"array","items":{"type":"string"}, "minItems":1},
+        "schema":{"type":"string"}
+      },
+      "additionalProperties":false
+    },
+    "performance":{
+      "type":"object",
+      "properties":{
+        "batch_size":{"type":"integer","minimum":1},
+        "flush_ms":{"type":"integer","minimum":1}
+      },
+      "additionalProperties":false
+    },
+    "health_check":{
+      "type":"object",
+      "properties":{
+        "enabled":{"type":"boolean"},
+        "sample_sinks":{"type":"array","items":{"type":"string"}}
+      },
+      "additionalProperties":false
+    }
+  },
+  "additionalProperties":false
+}

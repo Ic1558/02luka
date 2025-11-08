@@ -1,0 +1,56 @@
+name: Telemetry Consolidation & Alerts
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ "hub/**", "config/telemetry_router.yaml", "hub/telemetry_merge.mjs", ".github/workflows/telemetry.yml" ]
+permissions:
+  contents: write
+concurrency:
+  group: telemetry-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y jq
+          curl -sSLo /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+          npm i -g ajv-cli@5 ajv-formats@3
+      - name: Validate router schema
+        run: |
+          ajv validate --strict=true -s config/schemas/telemetry_router.schema.json -d config/telemetry_router.yaml
+      - name: Run telemetry merge
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          REDIS_PASS: ${{ secrets.REDIS_PASS }}
+        run: |
+          chmod +x tools/telemetry_route.zsh
+          ./tools/telemetry_route.zsh
+          test -f hub/telemetry_snapshot.json
+          node -e "JSON.parse(require('fs').readFileSync('hub/telemetry_snapshot.json','utf8'))"
+      - name: Commit snapshot (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          if ! git diff --quiet -- hub/telemetry_snapshot.json; then
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
+            git config user.name  "02LUKA Bot"
+            git config user.email "bot@02luka.local"
+            git add hub/telemetry_snapshot.json
+            git commit -m "chore(hub): update telemetry snapshot"
+            git push
+          else
+            echo "No changes."
+          fi
