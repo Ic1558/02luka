@@ -115,32 +115,32 @@ function normalizeStatus(value) {
   return 'unknown';
 }
 
-  function fetchApiSummary(urlString) {
-    return new Promise(resolve => {
-      let parsed;
-      try {
-        parsed = new URL(urlString);
-      } catch (error) {
-        return resolve(null);
-      }
-
-      const isHttps = parsed.protocol === 'https:';
-      const requester = isHttps ? https : http;
-      const requestOptions = {
-        protocol: parsed.protocol,
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: `${parsed.pathname || '/'}${parsed.search || ''}`,
-        method: 'GET',
-        timeout: 4500,
-        headers: { Accept: 'application/json' }
-      };
-
-      if (parsed.username || parsed.password) {
-        requestOptions.auth = `${parsed.username || ''}:${parsed.password || ''}`;
-      }
-
-      const request = requester.request(requestOptions, res => {
+function fetchApiSummary(urlString) {
+  return new Promise(resolve => {
+    let parsed;
+    try {
+      parsed = new URL(urlString);
+    } catch (error) {
+      return resolve(null);
+    }
+    const isHttps = parsed.protocol === 'https:';
+    const requester = isHttps ? https : http;
+    const pathWithQuery = `${parsed.pathname || '/'}${parsed.search || ''}`;
+    const requestOptions = {
+      protocol: parsed.protocol,
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: pathWithQuery,
+      method: 'GET',
+      timeout: 4500,
+      headers: { Accept: 'application/json' }
+    };
+    if (parsed.username || parsed.password) {
+      requestOptions.auth = `${parsed.username || ''}:${parsed.password || ''}`;
+    }
+    const request = requester.request(
+      requestOptions,
+      res => {
         const chunks = [];
         res.on('data', chunk => chunks.push(chunk));
         res.on('end', () => {
