@@ -125,11 +125,12 @@ function fetchApiSummary(urlString) {
     }
     const isHttps = parsed.protocol === 'https:';
     const requester = isHttps ? https : http;
+    const pathWithQuery = `${parsed.pathname || '/'}${parsed.search || ''}`;
     const requestOptions = {
       protocol: parsed.protocol,
       hostname: parsed.hostname,
       port: parsed.port || (isHttps ? 443 : 80),
-      path: `${parsed.pathname || '/'}${parsed.search || ''}`,
+      path: pathWithQuery,
       method: 'GET',
       timeout: 4500,
       headers: { Accept: 'application/json' }

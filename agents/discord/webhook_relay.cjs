@@ -8,6 +8,7 @@
  *   await postDiscordWebhook('https://discord.com/api/webhooks/...', { content: 'Hello' });
  */
 
+const http = require('http');
 const https = require('https');
 
 /**
@@ -40,9 +41,17 @@ function postDiscordWebhook(url, payload) {
       return reject(new Error(`Invalid URL: ${err.message}`));
     }
 
+    if (!parsedUrl.protocol || !['https:', 'http:'].includes(parsedUrl.protocol)) {
+      return reject(new Error(`Unsupported protocol: ${parsedUrl.protocol || 'unknown'}`));
+    }
+
+    const isHttps = parsedUrl.protocol === 'https:';
+    const requester = isHttps ? https : http;
+
     const options = {
       hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
+      port: parsedUrl.port || undefined,
+      path: (parsedUrl.pathname || '/') + (parsedUrl.search || ''),
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,7 +61,7 @@ function postDiscordWebhook(url, payload) {
       timeout: 10000 // 10 second timeout
     };
 
-    const req = https.request(options, (res) => {
+    const req = requester.request(options, (res) => {
       let body = '';
 
       res.on('data', (chunk) => {
