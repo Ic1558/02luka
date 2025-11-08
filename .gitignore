@@ -50,6 +50,32 @@ run/*.lock
 telemetry/*.log
 g/telemetry/*.log
 
+# Memory audit generated reports
+hub/memory_audit.json
+g/telemetry/memory_audit.jsonl
+g/reports/memory_audit.log
+
 # Conflict backups
 *.backup.*
 sync_conflicts_*/
+
+# local logs
+logs/*.log
+logs/**/*.log
+
+# ---- CI / local automation noise ----
+logs/
+*.out
+*.err
+.tmp/
+coverage/
+tools/puppeteer/.logs/
+
+.venv/
+g/rag/.venv/
+__pycache__/
+run/*.err
+g/reports/sync_conflicts_*/
+*.cache/
+_trash/
+hub/node_modules/

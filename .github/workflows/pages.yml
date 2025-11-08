@@ -32,33 +32,33 @@ jobs:
           cp -r docs dist/ 2>/dev/null || echo "No docs directory"
 
           # Generate health page
-          cat > dist/_health.html << 'HTML'
-          <!doctype html>
-          <meta charset="utf-8">
-          <title>02luka Health</title>
-          <h1>02luka System Health</h1>
-          <p>Status: <strong style="color:green">OK</strong></p>
-          <p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>
-HTML
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<meta charset="utf-8">' \
+            '<title>02luka Health</title>' \
+            '<h1>02luka System Health</h1>' \
+            '<p>Status: <strong style="color:green">OK</strong></p>' \
+            "<p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>" \
+            > dist/_health.html
 
           # Generate manifest
-          cat > dist/manifest.json << JSON
-          {
-            "status": "ok",
-            "timestamp": "$(date -u +%FT%TZ)",
-            "version": "$(git rev-parse --short HEAD)",
-            "branch": "main"
-          }
-JSON
+          printf '%s\n' \
+            '{' \
+            '  "status": "ok",' \
+            "  \"timestamp\": \"$(date -u +%FT%TZ)\"," \
+            "  \"version\": \"$(git rev-parse --short HEAD)\"," \
+            '  "branch": "main"' \
+            '}' \
+            > dist/manifest.json
 
           # Generate ops status page
-          cat > dist/ops/status.html << 'HTML'
-          <!doctype html>
-          <meta charset="utf-8">
-          <title>02luka Ops Status</title>
-          <h1>02luka Operations</h1>
-          <p>System operational</p>
-HTML
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<meta charset="utf-8">' \
+            '<title>02luka Ops Status</title>' \
+            '<h1>02luka Operations</h1>' \
+            '<p>System operational</p>' \
+            > dist/ops/status.html
 
           echo "✅ Static site built successfully"
           ls -la dist/
@@ -75,6 +75,9 @@ HTML
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

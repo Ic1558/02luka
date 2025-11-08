@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CI Event",
+  "type": "object",
+  "required": ["type", "pr", "repo", "time"],
+  "properties": {
+    "type": { "type": "string", "enum": ["pr.rerun.request", "pr.rerun.done", "pr.fail.detected"] },
+    "repo": { "type": "string" },
+    "pr":   { "type": "integer" },
+    "actor":{ "type": "string" },
+    "data": { "type": "object" },
+    "time": { "type": "string", "format": "date-time" }
+  }
+}
