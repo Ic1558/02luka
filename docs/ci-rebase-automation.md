@@ -10,13 +10,15 @@ The CI Rebase Automation system provides a safe, automated way to rebase multipl
 - Multiple CI-related PRs need to be synchronized
 - You want to ensure all CI PRs are up-to-date with the latest main branch
 
+**🚀 NEW:** Check out [Smart Features](ci-rebase-smart-features.md) for intelligent conflict detection, dependency analysis, and extensibility!
+
 ## Components
 
 ### 1. Global CI Branches Script (`tools/global_ci_branches.zsh`)
 
 Core CLI tool that discovers and rebases CI-related PRs.
 
-**Features:**
+**Core Features:**
 - ✅ Safe by default (dry-run mode)
 - ✅ Fork detection and protection
 - ✅ Branch ownership validation
@@ -24,6 +26,14 @@ Core CLI tool that discovers and rebases CI-related PRs.
 - ✅ Conflict handling with automatic backups
 - ✅ Resume-ability via state file
 - ✅ Required checks filtering
+
+**Smart Features:** (See [Smart Features Guide](ci-rebase-smart-features.md))
+- 🧠 Pre-flight conflict detection
+- 🔗 PR dependency analysis
+- 📊 Intelligent ordering
+- 🔌 Extensible hook system
+- 📈 Metrics and telemetry
+- ⚙️ Configuration-driven behavior
 
 **Usage:**
 
