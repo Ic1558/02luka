@@ -1,0 +1,28 @@
+name: MCP Auto-Discovery
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # every 30 minutes
+  workflow_dispatch:
+  repository_dispatch:
+    types: [mcp-config-updated]
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Run MCP Discovery
+        run: node hub/mcp_discovery.mjs
+      - name: Commit Registry
+        run: |
+          git config user.name "02LUKA Bot"
+          git config user.email "bot@02luka.local"
+          git add hub/mcp_registry.json
+          git commit -m "chore(phase-20.1): update MCP registry" || echo "No changes"
+          git push
