@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fi'
 import axios from 'axios'
 import { toast } from 'react-toastify'
+import AIInsights from '../../components/AI/AIInsights'
 
 const ContextDetail = () => {
   const { id } = useParams()
@@ -284,6 +285,9 @@ const ContextDetail = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* AI Insights */}
+          {context && <AIInsights contextData={context} />}
+
           {/* Environmental Constraints */}
           <div className="card">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">

@@ -18,6 +18,7 @@ import documentRoutes from './routes/documents.js'
 import notificationRoutes from './routes/notifications.js'
 import contextRoutes from './routes/contexts.js'
 import sketchRoutes from './routes/sketches.js'
+import aiRoutes from './routes/ai.js'
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js'
@@ -91,13 +92,14 @@ app.use('/api/documents', documentRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/contexts', contextRoutes)
 app.use('/api/sketches', sketchRoutes)
+app.use('/api/ai', aiRoutes)
 
 // API info endpoint
 app.get('/api', (req, res) => {
   res.json({
     name: 'ProBuild API',
-    version: '1.1.0',
-    description: 'Architecture & Construction Project Management API - Phase 22.1',
+    version: '1.2.0',
+    description: 'Architecture & Construction Project Management API - Phase 22.2 (AI-Powered)',
     endpoints: {
       auth: '/api/auth',
       projects: '/api/projects',
@@ -107,7 +109,8 @@ app.get('/api', (req, res) => {
       documents: '/api/documents',
       notifications: '/api/notifications',
       contexts: '/api/contexts',
-      sketches: '/api/sketches'
+      sketches: '/api/sketches',
+      ai: '/api/ai'
     }
   })
 })
