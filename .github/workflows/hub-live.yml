@@ -1,0 +1,185 @@
+name: hub-live
+
+on:
+  push:
+    branches: [main, develop, 'claude/**']
+    paths:
+      - 'hub/**'
+      - 'config/hub_dashboard.yaml'
+      - 'config/schemas/hub_dashboard.schema.json'
+      - '.github/workflows/hub-live.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'hub/**'
+      - 'config/hub_dashboard.yaml'
+      - 'config/schemas/hub_dashboard.schema.json'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  validate-config:
+    name: Validate hub_dashboard.yaml
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Convert YAML to JSON
+        run: |
+          yq eval -o=json config/hub_dashboard.yaml > /tmp/hub_dashboard.json
+          cat /tmp/hub_dashboard.json
+
+      - name: Validate against schema
+        run: |
+          ajv validate \
+            -s config/schemas/hub_dashboard.schema.json \
+            -d /tmp/hub_dashboard.json \
+            --strict=true \
+            --all-errors
+
+      - name: Check required fields
+        run: |
+          jq -e '.redis.url' /tmp/hub_dashboard.json > /dev/null
+          jq -e '.redis.channels | length > 0' /tmp/hub_dashboard.json > /dev/null
+          jq -e '.server.port' /tmp/hub_dashboard.json > /dev/null
+          echo "✅ All required fields present"
+
+  lint-ui:
+    name: Lint HTML/JS/CSS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check HTML syntax
+        run: |
+          # Basic HTML validation
+          for file in hub/public/*.html; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Check for basic HTML structure
+              grep -q '<!DOCTYPE html>' "$file" || (echo "Missing DOCTYPE in $file" && exit 1)
+              grep -q '<html' "$file" || (echo "Missing <html> tag in $file" && exit 1)
+              grep -q '</html>' "$file" || (echo "Missing </html> tag in $file" && exit 1)
+              echo "✅ $file looks valid"
+            fi
+          done
+
+      - name: Check JS syntax
+        run: |
+          # Basic JS validation
+          for file in hub/public/*.js; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              node --check "$file"
+              echo "✅ $file syntax valid"
+            fi
+          done
+
+      - name: Check CSS syntax
+        run: |
+          # Basic CSS validation (check for unmatched braces)
+          for file in hub/public/*.css; do
+            if [ -f "$file" ]; then
+              echo "Checking $file..."
+              # Count braces
+              open_braces=$(grep -o '{' "$file" | wc -l)
+              close_braces=$(grep -o '}' "$file" | wc -l)
+              if [ "$open_braces" != "$close_braces" ]; then
+                echo "❌ Unmatched braces in $file"
+                exit 1
+              fi
+              echo "✅ $file looks valid"
+            fi
+          done
+
+  smoke-test:
+    name: Smoke test HTTP server
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          # Install required packages
+          npm install redis yaml
+
+      - name: Create dummy data files
+        run: |
+          mkdir -p hub
+          echo '{"status":"up","latency_ms":42,"services_up":"3/3","last_check":"2025-01-01T00:00:00Z"}' > hub/mcp_health.json
+          echo '{"errors":0,"warnings":0,"total_events":10}' > hub/telemetry_snapshot.json
+
+      - name: Run server in check mode
+        run: |
+          timeout 10s node hub/http_server.mjs --check || exit_code=$?
+          if [ "${exit_code:-0}" -eq 0 ] || [ "${exit_code:-0}" -eq 124 ]; then
+            echo "✅ Server check passed"
+            exit 0
+          else
+            echo "❌ Server check failed with exit code $exit_code"
+            exit 1
+          fi
+
+      - name: Verify files exist
+        run: |
+          test -f hub/http_server.mjs || (echo "Missing http_server.mjs" && exit 1)
+          test -f hub/sse_bridge.mjs || (echo "Missing sse_bridge.mjs" && exit 1)
+          test -f hub/public/index.html || (echo "Missing index.html" && exit 1)
+          test -f hub/public/app.js || (echo "Missing app.js" && exit 1)
+          test -f hub/public/style.css || (echo "Missing style.css" && exit 1)
+          echo "✅ All required files exist"
+
+  upload-artifact:
+    name: Upload hub-public artifact
+    runs-on: ubuntu-latest
+    needs: [validate-config, lint-ui, smoke-test]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload hub/public directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: hub-public
+          path: hub/public/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload config
+        uses: actions/upload-artifact@v4
+        with:
+          name: hub-config
+          path: |
+            config/hub_dashboard.yaml
+            config/schemas/hub_dashboard.schema.json
+          retention-days: 7

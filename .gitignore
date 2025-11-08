@@ -61,3 +61,9 @@ logs/**/*.log
 .tmp/
 tools/puppeteer/.logs/
 
+# ---- Hub Dashboard runtime ----
+.hub_server.pid
+hub/server.log
+hub/mcp_health.json
+hub/telemetry_snapshot.json
+

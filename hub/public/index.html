@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>02LUKA Hub Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>02LUKA Hub Dashboard</h1>
+    <div class="status-bar">
+      <span id="connection-status" class="status-indicator offline">Disconnected</span>
+      <span id="last-update">Last update: Never</span>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <!-- MCP Health Tile -->
+    <div class="tile" id="tile-mcp-health">
+      <div class="tile-header">
+        <h2>MCP Health</h2>
+        <span class="tile-status" id="mcp-status">Unknown</span>
+      </div>
+      <div class="tile-body">
+        <div class="metric">
+          <span class="metric-label">Status:</span>
+          <span class="metric-value" id="mcp-overall-status">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Latency:</span>
+          <span class="metric-value" id="mcp-latency">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Services:</span>
+          <span class="metric-value" id="mcp-services">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Last Check:</span>
+          <span class="metric-value" id="mcp-last-check">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Telemetry Tile -->
+    <div class="tile" id="tile-telemetry">
+      <div class="tile-header">
+        <h2>Telemetry (10m)</h2>
+        <span class="tile-status" id="telemetry-status">Unknown</span>
+      </div>
+      <div class="tile-body">
+        <div class="metric">
+          <span class="metric-label">Errors:</span>
+          <span class="metric-value error" id="telemetry-errors">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Warnings:</span>
+          <span class="metric-value warning" id="telemetry-warnings">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Events:</span>
+          <span class="metric-value" id="telemetry-events">-</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Window:</span>
+          <span class="metric-value" id="telemetry-window">Last 10m</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PR Monitor Tile -->
+    <div class="tile" id="tile-pr-monitor">
+      <div class="tile-header">
+        <h2>PR Monitor</h2>
+        <span class="tile-status" id="pr-status">Watching</span>
+      </div>
+      <div class="tile-body">
+        <div id="pr-events" class="event-list">
+          <div class="event-item">
+            <span class="event-time">--:--:--</span>
+            <span class="event-message">Waiting for events...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Phase 20.5: Hub Dashboard Live Tiles via SSE | <a href="/health" target="_blank">Health Check</a></p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://02luka.local/schemas/hub_dashboard.json",
+  "title": "Hub Dashboard Configuration Schema",
+  "description": "Schema for validating hub_dashboard.yaml configuration",
+  "type": "object",
+  "required": ["redis", "server", "security", "data", "ui"],
+  "additionalProperties": false,
+  "properties": {
+    "redis": {
+      "type": "object",
+      "required": ["url", "password", "channels"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^redis://",
+          "description": "Redis connection URL"
+        },
+        "password": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Redis password"
+        },
+        "channels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["hub:alerts", "ci:events", "mcp:health", "telemetry:events"]
+          },
+          "description": "Redis pub/sub channels to subscribe to"
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "required": ["host", "port"],
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "pattern": "^(127\\.0\\.0\\.1|localhost|0\\.0\\.0\\.0)$",
+          "description": "Server bind host"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535,
+          "description": "Server port"
+        },
+        "cors_enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable CORS headers"
+        },
+        "health_path": {
+          "type": "string",
+          "pattern": "^/",
+          "default": "/health",
+          "description": "Health check endpoint path"
+        },
+        "sse": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^/",
+              "default": "/events",
+              "description": "SSE endpoint path"
+            },
+            "keepalive_interval_ms": {
+              "type": "integer",
+              "minimum": 5000,
+              "maximum": 60000,
+              "default": 30000,
+              "description": "SSE keepalive interval in milliseconds"
+            },
+            "retry_interval_ms": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 10000,
+              "default": 3000,
+              "description": "SSE retry interval in milliseconds"
+            }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["enable_pr_proxy"],
+      "additionalProperties": false,
+      "properties": {
+        "enable_pr_proxy": {
+          "type": "boolean",
+          "description": "Enable PR checks proxy endpoint (requires GH_TOKEN)"
+        },
+        "allowed_origins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^https?://"
+          },
+          "description": "Allowed CORS origins"
+        }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["mcp_health_path", "telemetry_path"],
+      "additionalProperties": false,
+      "properties": {
+        "mcp_health_path": {
+          "type": "string",
+          "pattern": "\\.json$",
+          "description": "Path to MCP health JSON file"
+        },
+        "telemetry_path": {
+          "type": "string",
+          "pattern": "\\.json$",
+          "description": "Path to telemetry snapshot JSON file"
+        },
+        "refresh_interval_ms": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 300000,
+          "default": 30000,
+          "description": "Data refresh interval in milliseconds"
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "required": ["title", "tiles"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dashboard title"
+        },
+        "refresh_interval_ms": {
+          "type": "integer",
+          "minimum": 10000,
+          "maximum": 300000,
+          "default": 30000,
+          "description": "UI refresh interval in milliseconds"
+        },
+        "tiles": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "enabled", "priority"],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "enum": ["mcp_health", "telemetry", "pr_monitor"],
+                "description": "Tile identifier"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Tile display title"
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether tile is enabled"
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10,
+                "description": "Display priority (lower = higher priority)"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

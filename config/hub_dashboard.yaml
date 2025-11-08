@@ -1,0 +1,63 @@
+# Hub Dashboard Configuration - Phase 20.5
+# Live Tiles with SSE (Server-Sent Events)
+# WO-ID: WO-251108-PHASE-20.5-HUB-DASHBOARD
+
+redis:
+  url: ${REDIS_URL:-redis://127.0.0.1:6379}
+  password: ${REDIS_PASSWORD:-gggclukaic}
+  channels:
+    - hub:alerts
+    - ci:events
+    - mcp:health
+
+server:
+  host: 127.0.0.1
+  port: 8787
+  cors_enabled: true
+
+  # Health check endpoint
+  health_path: /health
+
+  # SSE configuration
+  sse:
+    path: /events
+    keepalive_interval_ms: 30000
+    retry_interval_ms: 3000
+
+security:
+  # Enable PR proxy endpoint (requires GH_TOKEN)
+  enable_pr_proxy: false
+
+  # Allowed origins for CORS (if enabled)
+  allowed_origins:
+    - http://127.0.0.1:8787
+    - http://localhost:8787
+
+data:
+  # Path to JSON data files (relative to project root)
+  mcp_health_path: hub/mcp_health.json
+  telemetry_path: hub/telemetry_snapshot.json
+
+  # Refresh intervals (milliseconds)
+  refresh_interval_ms: 30000
+
+ui:
+  title: "02LUKA Hub Dashboard"
+  refresh_interval_ms: 30000
+
+  # Tile configuration
+  tiles:
+    - id: mcp_health
+      title: "MCP Health"
+      enabled: true
+      priority: 1
+
+    - id: telemetry
+      title: "Telemetry (10m)"
+      enabled: true
+      priority: 2
+
+    - id: pr_monitor
+      title: "PR Monitor"
+      enabled: true
+      priority: 3

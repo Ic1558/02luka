@@ -90,6 +90,73 @@ ci:bus:rerun() {
     '{type:$type, repo:$repo, pr:$pr, time:$time}')"
 }
 
+# --- Hub Live Dashboard shortcuts ---
+hub:live:start() {
+  local pidfile="$HOME/02luka/.hub_server.pid"
+  if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    echo "⚠️  Hub server already running (PID: $(cat "$pidfile"))"
+    return 1
+  fi
+  echo "🟢 Starting Hub Dashboard server..."
+  cd "$HOME/02luka"
+  nohup node hub/http_server.mjs > hub/server.log 2>&1 &
+  echo $! > "$pidfile"
+  sleep 2
+  if kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    echo "✅ Hub server started (PID: $(cat "$pidfile"))"
+    echo "📊 Dashboard: http://127.0.0.1:8787"
+    echo "📡 SSE endpoint: http://127.0.0.1:8787/events"
+    echo "💚 Health check: http://127.0.0.1:8787/health"
+    echo "📝 Logs: tail -f ~/02luka/hub/server.log"
+  else
+    echo "❌ Failed to start server"
+    return 1
+  fi
+}
+
+hub:live:status() {
+  local pidfile="$HOME/02luka/.hub_server.pid"
+  if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    echo "✅ Hub server running (PID: $(cat "$pidfile"))"
+    echo ""
+    echo "Health check:"
+    curl -s http://127.0.0.1:8787/health | jq '.' || echo "Failed to reach health endpoint"
+    echo ""
+    echo "MCP Health:"
+    curl -s http://127.0.0.1:8787/api/mcp_health | jq '.' 2>/dev/null || echo "No data"
+    echo ""
+    echo "Telemetry:"
+    curl -s http://127.0.0.1:8787/api/telemetry | jq '.' 2>/dev/null || echo "No data"
+  else
+    echo "❌ Hub server not running"
+    return 1
+  fi
+}
+
+hub:live:stop() {
+  local pidfile="$HOME/02luka/.hub_server.pid"
+  if [[ -f "$pidfile" ]]; then
+    local pid=$(cat "$pidfile")
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "🔴 Stopping Hub server (PID: $pid)..."
+      kill "$pid"
+      sleep 1
+      if kill -0 "$pid" 2>/dev/null; then
+        echo "⚠️  Force killing..."
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+      rm -f "$pidfile"
+      echo "✅ Hub server stopped"
+    else
+      echo "⚠️  PID file exists but process not running"
+      rm -f "$pidfile"
+    fi
+  else
+    echo "❌ Hub server not running (no PID file)"
+    pkill -f "hub/http_server.mjs" 2>/dev/null && echo "✅ Killed stray process" || true
+  fi
+}
+
 # --- Auto-merge shortcuts ---
 auto:merge() {
   local pr="${1:-}"
@@ -210,7 +277,13 @@ case "$task" in
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
 
-  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
+  hub:live:start)  hub:live:start;;
+
+  hub:live:status) hub:live:status;;
+
+  hub:live:stop)   hub:live:stop;;
+
+  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe|hub:live:start|hub:live:status|hub:live:stop}"; exit 2;;
 
 esac
 
