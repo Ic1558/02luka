@@ -46,6 +46,12 @@ run/*.lock
 # Telemetry (large files)
 telemetry/*.log
 g/telemetry/*.log
+g/telemetry_unified/
+
+# Hub runtime data
+hub/mcp_health.json
+hub/health_dashboard.json
+hub/telemetry_snapshot.json
 
 # Conflict backups
 *.backup.*
