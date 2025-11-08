@@ -1,0 +1,73 @@
+name: MCP Health
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Every 10 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mcp-health-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mcp-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate MCP registry (if missing)
+        run: |
+          if [ ! -f hub/mcp_registry.json ]; then
+            echo "Registry missing, generating..."
+            if [ -f hub/mcp_discovery.mjs ]; then
+              node hub/mcp_discovery.mjs
+            else
+              echo "Warning: hub/mcp_discovery.mjs not found, creating empty registry"
+              mkdir -p hub
+              echo '{"_meta":{"created_by":"mcp-health-workflow","created_at":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","source":"fallback"},"servers":[]}' > hub/mcp_registry.json
+            fi
+          else
+            echo "Registry exists, skipping generation"
+          fi
+
+      - name: Run MCP health check
+        run: node hub/mcp_health.mjs
+
+      - name: Install ajv-cli for validation
+        run: npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate health snapshot schema
+        run: |
+          ajv validate \
+            --strict=true \
+            --spec=draft2020 \
+            -c ajv-formats \
+            -s config/schemas/mcp_health.schema.json \
+            -d hub/mcp_health.json
+
+      - name: Configure git
+        run: |
+          git config user.name "02LUKA Bot"
+          git config user.email "bot@02luka.local"
+
+      - name: Commit health snapshot (if changed)
+        run: |
+          git add hub/mcp_health.json
+          if git diff --staged --quiet; then
+            echo "No changes to health snapshot"
+          else
+            git commit -m "chore(hub): update MCP health snapshot"
+            git push
+            echo "Health snapshot updated and pushed"
+          fi

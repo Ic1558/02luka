@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "created_by": "GG_Agent_02luka",
+    "created_at": "2025-11-08T00:00:00Z",
+    "source": "test_data",
+    "description": "Sample MCP registry for Phase 20.2 testing"
+  },
+  "servers": [
+    {
+      "name": "node",
+      "command": "/opt/node22/bin/node",
+      "args": ["--version"]
+    },
+    {
+      "name": "python",
+      "command": "/usr/local/bin/python3",
+      "args": ["--version"]
+    },
+    {
+      "name": "nonexistent",
+      "command": "/nonexistent/binary",
+      "args": ["--version"]
+    }
+  ]
+}

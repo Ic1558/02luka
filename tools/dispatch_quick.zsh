@@ -210,7 +210,15 @@ case "$task" in
 
   kim:probe)       ./tools/kim_gateway_probe.zsh;;
 
-  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe}"; exit 2;;
+  hub:health)
+    if [[ "${DRY_RUN:-0}" == "1" ]]; then
+      echo "[DRY_RUN] Would execute: node $HOME/02luka/hub/mcp_health.mjs"
+    else
+      node "$HOME/02luka/hub/mcp_health.mjs"
+    fi
+    ;;
+
+  *) echo "usage: $0 {pr:quickcheck|ci:quiet|ci:optin-on|ci:optin-off|ci:rerun|ci:merge|ci:watch|ci:watch:on|ci:watch:off|ci:bus:rerun|auto:merge|auto:rerun|auto:fix-conflict|auto:label|auto:quiet|auto:decision|rag:faiss|kim:probe|hub:health}"; exit 2;;
 
 esac
 
