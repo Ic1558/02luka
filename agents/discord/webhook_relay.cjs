@@ -50,7 +50,7 @@ function postDiscordWebhook(url, payload) {
 
     const options = {
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || undefined,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
       path: (parsedUrl.pathname || '/') + (parsedUrl.search || ''),
       method: 'POST',
       headers: {
