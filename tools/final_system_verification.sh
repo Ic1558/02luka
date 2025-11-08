@@ -1,1 +1,0 @@
-/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g/tools/final_system_verification.sh
