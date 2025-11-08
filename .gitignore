@@ -47,6 +47,11 @@ run/*.lock
 telemetry/*.log
 g/telemetry/*.log
 
+# Memory audit generated reports
+hub/memory_audit.json
+g/telemetry/memory_audit.jsonl
+g/reports/memory_audit.log
+
 # Conflict backups
 *.backup.*
 sync_conflicts_*/
