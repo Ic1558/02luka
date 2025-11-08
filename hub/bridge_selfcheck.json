@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-11-08T09:33:13Z",
+  "timestamp": "2025-11-08T20:13:28Z",
   "status": "healthy",
   "agents": [
     {
@@ -10,7 +10,7 @@
           "exists": true,
           "permissions": "drwxr-xr-x",
           "file_count": 25,
-          "oldest_file_age_hours": 5
+          "oldest_file_age_hours": 0
         },
         "outbox": {
           "exists": false,
@@ -22,7 +22,7 @@
           "exists": true,
           "permissions": "drwxr-xr-x",
           "file_count": 3,
-          "oldest_file_age_hours": 5
+          "oldest_file_age_hours": 0
         }
       },
       "issues": [],
