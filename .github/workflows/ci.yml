@@ -98,36 +98,32 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
       continue-on-error: true
     - name: Install dependencies
-      run: '# Install jq, yq
-
+      run: |
+        # Install jq, yq
         sudo apt-get update -qq
-
         sudo apt-get install -y -qq jq
-
         sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-
         sudo chmod +x /usr/local/bin/yq
-
-
+        
         # Verify installations
         jq --version
         yq --version
 
-      - name: Install npm packages (skip if no lockfile)
-        run: |
-          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
-            npm ci
-          else
-            echo "No Node lockfile found; skipping npm install"
-          fi
+    - name: Install npm packages (skip if no lockfile)
+      run: |
+        if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
+          npm ci
+        else
+          echo "No Node lockfile found; skipping npm install"
+        fi
 
-      - name: Set script permissions
-        run: |
-          chmod +x tools/ci/*.sh || true
-          chmod +x scripts/*.sh 2>/dev/null || true
+    - name: Set script permissions
+      run: |
+        chmod +x tools/ci/*.sh || true
+        chmod +x scripts/*.sh 2>/dev/null || true
 
-      - name: Run ops gate
-        run: bash tools/ci/ops_gate.sh
+    - name: Run ops gate
+      run: bash tools/ci/ops_gate.sh
 
   # ============================================================
   # OPTIONAL JOB: Router Core AKR (phase 15)
