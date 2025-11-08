@@ -1,0 +1,39 @@
+{
+  "$id": "file:config/schemas/mcp_health.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MCP Health Snapshot",
+  "type": "object",
+  "required": ["_meta", "results"],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "required": ["created_by", "created_at", "source", "registry_path", "total", "healthy"],
+      "properties": {
+        "created_by": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "source": { "type": "string", "const": "mcp_health.mjs" },
+        "registry_path": { "type": "string" },
+        "total": { "type": "integer", "minimum": 0 },
+        "healthy": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "ok", "latency_ms", "command", "args", "reason"],
+        "properties": {
+          "name": { "type": "string" },
+          "ok": { "type": "boolean" },
+          "latency_ms": { "type": "number", "minimum": 0 },
+          "command": { "type": "string" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

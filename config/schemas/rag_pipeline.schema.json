@@ -1,0 +1,92 @@
+{
+  "$id": "file:config/schemas/rag_pipeline.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RAG Pipeline Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": {"type": "string"},
+        "created_by": {"type": "string"},
+        "created_at": {"type": "string"},
+        "source": {"type": "string"},
+        "x-notes": {"type": "string"}
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "description": {"type": "string"},
+        "embeddings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "model": {"type": "string"},
+            "batch_size": {"type": "integer", "minimum": 1}
+          },
+          "required": ["model", "batch_size"]
+        },
+        "retriever": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "backend": {"type": "string"},
+            "index_path": {"type": "string"},
+            "top_k": {"type": "integer", "minimum": 1}
+          },
+          "required": ["backend", "index_path", "top_k"]
+        },
+        "generator": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "model": {"type": "string"},
+            "temperature": {"type": "number", "minimum": 0, "maximum": 2}
+          },
+          "required": ["model", "temperature"]
+        }
+      },
+      "required": ["name", "description", "embeddings", "retriever", "generator"]
+    },
+    "probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interval_minutes": {"type": "integer", "minimum": 1},
+        "command": {"type": "string"},
+        "timeout_seconds": {"type": "integer", "minimum": 1}
+      },
+      "required": ["interval_minutes", "command", "timeout_seconds"]
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"]
+        }
+      },
+      "required": ["level"]
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "namespace": {"type": "string"},
+        "streams": {
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        }
+      },
+      "required": ["namespace", "streams"]
+    }
+  },
+  "required": ["metadata", "pipeline", "probes", "logging", "telemetry"]
+}
