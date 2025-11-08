@@ -61,9 +61,11 @@ logs/*.log
 logs/**/*.log
 
 # ---- CI / local automation noise ----
+logs/
 *.out
 *.err
 .tmp/
+coverage/
 tools/puppeteer/.logs/
 
 .venv/
