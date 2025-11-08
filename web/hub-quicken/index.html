@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#0b0f19"/>
   <title>02LUKA – Hub Quicken v2</title>
   <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="ux-enhancements.css"/>
   <link rel="manifest" href="manifest.json"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
 </head>
@@ -168,6 +169,7 @@
       <tr><td><kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>View history</td></tr>
       <tr><td><kbd>Alt</kbd>+<kbd>T</kbd></td><td>Toggle theme</td></tr>
       <tr><td><kbd>Alt</kbd>+<kbd>R</kbd></td><td>Toggle regex search</td></tr>
+      <tr><td><kbd>Q</kbd></td><td>Quick actions menu</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close modals</td></tr>
     </table>
@@ -233,11 +235,96 @@
     </div>
 
     <div class="modal-footer">
+      <button id="ai-setup-wizard" class="btn-secondary">🚀 Setup Wizard</button>
       <button id="ai-test-connection" class="btn-primary">Test Connection</button>
       <button id="ai-save-settings" class="btn-success">Save Settings</button>
     </div>
   </div>
 </dialog>
+
+<!-- Welcome Modal (First-time users) -->
+<dialog id="welcome-modal" aria-labelledby="welcome-title">
+  <div class="modal-header welcome-header">
+    <h2 id="welcome-title">👋 Welcome to Hub Quicken v2!</h2>
+  </div>
+  <div class="modal-body">
+    <div class="welcome-content">
+      <p class="welcome-subtitle">Your AI-powered hub monitoring dashboard</p>
+
+      <div class="welcome-features">
+        <div class="welcome-feature">
+          <span class="feature-icon">📊</span>
+          <h3>Real-time Monitoring</h3>
+          <p>Track hub health, MCP servers, and performance</p>
+        </div>
+        <div class="welcome-feature">
+          <span class="feature-icon">🤖</span>
+          <h3>AI Analysis</h3>
+          <p>Get smart insights from local AI</p>
+        </div>
+        <div class="welcome-feature">
+          <span class="feature-icon">⚡</span>
+          <h3>Zero Setup</h3>
+          <p>Works instantly in your browser</p>
+        </div>
+      </div>
+
+      <div class="welcome-quickstart">
+        <h3>Quick Start Guide</h3>
+        <ol>
+          <li><strong>Monitor:</strong> Data loads automatically</li>
+          <li><strong>Search:</strong> Use the search box to filter (try "mcp")</li>
+          <li><strong>AI:</strong> Click <span class="inline-btn">🤖 AI</span> for intelligent analysis</li>
+          <li><strong>Shortcuts:</strong> Press <kbd>?</kbd> for keyboard shortcuts</li>
+        </ol>
+      </div>
+
+      <div class="welcome-tips">
+        <p><strong>💡 Pro Tip:</strong> Enable auto-refresh for 24/7 monitoring!</p>
+      </div>
+
+      <div class="modal-footer">
+        <label class="checkbox-label">
+          <input type="checkbox" id="dont-show-welcome"/>
+          <span>Don't show this again</span>
+        </label>
+        <button id="skip-welcome" class="btn-success">Get Started</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<!-- Quick Actions Floating Menu -->
+<div id="quick-actions" class="quick-actions">
+  <button class="qa-trigger" title="Quick Actions (Q)" aria-label="Quick actions menu">
+    <span class="qa-icon">⚡</span>
+  </button>
+  <div class="qa-menu">
+    <button class="qa-item" data-action="refresh">
+      <span>🔄</span> Refresh Now
+    </button>
+    <button class="qa-item" data-action="export">
+      <span>💾</span> Export Data
+    </button>
+    <button class="qa-item" data-action="ai-analyze">
+      <span>🤖</span> AI Analysis
+    </button>
+    <button class="qa-item" data-action="theme">
+      <span>🌓</span> Toggle Theme
+    </button>
+    <button class="qa-item" data-action="help">
+      <span>❓</span> Help
+    </button>
+  </div>
+</div>
+
+<!-- Help button (visible) -->
+<button id="help-button" class="help-button" title="Help & Support" aria-label="Help">
+  <span>?</span>
+</button>
+
+<!-- Confetti canvas for celebrations -->
+<canvas id="confetti-canvas"></canvas>
 
 <script src="app.js"></script>
 </body>

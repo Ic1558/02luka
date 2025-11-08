@@ -293,6 +293,9 @@ async function render() {
   // Save snapshot
   saveSnapshot(payload);
 
+  // Check for milestones (10 snapshots triggers confetti)
+  checkMilestones();
+
   // Auto-analyze if enabled
   if (aiSettings && aiSettings.autoAnalyze) {
     setTimeout(() => runAIAnalysis(), 1000); // Delay to let data settle
@@ -746,6 +749,9 @@ async function runAIAnalysis() {
     Q("#ai-badge").className = "badge ok";
 
     toast("AI analysis complete!", "success");
+
+    // Check for milestones (first AI analysis triggers confetti)
+    setTimeout(() => checkMilestones(), 500);
   } catch (e) {
     loadingEl.style.display = "none";
     analysisEl.style.display = "block";
@@ -801,6 +807,285 @@ function initAISettings() {
     saveAISettings(settings);
     Q("#ai-settings-modal").close();
   };
+}
+
+// ======== UX ENHANCEMENTS ========
+
+// Welcome modal for first-time users
+function initWelcomeModal() {
+  const WELCOME_KEY = "02luka.hub.quicken.welcome_shown";
+  const welcomeModal = Q("#welcome-modal");
+  const skipBtn = Q("#skip-welcome");
+  const dontShowCheckbox = Q("#dont-show-welcome");
+
+  // Show on first visit
+  if (!localStorage.getItem(WELCOME_KEY)) {
+    setTimeout(() => {
+      welcomeModal.showModal();
+      // Pulse help button after modal closes
+      setTimeout(() => {
+        Q("#help-button")?.classList.add("pulse");
+      }, 500);
+    }, 500);
+  }
+
+  // Skip/close button
+  skipBtn.addEventListener("click", () => {
+    if (dontShowCheckbox.checked) {
+      localStorage.setItem(WELCOME_KEY, "true");
+    }
+    welcomeModal.close();
+  });
+
+  // Allow Escape to close
+  welcomeModal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      welcomeModal.close();
+    }
+  });
+}
+
+// Quick actions floating menu
+function initQuickActions() {
+  const quickActions = Q("#quick-actions");
+  const trigger = quickActions?.querySelector(".qa-trigger");
+  const menu = quickActions?.querySelector(".qa-menu");
+  let isOpen = false;
+
+  if (!trigger || !menu) return;
+
+  // Toggle menu
+  trigger.addEventListener("click", () => {
+    isOpen = !isOpen;
+    menu.classList.toggle("open", isOpen);
+    trigger.setAttribute("aria-expanded", isOpen);
+  });
+
+  // Handle action clicks
+  QA(".qa-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const action = item.dataset.action;
+
+      switch (action) {
+        case "refresh":
+          render();
+          toast("Refreshing data...", "info");
+          break;
+        case "export":
+          exportData();
+          break;
+        case "ai-analyze":
+          Q("#ai-analyze")?.click();
+          break;
+        case "theme":
+          Q("#toggle-theme")?.click();
+          break;
+        case "help":
+          Q("#shortcuts-modal")?.showModal();
+          break;
+      }
+
+      // Close menu after action
+      isOpen = false;
+      menu.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    if (isOpen && !quickActions.contains(e.target)) {
+      isOpen = false;
+      menu.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  // Keyboard shortcut: Q
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "q" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      // Don't trigger if typing in input
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      trigger.click();
+    }
+  });
+}
+
+// Help button
+function initHelpButton() {
+  const helpBtn = Q("#help-button");
+  if (!helpBtn) return;
+
+  helpBtn.addEventListener("click", () => {
+    Q("#shortcuts-modal")?.showModal();
+    helpBtn.classList.remove("pulse"); // Remove pulse after first click
+  });
+
+  // Remove pulse class after 5 seconds
+  setTimeout(() => {
+    helpBtn.classList.remove("pulse");
+  }, 5000);
+}
+
+// Confetti animation for celebrations
+function initConfetti() {
+  const canvas = Q("#confetti-canvas");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  let particles = [];
+  let animationId = null;
+
+  // Set canvas size
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener("resize", resizeCanvas);
+
+  // Particle class
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = -10;
+      this.size = Math.random() * 6 + 4;
+      this.speedY = Math.random() * 3 + 2;
+      this.speedX = Math.random() * 2 - 1;
+      this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+      this.rotation = Math.random() * 360;
+      this.rotationSpeed = Math.random() * 10 - 5;
+    }
+
+    update() {
+      this.y += this.speedY;
+      this.x += this.speedX;
+      this.rotation += this.rotationSpeed;
+      this.speedY += 0.1; // Gravity
+    }
+
+    draw() {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate((this.rotation * Math.PI) / 180);
+      ctx.fillStyle = this.color;
+      ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+      ctx.restore();
+    }
+  }
+
+  // Animation loop
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach((particle, index) => {
+      particle.update();
+      particle.draw();
+
+      // Remove particles that are off screen
+      if (particle.y > canvas.height) {
+        particles.splice(index, 1);
+      }
+    });
+
+    if (particles.length > 0) {
+      animationId = requestAnimationFrame(animate);
+    } else {
+      animationId = null;
+      canvas.style.display = "none";
+    }
+  }
+
+  // Trigger confetti
+  window.triggerConfetti = () => {
+    canvas.style.display = "block";
+
+    // Create particles
+    for (let i = 0; i < 100; i++) {
+      particles.push(new Particle());
+    }
+
+    // Start animation if not already running
+    if (!animationId) {
+      animate();
+    }
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      canvas.style.display = "none";
+      particles = [];
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+    }, 3000);
+  };
+}
+
+// Milestone tracking for confetti
+let milestonesReached = new Set();
+
+function checkMilestones() {
+  const MILESTONES_KEY = "02luka.hub.quicken.milestones";
+  const saved = localStorage.getItem(MILESTONES_KEY);
+  if (saved) {
+    milestonesReached = new Set(JSON.parse(saved));
+  }
+
+  // Check for first AI analysis
+  const aiAnalysisText = Q("#ai-analysis-text")?.textContent;
+  if (aiAnalysisText && aiAnalysisText.trim() && !milestonesReached.has("first_ai_analysis")) {
+    milestonesReached.add("first_ai_analysis");
+    localStorage.setItem(MILESTONES_KEY, JSON.stringify([...milestonesReached]));
+
+    setTimeout(() => {
+      if (window.triggerConfetti) {
+        window.triggerConfetti();
+        toast("🎉 First AI analysis complete!", "success");
+      }
+    }, 500);
+  }
+
+  // Check for 10th snapshot
+  const history = loadHistory();
+  if (history.length >= 10 && !milestonesReached.has("10_snapshots")) {
+    milestonesReached.add("10_snapshots");
+    localStorage.setItem(MILESTONES_KEY, JSON.stringify([...milestonesReached]));
+
+    if (window.triggerConfetti) {
+      window.triggerConfetti();
+      toast("🎉 10 snapshots saved!", "success");
+    }
+  }
+}
+
+// Enhanced toast with actions
+function toastWithAction(message, type = "info", actionLabel = null, actionCallback = null) {
+  const container = Q("#toast-container");
+  const t = document.createElement("div");
+  t.className = `toast toast-${type}`;
+
+  const messageSpan = document.createElement("span");
+  messageSpan.textContent = message;
+  t.appendChild(messageSpan);
+
+  if (actionLabel && actionCallback) {
+    const actionBtn = document.createElement("button");
+    actionBtn.className = "toast-action";
+    actionBtn.textContent = actionLabel;
+    actionBtn.onclick = () => {
+      actionCallback();
+      t.remove();
+    };
+    t.appendChild(actionBtn);
+  }
+
+  container.appendChild(t);
+  setTimeout(() => t.classList.add("show"), 10);
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 300);
+  }, actionLabel ? 6000 : 3000); // Longer duration if there's an action
 }
 
 // ======== SETUP ========
@@ -881,6 +1166,12 @@ function setup() {
   initCollapsible();
   initPullRefresh();
   initAISettings();
+
+  // Initialize UX enhancements
+  initWelcomeModal();
+  initQuickActions();
+  initHelpButton();
+  initConfetti();
 
   // Service worker
   if ("serviceWorker" in navigator) {
