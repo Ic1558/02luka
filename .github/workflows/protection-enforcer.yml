@@ -1,0 +1,32 @@
+name: Protection Enforcer
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '27 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assert required job IDs exist in workflows
+        run: node tools/required_checks_assert.mjs
+
+      - name: Comment guidance on mismatches (best-effort)
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          body="Branch protection mismatch detected.
+          Make sure required checks are exactly: \`$(jq -r '.required|join(", ")' config/required_checks.json)\`.
+          If optional jobs are failing but block merge, unmark them in protection or fix them."
+          gh pr comment "$PR_NUMBER" --body "$body" || true
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
