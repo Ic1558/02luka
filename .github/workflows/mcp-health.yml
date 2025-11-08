@@ -58,7 +58,22 @@ jobs:
 
       - name: Validate health schema
         run: |
-          ajv validate --strict=true -s config/schemas/mcp_health.schema.json -d hub/mcp_health.json
+          # Use ajv-formats for date-time format support
+          node -e "
+            const Ajv = require('ajv');
+            const addFormats = require('ajv-formats');
+            const ajv = new Ajv({strict: true});
+            addFormats(ajv);
+            const schema = require('./config/schemas/mcp_health.schema.json');
+            const data = require('./hub/mcp_health.json');
+            const valid = ajv.validate(schema, data);
+            if (!valid) {
+              console.error('Schema validation failed:');
+              console.error(JSON.stringify(ajv.errors, null, 2));
+              process.exit(1);
+            }
+            console.log('✅ Schema validation passed');
+          "
 
       - name: Commit health snapshot (if changed)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

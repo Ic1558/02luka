@@ -158,20 +158,25 @@ jobs:
         run: |
           echo "🔍 Validating telemetry output against schema..."
 
-          # Install ajv-cli for JSON schema validation
-          npm install -g ajv-cli
+          # Install ajv and ajv-formats for JSON schema validation
+          npm install -g ajv-cli ajv-formats
 
-          # Validate
-          ajv validate \
-            -s g/schemas/telemetry_v2.schema.json \
-            -d hub/system_telemetry_v2.json \
-            --strict=false \
-            --all-errors || {
-              echo "❌ Schema validation failed"
-              exit 1
+          # Use ajv-formats for date-time format support
+          node -e "
+            const Ajv = require('ajv');
+            const addFormats = require('ajv-formats');
+            const ajv = new Ajv({strict: false, allErrors: true});
+            addFormats(ajv);
+            const schema = require('./g/schemas/telemetry_v2.schema.json');
+            const data = require('./hub/system_telemetry_v2.json');
+            const valid = ajv.validate(schema, data);
+            if (!valid) {
+              console.error('❌ Schema validation failed:');
+              console.error(JSON.stringify(ajv.errors, null, 2));
+              process.exit(1);
             }
-
-          echo "✅ Schema validation passed"
+            console.log('✅ Schema validation passed');
+          "
 
       - name: Check for critical alerts
         id: check_alerts
