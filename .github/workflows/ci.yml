@@ -126,6 +126,52 @@ jobs:
         run: bash tools/ci/ops_gate.sh
 
   # ============================================================
+  # OPTIONAL JOB: Router Core AKR (phase 15)
+  # Skipped on forks and when [skip-smoke] is in PR title
+  # Runs with continue-on-error to not block PRs
+  # ============================================================
+  router-selftest:
+    name: 🧭 Phase 15 Router Core AKR [OPTIONAL]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: validate
+    continue-on-error: true
+    if: |
+      github.event.pull_request.head.repo.fork == false &&
+      !contains(github.event.pull_request.title, '[skip-smoke]') &&
+      (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/*.zsh
+          chmod +x tools/*.py
+
+      - name: Run router self-test
+        run: |
+          export LUKA_HOME=$PWD
+          bash tools/router_akr_selftest.zsh
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: router-selftest-report
+          path: g/reports/phase15/router_akr_selftest.md
+          if-no-files-found: warn
+
+  # ============================================================
   # OPTIONAL JOB: RAG Vector Search (phase 15)
   # Skipped on forks and when [skip-smoke] is in PR title
   # Runs with continue-on-error to not block PRs
@@ -194,7 +240,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     if: always()
-    needs: [validate, ops-gate, rag-vector-selftest]
+    needs: [validate, ops-gate, router-selftest, rag-vector-selftest]
     steps:
       - name: Check required jobs
         run: |
@@ -207,6 +253,7 @@ jobs:
           echo ""
           echo "Optional jobs (continue-on-error):"
           echo "  ops-gate: ${{ needs.ops-gate.result }}"
+          echo "  router-selftest: ${{ needs.router-selftest.result }}"
           echo "  rag-vector-selftest: ${{ needs.rag-vector-selftest.result }}"
           echo ""
 
