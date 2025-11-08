@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.02luka.hub-autoindex</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>cd "$HOME/02luka" && ./tools/hub_sync.zsh >> g/logs/hub_autoindex.out 2>> g/logs/hub_autoindex.err</string>
+  </array>
+  <key>StartInterval</key><integer>900</integer>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LUKA_MEM_REPO_ROOT</key><string>${HOME}/LocalProjects/02luka-memory</string>
+    <key>HUB_INDEX_PATH</key><string>${HOME}/02luka/hub/index.json</string>
+    <key>REDIS_URL</key><string>redis://:gggclukaic@127.0.0.1:6379</string>
+  </dict>
+  <key>StandardOutPath</key><string>${HOME}/02luka/g/logs/hub_autoindex.launchd.out</string>
+  <key>StandardErrorPath</key><string>${HOME}/02luka/g/logs/hub_autoindex.launchd.err</string>
+  <key>RunAtLoad</key><true/>
+</dict>
+</plist>

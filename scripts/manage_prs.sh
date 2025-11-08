@@ -1,4 +1,11 @@
 #!/bin/bash
+
+# Permission guard (CLS)
+if [ -f "$HOME/02luka/tools/permission_guard.zsh" ]; then
+  # shellcheck disable=SC1090
+  source "$HOME/02luka/tools/permission_guard.zsh"
+  permission_guard "$0 $@" || exit $?
+fi
 # PR Management Script
 # This script handles merging, re-running checks, rebasing, and monitoring PRs
 # Requires: GitHub CLI (gh) to be installed and authenticated

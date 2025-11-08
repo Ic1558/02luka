@@ -34,7 +34,7 @@ for json in "$INBOX"/OCR_APPROVED_*.json; do
   
   # Verify files exist and match hashes
   all_ok=true
-  jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null | while IFS=$'\t' read -r fpath expect; do
+  while IFS=$'\t' read -r fpath expect; do
     if [[ ! -f "$fpath" ]]; then
       log "ERR: missing file $fpath"
       all_ok=false
@@ -47,8 +47,16 @@ for json in "$INBOX"/OCR_APPROVED_*.json; do
         all_ok=false
       fi
     fi
-  done
-  
+  done < <(jq -r '.files[]? | [.path,.sha256] | @tsv' "$WORK/$base" 2>/dev/null)
+
+  # If any validation failed, skip to failed and continue
+  if [[ "$all_ok" != "true" ]]; then
+    log "ERR: hash validation failed for $wo_id"
+    mv "$WORK/$base" "$FAIL/$base"
+    echo "{\"kind\":\"ocr_execution\",\"wo_id\":\"$wo_id\",\"status\":\"failed\",\"action\":\"$action\",\"reason\":\"sha256\",\"when\":\"$(ts)\"}" >> "$TELEM/ocr_execution_$(date +%Y%m%d).ndjson"
+    continue
+  fi
+
   # Execute action
   rc=0
   case "$action" in

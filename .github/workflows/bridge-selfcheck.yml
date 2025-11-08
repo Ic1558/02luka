@@ -1,0 +1,174 @@
+name: Bridge Self-Check
+
+on:
+  schedule:
+    # Daily at 03:00 Asia/Bangkok (UTC+7) = 20:00 UTC
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      stuck_threshold_hours:
+        description: 'Stuck file threshold in hours (default: 24)'
+        required: false
+        default: '24'
+        type: string
+  repository_dispatch:
+    types: [bridge:selfcheck]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "bridge-selfcheck"
+  cancel-in-progress: true
+
+jobs:
+  selfcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq zsh
+
+      - name: Create output directories
+        run: |
+          mkdir -p hub
+          mkdir -p g/state/alerts
+          mkdir -p g/logs
+
+      - name: Run Bridge Self-Check
+        run: |
+          echo "🔍 Starting bridge self-check..."
+          zsh tools/bridge_selfcheck.zsh
+        env:
+          BRIDGE_STUCK_THRESHOLD_HOURS: ${{ github.event.inputs.stuck_threshold_hours || '24' }}
+          LUKA_HOME: ${{ github.workspace }}
+
+      - name: Verify Self-Check Output
+        run: |
+          echo "📊 Bridge Self-Check Results"
+          echo "=============================="
+
+          if [[ -f hub/bridge_selfcheck.json ]]; then
+            echo ""
+            echo "✅ Self-check report generated"
+            echo ""
+            echo "📄 Report Summary:"
+            jq -r '.summary | "  Total Agents: \(.total_agents)\n  Healthy: \(.healthy_count)\n  Warnings: \(.warning_count)\n  Critical: \(.critical_count)\n  Total Issues: \(.total_issues)"' hub/bridge_selfcheck.json
+
+            echo ""
+            echo "🔍 Agent Details:"
+            jq -r '.agents[] | "  \(.agent_id): \(.status) (\(.metrics.pending_work_orders) pending, \(.metrics.stuck_files) stuck)"' hub/bridge_selfcheck.json
+
+            # Show issues if any
+            issue_count=$(jq '[.agents[].issues[]] | length' hub/bridge_selfcheck.json)
+            if [[ $issue_count -gt 0 ]]; then
+              echo ""
+              echo "⚠️  Issues Detected:"
+              jq -r '.agents[] | select(.issues | length > 0) | "  [\(.agent_id)] \(.issues[] | "\(.severity | ascii_upcase): \(.message)")"' hub/bridge_selfcheck.json
+            fi
+          else
+            echo "❌ Self-check report not found!"
+            exit 1
+          fi
+
+      - name: Validate against schema
+        run: |
+          echo "📋 Validating report against JSON schema..."
+
+          # Install ajv-cli for schema validation
+          npm install -g ajv-cli
+
+          # Validate the report
+          ajv validate \
+            -s config/schemas/bridge_selfcheck.schema.json \
+            -d hub/bridge_selfcheck.json \
+            --strict=false
+
+          echo "✅ Report is valid"
+
+      - name: Publish to Redis (if configured)
+        if: env.LUKA_REDIS_URL != ''
+        run: |
+          if command -v redis-cli &> /dev/null; then
+            echo "📢 Publishing bridge:selfcheck event to Redis..."
+
+            payload=$(jq -c '{
+              type: "bridge.selfcheck.completed",
+              timestamp: .timestamp,
+              status: .status,
+              summary: .summary
+            }' hub/bridge_selfcheck.json)
+
+            redis-cli -u "${LUKA_REDIS_URL}" PUBLISH "bridge:selfcheck" "$payload" || echo "Redis publish failed (non-critical)"
+          else
+            echo "ℹ️  Redis CLI not available, skipping event publish"
+          fi
+        env:
+          LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL || '' }}
+
+      - name: Auto-commit snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Add the snapshot
+          git add hub/bridge_selfcheck.json
+
+          # Only commit if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            git commit -m "chore(bridge): auto-update self-check snapshot - $timestamp"
+
+            # Push with retry logic
+            attempt=0
+            until git push; do
+              attempt=$((attempt+1))
+              if [ $attempt -ge 3 ]; then
+                echo "Failed to push after $attempt attempts"
+                exit 1
+              fi
+              echo "Retry $attempt after brief backoff..."
+              sleep 2
+              git pull --rebase
+            done
+
+            echo "✅ Snapshot committed and pushed"
+          fi
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-selfcheck-report
+          path: |
+            hub/bridge_selfcheck.json
+            g/state/alerts/*.json
+          retention-days: 30
+
+      - name: Check for critical issues
+        run: |
+          status=$(jq -r '.status' hub/bridge_selfcheck.json)
+
+          if [[ "$status" == "critical" ]]; then
+            echo "❌ Critical issues detected in bridge integrity!"
+            echo ""
+            echo "Critical Issues:"
+            jq -r '.agents[] | select(.issues[] | select(.severity == "critical")) | "  [\(.agent_id)] \(.issues[] | select(.severity == "critical") | .message)"' hub/bridge_selfcheck.json
+            exit 1
+          elif [[ "$status" == "warning" ]]; then
+            echo "⚠️  Warnings detected but not critical"
+            exit 0
+          else
+            echo "✅ All bridge folders are healthy"
+            exit 0
+          fi

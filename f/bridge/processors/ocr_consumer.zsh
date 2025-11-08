@@ -68,7 +68,7 @@ process_one(){
 
   # Verify file hashes
   local bad=0
-  jq -r '.files[] | [.path,.sha256] | @tsv' "$tmp" | while IFS=$'\t' read -r p expect; do
+  while IFS=$'\t' read -r p expect; do
     if [[ ! -f "$p" ]]; then
       log "ERR: missing file: $p"
       bad=1
@@ -81,7 +81,7 @@ process_one(){
     else
       log "OK : sha256 $p"
     fi
-  done
+  done < <(jq -r '.files[] | [.path,.sha256] | @tsv' "$tmp")
 
   # If any hash failed → move to failed
   if [[ "$bad" == "1" ]]; then

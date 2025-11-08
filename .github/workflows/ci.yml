@@ -1,5 +1,7 @@
+---
 name: ci
-on:
+
+on:  # yamllint disable-line rule:truthy
   push:
     branches: [main, develop, 'ci/**']
   pull_request:
@@ -13,7 +15,6 @@ permissions:
 env:
   NODE_VERSION: '20'
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
 
 jobs:
   # ============================================================
@@ -24,6 +25,9 @@ jobs:
     name: Phase 4/5/6 smoke (local) [REQUIRED]
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      SKIP_BOSS_API: '1'
+      CI_QUIET: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +38,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-        continue-on-error: true  # Skip cache failure if no lockfile
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
         run: |
@@ -181,8 +186,6 @@ jobs:
       github.event.pull_request.head.repo.fork == false &&
       !contains(github.event.pull_request.title, '[skip-smoke]') &&
       (contains(github.event.pull_request.labels.*.name, 'run-smoke') || github.event_name == 'push')
-    strategy:
-      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
