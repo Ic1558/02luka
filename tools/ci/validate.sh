@@ -26,5 +26,3 @@ fi
 
 echo ""
 echo "✅ Validation complete"
-
-

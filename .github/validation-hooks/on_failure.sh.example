@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# Example On-Failure Hook
+# Runs when any validator fails
+#
+# Arguments:
+#   $1 = Number of failed validators
+#
+# To use: cp on_failure.sh.example on_failure.sh && chmod +x on_failure.sh
+
+set -euo pipefail
+
+FAILED_COUNT="$1"
+
+echo "⚠️  $FAILED_COUNT validator(s) failed"
+
+# Example: Create issue report
+REPORT_FILE="/tmp/validation-failure-$(date +%Y%m%d_%H%M%S).txt"
+
+cat > "$REPORT_FILE" <<EOF
+Validation Failure Report
+=========================
+
+Date: $(date -Iseconds)
+Failed Validators: $FAILED_COUNT
+
+Check the full validation output for details.
+
+Next Steps:
+1. Review validation logs
+2. Fix failing validators
+3. Re-run validation
+
+EOF
+
+echo "📝 Failure report saved to: $REPORT_FILE"
+
+# Example: Send notification (customize as needed)
+# curl -X POST "$SLACK_WEBHOOK" \
+#   -d '{"text":"❌ Validation failed: '$FAILED_COUNT' validators failed"}'
+
+exit 0
