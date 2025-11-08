@@ -23,6 +23,7 @@ import aiRoutes from './routes/ai.js'
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js'
 import { notFound } from './middleware/notFound.js'
+import { protect } from './middleware/auth.js'
 
 // Import services
 import { initializeRedis } from './services/redis.js'
@@ -83,16 +84,19 @@ app.get('/healthz', (req, res) => {
 })
 
 // API Routes
+// Public routes (no authentication required)
 app.use('/api/auth', authRoutes)
-app.use('/api/projects', projectRoutes)
-app.use('/api/tasks', taskRoutes)
-app.use('/api/team', teamRoutes)
-app.use('/api/materials', materialRoutes)
-app.use('/api/documents', documentRoutes)
-app.use('/api/notifications', notificationRoutes)
-app.use('/api/contexts', contextRoutes)
-app.use('/api/sketches', sketchRoutes)
-app.use('/api/ai', aiRoutes)
+
+// Protected routes (authentication required)
+app.use('/api/projects', protect, projectRoutes)
+app.use('/api/tasks', protect, taskRoutes)
+app.use('/api/team', protect, teamRoutes)
+app.use('/api/materials', protect, materialRoutes)
+app.use('/api/documents', protect, documentRoutes)
+app.use('/api/notifications', protect, notificationRoutes)
+app.use('/api/contexts', protect, contextRoutes)
+app.use('/api/sketches', protect, sketchRoutes)
+app.use('/api/ai', protect, aiRoutes)
 
 // API info endpoint
 app.get('/api', (req, res) => {

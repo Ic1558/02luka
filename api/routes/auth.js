@@ -2,6 +2,7 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { body, validationResult } from 'express-validator'
+import { protect } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -145,17 +146,37 @@ router.post(
 // @route   GET /api/auth/me
 // @desc    Get current user
 // @access  Private
-router.get('/me', async (req, res) => {
-  // This would normally use the protect middleware
-  res.json({
-    success: true,
-    data: {
-      id: 1,
-      email: 'demo@probuild.com',
-      full_name: 'Demo User',
-      role: 'architect'
+router.get('/me', protect, async (req, res) => {
+  try {
+    // In production, fetch user from database using req.user.id
+    // For now, return the user data from the JWT token
+    const user = users.find(u => u.id === req.user.id)
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      })
     }
-  })
+
+    res.json({
+      success: true,
+      data: {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        phone: user.phone,
+        company: user.company
+      }
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    })
+  }
 })
 
 export default router
