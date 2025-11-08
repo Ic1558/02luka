@@ -1,0 +1,28 @@
+name: Hub Quicken v2 Check
+on:
+  pull_request:
+    paths:
+      - 'web/hub-quicken/**'
+      - '.github/workflows/hub-quicken-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quicken-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert UI files
+        run: |
+          test -f web/hub-quicken/index.html
+          test -f web/hub-quicken/app.js
+          test -f web/hub-quicken/style.css
+      - name: Validate JSON (if hub files exist)
+        run: |
+          sudo apt-get update -y >/dev/null 2>&1 || true
+          sudo apt-get install -y jq >/dev/null 2>&1 || true
+          for f in hub/index.json hub/mcp_registry.json hub/mcp_health.json; do
+            if [ -f "$f" ]; then jq -e . "$f" >/dev/null; fi
+          done
