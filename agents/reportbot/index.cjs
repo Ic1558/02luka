@@ -123,13 +123,16 @@ function fetchApiSummary(urlString) {
     } catch (error) {
       return resolve(null);
     }
-    const requester = parsed.protocol === 'https:' ? https : http;
+    const isHttps = parsed.protocol === 'https:';
+    const requester = isHttps ? https : http;
+    const pathWithQuery = `${parsed.pathname || '/'}${parsed.search || ''}`;
     const requestOptions = {
       protocol: parsed.protocol,
       hostname: parsed.hostname,
-      port: parsed.port ? Number(parsed.port) : undefined,
-      path: `${parsed.pathname || '/'}${parsed.search || ''}`,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: pathWithQuery,
       method: 'GET',
+      timeout: 4500,
       headers: { Accept: 'application/json' }
     };
     if (parsed.username || parsed.password) {
@@ -152,16 +155,15 @@ function fetchApiSummary(urlString) {
             resolve(null);
           }
         });
-      }
-    );
-    request.setTimeout(4500, () => {
-      request.destroy();
-      resolve(null);
+      });
+      request.on('timeout', () => {
+        request.destroy();
+        resolve(null);
+      });
+      request.on('error', () => resolve(null));
+      request.end();
     });
-    request.on('error', () => resolve(null));
-    request.end();
-  });
-}
+  }
 
 function readLatestMarker() {
   try {
