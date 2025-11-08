@@ -13,3 +13,16 @@ function runner. To launch it locally or expose it on your own domain, follow
 commands, and reverse-proxy guidance.
 
 Quick Ops:
+
+---
+
+## ⚙️ CI at a Glance
+
+| Feature | Command | Description |
+|----------|----------|-------------|
+| 🔁 Re-run checks | `./tools/dispatch_quick.zsh ci:rerun <PR#>` | Manually trigger CI |
+| 🧩 Event bus | `./tools/dispatch_quick.zsh ci:bus:rerun <PR#>` | Redis-based rerun |
+| 🕒 Watcher | `./tools/dispatch_quick.zsh ci:watch:on` | Auto-reruns every 5 min |
+| 🤖 Auto-merge | `./tools/dispatch_quick.zsh auto:merge <PR#>` | Merge when green |
+
+> See full guide: `g/reports/ci/CI_AUTOMATION_RUNBOOK.md`
