@@ -31,12 +31,12 @@
               "description": "Current agent status"
             },
             "last_heartbeat": {
-              "type": "string",
+              "type": ["string", "null"],
               "format": "date-time",
               "description": "Timestamp of last received heartbeat"
             },
             "seconds_since_heartbeat": {
-              "type": "number",
+              "type": ["number", "null"],
               "description": "Seconds elapsed since last heartbeat"
             },
             "channel": {
