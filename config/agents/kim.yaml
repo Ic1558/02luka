@@ -34,6 +34,45 @@ capabilities:
     - concept_explanation
     - multi_language_support
 
+  intent_map:
+    # Intent patterns this agent can handle
+    query.explain:
+      confidence: 0.90
+      keywords: [explain, describe, what is, tell me, how does, why]
+      thai_keywords: [อธิบาย, บอก, คืออะไร]
+    query.clarify:
+      confidence: 0.85
+      keywords: [clarify, unclear, not sure, confusing, ambiguous]
+      thai_keywords: [ชี้แจง, ไม่แน่ใจ, สับสน]
+    query.translate:
+      confidence: 0.95
+      keywords: [translate, translation, convert language]
+      thai_keywords: [แปล, แปลภาษา]
+    query.help:
+      confidence: 0.90
+      keywords: [help, assist, support, guide, how to]
+      thai_keywords: [ช่วย, ช่วยเหลือ, สอน]
+    query.documentation:
+      confidence: 0.85
+      keywords: [documentation, docs, manual, guide, readme]
+      thai_keywords: [เอกสาร, คู่มือ]
+    conversation.chat:
+      confidence: 0.80
+      keywords: [chat, talk, conversation, discuss, hello, hi]
+      thai_keywords: [สวัสดี, คุย, สนทนา]
+    intent.classify:
+      confidence: 0.85
+      keywords: [classify, categorize, identify intent, understand]
+      thai_keywords: [จำแนก, ระบุ]
+    user.support:
+      confidence: 0.85
+      keywords: [support, assistance, question, ask, inquiry]
+      thai_keywords: [สอบถาม, ถาม, คำถาม]
+    translation.request:
+      confidence: 0.95
+      keywords: [translate to, translate from, language conversion]
+      thai_keywords: [แปลเป็น, แปลจาก]
+
   interaction_modes:
     - chat
     - telegram_bot
