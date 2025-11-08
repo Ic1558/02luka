@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "version": "2.0.0",
+    "repository": "02luka",
+    "component": "system-telemetry-aggregator",
+    "phase": "21.4",
+    "hostname": "runsc",
+    "git_commit": "a464002",
+    "uptime_seconds": 0
+  },
+  "timestamp": "2025-11-08T09:41:30.326Z",
+  "sources": {
+    "mcp_health": {
+      "status": "error",
+      "timestamp": "2025-11-08T09:41:29.943Z",
+      "services": [
+        {
+          "name": "com.02luka.mcp.fs",
+          "state": "not running",
+          "pid": null,
+          "last_exit_code": null,
+          "error_logs": []
+        },
+        {
+          "name": "com.02luka.mcp.puppeteer",
+          "state": "not running",
+          "pid": null,
+          "last_exit_code": null,
+          "error_logs": []
+        }
+      ]
+    },
+    "delegation_watchdog": {
+      "status": "degraded",
+      "timestamp": "2025-11-08T09:41:30.057Z",
+      "agents": [
+        {
+          "name": "com.02luka.optimizer",
+          "state": "stopped",
+          "pid": null,
+          "last_exit_code": null,
+          "respawn_count": 0
+        },
+        {
+          "name": "com.02luka.digest",
+          "state": "stopped",
+          "pid": null,
+          "last_exit_code": null,
+          "respawn_count": 0
+        },
+        {
+          "name": "com.02luka.mcp.fs",
+          "state": "stopped",
+          "pid": null,
+          "last_exit_code": null,
+          "respawn_count": 0
+        },
+        {
+          "name": "com.02luka.mcp.puppeteer",
+          "state": "stopped",
+          "pid": null,
+          "last_exit_code": null,
+          "respawn_count": 0
+        }
+      ]
+    },
+    "bridge_selfcheck": {
+      "status": "unavailable",
+      "timestamp": "2025-11-08T09:41:30.140Z",
+      "http_status": null,
+      "response_time_ms": null,
+      "service_health": null,
+      "error_message": "connect ECONNREFUSED 127.0.0.1:3003"
+    }
+  },
+  "alerts": [
+    {
+      "name": "mcp_service_down",
+      "severity": "critical",
+      "message": "MCP service com.02luka.mcp.fs is not running",
+      "timestamp": "2025-11-08T09:41:30.146Z",
+      "source": "mcp_health",
+      "context": {
+        "service_name": "com.02luka.mcp.fs",
+        "state": "not running"
+      }
+    },
+    {
+      "name": "mcp_service_down",
+      "severity": "critical",
+      "message": "MCP service com.02luka.mcp.puppeteer is not running",
+      "timestamp": "2025-11-08T09:41:30.146Z",
+      "source": "mcp_health",
+      "context": {
+        "service_name": "com.02luka.mcp.puppeteer",
+        "state": "not running"
+      }
+    },
+    {
+      "name": "bridge_unhealthy",
+      "severity": "critical",
+      "message": "MCP WebBridge health check failed (status: N/A)",
+      "timestamp": "2025-11-08T09:41:30.146Z",
+      "source": "bridge_selfcheck",
+      "context": {
+        "http_status": null
+      }
+    }
+  ],
+  "summary": {
+    "overall_status": "error",
+    "total_sources": 3,
+    "healthy_sources": 0,
+    "degraded_sources": 1,
+    "error_sources": 2,
+    "active_alerts": 3
+  }
+}
