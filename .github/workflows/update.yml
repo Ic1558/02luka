@@ -288,14 +288,31 @@ jobs:
           echo "  - Code Quality: ${{ needs.code-quality.result }}"
           echo ""
 
-          # Check if all passed
-          if [ "${{ needs.rnd-vector-index.result }}" = "success" ] && \
-             [ "${{ needs.rnd-kim-proxy.result }}" = "success" ] && \
-             [ "${{ needs.rnd-integration.result }}" = "success" ] && \
-             [ "${{ needs.code-quality.result }}" = "success" ]; then
-            echo "✓ All R&D tests passed!"
+          # Check if all passed (ignore cancelled jobs due to concurrency)
+          VECTOR_RESULT="${{ needs.rnd-vector-index.result }}"
+          KIM_RESULT="${{ needs.rnd-kim-proxy.result }}"
+          INTEGRATION_RESULT="${{ needs.rnd-integration.result }}"
+          QUALITY_RESULT="${{ needs.code-quality.result }}"
+          
+          # Count failures (excluding cancelled)
+          FAILURES=0
+          if [ "$VECTOR_RESULT" != "success" ] && [ "$VECTOR_RESULT" != "cancelled" ]; then
+            FAILURES=$((FAILURES + 1))
+          fi
+          if [ "$KIM_RESULT" != "success" ] && [ "$KIM_RESULT" != "cancelled" ]; then
+            FAILURES=$((FAILURES + 1))
+          fi
+          if [ "$INTEGRATION_RESULT" != "success" ] && [ "$INTEGRATION_RESULT" != "cancelled" ]; then
+            FAILURES=$((FAILURES + 1))
+          fi
+          if [ "$QUALITY_RESULT" != "success" ] && [ "$QUALITY_RESULT" != "cancelled" ]; then
+            FAILURES=$((FAILURES + 1))
+          fi
+          
+          if [ $FAILURES -eq 0 ]; then
+            echo "✓ All R&D tests passed (or cancelled due to concurrency)!"
             exit 0
           else
-            echo "✗ Some R&D tests failed"
+            echo "✗ $FAILURES R&D test(s) failed"
             exit 1
           fi
