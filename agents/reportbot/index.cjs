@@ -130,8 +130,9 @@ function normalizeStatus(value) {
         protocol: parsed.protocol,
         hostname: parsed.hostname,
         port: parsed.port || (isHttps ? 443 : 80),
-        path: `${parsed.pathname}${parsed.search}`,
+        path: `${parsed.pathname || '/'}${parsed.search || ''}`,
         method: 'GET',
+        timeout: 4500,
         headers: { Accept: 'application/json' }
       };
 
@@ -155,8 +156,6 @@ function normalizeStatus(value) {
           }
         });
       });
-
-      request.setTimeout?.(4500);
       request.on('timeout', () => {
         request.destroy();
         resolve(null);
