@@ -1,0 +1,40 @@
+---
+name: CLS Web Integration & Load Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      ci_strict:
+        description: 'Strict mode (0/1)'
+        required: false
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    name: Sanity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          VAL="${{ github.event.inputs.ci_strict || vars.CI_STRICT }}"
+          [ -z "$VAL" ] && VAL=0
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+      - run: |
+          echo "CI_STRICT=$CI_STRICT"
+          if [ "$CI_STRICT" != "1" ]; then
+            echo "Soft-green: skip heavy jobs"
+            exit 0
+          fi
+
+  cls-web-load-test:
+    needs: sanity
+    if: ${{ success() && env.CI_STRICT == '1' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "heavy jobs go here"
