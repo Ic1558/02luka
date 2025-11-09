@@ -111,7 +111,7 @@ jq -n --arg ts "$TS" \
   },
   tags: ( if ($tags|length) > 0 then ($tags | split(",") | map(.|gsub("^\\s+|\\s+$";""))) else [] end ),
   author: $author,
-  confidence: confidence
+  confidence: ($confidence | tonumber)
 }
 ' >> "$F"
 
