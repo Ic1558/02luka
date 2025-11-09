@@ -1,3 +1,4 @@
+---
 name: CLS Web Integration & Load Test
 
 on:
@@ -37,10 +38,9 @@ jobs:
         run: |
           echo "CI_STRICT=$CI_STRICT"
           if [ "$CI_STRICT" != "1" ]; then
-            echo "::notice::Soft-green: heavy jobs will be skipped. Set repo variable CI_STRICT=1 to enable."
+            echo "Soft-green: heavy jobs will be skipped."
           fi
 
-  # Heavy tests – run ONLY when ci_strict == '1'
   cls-web-load-test:
     name: CLS Web Load Test [heavy]
     needs: sanity
@@ -48,24 +48,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run heavy load test
-        run: |
-          echo "Heavy CLS Web load test running..."
-          # Add actual test commands here when services are ready
+      - run: echo "heavy jobs go here"
 
   summary:
     name: CLS Web Test Summary
     needs: [sanity, cls-web-load-test]
-    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Summary Report
-        run: |
-          echo "### CLS Web CI Summary"
-          echo ""
-          echo "Sanity gate: ci_strict=${{ needs.sanity.outputs.ci_strict }}"
+      - run: |
+          echo "Sanity gate: ${{ needs.sanity.outputs.ci_strict }}"
           if [ "${{ needs.sanity.outputs.ci_strict }}" != "1" ]; then
-            echo "✅ Summary: Heavy tests were intentionally skipped (soft-green mode)."
+            echo "Summary: Heavy tests were intentionally skipped (soft-green)."
           else
-            echo "✅ Summary: Heavy tests ran."
-          fi
+            echo "Summary: Heavy tests ran."
