@@ -1,0 +1,13 @@
+{
+  "id": "MLS-1762709136",
+  "type": "solution",
+  "title": "MLS Tool Restoration",
+  "description": "Successfully restored mls_capture.zsh from git history (commit ad8ccf4)",
+  "context": "Tool was referenced in .cursorrules but missing from filesystem",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-10T00:25:36+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
