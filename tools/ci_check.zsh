@@ -92,6 +92,16 @@ fi
 ls -la "$OUTDIR"
 [[ -f "$OUTDIR/selfcheck.json" ]] || die "selfcheck.json missing after download"
 
+# --- OPTIONAL: DOWNLOAD & SHOW ESCALATION PROMPT ----------------------
+if gh run download -R "$REPO" "$RID" -n escalation-prompt -D "$OUTDIR" >/dev/null 2>&1; then
+  if [[ -f "$OUTDIR/escalation_prompt.txt" ]]; then
+    print_section "Escalation prompt"
+    echo "------------------------------------------------------------"
+    cat "$OUTDIR/escalation_prompt.txt"
+    echo "------------------------------------------------------------"
+  fi
+fi
+
 # --- PRINT SUMMARY -----------------------------------------------------
 print_section "Quick summary"
 jq -r '

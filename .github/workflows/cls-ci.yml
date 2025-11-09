@@ -129,6 +129,58 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+      - name: Decide escalation prompt
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          mkdir -p output/alerts g/state/alerts
+          STATUS="$(jq -r '.status' hub/bridge_selfcheck.json 2>/dev/null || echo "unknown")"
+          WARN="$(jq -r '.summary.warning_count' hub/bridge_selfcheck.json 2>/dev/null || echo "0")"
+          CRIT="$(jq -r '.summary.critical_count' hub/bridge_selfcheck.json 2>/dev/null || echo "0")"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          prompt_file="output/alerts/escalation_prompt.txt"
+          : > "$prompt_file"
+
+          if [[ "$STATUS" == "critical" || "$CRIT" != "0" ]]; then
+            cat > "$prompt_file" <<'TXT'
+NEEDS ELEVATION → CLC (privileged)
+เหตุผล: พบ critical issues ใน bridge/self-check
+การดำเนินการ: ใช้ CLC เพื่อแก้ไฟล์/สิทธิ์/ระบบที่ต้องการ privileged write
+TXT
+            {
+              echo ""
+              echo "Run URL: $RUN_URL"
+              echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
+            } >> "$prompt_file"
+          elif [[ "$STATUS" == "warning" || "$WARN" != "0" ]]; then
+            cat > "$prompt_file" <<'TXT'
+ATTENTION → Mary/GC
+เหตุผล: พบ warnings ใน bridge/self-check
+การดำเนินการ: ตรวจสอบและตัดสินใจว่าจะ escalate ไป CLC หรือรอรอบถัดไป
+TXT
+            {
+              echo ""
+              echo "Run URL: $RUN_URL"
+              echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
+            } >> "$prompt_file"
+          else
+            rm -f "$prompt_file"
+          fi
+
+          if [[ -f "output/alerts/escalation_prompt.txt" ]]; then
+            cp "output/alerts/escalation_prompt.txt" "g/state/alerts/escalation_prompt.txt" || true
+          fi
+
+      - name: Upload escalation prompt (if any)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: escalation-prompt
+          path: output/alerts/escalation_prompt.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Write MLS event (strict success)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash

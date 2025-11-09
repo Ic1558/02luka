@@ -1,3 +1,4 @@
+---
 name: CLS CI
 run-name: "CLS CI (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
@@ -138,11 +139,149 @@ jobs:
             exit 1
           fi
 
-      - name: Stage report for artifacts
+      - name: Guard: ensure staged artifact exists
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
-          mkdir -p output/reports
-          cp hub/bridge_selfcheck.json output/reports/selfcheck.json
+          if [ ! -f output/reports/selfcheck.json ]; then
+            echo "❌ selfcheck.json missing — stage step may have failed"
+            ls -la output/reports || true
+            exit 1
+          fi
+
+      - name: Upload artifact (selfcheck-report)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfcheck-report
+          path: |
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Decide escalation prompt
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          mkdir -p output/alerts g/state/alerts
+          STATUS="$(jq -r '.status' hub/bridge_selfcheck.json 2>/dev/null || echo "unknown")"
+          WARN="$(jq -r '.summary.warning_count' hub/bridge_selfcheck.json 2>/dev/null || echo "0")"
+          CRIT="$(jq -r '.summary.critical_count' hub/bridge_selfcheck.json 2>/dev/null || echo "0")"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          prompt_file="output/alerts/escalation_prompt.txt"
+          : > "$prompt_file"
+
+          if [[ "$STATUS" == "critical" || "$CRIT" != "0" ]]; then
+            cat > "$prompt_file" <<'TXT'
+NEEDS ELEVATION → CLC (privileged)
+เหตุผล: พบ critical issues ใน bridge/self-check
+การดำเนินการ: ใช้ CLC เพื่อแก้ไฟล์/สิทธิ์/ระบบที่ต้องการ privileged write
+TXT
+            {
+              echo ""
+              echo "Run URL: $RUN_URL"
+              echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
+            } >> "$prompt_file"
+          elif [[ "$STATUS" == "warning" || "$WARN" != "0" ]]; then
+            cat > "$prompt_file" <<'TXT'
+ATTENTION → Mary/GC
+เหตุผล: พบ warnings ใน bridge/self-check
+การดำเนินการ: ตรวจสอบและตัดสินใจว่าจะ escalate ไป CLC หรือรอรอบถัดไป
+TXT
+            {
+              echo ""
+              echo "Run URL: $RUN_URL"
+              echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
+            } >> "$prompt_file"
+          else
+            rm -f "$prompt_file"
+          fi
+
+          if [[ -f "output/alerts/escalation_prompt.txt" ]]; then
+            cp "output/alerts/escalation_prompt.txt" "g/state/alerts/escalation_prompt.txt" || true
+          fi
+
+      - name: Upload escalation prompt (if any)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: escalation-prompt
+          path: output/alerts/escalation_prompt.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Write MLS event (strict success)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          DAY="$(date +%Y-%m-%d)"
+          LEDGER_DIR="mls/ledger"
+          mkdir -p "$LEDGER_DIR"
+          OUTFILE="$LEDGER_DIR/${DAY}.jsonl"
+
+          RUN_ID="${{ github.run_id }}"
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          WF="cls-ci.yml"
+          ART="selfcheck-report"
+          ART_PATH="output/reports/selfcheck.json"
+
+          # Build a single-line JSON object and append to JSONL ledger
+          jq -n \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg type "solution" \
+            --arg title "CLS strict CI artifact uploaded" \
+            --arg summary "selfcheck-report uploaded and validated; bridge healthy" \
+            --arg producer "cls" \
+            --arg context "ci" \
+            --arg repo "$REPO" \
+            --arg run_id "$RUN_ID" \
+            --arg workflow "$WF" \
+            --arg sha "$SHA" \
+            --arg artifact "$ART" \
+            --arg artifact_path "$ART_PATH" \
+            --arg author "gg" \
+            --argjson confidence 0.9 \
+            '
+            {
+              ts: $ts,
+              type: $type,
+              title: $title,
+              summary: $summary,
+              source: {
+                producer: $producer,
+                context: $context,
+                repo: $repo,
+                run_id: $run_id,
+                workflow: $workflow,
+                sha: $sha,
+                artifact: $artifact,
+                artifact_path: $artifact_path
+              },
+              links: { followup_id: null, wo_id: null },
+              tags: ["bridge","strict","artifact","healthy"],
+              author: $author,
+              confidence: $confidence
+            }
+            ' >> "$OUTFILE"
+
+          echo "📘 MLS appended → $OUTFILE"
+
+      - name: Validate MLS event (if schema present)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          SCHEMA="mls/schema/mls_event.schema.json"
+          if [ -f "$SCHEMA" ]; then
+            echo "🔎 Schema found → validating last MLS line"
+            DAY="$(date +%Y-%m-%d)"
+            LEDGER="mls/ledger/${DAY}.jsonl"
+            tail -n 1 "$LEDGER" > /tmp/mls_last.json
+            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
+            echo "✅ MLS event is valid"
+          else
+            echo "ℹ️  MLS schema not present, skipping validation"
+          fi
 
       - name: Setup Node.js
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -215,26 +354,6 @@ jobs:
 
             echo "✅ Snapshot committed and pushed"
           fi
-
-      - name: Upload artifact (selfcheck-report)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: selfcheck-report
-          path: |
-            output/reports/selfcheck.json
-          retention-days: 14
-          if-no-files-found: warn
-
-      - name: Upload artifact (bridge-selfcheck-report alias)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bridge-selfcheck-report
-          path: |
-            output/reports/selfcheck.json
-          retention-days: 14
-          if-no-files-found: warn
 
       - name: Check for critical issues
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
