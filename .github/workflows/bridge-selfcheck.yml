@@ -266,21 +266,36 @@ jobs:
 
           echo "📘 MLS appended → $OUTFILE"
 
-      - name: Validate MLS event (if schema present)
+      - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
         run: |
-          SCHEMA="mls/schema/mls_event.schema.json"
-          if [ -f "$SCHEMA" ]; then
-            echo "🔎 Schema found → validating last MLS line"
-            DAY="$(date +%Y-%m-%d)"
-            LEDGER="mls/ledger/${DAY}.jsonl"
-            tail -n 1 "$LEDGER" > /tmp/mls_last.json
-            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
-            echo "✅ MLS event is valid"
-          else
-            echo "ℹ️  MLS schema not present, skipping validation"
-          fi
+          set -euo pipefail
+          SCHEMA="mls/schema/mls_event.schema.json"   # ใช้เป็นเอกสารอ้างอิงเฉย ๆ
+          DAY="$(date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
+
+          test -f "$LEDGER" || { echo "❌ No ledger for $DAY"; exit 1; }
+
+          # ดึง "บรรทัดสุดท้ายที่ไม่ว่าง" อย่างปลอดภัย
+          awk 'NF{last=$0} END{ if(!last){exit 2}; print last }' "$LEDGER" > /tmp/mls_last.json
+
+          # 1) รูปแบบ JSON ถูกต้องก่อน (กันเคสได้ '}' เดี่ยว ๆ)
+          jq -e . /tmp/mls_last.json >/dev/null
+
+          # 2) schema-lite (ตรวจฟิลด์จำเป็น + type สำคัญ แบบเร็ว)
+          jq -e '
+            (.ts|type=="string") and
+            (.type|IN("solution","failure","improvement","pattern","antipattern")) and
+            (.title|type=="string" and (.|length)>0) and
+            (.summary|type=="string" and (.|length)>0) and
+            (.author|type=="string") and
+            (.confidence|type=="number" and .confidence>=0 and .confidence<=1) and
+            (.source|type=="object") and
+            (.source.producer|IN("cls","codex","clc","gemini"))
+          ' /tmp/mls_last.json >/dev/null
+
+          echo "✅ MLS event is valid (jq schema-lite)"
 
       - name: Setup Node.js
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
