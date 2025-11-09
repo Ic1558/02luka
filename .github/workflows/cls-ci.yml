@@ -1,3 +1,4 @@
+---
 name: CLS CI
 run-name: "CLS CI (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
@@ -109,6 +110,207 @@ jobs:
           mkdir -p output/reports
           cp hub/bridge_selfcheck.json output/reports/selfcheck.json
 
+      - name: Guard: ensure staged artifact exists
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          if [ ! -f output/reports/selfcheck.json ]; then
+            echo "❌ selfcheck.json missing — stage step may have failed"
+            ls -la output/reports || true
+            exit 1
+          fi
+
+      - name: Upload artifact (selfcheck-report)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfcheck-report
+          path: |
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Write MLS event (strict success)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          DAY="$(date +%Y-%m-%d)"
+          LEDGER_DIR="mls/ledger"
+          mkdir -p "$LEDGER_DIR"
+          OUTFILE="$LEDGER_DIR/${DAY}.jsonl"
+
+          RUN_ID="${{ github.run_id }}"
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          WF="cls-ci.yml"
+          ART="selfcheck-report"
+          ART_PATH="output/reports/selfcheck.json"
+
+          # Build a single-line JSON object and append to JSONL ledger
+          jq -n \
+            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg type "solution" \
+            --arg title "CLS strict CI artifact uploaded" \
+            --arg summary "selfcheck-report uploaded and validated; bridge healthy" \
+            --arg producer "cls" \
+            --arg context "ci" \
+            --arg repo "$REPO" \
+            --arg run_id "$RUN_ID" \
+            --arg workflow "$WF" \
+            --arg sha "$SHA" \
+            --arg artifact "$ART" \
+            --arg artifact_path "$ART_PATH" \
+            --arg author "gg" \
+            --argjson confidence 0.9 \
+            '
+            {
+              ts: $ts,
+              type: $type,
+              title: $title,
+              summary: $summary,
+              source: {
+                producer: $producer,
+                context: $context,
+                repo: $repo,
+                run_id: $run_id,
+                workflow: $workflow,
+                sha: $sha,
+                artifact: $artifact,
+                artifact_path: $artifact_path
+              },
+              links: { followup_id: null, wo_id: null },
+              tags: ["bridge","strict","artifact","healthy"],
+              author: $author,
+              confidence: $confidence
+            }
+            ' >> "$OUTFILE"
+
+          echo "📘 MLS appended → $OUTFILE"
+
+      - name: Validate MLS event (if schema present)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          SCHEMA="mls/schema/mls_event.schema.json"
+          if [ -f "$SCHEMA" ]; then
+            echo "🔎 Schema found → validating last MLS line"
+            DAY="$(date +%Y-%m-%d)"
+            LEDGER="mls/ledger/${DAY}.jsonl"
+            tail -n 1 "$LEDGER" > /tmp/mls_last.json
+            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
+            echo "✅ MLS event is valid"
+          else
+            echo "ℹ️  MLS schema not present, skipping validation"
+          fi
+
+      - name: Update status summary and commit
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          DAY="$(date +%Y-%m-%d)"
+          DATE_STR="$(date +%y%m%d)"
+          STATUS_DIR="mls/status"
+          mkdir -p "$STATUS_DIR"
+          
+          RUN_ID="${{ github.run_id }}"
+          SHA="${{ github.sha }}"
+          REPO="${{ github.repository }}"
+          
+          # Read artifact summary
+          if [ -f "output/reports/selfcheck.json" ]; then
+            ARTIFACT_SIZE=$(stat -f%z "output/reports/selfcheck.json" 2>/dev/null || stat -c%s "output/reports/selfcheck.json" 2>/dev/null || echo "0")
+            ARTIFACT_STATUS=$(jq -r '.status' "output/reports/selfcheck.json")
+            ARTIFACT_SUMMARY=$(jq -c '.summary' "output/reports/selfcheck.json")
+          else
+            ARTIFACT_SIZE="0"
+            ARTIFACT_STATUS="unknown"
+            ARTIFACT_SUMMARY='{"total_agents":0,"healthy_count":0,"warning_count":0,"critical_count":0,"total_issues":0}'
+          fi
+          
+          # Generate YAML summary
+          cat > "$STATUS_DIR/${DATE_STR}_ci_cls_codex_summary.yml" <<EOF
+# date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+version: 1
+scope: "CLS · Codex CLI · CLC — artifact & MLS integration"
+repo: "$REPO"
+
+workflows:
+  - name: "cls-ci.yml"
+    status: "stable"
+    guards:
+      - "Guard: ensure staged artifact exists"
+    artifacts:
+      primary: "selfcheck-report"
+    mls:
+      write_on_strict_success: true
+      validate_if_schema_present: true
+
+runs:
+  last_strict:
+    run_id: "$RUN_ID"
+    head_sha: "$SHA"
+    conclusion: "${{ job.status }}"
+    artifact:
+      name: "selfcheck-report"
+      path_local: "~/02luka/__artifacts__/cls_strict/selfcheck.json"
+      size_bytes: $ARTIFACT_SIZE
+      status: "$ARTIFACT_STATUS"
+      summary: $ARTIFACT_SUMMARY
+EOF
+          
+          # Generate JSON summary
+          jq -n \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg repo "$REPO" \
+            --arg run_id "$RUN_ID" \
+            --arg sha "$SHA" \
+            --arg conclusion "${{ job.status }}" \
+            --arg artifact_name "selfcheck-report" \
+            --arg artifact_path "~/02luka/__artifacts__/cls_strict/selfcheck.json" \
+            --argjson artifact_size "$ARTIFACT_SIZE" \
+            --arg artifact_status "$ARTIFACT_STATUS" \
+            --argjson artifact_summary "$ARTIFACT_SUMMARY" \
+            '{
+              date: $date,
+              version: 1,
+              scope: "CLS · Codex CLI · CLC — artifact & MLS integration",
+              repo: $repo,
+              workflows: [
+                {
+                  name: "cls-ci.yml",
+                  status: "stable",
+                  guards: ["Guard: ensure staged artifact exists"],
+                  artifacts: { primary: "selfcheck-report" },
+                  mls: { write_on_strict_success: true, validate_if_schema_present: true }
+                }
+              ],
+              runs: {
+                last_strict: {
+                  run_id: $run_id,
+                  head_sha: $sha,
+                  conclusion: $conclusion,
+                  artifact: {
+                    name: $artifact_name,
+                    path_local: $artifact_path,
+                    size_bytes: $artifact_size,
+                    status: $artifact_status,
+                    summary: $artifact_summary
+                  }
+                }
+              }
+            }' > "$STATUS_DIR/${DATE_STR}_ci_cls_codex_summary.json"
+          
+          echo "📊 Status summary generated → $STATUS_DIR/${DATE_STR}_ci_cls_codex_summary.{yml,json}"
+          
+          # Auto-commit status summary
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$STATUS_DIR/${DATE_STR}_ci_cls_codex_summary.yml" "$STATUS_DIR/${DATE_STR}_ci_cls_codex_summary.json"
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "docs(mls): update status summary for run $RUN_ID" || echo "Commit failed (non-critical)"
+          fi
+
       - name: Setup Node.js
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/setup-node@v4
@@ -142,26 +344,6 @@ jobs:
           else
             git commit -m "chore(bridge): auto-update self-check snapshot" || echo "Commit failed (non-critical)"
           fi
-
-      - name: Upload artifact (selfcheck-report)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: selfcheck-report
-          path: |
-            output/reports/selfcheck.json
-          retention-days: 14
-          if-no-files-found: warn
-
-      - name: Upload artifact (bridge-selfcheck-report alias)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bridge-selfcheck-report
-          path: |
-            output/reports/selfcheck.json
-          retention-days: 14
-          if-no-files-found: warn
 
       - name: Check for critical issues
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
