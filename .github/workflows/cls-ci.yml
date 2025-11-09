@@ -110,7 +110,7 @@ jobs:
           mkdir -p output/reports
           cp hub/bridge_selfcheck.json output/reports/selfcheck.json
 
-      - name: Guard: ensure staged artifact exists
+      - name: "Guard: ensure staged artifact exists"
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           if [ ! -f output/reports/selfcheck.json ]; then
