@@ -1,33 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-09T01:41:06.201Z",
+    "created_at": "2025-11-09T03:04:19.723Z",
     "source": "hub_autoindex.cjs",
     "total": 15,
     "mem_root": "/home/runner/work/02luka/02luka/memory-repo"
   },
   "items": [
     {
-      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-09T01:41:04.432Z",
-      "bytes": 10267,
-      "kind": "md",
-      "title": "MCP Configuration Crisis Resolution",
-      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
-      "meta": {
-        "title": "MCP Configuration Crisis Resolution",
-        "date": "2025-11-07",
-        "type": "solution",
-        "category": "infrastructure",
-        "severity": "critical",
-        "status": "resolved",
-        "tags": "[mcp, cursor, configuration, troubleshooting]"
-      },
-      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
-    },
-    {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-09T01:41:04.432Z",
+      "mtime": "2025-11-09T03:04:17.725Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -45,7 +27,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-09T01:41:04.432Z",
+      "mtime": "2025-11-09T03:04:17.725Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -62,7 +44,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-09T01:41:04.432Z",
+      "mtime": "2025-11-09T03:04:17.725Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -79,7 +61,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-09T01:41:04.432Z",
+      "mtime": "2025-11-09T03:04:17.725Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -88,18 +70,8 @@
       "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
     },
     {
-      "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
-      "bytes": 23,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"mcpServers\":{}}",
-      "meta": {},
-      "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
-    },
-    {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -116,7 +88,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -132,7 +104,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -142,7 +114,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -157,7 +129,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -173,7 +145,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -190,7 +162,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -206,7 +178,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -216,13 +188,41 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-09T01:41:04.431Z",
+      "mtime": "2025-11-09T03:04:17.724Z",
       "bytes": 458,
       "kind": "md",
       "title": "02LUKA Memory Repository",
       "summary": "# 02LUKA Memory Repository\n\nThis repository stores automated memory entries created by the AI/OP-001 v3 protocol.\n\n## Structure\n\n- `{agent}/{scope}/` - Memory entries organized by agent and scope\n- Each file contains markdown-formatted memory content\n- Git history provides complete audit trail\n\n## Generated By\n\n- AI/OP-001 v3 Memory Upsert Protocol  \n- N8N Workflow: GM • Memory Upsert (v3-git-auth",
       "meta": {},
       "sha256": "bc9527dafb5147842bd2c9924f27dec03e063761a32538f738178a6dd98bce24"
+    },
+    {
+      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
+      "mtime": "2025-11-09T03:04:17.724Z",
+      "bytes": 10267,
+      "kind": "md",
+      "title": "MCP Configuration Crisis Resolution",
+      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
+      "meta": {
+        "title": "MCP Configuration Crisis Resolution",
+        "date": "2025-11-07",
+        "type": "solution",
+        "category": "infrastructure",
+        "severity": "critical",
+        "status": "resolved",
+        "tags": "[mcp, cursor, configuration, troubleshooting]"
+      },
+      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
+    },
+    {
+      "rel": ".cursor/mcp.json",
+      "mtime": "2025-11-09T03:04:17.723Z",
+      "bytes": 23,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"mcpServers\":{}}",
+      "meta": {},
+      "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
     }
   ]
 }
