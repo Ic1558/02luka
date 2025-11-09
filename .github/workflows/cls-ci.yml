@@ -1,6 +1,8 @@
 ---
 name: CLS Web Integration & Load Test
 
+run-name: CLS CI (strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }})
+
 on:
   pull_request:
   workflow_dispatch:
@@ -52,7 +54,8 @@ jobs:
 
   summary:
     name: CLS Web Test Summary
-    needs: [sanity, cls-web-load-test]
+    needs: [sanity]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - run: |
