@@ -419,11 +419,22 @@ jobs:
 
           test -f "$LEDGER" || { echo "❌ No ledger for $DAY"; exit 1; }
 
-          # ดึง "บรรทัดสุดท้ายที่ไม่ว่าง" อย่างปลอดภัย
-          awk 'NF{last=$0} END{ if(!last){exit 2}; print last }' "$LEDGER" > /tmp/mls_last.json
+          # ดึง "บรรทัดสุดท้ายที่ไม่ว่างและเป็น JSON ที่สมบูรณ์" อย่างปลอดภัย
+          # ใช้ grep เพื่อหา JSON ที่เริ่มด้วย { และจบด้วย }
+          LAST_LINE=$(awk 'NF{last=$0} END{ if(!last){exit 2}; print last }' "$LEDGER")
+          if ! echo "$LAST_LINE" | jq -e . >/dev/null 2>&1; then
+            echo "❌ Last line is not valid JSON, trying to find last valid JSON line..."
+            # หาบรรทัดสุดท้ายที่เป็น JSON ที่สมบูรณ์
+            LAST_LINE=$(grep -E '^\{.*\}$' "$LEDGER" | tail -n 1 || echo "")
+            if [ -z "$LAST_LINE" ]; then
+              echo "❌ No valid JSON found in ledger"
+              exit 1
+            fi
+          fi
+          echo "$LAST_LINE" > /tmp/mls_last.json
 
           # 1) รูปแบบ JSON ถูกต้องก่อน (กันเคสได้ '}' เดี่ยว ๆ)
-          jq -e . /tmp/mls_last.json >/dev/null
+          jq -e . /tmp/mls_last.json >/dev/null || { echo "❌ Invalid JSON format"; exit 1; }
 
           # 2) schema-lite (ตรวจฟิลด์จำเป็น + type สำคัญ แบบเร็ว)
           jq -e '
@@ -435,7 +446,7 @@ jobs:
             (.confidence|type=="number" and .confidence>=0 and .confidence<=1) and
             (.source|type=="object") and
             (.source.producer|IN("cls","codex","clc","gemini"))
-          ' /tmp/mls_last.json >/dev/null
+          ' /tmp/mls_last.json >/dev/null || { echo "❌ Schema validation failed"; exit 1; }
 
           echo "✅ MLS event is valid (jq schema-lite)"
 
