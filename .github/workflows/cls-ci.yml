@@ -234,22 +234,6 @@ jobs:
 
           echo "📘 MLS appended → $OUTFILE"
 
-      - name: Validate MLS event (if schema present)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        shell: bash
-        run: |
-          SCHEMA="mls/schema/mls_event.schema.json"
-          if [ -f "$SCHEMA" ]; then
-            echo "🔎 Schema found → validating last MLS line"
-            DAY="$(date +%Y-%m-%d)"
-            LEDGER="mls/ledger/${DAY}.jsonl"
-            tail -n 1 "$LEDGER" > /tmp/mls_last.json
-            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
-            echo "✅ MLS event is valid"
-          else
-            echo "ℹ️  MLS schema not present, skipping validation"
-          fi
-
       - name: Update status summary and commit
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
@@ -421,6 +405,22 @@ jobs:
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate MLS event (if schema present)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          SCHEMA="mls/schema/mls_event.schema.json"
+          if [ -f "$SCHEMA" ]; then
+            echo "🔎 Schema found → validating last MLS line"
+            DAY="$(date +%Y-%m-%d)"
+            LEDGER="mls/ledger/${DAY}.jsonl"
+            tail -n 1 "$LEDGER" > /tmp/mls_last.json
+            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
+            echo "✅ MLS event is valid"
+          else
+            echo "ℹ️  MLS schema not present, skipping validation"
+          fi
 
       - name: Validate against schema
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
