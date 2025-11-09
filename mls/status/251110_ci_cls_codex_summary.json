@@ -1,0 +1,98 @@
+{
+  "date": "2025-11-10T00:00:00+07:00",
+  "version": 1,
+  "scope": "CLS · Codex CLI · CLC — artifact & MLS integration",
+  "repo": "Ic1558/02luka",
+  "workflows": [
+    {
+      "name": "cls-ci.yml",
+      "status": "stable",
+      "guards": ["Guard: ensure staged artifact exists"],
+      "artifacts": { "primary": "selfcheck-report" },
+      "mls": { "write_on_strict_success": true, "validate_if_schema_present": true }
+    },
+    {
+      "name": "bridge-selfcheck.yml",
+      "status": "stable",
+      "artifacts": { "primary": "selfcheck-report" },
+      "mls": { "write_on_strict_success": true, "validate_if_schema_present": true }
+    }
+  ],
+  "runs": {
+    "last_strict": {
+      "run_id": "19213412721",
+      "head_sha": "fd066bc90b1ff772789ca970694244680681f7ac",
+      "conclusion": "success",
+      "artifact": {
+        "name": "selfcheck-report",
+        "path_local": "~/02luka/__artifacts__/cls_strict/selfcheck.json",
+        "size_bytes": 926,
+        "status": "healthy",
+        "summary": {
+          "total_agents": 1,
+          "healthy_count": 1,
+          "warning_count": 0,
+          "critical_count": 0,
+          "total_issues": 0
+        }
+      }
+    }
+  },
+  "changes_done": [
+    "Keep single artifact name `selfcheck-report` (removed alias)",
+    "Added Guard step before upload to prevent green-without-file",
+    "Added Write MLS event on strict success (both workflows)",
+    "Added optional MLS schema validation (AJV) on last event",
+    "Added `ci_check.zsh` (trigger → wait → download → summary → save RID)",
+    "Added `--view-mls` to view last 10 MLS entries",
+    "YAML hygiene: add document start `---`, trim trailing spaces"
+  ],
+  "issues_fixed": [
+    { "type": "syntax", "detail": "Malformed '- name' split → fixed to valid YAML key" },
+    { "type": "artifact-duplication", "detail": "Alias artifact caused duplicate/collision → removed" }
+  ],
+  "pending": [
+    {
+      "id": "MLS-SCHEMA-SETUP",
+      "title": "Add `mls/schema/mls_event.schema.json` to repo",
+      "owner": "GG",
+      "status": "Open",
+      "notes": "Validation step currently skips if schema missing"
+    },
+    {
+      "id": "CODEX-PIPE-MLS",
+      "title": "Wire Codex CLI to write MLS event after WO success/failure",
+      "owner": "GG",
+      "status": "In Progress",
+      "notes": "Wrapper example ready; integrate into Codex CLI flow"
+    },
+    {
+      "id": "TELEMETRY-NOTIFY",
+      "title": "Optional: Telegram/Slack alert on critical",
+      "owner": "Mary",
+      "status": "Backlog"
+    }
+  ],
+  "decisions": [
+    {
+      "when": "2025-11-10",
+      "decision": "Separate systems but link via followup_id & run_id",
+      "rationale": "Keep MLS=knowledge; Followup=tasks; clear queries; audit-friendly"
+    }
+  ],
+  "risks": [
+    { "id": "SCHEMA-ABSENT", "severity": "low", "note": "Validation skipped until schema is added; data still appended" }
+  ],
+  "next_actions": [
+    "Add MLS schema file and enable AJV check (quick win)",
+    "Integrate Codex CLI MLS write on success/failure branch",
+    "Optional: README badge already suggested for visibility"
+  ],
+  "owners": {
+    "GG": "orchestration, CI guardrails, MLS integration",
+    "Mary": "alerts/ops",
+    "CLC": "privileged writes (only when required)",
+    "CLS": "CI executor & artifact source"
+  }
+}
+
