@@ -139,14 +139,16 @@ jobs:
             exit 1
           fi
 
-      - name: Guard: ensure staged artifact exists
+      - name: "Guard: ensure staged artifact exists"
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
         run: |
-          if [ ! -f output/reports/selfcheck.json ]; then
+          test -f output/reports/selfcheck.json || {
             echo "❌ selfcheck.json missing — stage step may have failed"
             ls -la output/reports || true
             exit 1
-          fi
+          }
+          echo "✅ Guard passed: selfcheck.json exists"
 
       - name: Upload artifact (selfcheck-report)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
