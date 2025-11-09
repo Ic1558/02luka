@@ -1,7 +1,7 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-09T06:49:01.024Z",
+    "created_at": "2025-11-09T07:17:49.104Z",
     "source": "hub_autoindex.cjs",
     "total": 15,
     "mem_root": "/home/runner/work/02luka/02luka/memory-repo"
@@ -9,7 +9,7 @@
   "items": [
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-09T06:48:56.460Z",
+      "mtime": "2025-11-09T07:17:46.151Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -27,7 +27,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-09T06:48:56.460Z",
+      "mtime": "2025-11-09T07:17:46.151Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -45,7 +45,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-09T06:48:56.460Z",
+      "mtime": "2025-11-09T07:17:46.151Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -62,7 +62,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-09T06:48:56.460Z",
+      "mtime": "2025-11-09T07:17:46.151Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -79,7 +79,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-09T06:48:56.460Z",
+      "mtime": "2025-11-09T07:17:46.151Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -89,7 +89,7 @@
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -106,7 +106,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -122,7 +122,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -132,7 +132,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -147,7 +147,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -163,7 +163,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -180,7 +180,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -196,7 +196,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -206,7 +206,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-09T06:48:56.459Z",
+      "mtime": "2025-11-09T07:17:46.150Z",
       "bytes": 458,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -216,7 +216,7 @@
     },
     {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-09T06:48:56.458Z",
+      "mtime": "2025-11-09T07:17:46.149Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
