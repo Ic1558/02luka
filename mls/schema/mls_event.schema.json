@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MLS Event",
   "type": "object",
   "required": ["ts","type","title","summary","source","author","confidence"],
@@ -37,4 +36,3 @@
   },
   "additionalProperties": false
 }
-
