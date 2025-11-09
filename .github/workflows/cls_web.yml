@@ -1,9 +1,5 @@
 ---
-# yamllint disable-line rule:truthy
 name: CLS Web (deprecated wrapper)
-
-# This workflow is deprecated. Use cls-ci.yml instead.
-# Changed to workflow_call to prevent accidental triggers.
 
 on:
   workflow_call:
@@ -12,19 +8,8 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: read
-
 jobs:
   noop:
-    name: Deprecated - Use cls-ci.yml
     runs-on: ubuntu-latest
     steps:
-      - name: Deprecation Notice
-        run: |
-          echo "⚠️  This workflow is deprecated."
-          echo "✅ Use 'CLS Web Integration & Load Test' (cls-ci.yml) instead."
-          echo ""
-          echo "To run CLS tests:"
-          echo "  gh workflow run cls-ci.yml -r main -f ci_strict=0  # soft mode"
-          echo "  gh workflow run cls-ci.yml -r main -f ci_strict=1  # strict mode"
+      - run: echo "CLS Web is deprecated; use cls-ci.yml"
