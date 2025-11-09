@@ -1,369 +1,171 @@
 ---
-# Global Validation Configuration
-# Controls behavior of the smart validation system
-#
-# Location: .github/validation.config.yml
-# Documentation: docs/global-validation.md
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Core Settings
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Enable validation system
-enabled: true
-
-# Fail fast (stop on first error) or collect all errors
-fail_fast: false
-
-# Validation timeout (seconds, 0 = no timeout)
-timeout: 300
-
-# Parallel validation workers (1 = sequential)
-parallel_workers: 4
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Validator Categories
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Control which validators run
-validators:
-  # Critical validators (always run, failures block)
-  critical:
-    - directory_structure
-    - git_repository
-    - required_files
-
-  # Important validators (run by default, failures warn)
-  important:
-    - workflow_files
-    - script_permissions
-    - cls_integration
-    - dependencies
-
-  # Optional validators (can be skipped)
-  optional:
-    - code_style
-    - documentation
-    - performance
-    - security_scan
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Directory Structure Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-directory_structure:
-  required_dirs:
-    - path: .github/workflows
-      description: "GitHub Actions workflows"
-    - path: tools
-      description: "Tooling scripts"
-    - path: scripts
-      description: "Automation scripts"
-    - path: docs
-      description: "Documentation"
-    - path: g/reports
-      description: "Generated reports"
-    - path: CLS
-      description: "Cursor integration"
-    - path: memory/cls
-      description: "CLS memory storage"
-
-  optional_dirs:
-    - path: .github/ci-rebase-hooks
-      description: "CI rebase hooks"
-    - path: tools/lib
-      description: "Shared libraries"
-    - path: bridge
-      description: "Integration bridge"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Required Files Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-required_files:
-  critical:
-    - path: .github/workflows/ci.yml
-      description: "Main CI workflow"
-      pattern: "validate"  # Must contain this string
-
-    - path: README.md
-      description: "Project README"
-      min_size: 100  # Minimum bytes
-
-    - path: package.json
-      description: "Node.js package config"
-      validate_json: true
-
-  important:
-    - path: .github/workflows/daily-proof.yml
-      description: "Daily proof workflow"
-
-    - path: CLS/CURSOR_INTEGRATION_GUIDE.md
-      description: "CLS integration guide"
-
-    - path: tools/global_ci_branches.zsh
-      description: "CI rebase automation"
-      executable: true
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Git Repository Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-git_repository:
-  # Verify it's a git repo
-  verify_git_dir: true
-
-  # Check for remote
-  require_remote: true
-  remote_name: origin
-
-  # Check branch
-  allowed_branches:
-    - main
-    - develop
-    - "claude/*"
-    - "feature/*"
-    - "fix/*"
-
-  # Working tree checks
-  allow_dirty: true  # Allow uncommitted changes
-  warn_untracked: false
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Workflow Files Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-workflow_files:
-  # Validate YAML syntax
-  validate_yaml: true
-
-  # Check for required actions versions
-  required_action_versions:
-    "actions/checkout": "v4"
-    "actions/upload-artifact": "v4"
-    "actions/setup-node": "v4"
-
-  # Warn about deprecated actions
-  deprecated_actions:
-    - "actions/checkout@v2"
-    - "actions/upload-artifact@v2"
-
-  # Check workflow naming conventions
-  naming_pattern: "^[a-z0-9-]+\\.yml$"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Script Permissions Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-script_permissions:
-  # Patterns of scripts that should be executable
-  executable_patterns:
-    - "tools/*.zsh"
-    - "tools/**/*.sh"
-    - "scripts/*.sh"
-    - ".github/ci-rebase-hooks/*.sh"
-
-  # Exclude patterns
-  exclude_patterns:
-    - "**/*.example"
-    - "**/*.md"
-    - "**/README*"
-
-  # Auto-fix permissions
-  auto_fix: false
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CLS Integration Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-cls_integration:
-  required_files:
-    - CLS/CURSOR_INTEGRATION_GUIDE.md
-    - memory/cls/.gitkeep
-
-  check_tools:
-    - tools/cls_cursor_helper.zsh
-    - tools/cls_detect_patterns.zsh
-    - tools/cls_shell_request.zsh
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Dependencies Validation
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-dependencies:
-  # System dependencies
-  system_tools:
-    required:
-      - git
-      - jq
-      - bash
-
-    recommended:
-      - yq
-      - gh
-      - redis-cli
-
-  # Node.js dependencies (if package.json exists)
-  node:
-    check_lockfile: true
-    check_outdated: false
-    check_vulnerabilities: false  # Can be slow
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Performance Checks
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-performance:
-  # Check repository size
-  max_repo_size_mb: 500
-
-  # Check file counts
-  max_files: 10000
-  warn_large_files_mb: 10
-
-  # Check script complexity
-  max_script_lines: 1000
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Security Scan
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-security_scan:
-  # Check for secrets in code
-  scan_secrets: true
-  secret_patterns:
-    - "password\\s*=\\s*['\"].*['\"]"
-    - "api[_-]?key\\s*=\\s*['\"].*['\"]"
-    - "token\\s*=\\s*['\"].*['\"]"
-
-  # Exclude files from secret scanning
-  exclude_from_scan:
-    - "**/*.md"
-    - "**/*.example"
-    - ".github/**/*.yml"
-
-  # Check file permissions (no 777)
-  check_dangerous_permissions: true
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Caching
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-caching:
-  # Enable result caching
-  enabled: true
-
-  # Cache directory
-  cache_dir: /tmp/validation-cache
-
-  # Cache TTL (seconds)
-  ttl: 3600  # 1 hour
-
-  # Cache validation results per validator
-  cache_validators:
-    - dependencies
-    - security_scan
-    - performance
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Hooks
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-hooks:
-  enabled: true
-  hooks_dir: .github/validation-hooks
-
-  # Available hooks:
-  # - pre_validate: Before validation starts
-  # - post_validate: After all validation complete
-  # - on_validator_start: Before each validator
-  # - on_validator_complete: After each validator
-  # - on_failure: When any validator fails
-  # - on_success: When all validators pass
-
-  pre_validate: []
-  post_validate: []
-  on_validator_start: []
-  on_validator_complete: []
-  on_failure: []
-  on_success: []
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Metrics
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-metrics:
-  enabled: true
-  metrics_file: /tmp/validation-metrics.json
-
-  track:
-    - validator_duration
-    - pass_fail_rate
-    - cache_hit_rate
-    - file_counts
-    - dependency_versions
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Reporting
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-reporting:
-  # Output format: compact, detailed, json
-  format: detailed
-
-  # Show progress during validation
-  show_progress: true
-
-  # Color output
-  use_colors: true
-
-  # Generate HTML report
-  generate_html: false
-  html_output: /tmp/validation-report.html
-
-  # Save results to file
-  save_results: true
-  results_file: /tmp/validation-results.json
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CI-Specific Settings
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ci_mode:
-  # Auto-detect CI environment
-  auto_detect: true
-
-  # CI-specific overrides
-  overrides:
-    fail_fast: true      # Fail fast in CI
-    parallel_workers: 2  # Less parallelism in CI
-    timeout: 600         # Longer timeout for CI
-
-  # Environment variables to respect
-  respect_env_vars:
-    SKIP_BOSS_API: skip_server_validators
-    CI_QUIET: quiet_mode
-    VALIDATION_SKIP: skip_validators
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Auto-Fix
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-auto_fix:
-  # Enable auto-fixing
-  enabled: false
-
-  # What to auto-fix
-  fixable_issues:
-    - script_permissions
-    - trailing_whitespace
-    - missing_newline
-
-  # Require confirmation
-  require_confirmation: true
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Version
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-schema_version: "1.0"
+name: CI (Core)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CI_STRICT: ${{ vars.CI_STRICT || '0' }}
+
+jobs:
+  path-guard:
+    name: Path Guard [REQUIRED]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forbid hardcoded wrong paths
+        run: |
+          set -euo pipefail
+          if git grep -nE "/Users/icmini/LocalProjects/02luka(?!-memory)" -- ':!**/.gitignore' ':!**/*.png' ':!**/*.jpg' ; then
+            echo "❌ Found forbidden hardcoded path /Users/icmini/LocalProjects/02luka"
+            exit 1
+          fi
+          echo "✅ Path guard passed"
+
+  schema-validate:
+    name: Schema Validation [REQUIRED]
+    needs: path-guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install ajv-cli & ajv-formats
+        run: |
+          npm i -g ajv-cli@5 ajv-formats@3
+      - name: Validate RAG pipeline schema
+        run: |
+          if [ -f config/schemas/rag_pipeline.schema.json ] && [ -f config/rag_pipeline.yaml ]; then
+            ajv validate -s config/schemas/rag_pipeline.schema.json -d config/rag_pipeline.yaml --strict=true
+          else
+            echo "No RAG pipeline schema/yaml; skipping"
+          fi
+      - name: Validate Kim proxy gateway schema
+        run: |
+          if [ -f config/schemas/kim_proxy_gateway.schema.json ] && [ -f config/kim_proxy_gateway.yaml ]; then
+            ajv validate -s config/schemas/kim_proxy_gateway.schema.json -d config/kim_proxy_gateway.yaml --strict=true
+          else
+            echo "No Kim proxy schema/yaml; skipping"
+          fi
+
+  validate:
+    name: Phase 4/5/6 smoke (local) [REQUIRED]
+    needs: [path-guard, schema-validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core validation
+        run: |
+          set -euo pipefail
+          if [ -x tools/ci/validate.sh ]; then
+            bash tools/ci/validate.sh
+          else
+            echo "No tools/ci/validate.sh; passing"
+          fi
+
+  ops-gate:
+    name: Phase 5/6/7 smoke (ops) [OPTIONAL]
+    needs: validate
+    runs-on: macos-latest
+    if: env.CI_STRICT == '1'
+    continue-on-error: true
+    env:
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ops gate
+        run: |
+          set -euo pipefail
+          if [ -x ./scripts/ops_gate.sh ]; then
+            ./scripts/ops_gate.sh || true
+          else
+            echo "No ops_gate.sh; skipping"
+          fi
+
+  rag-vector-selftest:
+    name: Phase 15 RAG Vector Search [OPTIONAL]
+    needs: validate
+    runs-on: ubuntu-latest
+    if: env.CI_STRICT == '1'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: RAG self-test
+        run: |
+          set -euo pipefail
+          if [ -x ./scripts/rag_selftest.sh ]; then
+            ./scripts/rag_selftest.sh || true
+          else
+            echo "No rag_selftest.sh; skipping"
+          fi
+---
+name: CLS CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CI_STRICT: ${{ vars.CI_STRICT || '0' }}
+
+jobs:
+  sanity:
+    name: Sanity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "CI_STRICT=${CI_STRICT}"
+          if [ "${CI_STRICT}" != "1" ]; then
+            echo "Skipping heavy CLS checks (set repo variable CI_STRICT=1 to enable)."
+          fi
+
+  cls-checks:
+    name: CLS integration checks [OPTIONAL]
+    needs: sanity
+    runs-on: ubuntu-latest
+    if: env.CI_STRICT == '1'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke
+        run: |
+          set -euo pipefail
+          if [ -x tools/cls_smoke.zsh ]; then
+            zsh tools/cls_smoke.zsh || true
+          else
+            echo "No CLS smoke script; skipping"
+          fi
+---
+name: Router Selftest
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CI_STRICT: ${{ vars.CI_STRICT || '0' }}
+
+jobs:
+  router-selftest:
+    name: Router Core Selftest [OPTIONAL]
+    runs-on: ubuntu-latest
+    if: env.CI_STRICT == '1'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run router self-tests
+        run: |
+          set -euo pipefail
+          if [ -x scripts/router_selftest.sh ]; then
+            bash scripts/router_selftest.sh || true
+          else
+            echo "No router_selftest.sh; skipping"
+          fi

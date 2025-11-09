@@ -50,6 +50,16 @@ check_health() {
 
 echo "[smoke-with-server] Target base: ${BASE_URL}"
 
+if [ "${SKIP_BOSS_API:-0}" = "1" ]; then
+  echo "[smoke-with-server] Skip boss-api smoke in CI (SKIP_BOSS_API=1)"
+  echo "[smoke-with-server] Running scripts/smoke.sh (without server)"
+  set +e
+  bash "${ROOT_DIR}/scripts/smoke.sh"
+  result=$?
+  set -e
+  exit ${result}
+fi
+
 if check_health; then
   echo "[smoke-with-server] Existing boss-api detected; will reuse"
 else

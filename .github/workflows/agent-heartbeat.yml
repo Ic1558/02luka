@@ -46,9 +46,15 @@ jobs:
           # Install redis client if not in package.json
           npm install redis
 
+      - name: Load Redis URL
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          if [ -z "$REDIS_VAL" ]; then REDIS_VAL="redis://127.0.0.1:6379"; fi
+          echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
+
       - name: Check Redis connectivity
-        env:
-          LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL || 'redis://127.0.0.1:6379' }}
         run: |
           echo "Testing Redis connectivity..."
           # Extract host and port from URL
@@ -63,12 +69,22 @@ jobs:
             echo "Continuing with local file generation..."
           fi
 
+      - name: Load environment variables
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          if [ -z "$REDIS_VAL" ]; then REDIS_VAL="redis://127.0.0.1:6379"; fi
+          echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
+          
+          DURATION_VAL="${{ github.event.inputs.duration }}"
+          if [ -z "$DURATION_VAL" ]; then DURATION_VAL="300"; fi
+          echo "MONITOR_DURATION=$DURATION_VAL" >> "$GITHUB_ENV"
+
       - name: Run Heartbeat Monitor
         env:
-          LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL || 'redis://127.0.0.1:6379' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          MONITOR_DURATION: ${{ github.event.inputs.duration || '300' }}
         run: |
           echo "Starting Agent Heartbeat Monitor..."
           echo "Duration: ${MONITOR_DURATION}s"

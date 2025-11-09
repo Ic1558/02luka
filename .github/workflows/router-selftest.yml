@@ -12,6 +12,12 @@ on:
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
+    inputs:
+      ci_strict:
+        description: 'Strict mode (0/1)'
+        required: false
+        default: '0'
+        type: string
 
 permissions:
   contents: read
