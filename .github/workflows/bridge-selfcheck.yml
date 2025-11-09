@@ -143,11 +143,12 @@ jobs:
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
         run: |
-          test -f output/reports/selfcheck.json || {
+          set -euo pipefail
+          if [ ! -f output/reports/selfcheck.json ]; then
             echo "❌ selfcheck.json missing — stage step may have failed"
             ls -la output/reports || true
             exit 1
-          }
+          fi
           echo "✅ Guard passed: selfcheck.json exists"
 
       - name: Upload artifact (selfcheck-report)
