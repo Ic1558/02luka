@@ -1,10 +1,10 @@
----
-name: CLS Web Integration & Load Test
-
-run-name: CLS CI (strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }})
+name: CLS CI
+run-name: "CLS CI (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
 on:
   pull_request:
+  schedule:
+    - cron: '0 17 * * *'  # 00:00 Asia/Bangkok (UTC+7)
   workflow_dispatch:
     inputs:
       ci_strict:
@@ -14,10 +14,10 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: cls-ci-${{ github.ref }}
+  group: bridge-selfcheck-ci-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -32,7 +32,11 @@ jobs:
         shell: bash
         run: |
           VAL="${{ github.event.inputs.ci_strict }}"
-          if [ -z "$VAL" ]; then VAL="${{ vars.CI_STRICT }}"; fi
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            VAL=1
+          elif [ -z "$VAL" ]; then
+            VAL="${{ vars.CI_STRICT }}"
+          fi
           if [ -z "$VAL" ]; then VAL=0; fi
           echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
           echo "ci_strict=$VAL" >> "$GITHUB_OUTPUT"
@@ -43,25 +47,151 @@ jobs:
             echo "Soft-green: heavy jobs will be skipped."
           fi
 
-  cls-web-load-test:
-    name: CLS Web Load Test [heavy]
+  selfcheck:
+    name: Self-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: sanity
-    if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: echo "heavy jobs go here"
+      - name: Checkout repository
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/checkout@v4
 
-  summary:
-    name: CLS Web Test Summary
-    needs: [sanity]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "Sanity gate: ${{ needs.sanity.outputs.ci_strict }}"
-          if [ "${{ needs.sanity.outputs.ci_strict }}" != "1" ]; then
-            echo "Summary: Heavy tests were intentionally skipped (soft-green)."
+      - name: Install dependencies
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y jq zsh
+
+      - name: Create output directories
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          mkdir -p hub
+          mkdir -p g/state/alerts
+          mkdir -p g/logs
+          mkdir -p output/reports
+
+      - name: Run Bridge Self-Check
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          echo "🔍 Starting bridge self-check..."
+          zsh tools/bridge_selfcheck.zsh
+        env:
+          BRIDGE_STUCK_THRESHOLD_HOURS: ${{ github.event.inputs.stuck_threshold_hours || '24' }}
+          LUKA_HOME: ${{ github.workspace }}
+
+      - name: Verify Self-Check Output
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          echo "📊 Bridge Self-Check Results"
+          echo "=============================="
+          
+          if [[ -f hub/bridge_selfcheck.json ]]; then
+            echo ""
+            echo "✅ Self-check report generated"
+            echo ""
+            echo "📄 Report Summary:"
+            jq -r '.summary | "  Total Agents: \(.total_agents)\n  Healthy: \(.healthy_count)\n  Warnings: \(.warning_count)\n  Critical: \(.critical_count)\n  Total Issues: \(.total_issues)"' hub/bridge_selfcheck.json || echo "⚠️  Unable to parse summary"
           else
-            echo "Summary: Heavy tests ran."
+            echo "❌ Self-check report not found!"
+            exit 1
           fi
+
+      - name: Stage report for artifacts
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          mkdir -p output/reports
+          cp hub/bridge_selfcheck.json output/reports/selfcheck.json
+
+      - name: Setup Node.js
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install ajv-cli (pinned)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate against schema
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          echo "📋 Validating report against JSON schema..."
+          ajv validate \
+            -s config/schemas/bridge_selfcheck.schema.json \
+            -d hub/bridge_selfcheck.json \
+            --strict=false
+          echo "✅ Report is valid"
+
+      - name: Auto-commit snapshot
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hub/bridge_selfcheck.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(bridge): auto-update self-check snapshot" || echo "Commit failed (non-critical)"
+          fi
+
+      - name: Upload artifact (selfcheck-report)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfcheck-report
+          path: |
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload artifact (bridge-selfcheck-report alias)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-selfcheck-report
+          path: |
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Check for critical issues
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          status=$(jq -r '.status' hub/bridge_selfcheck.json)
+          
+          if [[ "$status" == "critical" ]]; then
+            echo "❌ Critical issues detected in bridge integrity!"
+            echo ""
+            echo "Critical Issues:"
+            jq -r '.agents[] | select(.issues[] | select(.severity == "critical")) | "  [\(.agent_id)] \(.issues[] | select(.severity == "critical") | .message)"' hub/bridge_selfcheck.json
+            exit 1
+          elif [[ "$status" == "warning" ]]; then
+            echo "⚠️  Warnings detected but not critical"
+            exit 0
+          else
+            echo "✅ All bridge folders are healthy"
+            exit 0
+          fi
+
+      - name: Publish to Redis (if configured)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
+        run: |
+          if command -v redis-cli &> /dev/null; then
+            echo "📢 Publishing bridge:selfcheck event to Redis..."
+            
+            payload=$(jq -c '{
+              type: "bridge.selfcheck.completed",
+              timestamp: .timestamp,
+              status: .status,
+              summary: .summary
+            }' hub/bridge_selfcheck.json)
+            
+            redis-cli -u "${LUKA_REDIS_URL}" PUBLISH "bridge:selfcheck" "$payload" || echo "Redis publish failed (non-critical)"
+          else
+            echo "ℹ️  Redis CLI not available, skipping event publish"
+          fi
+        env:
+          LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL }}
