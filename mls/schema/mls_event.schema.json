@@ -12,13 +12,13 @@
       "required":["producer"],
       "properties":{
         "producer":{"enum":["cls","codex","clc","gemini"]},
-        "context":{"enum":["ci","wo","local"],"nullable":true},
-        "repo":{"type":"string","nullable":true},
-        "run_id":{"type":"string","nullable":true},
-        "workflow":{"type":"string","nullable":true},
-        "sha":{"type":"string","nullable":true},
-        "artifact":{"type":"string","nullable":true},
-        "artifact_path":{"type":"string","nullable":true}
+              "context":{"type":["string","null"],"enum":["ci","wo","local",null]},
+              "repo":{"type":["string","null"]},
+              "run_id":{"type":["string","null"]},
+              "workflow":{"type":["string","null"]},
+              "sha":{"type":["string","null"]},
+              "artifact":{"type":["string","null"]},
+              "artifact_path":{"type":["string","null"]}
       },
       "additionalProperties": false
     },
