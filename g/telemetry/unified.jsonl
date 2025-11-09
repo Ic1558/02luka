@@ -1,0 +1,6 @@
+{"ts":"2025-11-08T20:47:03Z","agent":"ocr","event":"sha256_validation","ok":true,"detail":{"file":"ok_demo.jpg","sha256":"abc"}}}
+{"ts":"2025-11-08T20:47:03Z","agent":"ocr","event":"sha256_validation","ok":false,"detail":{"file":"bad_hash.jpg","note":"sha_mismatch"}}}
+{"ts":"2025-11-08T20:47:03Z","agent":"ocr","event":"sha256_validation","ok":false,"detail":{"file":"corrupt.jpg","note":"sha_fail"}}}
+{"ts":"2025-11-08T21:22:53Z","agent":"system","event":"phase22_v0_queue","ok":true,"detail":{"wo":"WO-20251108_204850-PHASE22-TEL-DASH","status":"awaiting_clc"}}}
+{"ts":"2025-11-08T21:27:37Z","agent":"pr_scoring","event":"evaluated","ok":true,"detail":{"pr":248,"score":97,"rubric":"phase21_22","verdict":"A+"}}}
+{"ts":"2025-11-08T21:31:43Z","agent":"unknown","event":"event","ok":true,"detail":{}}

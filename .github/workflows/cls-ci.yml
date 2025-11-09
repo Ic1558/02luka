@@ -53,6 +53,12 @@ jobs:
     timeout-minutes: 10
     needs: sanity
     steps:
+      - name: Show workflow version
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          echo "WF_SHA=${{ github.sha }}"
+          echo "WF_REF=${{ github.ref }}"
+
       - name: Checkout repository
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/checkout@v4
