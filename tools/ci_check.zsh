@@ -35,17 +35,20 @@ if [[ "${1:-}" == "--view-mls" ]]; then
     exit 0
   fi
   echo "== MLS latest entries ($LAST_FILE) =="
-  tail -n 10 "$LAST_FILE" | jq -r '
-    . as $e |
-    "• [" + (.type|tostring) + "] " + .title
-    + "\n  ts: " + .ts
-    + "\n  src: " + .source.producer + "@" + (.source.context // "n/a")
-    + " run: " + ((.source.run_id // "n/a")|tostring)
-    + " sha: " + (.source.sha // "n/a")
-    + "\n  summary: " + .summary
-    + "\n  tags: " + ((.tags // [])|join(", "))
-    + "\n"
-  '
+  tail -n 10 "$LAST_FILE" | while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+      echo "$line" | jq -r '
+        "• [" + (.type|tostring) + "] " + .title
+        + "\n  ts: " + .ts
+        + "\n  src: " + .source.producer + "@" + (.source.context // "n/a")
+        + " run: " + ((.source.run_id // "n/a")|tostring)
+        + " sha: " + (.source.sha // "n/a")
+        + "\n  summary: " + .summary
+        + "\n  tags: " + ((.tags // [])|join(", "))
+        + "\n"
+      '
+    fi
+  done
   exit 0
 fi
 
