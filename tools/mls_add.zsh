@@ -113,7 +113,7 @@ jq -n --arg ts "$TS" \
   author: $author,
   confidence: ($confidence | tonumber)
 }
-' >> "$F"
+' -c >> "$F"
 
 echo "Appended MLS event → $F"
 
