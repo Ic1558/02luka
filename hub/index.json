@@ -1,42 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-09T05:40:05.622Z",
+    "created_at": "2025-11-09T05:50:31.178Z",
     "source": "hub_autoindex.cjs",
     "total": 15,
     "mem_root": "/home/runner/work/02luka/02luka/memory-repo"
   },
   "items": [
     {
-      "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-09T05:39:55.999Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
-    },
-    {
-      "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-09T05:39:55.999Z",
-      "bytes": 261,
-      "kind": "md",
-      "title": "Manual Git Setup Test",
-      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
-      "meta": {},
-      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
-    },
-    {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -53,7 +26,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -69,7 +42,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -78,23 +51,8 @@
       "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
     },
     {
-      "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-09T05:39:55.998Z",
-      "bytes": 15223,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
-      "meta": {
-        "generated_at": "2025-11-07T20:21:38Z",
-        "revision": "f67de55",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": 20
-      },
-      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
-    },
-    {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -110,7 +68,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -127,7 +85,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -143,7 +101,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -153,7 +111,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 458,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -163,7 +121,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -181,7 +139,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -199,7 +157,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-09T05:39:55.998Z",
+      "mtime": "2025-11-09T05:50:26.735Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -215,14 +173,56 @@
       "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
     },
     {
+      "rel": "g/reports/sessions/session_20251108_102049.md",
+      "mtime": "2025-11-09T05:50:26.735Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
+    },
+    {
+      "rel": "test/manual_setup/git_manual_test.md",
+      "mtime": "2025-11-09T05:50:26.735Z",
+      "bytes": 261,
+      "kind": "md",
+      "title": "Manual Git Setup Test",
+      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
+      "meta": {},
+      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
+    },
+    {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-09T05:39:55.997Z",
+      "mtime": "2025-11-09T05:50:26.734Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
       "summary": "{\"mcpServers\":{}}",
       "meta": {},
       "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_202138Z.json",
+      "mtime": "2025-11-09T05:50:26.734Z",
+      "bytes": 15223,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
+      "meta": {
+        "generated_at": "2025-11-07T20:21:38Z",
+        "revision": "f67de55",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": 20
+      },
+      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
     }
   ]
 }
