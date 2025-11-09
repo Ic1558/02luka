@@ -172,27 +172,23 @@ jobs:
           : > "$prompt_file"
 
           if [[ "$STATUS" == "critical" || "$CRIT" != "0" ]]; then
-            cat > "$prompt_file" <<'TXT'
-NEEDS ELEVATION → CLC (privileged)
-เหตุผล: พบ critical issues ใน bridge/self-check
-การดำเนินการ: ใช้ CLC เพื่อแก้ไฟล์/สิทธิ์/ระบบที่ต้องการ privileged write
-TXT
             {
+              echo "NEEDS ELEVATION → CLC (privileged)"
+              echo "เหตุผล: พบ critical issues ใน bridge/self-check"
+              echo "การดำเนินการ: ใช้ CLC เพื่อแก้ไฟล์/สิทธิ์/ระบบที่ต้องการ privileged write"
               echo ""
               echo "Run URL: $RUN_URL"
               echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
-            } >> "$prompt_file"
+            } > "$prompt_file"
           elif [[ "$STATUS" == "warning" || "$WARN" != "0" ]]; then
-            cat > "$prompt_file" <<'TXT'
-ATTENTION → Mary/GC
-เหตุผล: พบ warnings ใน bridge/self-check
-การดำเนินการ: ตรวจสอบและตัดสินใจว่าจะ escalate ไป CLC หรือรอรอบถัดไป
-TXT
             {
+              echo "ATTENTION → Mary/GC"
+              echo "เหตุผล: พบ warnings ใน bridge/self-check"
+              echo "การดำเนินการ: ตรวจสอบและตัดสินใจว่าจะ escalate ไป CLC หรือรอรอบถัดไป"
               echo ""
               echo "Run URL: $RUN_URL"
               echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
-            } >> "$prompt_file"
+            } > "$prompt_file"
           else
             rm -f "$prompt_file"
           fi
