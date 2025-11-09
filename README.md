@@ -1,5 +1,7 @@
 # 02luka Automation Console
 
+![CLS CI](https://github.com/Ic1558/02luka/actions/workflows/cls-ci.yml/badge.svg)
+
 ## Dashboard Service
 - LaunchAgent: `~/Library/LaunchAgents/com.02luka.dashboard.plist`
 - Port: `4100` (ENV: HOST=127.0.0.1, PORT=4100)

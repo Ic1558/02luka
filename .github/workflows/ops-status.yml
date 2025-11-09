@@ -38,6 +38,9 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Create output directory
         run: mkdir -p dist/ops
 
@@ -48,6 +51,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          FORCE_REFRESH: ${{ inputs.force_refresh }}
 
       - name: Verify Status Board Output
         run: |

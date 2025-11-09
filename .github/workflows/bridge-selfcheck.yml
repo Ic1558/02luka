@@ -1,28 +1,29 @@
-name: Bridge Self-Check
+name: CLS CI
+run-name: "CLS CI (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
 on:
+  pull_request:
   schedule:
-    # Daily at 03:00 Asia/Bangkok (UTC+7) = 20:00 UTC
-    - cron: '0 20 * * *'
+    - cron: '0 17 * * *'  # 00:00 Asia/Bangkok (UTC+7)
   workflow_dispatch:
     inputs:
-      stuck_threshold_hours:
-        description: 'Stuck file threshold in hours (default: 24)'
+      ci_strict:
+        description: 'Strict mode (0/1)'
         required: false
-        default: '24'
+        default: '0'
         type: string
-  repository_dispatch:
-    types: [bridge:selfcheck]
 
 permissions:
   contents: write
 
 concurrency:
-  group: "bridge-selfcheck"
+  group: "cls-ci"
   cancel-in-progress: true
 
 jobs:
   sanity:
+    outputs:
+      ci_strict: ${{ steps.setflag.outputs.ci_strict }}
     name: Sanity Gate
     runs-on: ubuntu-latest
     steps:
@@ -32,12 +33,18 @@ jobs:
           # Running on ubuntu-latest, so IS_MAC=0
           echo "IS_MAC=0" >> "$GITHUB_ENV"
       - name: Load CI_STRICT
+        id: setflag
         shell: bash
         run: |
-          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
-          VAL="${{ vars.CI_STRICT }}"
+          VAL="${{ github.event.inputs.ci_strict }}"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            VAL=1
+          elif [ -z "$VAL" ]; then
+            VAL="${{ vars.CI_STRICT }}"
+          fi
           if [ -z "$VAL" ]; then VAL=0; fi
           echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+          echo "ci_strict=$VAL" >> "$GITHUB_OUTPUT"
       - run: |
           echo "CI_STRICT=$CI_STRICT  IS_MAC=$IS_MAC"
           echo "::notice ::Soft-green gate. Set repo variable CI_STRICT=1 to enable heavy jobs."
@@ -50,8 +57,14 @@ jobs:
     name: Self-Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: sanity
 
     steps:
+      - name: Show workflow version
+        run: |
+          echo "WF_SHA=${{ github.sha }}"
+          echo "WF_REF=${{ github.ref }}"
+
       - name: Determine OS flag
         shell: bash
         run: |
@@ -69,26 +82,26 @@ jobs:
           if [ -z "$REDIS_VAL" ]; then REDIS_VAL=""; fi
           echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
       - name: Checkout repository
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Install dependencies
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y jq zsh
 
       - name: Create output directories
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           mkdir -p hub
           mkdir -p g/state/alerts
           mkdir -p g/logs
 
       - name: Run Bridge Self-Check
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           echo "🔍 Starting bridge self-check..."
           zsh tools/bridge_selfcheck.zsh
@@ -97,7 +110,7 @@ jobs:
           LUKA_HOME: ${{ github.workspace }}
 
       - name: Verify Self-Check Output
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           echo "📊 Bridge Self-Check Results"
           echo "=============================="
@@ -125,31 +138,36 @@ jobs:
             exit 1
           fi
 
+      - name: Stage report for artifacts
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          mkdir -p output/reports
+          cp hub/bridge_selfcheck.json output/reports/selfcheck.json
+
       - name: Setup Node.js
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Validate against schema
-        if: env.CI_STRICT == '1'
+      - name: Install ajv-cli (pinned)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
-          echo "📋 Validating report against JSON schema..."
-
-          # Install pinned ajv-cli for schema validation
           npm install -g ajv-cli@5 ajv-formats@3
 
-          # Validate the report
+      - name: Validate against schema
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        run: |
+          echo "📋 Validating report against JSON schema..."
           ajv validate \
             -s config/schemas/bridge_selfcheck.schema.json \
             -d hub/bridge_selfcheck.json \
             --strict=false
-
           echo "✅ Report is valid"
 
       - name: Publish to Redis (if configured)
-        if: env.CI_STRICT == '1' && env.LUKA_REDIS_URL != ''
+        if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
         run: |
           if command -v redis-cli &> /dev/null; then
             echo "📢 Publishing bridge:selfcheck event to Redis..."
@@ -167,7 +185,7 @@ jobs:
           fi
 
       - name: Auto-commit snapshot
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -198,18 +216,28 @@ jobs:
             echo "✅ Snapshot committed and pushed"
           fi
 
-      - name: Upload artifact
-        if: env.CI_STRICT == '1'
+      - name: Upload artifact (selfcheck-report)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: selfcheck-report
+          path: |
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload artifact (bridge-selfcheck-report alias)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: bridge-selfcheck-report
           path: |
-            hub/bridge_selfcheck.json
-            g/state/alerts/*.json
-          retention-days: 30
+            output/reports/selfcheck.json
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Check for critical issues
-        if: env.CI_STRICT == '1'
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           status=$(jq -r '.status' hub/bridge_selfcheck.json)
 
