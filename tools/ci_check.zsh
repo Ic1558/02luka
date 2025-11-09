@@ -22,6 +22,33 @@ die() { echo "❌ $1" >&2; exit 1; }
 command -v gh >/dev/null || die "GitHub CLI (gh) not found."
 command -v jq >/dev/null || die "jq not found."
 
+# --- VIEW MLS OPTION ---------------------------------------------------
+if [[ "${1:-}" == "--view-mls" ]]; then
+  LEDGER_DIR="$HOME/02luka/mls/ledger"
+  if [[ ! -d "$LEDGER_DIR" ]]; then
+    echo "ℹ️  No MLS ledger directory: $LEDGER_DIR"
+    exit 0
+  fi
+  LAST_FILE="$(ls -1 "$LEDGER_DIR"/*.jsonl 2>/dev/null | tail -n 1 || true)"
+  if [[ -z "$LAST_FILE" ]]; then
+    echo "ℹ️  No MLS ledger files found."
+    exit 0
+  fi
+  echo "== MLS latest entries ($LAST_FILE) =="
+  tail -n 10 "$LAST_FILE" | jq -r '
+    . as $e |
+    "• [" + (.type|tostring) + "] " + .title
+    + "\n  ts: " + .ts
+    + "\n  src: " + .source.producer + "@" + (.source.context // "n/a")
+    + " run: " + ((.source.run_id // "n/a")|tostring)
+    + " sha: " + (.source.sha // "n/a")
+    + "\n  summary: " + .summary
+    + "\n  tags: " + ((.tags // [])|join(", "))
+    + "\n"
+  '
+  exit 0
+fi
+
 print_section "Trigger runs (soft & strict)"
 gh workflow run "$WF" -R "$REPO" -r main -f ci_strict=0 >/dev/null
 gh workflow run "$WF" -R "$REPO" -r main -f ci_strict=1 >/dev/null
@@ -76,6 +103,27 @@ jq -r '
 # --- SAVE RUN INFO -----------------------------------------------------
 echo "$RID" > "$HOME/02luka/__artifacts__/last_strict_run.txt"
 echo "Saved last strict RUN_ID → $HOME/02luka/__artifacts__/last_strict_run.txt"
+
+# --- WRITE MLS EVENT (if successful) ------------------------------------
+if [[ "$conclusion" == "success" ]]; then
+  print_section "Write MLS event"
+  SHA=$(git -C ~/02luka rev-parse HEAD 2>/dev/null || echo "")
+  ~/02luka/tools/mls_add.zsh \
+    --type solution \
+    --title "CLS strict CI stable" \
+    --summary "artifact uploaded ok; bridge healthy" \
+    --producer cls \
+    --context ci \
+    --repo "$REPO" \
+    --run-id "$RID" \
+    --workflow "$WF" \
+    --sha "$SHA" \
+    --artifact "selfcheck-report" \
+    --artifact-path "$OUTDIR/selfcheck.json" \
+    --tags "strict,artifact,bridge" \
+    --author gg \
+    --confidence 0.9 || echo "⚠️  MLS write failed (non-critical)"
+fi
 
 # --- EXIT CODES --------------------------------------------------------
 if [[ "$conclusion" != "success" ]]; then
