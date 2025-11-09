@@ -408,34 +408,36 @@ jobs:
             git commit -m "docs(mls): update status summary for run $RUN_ID" || echo "Commit failed (non-critical)"
           fi
 
-      - name: Setup Node.js
+      - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            tools/package-lock.json
-
-      - name: Install ajv-cli (strict only)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
         run: |
-          npm i -g ajv-cli@5 ajv-formats@3
+          set -euo pipefail
+          SCHEMA="mls/schema/mls_event.schema.json"   # ใช้เป็นเอกสารอ้างอิงเฉย ๆ
+          DAY="$(date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
 
-      - name: Validate MLS event (if schema present)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        run: |
-          SCHEMA="mls/schema/mls_event.schema.json"
-          if [ -f "$SCHEMA" ]; then
-            DAY="$(date +%Y-%m-%d)"
-            LEDGER="mls/ledger/${DAY}.jsonl"
-            tail -n 1 "$LEDGER" > /tmp/mls_last.json
-            ajv validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
-            echo "✅ MLS event valid"
-          else
-            echo "ℹ️ No MLS schema, skip"
-          fi
+          test -f "$LEDGER" || { echo "❌ No ledger for $DAY"; exit 1; }
+
+          # ดึง "บรรทัดสุดท้ายที่ไม่ว่าง" อย่างปลอดภัย
+          awk 'NF{last=$0} END{ if(!last){exit 2}; print last }' "$LEDGER" > /tmp/mls_last.json
+
+          # 1) รูปแบบ JSON ถูกต้องก่อน (กันเคสได้ '}' เดี่ยว ๆ)
+          jq -e . /tmp/mls_last.json >/dev/null
+
+          # 2) schema-lite (ตรวจฟิลด์จำเป็น + type สำคัญ แบบเร็ว)
+          jq -e '
+            (.ts|type=="string") and
+            (.type|IN("solution","failure","improvement","pattern","antipattern")) and
+            (.title|type=="string" and (.|length)>0) and
+            (.summary|type=="string" and (.|length)>0) and
+            (.author|type=="string") and
+            (.confidence|type=="number" and .confidence>=0 and .confidence<=1) and
+            (.source|type=="object") and
+            (.source.producer|IN("cls","codex","clc","gemini"))
+          ' /tmp/mls_last.json >/dev/null
+
+          echo "✅ MLS event is valid (jq schema-lite)"
 
       - name: Validate against schema
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
