@@ -3,6 +3,9 @@
 # Global Validation Script
 # Smart, extensible validation for the 02LUKA system
 #
+# ⚠️  STATUS: IN DEVELOPMENT - NOT READY FOR PRODUCTION USE
+# This script is experimental and may have issues. Use tools/ci/validate.sh instead.
+#
 # Features:
 # - Configuration-driven validation rules
 # - Parallel execution for speed
@@ -45,6 +48,20 @@
 #
 
 set -euo pipefail
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Development Status Warning
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Show warning unless explicitly disabled
+if [[ "${SKIP_DEV_WARNING:-0}" != "1" ]]; then
+  echo "⚠️  WARNING: This script is IN DEVELOPMENT and NOT READY FOR PRODUCTION USE" >&2
+  echo "   Status: Experimental (PR #244)" >&2
+  echo "   Known Issues: Output display problems, associative array handling" >&2
+  echo "   Recommendation: Use tools/ci/validate.sh for production validation" >&2
+  echo "   To suppress this warning: SKIP_DEV_WARNING=1 $0" >&2
+  echo "" >&2
+fi
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Configuration & Defaults

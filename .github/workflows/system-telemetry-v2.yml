@@ -29,6 +29,9 @@ permissions:
   contents: write
   actions: read
 
+env:
+  MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE }}
+
 concurrency:
   group: "system-telemetry-v2"
   cancel-in-progress: false
@@ -40,6 +43,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - name: Maintenance guard
+        if: env.MAINTENANCE_MODE == '1'
+        run: echo "Repo in maintenance mode; skipping." && exit 0
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -229,15 +236,22 @@ jobs:
       - name: Export to Grafana Loki
         if: ${{ inputs.export_loki == true || github.event.client_payload.export_loki == true }}
         run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          LOKI_VAL="${{ secrets.LOKI_ENDPOINT }}"
+          if [ -z "$LOKI_VAL" ]; then LOKI_VAL="http://127.0.0.1:3100/loki/api/v1/push"; fi
+          echo "LOKI_ENDPOINT=$LOKI_VAL" >> "$GITHUB_ENV"
+          echo "Using LOKI_ENDPOINT=$LOKI_VAL"
           echo "📤 Exporting to Grafana Loki..."
           echo "⚠️ Loki export not yet implemented (placeholder)"
           # TODO: Implement Loki push using curl or promtail
-        env:
-          LOKI_ENDPOINT: ${{ secrets.LOKI_ENDPOINT || 'http://127.0.0.1:3100/loki/api/v1/push' }}
 
       - name: Send Telegram summary
         if: ${{ inputs.export_telegram == true || github.event.client_payload.export_telegram == true }}
         run: |
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "⚠️ Telegram secrets not set, skipping notification."
+            exit 0
+          fi
           echo "📤 Sending Telegram summary..."
           echo "⚠️ Telegram export not yet implemented (placeholder)"
           # TODO: Implement Telegram notification using bot API

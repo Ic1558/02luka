@@ -2,6 +2,21 @@
 
 Smart, extensible validation for the 02LUKA system.
 
+## ⚠️  Status: IN DEVELOPMENT - NOT READY FOR PRODUCTION USE
+
+**This system is experimental (PR #244) and is currently in development.**
+
+**Known Issues:**
+- Output display problems
+- Associative array handling issues
+- Some validators may not work correctly
+
+**Recommendation:**
+- **For production use:** `tools/ci/validate.sh` and `scripts/smoke.sh` (existing, stable)
+- **For testing/development:** This global validation system
+
+**Current Score:** 70/100 (C+) - Functional but has issues
+
 ## Overview
 
 The Global Validation System provides intelligent, configuration-driven validation with:

@@ -9,13 +9,13 @@ on:
       alert_on_mismatch:
         description: 'Alert if mismatch count > 0'
         required: false
-        default: 'true'
+        default: true
         type: boolean
 
       force_full_scan:
         description: 'Force full directory scan'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
   # Scheduled audit (daily at 03:00 UTC / 10:00 ICT)
