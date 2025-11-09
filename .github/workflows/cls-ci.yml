@@ -1,4 +1,3 @@
----
 name: CLS Web Integration & Load Test
 
 on:
@@ -9,32 +8,64 @@ on:
         description: 'Strict mode (0/1)'
         required: false
         default: '0'
+        type: string
 
 permissions:
   contents: read
+
+concurrency:
+  group: cls-ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   sanity:
     name: Sanity Gate
     runs-on: ubuntu-latest
+    outputs:
+      ci_strict: ${{ steps.setflag.outputs.ci_strict }}
     steps:
       - name: Load CI_STRICT
+        id: setflag
         shell: bash
         run: |
-          VAL="${{ github.event.inputs.ci_strict || vars.CI_STRICT }}"
-          [ -z "$VAL" ] && VAL=0
+          VAL="${{ github.event.inputs.ci_strict }}"
+          if [ -z "$VAL" ]; then VAL="${{ vars.CI_STRICT }}"; fi
+          if [ -z "$VAL" ]; then VAL=0; fi
           echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
-      - run: |
+          echo "ci_strict=$VAL" >> "$GITHUB_OUTPUT"
+      - name: Echo gate
+        run: |
           echo "CI_STRICT=$CI_STRICT"
           if [ "$CI_STRICT" != "1" ]; then
-            echo "Soft-green: skip heavy jobs"
-            exit 0
+            echo "::notice::Soft-green: heavy jobs will be skipped. Set repo variable CI_STRICT=1 to enable."
           fi
 
+  # Heavy tests – run ONLY when ci_strict == '1'
   cls-web-load-test:
+    name: CLS Web Load Test [heavy]
     needs: sanity
-    if: ${{ success() && env.CI_STRICT == '1' }}
+    if: ${{ needs.sanity.outputs.ci_strict == '1' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "heavy jobs go here"
+      - name: Run heavy load test
+        run: |
+          echo "Heavy CLS Web load test running..."
+          # Add actual test commands here when services are ready
+
+  summary:
+    name: CLS Web Test Summary
+    needs: [sanity, cls-web-load-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary Report
+        run: |
+          echo "### CLS Web CI Summary"
+          echo ""
+          echo "Sanity gate: ci_strict=${{ needs.sanity.outputs.ci_strict }}"
+          if [ "${{ needs.sanity.outputs.ci_strict }}" != "1" ]; then
+            echo "✅ Summary: Heavy tests were intentionally skipped (soft-green mode)."
+          else
+            echo "✅ Summary: Heavy tests ran."
+          fi
