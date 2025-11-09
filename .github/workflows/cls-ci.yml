@@ -61,3 +61,4 @@ jobs:
             echo "Summary: Heavy tests were intentionally skipped (soft-green)."
           else
             echo "Summary: Heavy tests ran."
+          fi
