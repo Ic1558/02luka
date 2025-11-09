@@ -108,7 +108,18 @@ jobs:
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           mkdir -p output/reports
+          if [ ! -f hub/bridge_selfcheck.json ]; then
+            echo "❌ hub/bridge_selfcheck.json not found!"
+            ls -la hub/ || true
+            exit 1
+          fi
           cp hub/bridge_selfcheck.json output/reports/selfcheck.json
+          if [ ! -f output/reports/selfcheck.json ]; then
+            echo "❌ Failed to copy selfcheck.json"
+            ls -la output/reports || true
+            exit 1
+          fi
+          echo "✅ Staged selfcheck.json successfully"
 
       - name: "Guard: ensure staged artifact exists"
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -118,6 +129,7 @@ jobs:
             ls -la output/reports || true
             exit 1
           fi
+          echo "✅ Guard passed: selfcheck.json exists"
 
       - name: Upload artifact (selfcheck-report)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
