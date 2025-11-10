@@ -17,6 +17,10 @@ on:
 permissions:
   contents: write
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: cls-ci-${{ github.ref }}
   cancel-in-progress: true
