@@ -1,0 +1,53 @@
+---
+name: Phase15 Quick Health (CI)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 1 * * *'   # 08:15 ICT
+
+env:
+  TZ: Asia/Bangkok
+  MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE || '0' }}
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  quick-health:
+    if: ${{ env.MAINTENANCE_MODE != '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq + zsh
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq zsh
+
+      - name: Run Phase15 Quick Health (CI mode)
+        run: |
+          chmod +x ./tools/phase15_quick_health.zsh
+          ./tools/phase15_quick_health.zsh --json | tee health.json
+        shell: bash
+
+      - name: Upload JSON artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase15-quick-health-json
+          path: health.json
+          if-no-files-found: warn
+
+      - name: Fail if not ok
+        run: |
+          jq -e '.ok == true' health.json >/dev/null || {
+            echo "❌ Phase15 Quick Health failed"
+            echo "Health check details:"
+            jq '.' health.json
+            exit 1
+          }
+          echo "✅ Phase15 Quick Health: OK"
+

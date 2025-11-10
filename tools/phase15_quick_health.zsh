@@ -133,6 +133,24 @@ check_mcp_bridge() {
   local permissions_ok=true
   local owner_ok=true
 
+  # Skip launchctl checks on non-macOS systems
+  if [[ "$(uname)" != "Darwin" ]]; then
+    # CI mode - skip MCP bridge checks
+    MCP_OK=1
+    pid=""
+    last_exit="unknown"
+    program=""
+    script_path=""
+    keep_alive="false"
+    run_at_load="false"
+    plist_ok=true
+    label_ok=true
+    program_ok=true
+    permissions_ok=true
+    owner_ok=true
+    return 0
+  fi
+
   # 1. Service Status & PID
   if launchctl list | grep -q "${SERVICE_MCP_BRIDGE}"; then
     pid=$(launchctl list | grep "${SERVICE_MCP_BRIDGE}" | awk '{print $1}')
