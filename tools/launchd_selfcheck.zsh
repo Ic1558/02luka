@@ -1,6 +1,13 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+# Script version debug header
+echo "=== launchd_selfcheck.zsh ===" >&2
+echo "Script: tools/launchd_selfcheck.zsh" >&2
+echo "Version: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" >&2
+echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >&2
+echo "=============================" >&2
+
 # Config
 : "${LABEL_PREFIX:=com.02luka.}"      # กรองเฉพาะเอเจนต์ของ 02luka
 : "${OUT:=hub/selfcheck_report.json}" # ไฟล์รายงาน JSON
