@@ -65,11 +65,23 @@ if [ -f "${PLIST_MCP_BRIDGE}" ]; then
     
     # ตรวจ Program/ProgramArguments
     if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}"; then
-      PROGRAM=$(grep -A 2 "ProgramArguments" "${PLIST_MCP_BRIDGE}" | grep "<string>" | head -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | sed "s|\$HOME|${HOME}|g")
-      if [ -f "${PROGRAM}" ] || command -v "${PROGRAM}" >/dev/null 2>&1; then
-        echo "   ✅ Program exists: ${PROGRAM}"
-      else
-        echo "   ⚠️  Program not found: ${PROGRAM}"
+      # หา executable path (argument แรกใน ProgramArguments array)
+      PROGRAM=$(grep -A 10 "ProgramArguments" "${PLIST_MCP_BRIDGE}" | grep "<string>" | head -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | sed "s|\$HOME|${HOME}|g" | xargs)
+      if [ -n "${PROGRAM}" ]; then
+        if [ -f "${PROGRAM}" ] || command -v "${PROGRAM}" >/dev/null 2>&1; then
+          echo "   ✅ Executable exists: ${PROGRAM}"
+        else
+          echo "   ⚠️  Executable not found: ${PROGRAM}"
+        fi
+        # แสดง script path ถ้ามี (argument ที่ 2 หรือ 3)
+        SCRIPT_PATH=$(grep -A 10 "ProgramArguments" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | sed "s|\$HOME|${HOME}|g" | grep -E "^${HOME}|^/" | head -1 | xargs)
+        if [ -n "${SCRIPT_PATH}" ] && [ "${SCRIPT_PATH}" != "${PROGRAM}" ]; then
+          if [ -f "${SCRIPT_PATH}" ]; then
+            echo "   ✅ Script exists: ${SCRIPT_PATH}"
+          else
+            echo "   ⚠️  Script not found: ${SCRIPT_PATH}"
+          fi
+        fi
       fi
     fi
     
