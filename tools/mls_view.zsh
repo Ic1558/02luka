@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 # ======================================================================
 # MLS Viewer — quick terminal viewer for MLS ledger entries
 # Usage:
@@ -10,7 +10,12 @@
 
 set -euo pipefail
 
-LEDGER_DIR="$HOME/02luka/mls/ledger"
+# Resolve script directory and repo root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+LEDGER_DIR="$REPO_ROOT/mls/ledger"
+LEGACY_DB="$REPO_ROOT/g/knowledge/mls_lessons.jsonl"
 # LEDGER_FILE will be computed after parsing CLI options
 
 # --- HELPERS ----------------------------------------------------------
@@ -28,6 +33,7 @@ Options:
   --today              Show all entries from today
   --date YYYY-MM-DD    Pick a specific ledger date (local timezone)
   --file PATH          Read from an explicit ledger file (overrides --date/--today)
+  --summary            Show summary statistics only (count by type, producer, context)
   --by TYPE=VALUE      Filter by field (e.g., type=solution, producer=cls)
   --producer=PROD      Filter by producer (cls, codex, clc, gemini)
   --grep PATTERN       Search in title/summary/tags
@@ -38,6 +44,8 @@ Options:
 
 Examples:
   mls_view.zsh --today
+  mls_view.zsh --summary
+  mls_view.zsh --today --summary
   mls_view.zsh --by type=solution
   mls_view.zsh --producer=cls --limit=5
   mls_view.zsh --grep 'artifact'
@@ -51,6 +59,7 @@ EOF
 # --- PARSE ARGS -------------------------------------------------------
 
 SHOW_TODAY=false
+SHOW_SUMMARY=false
 FILTER_BY=""
 PRODUCER=""
 GREP_PATTERN=""
@@ -65,6 +74,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --today)
       SHOW_TODAY=true
+      shift
+      ;;
+    --summary)
+      SHOW_SUMMARY=true
       shift
       ;;
     --by)
@@ -142,19 +155,49 @@ fi
 
 # --- VALIDATE ---------------------------------------------------------
 
-if [ ! -f "$LEDGER_FILE" ]; then
-  die "Ledger file not found: $LEDGER_FILE"
-fi
-
 command -v jq >/dev/null || die "jq not found"
 
 # --- READ ENTRIES -----------------------------------------------------
+
+# Try daily ledger first, fall back to legacy DB if not found or empty
+USING_LEGACY=false
+if [ ! -f "$LEDGER_FILE" ] || [ ! -s "$LEDGER_FILE" ]; then
+  if [ -f "$LEGACY_DB" ]; then
+    echo "ℹ️  Daily ledger not found or empty, using legacy database: $LEGACY_DB" >&2
+    LEDGER_FILE="$LEGACY_DB"
+    USING_LEGACY=true
+  else
+    die "Neither daily ledger ($LEDGER_FILE) nor legacy DB ($LEGACY_DB) found"
+  fi
+fi
 
 ENTRIES=$(awk 'NF' "$LEDGER_FILE" | jq -s '.')
 
 if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
   echo "ℹ️  No entries found in $LEDGER_FILE"
   exit 0
+fi
+
+# Normalize legacy format to modern format
+if [ "$USING_LEGACY" = true ]; then
+  ENTRIES=$(echo "$ENTRIES" | jq '[.[] | {
+    ts: (.timestamp // .ts),
+    type: .type,
+    title: .title,
+    summary: (.description // .summary),
+    memo: (.context // .memo // ""),
+    source: {
+      producer: "legacy",
+      context: "legacy",
+      session: (.related_session // "unknown")
+    },
+    links: {
+      wo_id: (.related_wo // "")
+    },
+    tags: (.tags // []),
+    author: "legacy",
+    confidence: 0.5
+  }]')
 fi
 
 # --- APPLY FILTERS ----------------------------------------------------
@@ -183,7 +226,11 @@ fi
 
 # Grep in title/summary/tags
 if [ -n "$GREP_PATTERN" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or select(.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or select(.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\"))]")
+  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(
+    (.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or
+    (.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or
+    ((.tags | type == \"array\") and (.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\")))
+  )]")
 fi
 
 # Limit
@@ -193,14 +240,42 @@ fi
 
 # --- OUTPUT -----------------------------------------------------------
 
-if [ "$JSON_OUTPUT" = true ]; then
+if [ "$SHOW_SUMMARY" = true ]; then
+  # Show summary statistics
+  COUNT=$(echo "$ENTRIES" | jq 'length')
+  echo "📊 MLS Summary Statistics"
+  echo "========================="
+  echo ""
+  echo "Total entries: $COUNT"
+  echo ""
+
+  echo "By Type:"
+  echo "$ENTRIES" | jq -r 'group_by(.type) | map({type: .[0].type, count: length}) | sort_by(-.count) | .[] | "  \(.type): \(.count)"'
+  echo ""
+
+  echo "By Producer:"
+  echo "$ENTRIES" | jq -r 'group_by(.source.producer) | map({producer: .[0].source.producer, count: length}) | sort_by(-.count) | .[] | "  \(.producer): \(.count)"'
+  echo ""
+
+  echo "By Context:"
+  echo "$ENTRIES" | jq -r 'group_by(.source.context) | map({context: .[0].source.context, count: length}) | sort_by(-.count) | .[] | "  \(.context): \(.count)"'
+  echo ""
+
+  # Show date range
+  FIRST_TS=$(echo "$ENTRIES" | jq -r 'map(.ts) | min')
+  LAST_TS=$(echo "$ENTRIES" | jq -r 'map(.ts) | max')
+  echo "Date Range:"
+  echo "  First: $FIRST_TS"
+  echo "  Last:  $LAST_TS"
+
+elif [ "$JSON_OUTPUT" = true ]; then
   echo "$ENTRIES" | jq '.'
 else
   COUNT=$(echo "$ENTRIES" | jq 'length')
   echo "📊 Found $COUNT entries"
   echo ""
-  
-  echo "$ENTRIES" | jq -r '.[] | 
+
+  echo "$ENTRIES" | jq -r '.[] |
     "\(.ts) | \(.type) | \(.title)
     Producer: \(.source.producer) | Context: \(.source.context // "N/A") | Workflow: \(.source.workflow // "N/A")
     Run ID: \(.source.run_id // "N/A") | Artifact: \(.source.artifact // "N/A") | Size: \(.source.artifact_size // "N/A") bytes
