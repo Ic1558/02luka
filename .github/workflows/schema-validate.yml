@@ -30,11 +30,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
         with:
-          node-version: '20'
-          cache: 'npm'
+          install-dependencies: 'false'
 
       - name: Install tools
         run: |

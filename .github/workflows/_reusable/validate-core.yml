@@ -27,12 +27,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
         with:
           node-version: ${{ inputs.node_version }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-        continue-on-error: true
+          continue-on-error: 'true'
 
       - name: Install dependencies
         run: |
@@ -43,14 +42,6 @@ jobs:
           jq --version
           yq --version
           redis-cli --version
-
-      - name: Install npm packages (skip if no lockfile)
-        run: |
-          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
-            npm ci
-          else
-            echo "No Node lockfile found; skipping npm install"
-          fi
 
       - name: Set script permissions
         run: |

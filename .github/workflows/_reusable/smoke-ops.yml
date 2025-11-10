@@ -25,10 +25,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node with cache
+        uses: ./.github/actions/node-setup
         with:
           node-version: ${{ inputs.node_version }}
-        continue-on-error: true
+          continue-on-error: 'true'
 
       - name: Install dependencies
         run: |
@@ -38,14 +39,6 @@ jobs:
           sudo chmod +x /usr/local/bin/yq
           jq --version
           yq --version
-
-      - name: Install npm packages (skip if no lockfile)
-        run: |
-          if [ -f package-lock.json ] || [ -f yarn.lock ] || [ -f pnpm-lock.yaml ]; then
-            npm ci
-          else
-            echo "No Node lockfile found; skipping npm install"
-          fi
 
       - name: Set script permissions
         run: |

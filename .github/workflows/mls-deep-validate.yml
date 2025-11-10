@@ -18,13 +18,12 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/node-setup
         with:
-          node-version: '20'
-          cache: 'npm'
           cache-dependency-path: |
             package-lock.json
             tools/package-lock.json
+          install-dependencies: 'false'
 
       - name: Install ajv-cli
         run: npm i -g ajv-cli@5 ajv-formats@3
