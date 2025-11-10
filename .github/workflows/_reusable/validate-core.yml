@@ -17,6 +17,12 @@ jobs:
       SKIP_BOSS_API: '1'
       CI_QUIET: '1'
     steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0

@@ -34,6 +34,12 @@ jobs:
     timeout-minutes: 5
     continue-on-error: true
     steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
       - name: Load CI_STRICT
         shell: bash
         run: |
