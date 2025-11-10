@@ -313,6 +313,25 @@ jobs:
 
           echo "📘 MLS appended → $OUTFILE"
 
+      - name: Sanitize MLS ledger (strip blanks, keep valid JSON)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
+          [ -s "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY — skip sanitize"; exit 0; }
+          TMP="$(mktemp)"
+          # Keep only non-empty lines that are valid JSON
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            if echo "$line" | jq -e . >/dev/null 2>&1; then
+              printf '%s\n' "$line" >> "$TMP"
+            fi
+          done < "$LEDGER"
+          mv "$TMP" "$LEDGER"
+          echo "✅ Sanitized ledger → $LEDGER"
+
       - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
