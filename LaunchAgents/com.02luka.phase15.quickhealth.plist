@@ -8,7 +8,7 @@
   <array>
     <string>/bin/zsh</string>
     <string>-lc</string>
-    <string>TZ=Asia/Bangkok "$HOME/02luka/tools/phase15_quick_health.zsh" --json > "$HOME/02luka/mls/status/phase15_quickhealth.json" 2>&1; exit 0</string>
+    <string>TZ=Asia/Bangkok &quot;$HOME/02luka/tools/phase15_quick_health.zsh&quot; --json &gt; &quot;$HOME/02luka/mls/status/phase15_quickhealth.json&quot; 2&gt;&amp;1; exit 0</string>
   </array>
   <key>StartInterval</key>
   <integer>600</integer>
