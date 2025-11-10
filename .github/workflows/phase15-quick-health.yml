@@ -8,7 +8,6 @@ on:
 env:
   TZ: Asia/Bangkok
   MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE || '0' }}
-  PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
 
 permissions:
   contents: read
@@ -23,24 +22,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+
       - name: Install jq + zsh
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq jq zsh
+
+      - name: "Debug: Verify script version"
+        shell: bash
+        run: |
+          echo "=== Checking script version ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== First 30 lines of phase15_quick_health.zsh ==="
+          head -30 tools/phase15_quick_health.zsh
 
       - name: Run Phase15 Quick Health (CI mode)
         shell: bash
         run: |
           set +e
           chmod +x ./tools/phase15_quick_health.zsh
-          # Run script and capture exit without failing the job
-          ./tools/phase15_quick_health.zsh --json | tee health.json
+          # Run script in JSON mode - always captures output, always exits 0
+          ./tools/phase15_quick_health.zsh --json > health.json 2>&1
           script_exit=$?
           echo "script_exit=${script_exit}"
-          # Guarantee an artifact even on error/empty output
-          if [ ! -s health.json ]; then
-            echo '{"ok":false,"error":"no output from phase15_quick_health","ts":"'$(date -u +%FT%TZ)'"}' > health.json
+          # Validate JSON and ensure it's not empty
+          if [ ! -s health.json ] || ! jq empty health.json 2>/dev/null; then
+            echo '{"ok":false,"error":"no valid JSON from phase15_quick_health","ts_ict":"'$(TZ=Asia/Bangkok date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date -u +%FT%TZ)'"}' > health.json
           fi
+          # Display the JSON for debugging
+          echo "Health check result:"
+          jq '.' health.json 2>/dev/null || cat health.json
 
       - name: Upload JSON artifact
         if: ${{ always() }}
@@ -53,18 +73,24 @@ jobs:
       - name: Debug listing
         if: ${{ always() }}
         run: |
-          echo "Workspace files:"
-          ls -la
-          echo "health.json content:"
-          test -f health.json && sed -n '1,120p' health.json || echo "(health.json missing)"
+          echo "=== Health check artifact verification ==="
+          if [ -f health.json ]; then
+            echo "✓ health.json exists ($(wc -c < health.json) bytes)"
+            echo "Content:"
+            cat health.json
+          else
+            echo "✗ health.json missing!"
+          fi
 
-      - name: Fail if not ok (strict only)
-        if: ${{ env.PHASE15_STRICT == '1' }}
+      - name: Fail if not ok (strict mode only)
+        if: ${{ env.CI_STRICT == '1' }}
         run: |
-          jq -e '.ok == true' health.json >/dev/null || {
+          echo "=== CI_STRICT=1: Enforcing health check ==="
+          if jq -e '.ok == true' health.json >/dev/null 2>&1; then
+            echo "✅ Phase15 Quick Health: OK"
+          else
             echo "❌ Phase15 Quick Health failed"
             echo "Health check details:"
-            jq '.' health.json
+            jq '.' health.json || cat health.json
             exit 1
-          }
-          echo "✅ Phase15 Quick Health: OK"
+          fi
