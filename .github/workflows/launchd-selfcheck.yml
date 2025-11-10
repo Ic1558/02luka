@@ -83,12 +83,13 @@ jobs:
           echo "=== First 25 lines of launchd_selfcheck.zsh ==="
           head -25 tools/launchd_selfcheck.zsh
           echo ""
-          echo "=== Checking for mapfile ==="
-          if grep -q "mapfile" tools/launchd_selfcheck.zsh; then
-            echo "❌ ERROR: mapfile still found in script!"
+          echo "=== Checking for mapfile command (excluding comments) ==="
+          if grep -E "^[^#]*mapfile" tools/launchd_selfcheck.zsh >/dev/null 2>&1; then
+            echo "❌ ERROR: mapfile command still found in script!"
+            grep -n "^[^#]*mapfile" tools/launchd_selfcheck.zsh
             exit 1
           else
-            echo "✅ No mapfile found - using while loop"
+            echo "✅ No mapfile command found - using while loop"
           fi
 
       - name: Run selfcheck (allow empty, no self-heal in CI)
