@@ -30,6 +30,8 @@
     "url": "git@github.com:Ic1558/02luka.git"
   },
   "dependencies": {
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1"
   }
 }
