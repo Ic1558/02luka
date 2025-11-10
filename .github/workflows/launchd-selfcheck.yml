@@ -68,12 +68,13 @@ jobs:
           echo "IS_MAC=1" >> "$GITHUB_ENV"
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
       - name: Ensure hub dir
         run: mkdir -p hub
 
-      - name: Debug: Verify script version
+      - name: "Debug: Verify script version"
         shell: bash
         run: |
           echo "=== Checking script version ==="
