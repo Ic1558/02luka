@@ -462,8 +462,8 @@ if [[ "$JSON_MODE" == "true" ]]; then
   mcp_ok_json=$(echo "$mcp_json" | jq -r '.ok' 2>/dev/null || echo "false")
   mls_ok_json=$(echo "$mls_json" | jq -r '.ok' 2>/dev/null || echo "false")
 
-  # Sanitize boolean for --argjson
-  local overall_ok_json="false"
+  # Sanitize boolean for --argjson (not in function, so no 'local')
+  overall_ok_json="false"
   [[ "$mcp_ok_json" == "true" ]] && [[ "$mls_ok_json" == "true" ]] && overall_ok_json="true"
 
   jq -n \
