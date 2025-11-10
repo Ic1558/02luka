@@ -72,7 +72,7 @@ jobs:
         run: mkdir -p hub
 
       - name: Run selfcheck (allow empty, no self-heal in CI)
-        shell: bash
+        shell: zsh
         run: |
           chmod +x tools/launchd_selfcheck.zsh
           ALLOW_EMPTY=1 SELF_HEAL=0 OUT=hub/selfcheck_report.json tools/launchd_selfcheck.zsh
