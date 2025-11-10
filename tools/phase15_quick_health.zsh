@@ -65,23 +65,35 @@ if [ -f "${PLIST_MCP_BRIDGE}" ]; then
     
     # ตรวจ Program/ProgramArguments
     if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}"; then
-      # หา executable path (argument แรกใน ProgramArguments array)
-      PROGRAM=$(grep -A 10 "ProgramArguments" "${PLIST_MCP_BRIDGE}" | grep "<string>" | head -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | sed "s|\$HOME|${HOME}|g" | xargs)
-      if [ -n "${PROGRAM}" ]; then
-        if [ -f "${PROGRAM}" ] || command -v "${PROGRAM}" >/dev/null 2>&1; then
-          echo "   ✅ Executable exists: ${PROGRAM}"
-        else
-          echo "   ⚠️  Executable not found: ${PROGRAM}"
+      # ใช้ plutil แปลงเป็น JSON แล้ว parse
+      if command -v jq >/dev/null 2>&1; then
+        ARGS_JSON=$(plutil -convert json -o - "${PLIST_MCP_BRIDGE}" 2>/dev/null | jq -r '.ProgramArguments[]?' 2>/dev/null)
+        if [ -n "${ARGS_JSON}" ]; then
+          ARG_COUNT=0
+          while IFS= read -r ARG; do
+            ARG=$(echo "${ARG}" | sed "s|\$HOME|${HOME}|g")
+            if [ "${ARG_COUNT}" -eq 0 ]; then
+              # argument แรก = executable
+              if [ -f "${ARG}" ] || command -v "${ARG}" >/dev/null 2>&1; then
+                echo "   ✅ Executable exists: ${ARG}"
+              else
+                echo "   ⚠️  Executable not found: ${ARG}"
+              fi
+            elif [ "${ARG}" != "-lc" ] && [ "${ARG}" != "-c" ] && echo "${ARG}" | grep -qE "^${HOME}|^/"; then
+              # argument อื่นที่เป็น path
+              if [ -f "${ARG}" ]; then
+                echo "   ✅ Script exists: ${ARG}"
+                break
+              else
+                echo "   ⚠️  Script not found: ${ARG}"
+                break
+              fi
+            fi
+            ARG_COUNT=$((ARG_COUNT + 1))
+          done <<< "${ARGS_JSON}"
         fi
-        # แสดง script path ถ้ามี (argument ที่ 2 หรือ 3)
-        SCRIPT_PATH=$(grep -A 10 "ProgramArguments" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/' | sed "s|\$HOME|${HOME}|g" | grep -E "^${HOME}|^/" | head -1 | xargs)
-        if [ -n "${SCRIPT_PATH}" ] && [ "${SCRIPT_PATH}" != "${PROGRAM}" ]; then
-          if [ -f "${SCRIPT_PATH}" ]; then
-            echo "   ✅ Script exists: ${SCRIPT_PATH}"
-          else
-            echo "   ⚠️  Script not found: ${SCRIPT_PATH}"
-          fi
-        fi
+      else
+        echo "   ⚠️  jq not found - cannot parse ProgramArguments"
       fi
     fi
     
