@@ -25,7 +25,16 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install dependencies
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        run: npm ci --omit=dev
+
+      - name: Skip scoring for forked PR
+        if: ${{ github.event.pull_request.head.repo.fork }}
+        run: echo "Skipping readiness scoring for forks due to read-only token permissions."
+
       - name: Compute readiness score and comment
+        if: ${{ !github.event.pull_request.head.repo.fork }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
