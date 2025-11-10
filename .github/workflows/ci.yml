@@ -36,7 +36,7 @@ jobs:
   # This is the only job required to pass for PRs to be green
   # ============================================================
   validate:
-    uses: ./.github/workflows/_reusable/validate-core.yml
+    uses: .github/workflows/_reusable/validate-core.yml
     with:
       node_version: '20'
 
