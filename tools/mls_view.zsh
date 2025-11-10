@@ -184,6 +184,12 @@ if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
   exit 0
 fi
 
+# Detect legacy format: check if first entry lacks source.producer field
+if [ "$USING_LEGACY" = false ]; then
+  HAS_SOURCE=$(echo "$ENTRIES" | jq -r '.[0].source.producer // "null"')
+  [ "$HAS_SOURCE" = "null" ] && USING_LEGACY=true
+fi
+
 # Normalize legacy format to modern format
 if [ "$USING_LEGACY" = true ]; then
   ENTRIES=$(echo "$ENTRIES" | jq '[.[] | {
