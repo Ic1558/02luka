@@ -202,6 +202,52 @@ jobs:
           fi
           echo "✅ Guard passed: selfcheck.json exists"
 
+      - name: Normalize MLS entries (backfill artifact_size if missing)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
+          [ -f "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY yet — skip normalize"; exit 0; }
+
+          # Find the last non-empty line that parses as JSON
+          LAST_LINE=""
+          while IFS= read -r line; do
+            if [ -n "$line" ] && echo "$line" | jq -e . >/dev/null 2>&1; then
+              LAST_LINE="$line"
+            fi
+          done < "$LEDGER"
+          [ -n "$LAST_LINE" ] || { echo "ℹ️ No valid entry — skip"; exit 0; }
+
+          # If artifact_size already present and non-zero, skip
+          HAS_SIZE=$(echo "$LAST_LINE" | jq -r 'try (.source.artifact_size|tostring) catch ""')
+          if [ -n "$HAS_SIZE" ] && [ "$HAS_SIZE" != "0" ] && [ "$HAS_SIZE" != "null" ]; then
+            echo "ℹ️ Last entry already has artifact_size=$HAS_SIZE — skip"
+            exit 0
+          fi
+
+          # Try to compute size from the artifact on disk
+          ART_PATH=$(echo "$LAST_LINE" | jq -r '.source.artifact_path // empty')
+          if [ -z "$ART_PATH" ] || [ ! -f "$ART_PATH" ]; then
+            echo "ℹ️ Artifact path not available ($ART_PATH) — skip normalize"
+            exit 0
+          fi
+
+          ART_SIZE=$(stat -f%z "$ART_PATH" 2>/dev/null || stat -c%s "$ART_PATH" 2>/dev/null || echo "0")
+          if [ "$ART_SIZE" = "0" ]; then
+            echo "ℹ️ Artifact size could not be determined — skip"
+            exit 0
+          fi
+
+          # Append a normalized copy (append-only) with artifact_size filled
+          NEW_ENTRY=$(echo "$LAST_LINE" | jq -c --argjson size "$ART_SIZE" '
+            .source.artifact_size = $size
+            | .tags = ((.tags // []) + ["normalized"])
+            | .summary = (.summary + " (normalized artifact_size)")')
+          printf '%s\n' "$NEW_ENTRY" >> "$LEDGER"
+          echo "✅ Appended normalized entry with artifact_size=$ART_SIZE"
+
       - name: Upload artifact (selfcheck-report)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/upload-artifact@v4
@@ -265,7 +311,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DAY="$(date +%Y-%m-%d)"
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER_DIR="mls/ledger"
           mkdir -p "$LEDGER_DIR"
           OUTFILE="$LEDGER_DIR/${DAY}.jsonl"
@@ -286,7 +332,7 @@ jobs:
 
           # Build JSON once (compact, single-line), then append with a guaranteed newline
           ENTRY="$(jq -n -c \
-            --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg ts "$(TZ=Asia/Bangkok date +%Y-%m-%dT%H:%M:%S%z)" \
             --arg type "solution" \
             --arg title "Bridge Self-Check strict CI artifact uploaded" \
             --arg summary "selfcheck-report uploaded and validated; bridge healthy" \
@@ -337,7 +383,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DAY="$(date +%Y-%m-%d)"
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER="mls/ledger/${DAY}.jsonl"
 
           if [ ! -s "$LEDGER" ]; then
@@ -405,7 +451,7 @@ jobs:
           # Use the last valid JSON extracted earlier
           if [ ! -f /tmp/mls_last.json ]; then
             echo "ℹ️ /tmp/mls_last.json not found (schema-lite step likely skipped). Trying to rebuild from today's ledger."
-            DAY="$(date +%Y-%m-%d)"
+            DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
             LEDGER="mls/ledger/${DAY}.jsonl"
             if [ -s "$LEDGER" ]; then
               LAST_LINE=""
@@ -437,7 +483,7 @@ jobs:
           mkdir -p mls/status
 
           # ประเมินสถานะ entries ล่าสุดซ้ำอีกครั้งแบบ schema-lite
-          DAY="$(date +%Y-%m-%d)"
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER="mls/ledger/${DAY}.jsonl"
           LAST_STATUS="fail"
           if [ -s "$LEDGER" ]; then
@@ -473,7 +519,7 @@ jobs:
           if [ "$LAST_STATUS" = "ok" ]; then STREAK=$((STREAK+1)); else STREAK=0; fi
 
           jq -n --arg status "$LAST_STATUS" --argjson success_streak "$STREAK" \
-                --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                --arg ts "$(TZ=Asia/Bangkok date +%Y-%m-%dT%H:%M:%S%z)" \
                 '{ts:$ts,last_status:$status,success_streak:$success_streak}' > "$STREAK_FILE"
 
           echo "last_status=$LAST_STATUS" >> "$GITHUB_OUTPUT"
@@ -532,13 +578,19 @@ jobs:
 
           # Add the snapshot
           git add hub/bridge_selfcheck.json mls/status/mls_validation_streak.json
+          # Also commit ledger file if it was updated
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
+          LEDGER_FILE="mls/ledger/${DAY}.jsonl"
+          if [ -f "$LEDGER_FILE" ]; then
+            git add "$LEDGER_FILE"
+          fi
 
           # Only commit if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-            git commit -m "chore(bridge): auto-update self-check snapshot - $timestamp"
+            timestamp=$(TZ=Asia/Bangkok date +"%Y-%m-%d %H:%M:%S %z")
+            git commit -m "chore(bridge): auto-update self-check snapshot and MLS ledger - $timestamp"
 
             # Push with retry logic
             attempt=0
