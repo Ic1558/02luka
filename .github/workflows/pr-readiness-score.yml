@@ -4,17 +4,19 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited]
     branches: [main, develop]
+  workflow_dispatch: {}
 
 permissions:
   contents: read
   pull-requests: write
-  statuses: write
 
 jobs:
   score:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history for accurate analysis
 
@@ -23,83 +25,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Calculate PR Readiness Score
-        id: score
+      - name: Compute readiness score and comment
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
-          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
-          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
-          PR_MERGEABLE: ${{ github.event.pull_request.mergeable }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          node tools/pr_scoring.mjs
-
-      - name: Post Score Comment
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const score = JSON.parse(fs.readFileSync('/tmp/pr_score.json', 'utf8'));
-
-            const body = `## 📊 PR Readiness Score: ${score.total}/100 (${score.grade})
-
-            ### Breakdown
-            | Criterion | Score | Max | Status |
-            |-----------|-------|-----|--------|
-            ${score.criteria.map(c => `| ${c.name} | ${c.score} | ${c.max} | ${c.status} |`).join('\n')}
-
-            ### Recommendations
-            ${score.recommendations.map(r => `- ${r}`).join('\n')}
-
-            ${score.verdict === 'READY' ? '✅ **This PR is ready to merge!**' : '⚠️ **Address recommendations before merging**'}
-
-            ---
-            🤖 Auto-scored by PR Readiness Bot | Updated: ${new Date().toISOString()}
-            `;
-
-            // Find existing comment
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const botComment = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('PR Readiness Score'));
-
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: body
-              });
-            }
-
-      - name: Set Status Check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const score = JSON.parse(fs.readFileSync('/tmp/pr_score.json', 'utf8'));
-
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
-              state: score.total >= 70 ? 'success' : 'failure',
-              target_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${context.issue.number}`,
-              description: `Score: ${score.total}/100 (${score.grade})`,
-              context: 'PR Readiness Score'
-            });
+          node tools/pr_score.mjs
