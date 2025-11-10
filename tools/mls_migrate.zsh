@@ -1,0 +1,164 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+# mls_migrate.zsh — migrate old lessons (g/knowledge/mls_lessons.jsonl) → new ledger (mls/ledger/YYYY-MM-DD.jsonl)
+# Usage:
+#   tools/mls_migrate.zsh --dry-run
+#   tools/mls_migrate.zsh --run
+# Notes:
+# - Keeps old file untouched (read-only).
+# - Splits by date derived from .ts/.timestamp (string ISO) or uses today if missing.
+# - Preserves: related_session → source.session, related_wo → links.wo_id
+# - Adds: memo (rich context), source.producer="clc" (default), confidence=0.8 (default)
+
+BASE="${BASE:-$HOME/02luka}"
+OLD="$BASE/g/knowledge/mls_lessons.jsonl"
+LEDGER_DIR="$BASE/mls/ledger"
+REPORT="$BASE/g/reports/mls/migration_report.txt"
+MODE="${1:---dry-run}"
+
+[[ -f "$OLD" ]] || { echo "❌ Old lessons not found: $OLD"; exit 1; }
+mkdir -p "$LEDGER_DIR" "$(dirname "$REPORT")"
+
+count_total=0
+count_ok=0
+count_skipped=0
+typeset -A seen_ts
+typeset -A type_hist
+typeset -A day_hist
+dup_ts=0
+missing_critical=0
+SAMPLE="$BASE/g/reports/mls/migration_samples.jsonl"
+: > "$SAMPLE"
+
+# Helper: derive day (YYYY-MM-DD) from ts string (prefer first 10 chars if ISO-like)
+derive_day() {
+  local ts="$1"
+  if [[ -n "$ts" && "$ts" == 20??-* ]]; then
+    echo "${ts:0:10}"
+  else
+    date +%Y-%m-%d
+  fi
+}
+
+echo "▶️ Migration mode: $MODE" > "$REPORT"
+echo "Source: $OLD" >> "$REPORT"
+echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$REPORT"
+echo "---" >> "$REPORT"
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ -z "$line" ]] && continue
+  if ! echo "$line" | jq -e . >/dev/null 2>&1; then
+    ((count_skipped++))
+    echo "skip: not json" >> "$REPORT"
+    continue
+  fi
+  ((count_total++))
+
+  # Extract fields with fallbacks
+  ts="$(echo "$line" | jq -r '(.ts // .timestamp // "")')"
+  [[ "$ts" == "null" ]] && ts=""
+  [[ -z "$ts" ]] && ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  day="$(derive_day "$ts")"
+
+  
+  
+  new_json="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -c --arg ts "" '{
+ .
+  qq(# --- validation & histograms ---
+) .
+  qq(if [[ -n "" ]]; then
+) .
+  qq(  if [[ -n "${seen_ts[]-}" ]]; then
+) .
+  qq(    ((dup_ts++)); echo "warn: duplicate ts " >> ""
+) .
+  qq(  else
+) .
+  qq(    seen_ts[]=1
+) .
+  qq(  fi
+) .
+  qq(fi
+
+) .
+  qq(title_ok="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.title | tostring | length')") . "
+" .
+  qq(summary_ok="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.summary | tostring | length')") . "
+" .
+  qq(if [[ "" -eq 0 || "" -eq 0 ]]; then ((missing_critical++)); echo "warn: missing critical fields @ " >> ""; fi
+
+) .
+  qq(tkey="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.type')") . "
+" .
+  qq([[ -z "" || "" == "null" ]] && tkey="(unset)") . "
+" .
+  qq((( type_hist[]++ )); (( day_hist[]++ ))
+
+) .
+  qq(if [[ "20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400wc -l < "" | tr -d ' ')" -lt 5 ]]; then printf '%s\n' "" >> ""; fi
+)
+    ts: ,
+    type: (.type // "improvement"),
+    title: (.title // "Untitled"),
+    summary: (.summary // .description // "—"),
+    memo: (.context // .memo // empty),
+    source: {
+      producer: ("clc"),
+      context: (
+        if (.context | type == "string") then
+          if (.context | test("WO-|Work Order|work\.order"; "i")) then "wo"
+          elif (.context | test("CI|github|workflow|action"; "i")) then "ci"
+          elif (.context | test("bridge"; "i")) then "bridge"
+          else "local"
+          end
+        else
+          (.context_enum // "local")
+        end
+      ),
+      repo: (.repo // empty),
+      run_id: (.run_id // empty),
+      workflow: (.workflow // empty),
+      sha: (.sha // empty),
+      artifact: (.artifact // empty),
+      artifact_path: (.artifact_path // empty),
+      session: (.related_session // .session // empty)
+    },
+    links: {
+      followup_id: (.followup_id // empty),
+      wo_id: (
+        if (.related_wo? and .related_wo != "none" and (.related_wo | type=="string")) then
+          (.related_wo | capture("^(?<id>WO-[0-9]+)").id)
+        else
+          (.wo_id // empty)
+        end
+      )
+    },
+    tags: (.tags // []),
+    author: (.author // "clc"),
+    confidence: ((.confidence // 0.8) | tonumber)
+  }' )"
+
+
+  if [[ "$MODE" == "--dry-run" ]]; then
+    # validate shape quickly
+    echo "$new_json" | jq -e '.ts and .type and .title and .summary and .source' >/dev/null || {
+      ((count_skipped++))
+      echo "skip: schema-lite fail @ $ts" >> "$REPORT"
+      continue
+    }
+    ((count_ok++))
+    echo "ok(dry): $day" >> "$REPORT"
+  else
+    # append to daily ledger (append-only)
+    out="$LEDGER_DIR/$day.jsonl"
+    printf '%s\n' "$new_json" >> "$out"
+    ((count_ok++))
+    echo "ok(write): $out" >> "$REPORT"
+  fi
+done < "$OLD"
+
+echo "---" >> "$REPORT"
+echo "Total: $count_total, OK: $count_ok, Skipped: $count_skipped" >> "$REPORT"
+echo "Finished: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$REPORT"
+echo "📄 Report → $REPORT"
