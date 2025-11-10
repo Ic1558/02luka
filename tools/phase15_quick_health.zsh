@@ -356,12 +356,12 @@ check_mls() {
   # Output
   if [[ "$JSON_MODE" == "true" ]]; then
     jq -n \
-      --argjson streak_exists "$streak_exists" \
-      --argjson streak "$streak" \
+      --argjson streak_exists "$([[ "$streak_exists" == "true" ]] && echo true || echo false)" \
+      --argjson streak "$((streak))" \
       --arg ledger_path "${LEDGER_FILE}" \
-      --argjson ledger_exists "$ledger_exists" \
-      --argjson ledger_jsonl_ok "$ledger_jsonl_ok" \
-      --argjson entries_today "$entries_today" \
+      --argjson ledger_exists "$([[ "$ledger_exists" == "true" ]] && echo true || echo false)" \
+      --argjson ledger_jsonl_ok "$([[ "$ledger_jsonl_ok" == "true" ]] && echo true || echo false)" \
+      --argjson entries_today "$((entries_today))" \
       --argjson ok "$([[ $LEDGER_OK -eq 1 ]] && echo true || echo false)" \
       '{
         streak_file_exists: $streak_exists,
