@@ -1,18 +1,23 @@
 ---
 name: PR Readiness Score
-run-name: "PR Score (#${{ github.event.pull_request.number || 'manual' }}): ${{ github.event_name }}"
+run-name: "PR Score (#${{ github.event.pull_request.number || inputs.pr_number || 'manual' }}): ${{ github.event_name }}"
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to score (for manual runs)'
+        required: false
+        type: number
 
 permissions:
   contents: read
   pull-requests: write
 
 concurrency:
-  group: pr-score-${{ github.event.pull_request.number }}
+  group: pr-score-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
   cancel-in-progress: true
 
 defaults:
@@ -24,6 +29,8 @@ jobs:
     name: Compute PR readiness score
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Skip draft PRs - they're not ready for scoring yet
+    if: ${{ github.event.pull_request.draft != true }}
     outputs:
       score: ${{ steps.compute.outputs.score }}
       label: ${{ steps.compute.outputs.label }}
@@ -33,6 +40,11 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+          # Sparse checkout - only fetch what we need
+          sparse-checkout: |
+            .github/workflows
+            config
+            tools
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

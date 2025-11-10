@@ -350,13 +350,20 @@ async function upsertComment(token, owner, repo, prNumber, body) {
   const prNumber = event.number || event.pull_request.number;
   const { owner, repo } = getRepoInfo();
   const prUrl = `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`;
+
+  // Parallel fetch: get PR data first, then parallelize files and status
+  const startTime = Date.now();
   const pr = await ghRequest("GET", prUrl, token);
-  const files = await paginate(`${prUrl}/files?per_page=100`, token);
-  const status = await ghRequest(
-    "GET",
-    `https://api.github.com/repos/${owner}/${repo}/commits/${pr.head.sha}/status`,
-    token
-  );
+
+  // Fetch files and status in parallel (both depend on pr.head.sha)
+  const [files, status] = await Promise.all([
+    paginate(`${prUrl}/files?per_page=100`, token),
+    ghRequest(
+      "GET",
+      `https://api.github.com/repos/${owner}/${repo}/commits/${pr.head.sha}/status`,
+      token
+    ),
+  ]);
 
   const ci = evaluateCiStatus(status.state);
   const scope = evaluateScopeRisk(files, config.scope_risk);
@@ -463,13 +470,19 @@ async function upsertComment(token, owner, repo, prNumber, body) {
 
   const commentBody = buildComment(totalScore, breakdown, labelName, jsonPayload);
 
-  await ensureLabel(token, owner, repo, prNumber, labelName);
-  await upsertComment(token, owner, repo, prNumber, commentBody);
+  // Update label and comment in parallel (independent operations)
+  await Promise.all([
+    ensureLabel(token, owner, repo, prNumber, labelName),
+    upsertComment(token, owner, repo, prNumber, commentBody),
+  ]);
 
   // Output for GitHub Actions
   const finalScore = formatScore(totalScore);
-  console.log(`Readiness score for PR #${prNumber}: ${finalScore}`);
-  console.log(`::notice title=PR Readiness Score::Score: ${finalScore}/100 | Label: ${labelName}`);
+  const executionTime = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`Readiness score for PR #${prNumber}: ${finalScore} (computed in ${executionTime}s)`);
+  console.log(
+    `::notice title=PR Readiness Score::Score: ${finalScore}/100 | Label: ${labelName} | Time: ${executionTime}s`
+  );
 
   // Write to GITHUB_OUTPUT if available
   const outputFile = process.env.GITHUB_OUTPUT;
@@ -478,6 +491,7 @@ async function upsertComment(token, owner, repo, prNumber, body) {
       `score=${finalScore}`,
       `label=${labelName}`,
       `pr_number=${prNumber}`,
+      `execution_time=${executionTime}`,
     ].join("\n");
     await fs.appendFile(outputFile, `${outputs}\n`);
   }
@@ -485,18 +499,24 @@ async function upsertComment(token, owner, repo, prNumber, body) {
   // Write to GITHUB_STEP_SUMMARY if available
   const summaryFile = process.env.GITHUB_STEP_SUMMARY;
   if (summaryFile) {
+    // Determine emoji based on score
+    const emoji =
+      finalScore >= 90 ? "🟢" : finalScore >= 80 ? "🟡" : finalScore >= 70 ? "🟠" : "🔴";
     const summaryLines = [
-      `## PR Readiness Score: ${finalScore}/100`,
+      `## ${emoji} PR Readiness Score: ${finalScore}/100`,
       "",
-      `**Label:** \`${labelName}\``,
-      `**PR:** #${prNumber}`,
+      `**Label:** \`${labelName}\` | **PR:** #${prNumber} | **Computed in:** ${executionTime}s`,
       "",
-      "| Signal | Weight | Score | Contribution |",
-      "| --- | --- | --- | --- |",
+      "### Score Breakdown",
+      "",
+      "| Signal | Weight | Score | Contribution | Notes |",
+      "| --- | --- | --- | --- | --- |",
       ...breakdown.map(
         (item) =>
-          `| ${item.name} | ${(item.weight * 100).toFixed(0)}% | ${item.raw.toFixed(2)} | ${item.contribution.toFixed(2)} |`
+          `| ${item.name} | ${(item.weight * 100).toFixed(0)}% | ${item.raw.toFixed(2)} | ${item.contribution.toFixed(2)} | ${item.notes || "-"} |`
       ),
+      "",
+      `**Total:** ${finalScore}/100`,
     ].join("\n");
     await fs.appendFile(summaryFile, `${summaryLines}\n`);
   }
