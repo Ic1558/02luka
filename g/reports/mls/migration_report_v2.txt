@@ -1,23 +1,23 @@
-▶️ MLS Migration v2 (--apply)
+▶️ MLS Migration v2 (--plan)
 Source: /home/user/02luka/g/knowledge/mls_lessons.jsonl
-Started: 2025-11-10T20:07:23Z
+Started: 2025-11-10T20:18:21Z
 ---
-Flattened to: /tmp/mls_migrate_29166_flat.jsonl
-skip: already migrated MLS-1762282996 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762283023 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762283044 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762283055 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762283240 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762284184 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762284547 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762284678 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762284716 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762284774 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762285802 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762294960 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762294963 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762294970 → /home/user/02luka/mls/ledger/2025-11-05.jsonl
-skip: already migrated MLS-1762710452 → /home/user/02luka/mls/ledger/2025-11-10.jsonl
+Flattened to: /tmp/mls_migrate_1804_flat.jsonl
+2025-11-05: Two-Phase GD Sync Deployment
+2025-11-05: Archive with README Pattern
+2025-11-05: Direct Complex Merge Approach
+2025-11-05: Automatic Conflict Resolution Strategy
+2025-11-05: Real-Time Monitoring Dashboard
+2025-11-05: Confusing R&D Autopilot with WO Executor
+2025-11-05: Execute Directly Instead of Fake Delegation
+2025-11-05: WO-251105-test_executor succeeded
+2025-11-05: WO-251105-test_auto_pickup succeeded
+2025-11-05: WO Executor Agent Built and Operational
+2025-11-05: Multi-Session Progress Tracking System
+2025-11-05: WO-251105-gdrive_dryrun succeeded
+2025-11-05: WO-251105-gdrive_fresh_start_hybrid succeeded
+2025-11-05: WO-251105-gdrive_twoway_sync_mobile succeeded
+2025-11-10: MLS Tool Restoration
 ---
 📊 HISTOGRAMS
 
@@ -33,5 +33,5 @@ By Day:
 
 ---
 📈 SUMMARY
-Total: 15 | OK: 0 | Skipped: 0 | Duplicates: 15
-Finished: 2025-11-10T20:07:26Z
+Total: 15 | OK: 15 | Skipped: 0 | Duplicates: 0
+Finished: 2025-11-10T20:18:23Z
