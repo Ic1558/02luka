@@ -4,177 +4,453 @@
 
 set -euo pipefail
 
+# ============================================================
+# Configuration
+# ============================================================
 LUKA_HOME="${HOME}/02luka"
 USER_ID=$(id -u)
+CURRENT_USER=$(whoami)
 SERVICE_MCP_BRIDGE="com.02luka.gg.mcp-bridge"
 PLIST_MCP_BRIDGE="${HOME}/Library/LaunchAgents/${SERVICE_MCP_BRIDGE}.plist"
 TODAY=$(TZ=Asia/Bangkok date +%Y-%m-%d)
+TS_ICT=$(TZ=Asia/Bangkok date '+%Y-%m-%dT%H:%M:%S%z')
 LEDGER_FILE="${LUKA_HOME}/mls/ledger/${TODAY}.jsonl"
 STREAK_FILE="${LUKA_HOME}/mls/status/mls_validation_streak.json"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔍 Phase 15 Quick Health Check"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+# Flags
+JSON_MODE=false
+RESTART_BRIDGE=false
+TAIL_LOG=false
+FIX_LEDGER=false
+
+# Health status
+MCP_OK=1
+LEDGER_OK=1
+
+# ============================================================
+# Parse arguments
+# ============================================================
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --json)
+      JSON_MODE=true
+      shift
+      ;;
+    --restart-bridge)
+      RESTART_BRIDGE=true
+      shift
+      ;;
+    --tail-log)
+      TAIL_LOG=true
+      shift
+      ;;
+    --fix-ledger-today)
+      FIX_LEDGER=true
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: $0 [OPTIONS]"
+      echo ""
+      echo "Options:"
+      echo "  --json              Output results as JSON"
+      echo "  --restart-bridge    Restart MCP bridge service"
+      echo "  --tail-log          Stream live logs"
+      echo "  --fix-ledger-today  Fix today's ledger file"
+      echo "  -h, --help          Show this help"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+# ============================================================
+# Helper functions
+# ============================================================
+log_info() {
+  if [[ "$JSON_MODE" == "false" ]]; then
+    echo "$@"
+  fi
+}
+
+log_json() {
+  if [[ "$JSON_MODE" == "true" ]]; then
+    echo "$@"
+  fi
+}
+
+# ============================================================
+# Quick Actions
+# ============================================================
+if [[ "$RESTART_BRIDGE" == "true" ]]; then
+  log_info "🔄 Restarting MCP Bridge..."
+  launchctl bootout "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null || true
+  sleep 1
+  launchctl bootstrap "gui/${USER_ID}" "${PLIST_MCP_BRIDGE}" 2>/dev/null || true
+  sleep 1
+  launchctl kickstart -k "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null || true
+  log_info "✅ Restart complete. Re-checking status..."
+  sleep 2
+fi
+
+if [[ "$TAIL_LOG" == "true" ]]; then
+  log_info "📋 Streaming live logs (Ctrl+C to stop)..."
+  log stream --predicate 'subsystem CONTAINS "02luka" OR process == "mcp-bridge"' --info
+  exit 0
+fi
+
+if [[ "$FIX_LEDGER" == "true" ]]; then
+  log_info "🔧 Fixing today's ledger file..."
+  if [[ -f "${LEDGER_FILE}" ]]; then
+    # Normalize JSONL (ensure one JSON per line, no trailing commas)
+    if command -v jq >/dev/null 2>&1; then
+      jq -c . "${LEDGER_FILE}" > "${LEDGER_FILE}.tmp" 2>/dev/null && mv "${LEDGER_FILE}.tmp" "${LEDGER_FILE}"
+      log_info "✅ Ledger file normalized"
+    else
+      log_info "⚠️  jq not found - cannot normalize"
+    fi
+  else
+    log_info "⚠️  Ledger file not found: ${LEDGER_FILE}"
+  fi
+fi
 
 # ============================================================
 # MCP Bridge Service Check
 # ============================================================
-echo "📡 MCP Bridge: ${SERVICE_MCP_BRIDGE}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+check_mcp_bridge() {
+  MCP_OK=1
+  local pid=""
+  local last_exit="unknown"
+  local program=""
+  local script_path=""
+  local keep_alive="false"
+  local run_at_load="false"
+  local plist_ok=true
+  local label_ok=true
+  local program_ok=true
+  local permissions_ok=true
+  local owner_ok=true
 
-# 1. สถานะ + PID
-echo ""
-echo "1️⃣  Service Status & PID:"
-if launchctl list | grep -q "${SERVICE_MCP_BRIDGE}"; then
-  launchctl list | grep "${SERVICE_MCP_BRIDGE}"
-  echo "   ✅ Service is loaded"
-else
-  echo "   ❌ Service not found in launchctl list"
-fi
-
-# 2. รายละเอียดบริการ
-echo ""
-echo "2️⃣  Service Details (Program, KeepAlive, RunAtLoad, LastExitStatus):"
-if launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" >/dev/null 2>&1; then
-  launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" | grep -E "program|KeepAlive|RunAtLoad|LastExitStatus" || true
-  LAST_EXIT=$(launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null | grep "LastExitStatus" | awk '{print $2}' || echo "unknown")
-  if [ "$LAST_EXIT" = "0" ] || [ "$LAST_EXIT" = "unknown" ]; then
-    echo "   ✅ LastExitStatus: ${LAST_EXIT}"
-  else
-    echo "   ⚠️  LastExitStatus: ${LAST_EXIT} (non-zero - may indicate crash)"
-  fi
-else
-  echo "   ⚠️  Cannot print service details (service may not be loaded)"
-fi
-
-# 3. ตรวจ plist
-echo ""
-echo "3️⃣  Plist Validation:"
-if [ -f "${PLIST_MCP_BRIDGE}" ]; then
-  if plutil -lint "${PLIST_MCP_BRIDGE}" >/dev/null 2>&1; then
-    echo "   ✅ Plist syntax valid"
-    
-    # ตรวจ Label
-    LABEL=$(grep -A 1 "<key>Label</key>" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/')
-    if [ "${LABEL}" = "${SERVICE_MCP_BRIDGE}" ]; then
-      echo "   ✅ Label matches: ${LABEL}"
-    else
-      echo "   ⚠️  Label mismatch: expected ${SERVICE_MCP_BRIDGE}, found ${LABEL}"
+  # 1. Service Status & PID
+  if launchctl list | grep -q "${SERVICE_MCP_BRIDGE}"; then
+    pid=$(launchctl list | grep "${SERVICE_MCP_BRIDGE}" | awk '{print $1}')
+    if [[ "$pid" == "-" ]]; then
+      pid=""
     fi
-    
-    # ตรวจ Program/ProgramArguments
-    if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}"; then
-      # ใช้ plutil แปลงเป็น JSON แล้ว parse
-      if command -v jq >/dev/null 2>&1; then
-        ARGS_JSON=$(plutil -convert json -o - "${PLIST_MCP_BRIDGE}" 2>/dev/null | jq -r '.ProgramArguments[]?' 2>/dev/null)
-        if [ -n "${ARGS_JSON}" ]; then
-          ARG_COUNT=0
-          while IFS= read -r ARG; do
-            ARG=$(echo "${ARG}" | sed "s|\$HOME|${HOME}|g")
-            if [ "${ARG_COUNT}" -eq 0 ]; then
-              # argument แรก = executable
-              if [ -f "${ARG}" ] || command -v "${ARG}" >/dev/null 2>&1; then
-                echo "   ✅ Executable exists: ${ARG}"
-              else
-                echo "   ⚠️  Executable not found: ${ARG}"
-              fi
-            elif [ "${ARG}" != "-lc" ] && [ "${ARG}" != "-c" ] && echo "${ARG}" | grep -qE "^${HOME}|^/"; then
-              # argument อื่นที่เป็น path
-              if [ -f "${ARG}" ]; then
-                echo "   ✅ Script exists: ${ARG}"
-                break
-              else
-                echo "   ⚠️  Script not found: ${ARG}"
-                break
+  else
+    MCP_OK=0
+    plist_ok=false
+  fi
+
+  # 2. Service Details
+  if launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" >/dev/null 2>&1; then
+    last_exit=$(launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null | grep "LastExitStatus" | awk '{print $2}' || echo "unknown")
+    if [[ "$last_exit" != "0" ]] && [[ "$last_exit" != "unknown" ]]; then
+      MCP_OK=0
+    fi
+  fi
+
+  # 3. Plist Validation
+  if [[ ! -f "${PLIST_MCP_BRIDGE}" ]]; then
+    MCP_OK=0
+    plist_ok=false
+  else
+    # Check syntax
+    if ! plutil -lint "${PLIST_MCP_BRIDGE}" >/dev/null 2>&1; then
+      MCP_OK=0
+      plist_ok=false
+    fi
+
+    # Check Label
+    local label=$(grep -A 1 "<key>Label</key>" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/' || echo "")
+    if [[ "$label" != "${SERVICE_MCP_BRIDGE}" ]]; then
+      MCP_OK=0
+      label_ok=false
+    fi
+
+    # Check ProgramArguments
+    if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}" && command -v jq >/dev/null 2>&1; then
+      local args_json=$(plutil -convert json -o - "${PLIST_MCP_BRIDGE}" 2>/dev/null | jq -r '.ProgramArguments[]?' 2>/dev/null)
+      if [[ -n "$args_json" ]]; then
+        local arg_count=0
+        while IFS= read -r arg; do
+          arg=$(echo "$arg" | sed "s|\$HOME|${HOME}|g")
+          if [[ $arg_count -eq 0 ]]; then
+            program="$arg"
+            if [[ ! -f "$arg" ]] && ! command -v "$arg" >/dev/null 2>&1; then
+              MCP_OK=0
+              program_ok=false
+            fi
+          elif [[ "$arg" != "-lc" ]] && [[ "$arg" != "-c" ]] && echo "$arg" | grep -qE "^${HOME}|^/"; then
+            script_path="$arg"
+            if [[ ! -f "$arg" ]]; then
+              # Script not found - but don't fail if service is running
+              if [[ -z "$pid" ]]; then
+                MCP_OK=0
+                program_ok=false
               fi
             fi
-            ARG_COUNT=$((ARG_COUNT + 1))
-          done <<< "${ARGS_JSON}"
-        fi
-      else
-        echo "   ⚠️  jq not found - cannot parse ProgramArguments"
+            break
+          fi
+          arg_count=$((arg_count + 1))
+        done <<< "$args_json"
       fi
     fi
-    
-    # ตรวจ KeepAlive
+
+    # Check KeepAlive
     if grep -q "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}"; then
-      KEEPALIVE=$(grep -A 1 "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
-      echo "   ℹ️  KeepAlive: ${KEEPALIVE}"
+      keep_alive=$(grep -A 1 "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
     fi
-    
-    # ตรวจ RunAtLoad
+
+    # Check RunAtLoad
     if grep -q "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}"; then
-      RUNATLOAD=$(grep -A 1 "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
-      echo "   ℹ️  RunAtLoad: ${RUNATLOAD}"
+      run_at_load=$(grep -A 1 "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
     fi
-  else
-    echo "   ❌ Plist syntax invalid"
-    plutil -lint "${PLIST_MCP_BRIDGE}" 2>&1 || true
+
+    # Check permissions (should be 600) - warning only, not critical
+    local perms=$(stat -f %Lp "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "0")
+    if [[ "$perms" -gt 600 ]]; then
+      # Don't fail if service is running - just warn
+      if [[ -z "$pid" ]]; then
+        MCP_OK=0
+      fi
+      permissions_ok=false
+    fi
+
+    # Check owner (should be current user) - warning only, not critical
+    local owner=$(stat -f %Su "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "")
+    if [[ "$owner" != "$CURRENT_USER" ]]; then
+      # Don't fail if service is running - just warn
+      if [[ -z "$pid" ]]; then
+        MCP_OK=0
+      fi
+      owner_ok=false
+    fi
   fi
-else
-  echo "   ❌ Plist not found: ${PLIST_MCP_BRIDGE}"
-fi
+
+  # Output
+  if [[ "$JSON_MODE" == "true" ]]; then
+    jq -n \
+      --arg label "${SERVICE_MCP_BRIDGE}" \
+      --arg pid "$pid" \
+      --arg last_exit "$last_exit" \
+      --arg program "$program" \
+      --arg script_path "$script_path" \
+      --argjson keep_alive "$(echo "$keep_alive" | grep -q "true" && echo true || echo false)" \
+      --argjson run_at_load "$(echo "$run_at_load" | grep -q "true" && echo true || echo false)" \
+      --argjson ok "$([[ $MCP_OK -eq 1 ]] && echo true || echo false)" \
+      '{
+        label: $label,
+        pid: (if $pid == "" then null else ($pid | tonumber) end),
+        last_exit_status: (if $last_exit == "unknown" then null else ($last_exit | tonumber) end),
+        program: $program,
+        script_path: $script_path,
+        keep_alive: $keep_alive,
+        run_at_load: $run_at_load,
+        ok: $ok
+      }'
+  else
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info "📡 MCP Bridge: ${SERVICE_MCP_BRIDGE}"
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info ""
+    log_info "1️⃣  Service Status & PID:"
+    if [[ -n "$pid" ]]; then
+      log_info "   ✅ Service loaded (PID: ${pid})"
+    else
+      log_info "   ❌ Service not found in launchctl list"
+    fi
+    log_info ""
+    log_info "2️⃣  Service Details:"
+    log_info "   LastExitStatus: ${last_exit}"
+    if [[ "$last_exit" != "0" ]] && [[ "$last_exit" != "unknown" ]]; then
+      log_info "   ⚠️  Non-zero exit status (may indicate crash)"
+    fi
+    log_info ""
+    log_info "3️⃣  Plist Validation:"
+    if [[ "$plist_ok" == "true" ]]; then
+      log_info "   ✅ Plist syntax valid"
+    else
+      log_info "   ❌ Plist syntax invalid or not found"
+    fi
+    if [[ "$label_ok" == "true" ]]; then
+      log_info "   ✅ Label matches: ${SERVICE_MCP_BRIDGE}"
+    else
+      log_info "   ❌ Label mismatch"
+    fi
+    if [[ "$program_ok" == "true" ]]; then
+      log_info "   ✅ Program/script exists"
+      [[ -n "$program" ]] && log_info "      Executable: ${program}"
+      [[ -n "$script_path" ]] && log_info "      Script: ${script_path}"
+    else
+      log_info "   ❌ Program/script not found"
+    fi
+    if [[ "$permissions_ok" == "true" ]]; then
+      log_info "   ✅ Permissions: $(stat -f %Lp "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "unknown")"
+    else
+      log_info "   ⚠️  Permissions insecure: $(stat -f %Lp "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "unknown") (expect 600)"
+    fi
+    if [[ "$owner_ok" == "true" ]]; then
+      log_info "   ✅ Owner: $(stat -f %Su "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "unknown")"
+    else
+      log_info "   ⚠️  Owner mismatch: $(stat -f %Su "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "unknown") (expect ${CURRENT_USER})"
+    fi
+    log_info "   ℹ️  KeepAlive: ${keep_alive}"
+    log_info "   ℹ️  RunAtLoad: ${run_at_load}"
+  fi
+}
 
 # ============================================================
 # MLS Streak & Ledger Check
 # ============================================================
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📊 MLS Streak & Ledger"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+check_mls() {
+  LEDGER_OK=1
+  local streak_exists=false
+  local streak=0
+  local ledger_exists=false
+  local ledger_jsonl_ok=false
+  local entries_today=0
 
-# 1. ดู streak
-echo ""
-echo "1️⃣  Validation Streak:"
-if [ -f "${STREAK_FILE}" ]; then
-  cat "${STREAK_FILE}" | jq . 2>/dev/null || echo "   ⚠️  File exists but not valid JSON"
-else
-  echo "   ⚠️  Streak file not found (will be created on first validation)"
-  echo "   Location: ${STREAK_FILE}"
-fi
-
-# 2. ดู entry วันนี้
-echo ""
-echo "2️⃣  Today's MLS Entries (${TODAY}):"
-if [ -f "${LUKA_HOME}/tools/mls_view.zsh" ]; then
-  "${LUKA_HOME}/tools/mls_view.zsh" --today 2>/dev/null || echo "   ⚠️  Error running mls_view.zsh"
-else
-  echo "   ⚠️  mls_view.zsh not found: ${LUKA_HOME}/tools/mls_view.zsh"
-fi
-
-# 3. ยืนยัน ledger วันนี้
-echo ""
-echo "3️⃣  Today's Ledger File (${TODAY}):"
-if [ -f "${LEDGER_FILE}" ]; then
-  # ตรวจว่าเป็น JSONL ที่ถูกต้อง
-  if tail -n 3 "${LEDGER_FILE}" | jq -c . >/dev/null 2>&1; then
-    echo "   ✅ JSONL format valid"
-    echo "   📄 File: ${LEDGER_FILE}"
-    echo "   📊 Last 3 entries:"
-    tail -n 3 "${LEDGER_FILE}" | jq -c . | sed 's/^/      /'
-  else
-    echo "   ⚠️  File exists but not valid JSONL"
+  # 1. Streak file
+  if [[ -f "${STREAK_FILE}" ]]; then
+    streak_exists=true
+    if command -v jq >/dev/null 2>&1; then
+      streak=$(jq -r '.success_streak // 0' "${STREAK_FILE}" 2>/dev/null || echo "0")
+    fi
   fi
+
+  # 2. Ledger file
+  if [[ -f "${LEDGER_FILE}" ]]; then
+    ledger_exists=true
+    # Check JSONL format
+    if command -v jq >/dev/null 2>&1; then
+      if tail -n 3 "${LEDGER_FILE}" | jq -c . >/dev/null 2>&1; then
+        ledger_jsonl_ok=true
+        entries_today=$(wc -l < "${LEDGER_FILE}" 2>/dev/null || echo "0")
+      else
+        LEDGER_OK=0
+      fi
+    fi
+  fi
+
+  # Output
+  if [[ "$JSON_MODE" == "true" ]]; then
+    jq -n \
+      --argjson streak_exists "$streak_exists" \
+      --argjson streak "$streak" \
+      --arg ledger_path "${LEDGER_FILE}" \
+      --argjson ledger_exists "$ledger_exists" \
+      --argjson ledger_jsonl_ok "$ledger_jsonl_ok" \
+      --argjson entries_today "$entries_today" \
+      --argjson ok "$([[ $LEDGER_OK -eq 1 ]] && echo true || echo false)" \
+      '{
+        streak_file_exists: $streak_exists,
+        streak: $streak,
+        ledger_today_path: $ledger_path,
+        ledger_exists: $ledger_exists,
+        ledger_jsonl_ok: $ledger_jsonl_ok,
+        entries_today: $entries_today,
+        ok: $ok
+      }'
+  else
+    log_info ""
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info "📊 MLS Streak & Ledger"
+    log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    log_info ""
+    log_info "1️⃣  Validation Streak:"
+    if [[ "$streak_exists" == "true" ]]; then
+      log_info "   ✅ Streak file exists"
+      log_info "   📊 Current streak: ${streak}"
+    else
+      log_info "   ⚠️  Streak file not found (will be created on first validation)"
+      log_info "   Location: ${STREAK_FILE}"
+    fi
+    log_info ""
+    log_info "2️⃣  Today's Ledger File (${TODAY}):"
+    if [[ "$ledger_exists" == "true" ]]; then
+      log_info "   ✅ Ledger file exists"
+      if [[ "$ledger_jsonl_ok" == "true" ]]; then
+        log_info "   ✅ JSONL format valid"
+        log_info "   📊 Entries today: ${entries_today}"
+      else
+        log_info "   ❌ JSONL format invalid"
+      fi
+    else
+      log_info "   ⚠️  Ledger file not found: ${LEDGER_FILE}"
+    fi
+  fi
+}
+
+# ============================================================
+# Main execution
+# ============================================================
+if [[ "$JSON_MODE" == "true" ]]; then
+  # JSON output mode
+  mcp_json=$(check_mcp_bridge)
+  mls_json=$(check_mls)
+  
+  overall_ok=$([[ $MCP_OK -eq 1 ]] && [[ $LEDGER_OK -eq 1 ]] && echo true || echo false)
+  
+  # Re-check MCP_OK and LEDGER_OK after functions run
+  mcp_ok_json=$(echo "$mcp_json" | jq -r '.ok')
+  mls_ok_json=$(echo "$mls_json" | jq -r '.ok')
+  overall_ok=$([[ "$mcp_ok_json" == "true" ]] && [[ "$mls_ok_json" == "true" ]] && echo true || echo false)
+  
+  jq -n \
+    --arg ts_ict "$TS_ICT" \
+    --argjson mcp_bridge "$mcp_json" \
+    --argjson mls "$mls_json" \
+    --argjson ok "$overall_ok" \
+    '{
+      ts_ict: $ts_ict,
+      mcp_bridge: $mcp_bridge,
+      mls: $mls,
+      ok: $ok
+    }'
 else
-  echo "   ⚠️  Ledger file not found: ${LEDGER_FILE}"
+  # Human-readable output mode
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "🔍 Phase 15 Quick Health Check"
+  log_info "🕓 TS (ICT): ${TS_ICT}"
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info ""
+  
+  check_mcp_bridge
+  check_mls
+  
+  log_info ""
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "📋 Quick Actions"
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info ""
+  log_info "Restart MCP Bridge:"
+  log_info "  $0 --restart-bridge"
+  log_info ""
+  log_info "View live logs:"
+  log_info "  $0 --tail-log"
+  log_info ""
+  log_info "Fix today's ledger:"
+  log_info "  $0 --fix-ledger-today"
+  log_info ""
+  log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 fi
 
 # ============================================================
-# Summary
+# Exit with appropriate code
 # ============================================================
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📋 Quick Actions"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "Restart MCP Bridge:"
-echo "  launchctl bootout gui/${USER_ID}/${SERVICE_MCP_BRIDGE} 2>/dev/null || true"
-echo "  launchctl bootstrap gui/${USER_ID} \"${PLIST_MCP_BRIDGE}\""
-echo "  launchctl kickstart -k gui/${USER_ID}/${SERVICE_MCP_BRIDGE}"
-echo ""
-echo "View live logs:"
-echo "  log stream --predicate 'subsystem CONTAINS \"02luka\" OR process == \"mcp-bridge\"' --info"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
+if [[ $MCP_OK -eq 1 ]] && [[ $LEDGER_OK -eq 1 ]]; then
+  if [[ "$JSON_MODE" == "false" ]]; then
+    log_info "✅ Phase15 Quick Health: OK"
+  fi
+  exit 0
+else
+  if [[ "$JSON_MODE" == "false" ]]; then
+    log_info "❌ Phase15 Quick Health: FAILED"
+    [[ $MCP_OK -ne 1 ]] && log_info "   - MCP Bridge issues detected"
+    [[ $LEDGER_OK -ne 1 ]] && log_info "   - Ledger issues detected"
+  fi
+  exit 1
+fi
