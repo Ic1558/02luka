@@ -12,7 +12,13 @@ mkdir -p "$(dirname "$OUT")"
 _now() { date -u +'%Y-%m-%dT%H:%M:%SZ'; }
 
 # ดึงรายการเอเจนต์
-mapfile -t ALL < <(launchctl list | awk 'NR>1{print $1"\t"$2"\t"$3}')
+# ใช้ while loop แทน mapfile เพื่อความเข้ากันได้กับ Zsh
+ALL=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+  [[ -z "$line" ]] && continue
+  ALL+=("$line")
+done < <(launchctl list | awk 'NR>1{print $1"\t"$2"\t"$3}')
+
 labels=()
 for line in "${ALL[@]}"; do
   label="${line##*$'\t'}"
