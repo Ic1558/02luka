@@ -366,6 +366,15 @@ jobs:
             echo "ℹ️ Not enforcing yet (need 3 consecutive greens)."
           fi
 
+      - name: Upload MLS validation streak
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mls-validation-streak
+          path: mls/status/mls_validation_streak.json
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Update status summary and commit
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash

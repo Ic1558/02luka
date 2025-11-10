@@ -1,6 +1,6 @@
 ---
-name: CLS CI
-run-name: "CLS CI (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
+name: Bridge Self-Check
+run-name: "Bridge Self-Check (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
 on:
   pull_request:
@@ -402,6 +402,15 @@ jobs:
           else
             echo "ℹ️ Not enforcing yet (need 3 consecutive greens)."
           fi
+
+      - name: Upload MLS validation streak
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mls-validation-streak
+          path: mls/status/mls_validation_streak.json
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Publish to Redis (if configured)
         if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
