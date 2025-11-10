@@ -10,7 +10,6 @@ env:
   TZ: Asia/Bangkok
   MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE || '0' }}
   PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
-  PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
 
 permissions:
   contents: read
