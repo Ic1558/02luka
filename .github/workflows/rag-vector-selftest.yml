@@ -28,4 +28,4 @@ jobs:
       (github.event.pull_request.head.repo.fork == false &&
        !contains(github.event.pull_request.title, '[skip-smoke]') &&
        contains(github.event.pull_request.labels.*.name, 'run-smoke'))
-    uses: ./.github/workflows/_reusable/rag-vector-selftest.yml
+    uses: .github/workflows/_reusable/rag-vector-selftest.yml
