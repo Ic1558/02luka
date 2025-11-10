@@ -42,12 +42,15 @@ jobs:
 
       - name: Validate config schema
         run: |
+          # Use draft-07 schema (ajv-cli@5 supports draft-07, not draft-2020-12)
           ajv validate --strict=true \
             -s config/schemas/delegation_watchdog.schema.json \
             -d config/delegation_watchdog.yaml || exit 1
 
       - name: Run watchdog
         run: |
+          # Use GITHUB_WORKSPACE instead of $HOME/02luka to ensure script writes to correct location
+          # Script writes to LUKA_HOME/hub/delegation_watchdog.json, so we need LUKA_HOME to match workspace
           LUKA_HOME="$GITHUB_WORKSPACE" node hub/delegation_watchdog.mjs
           test -f hub/delegation_watchdog.json
           node -e "JSON.parse(require('fs').readFileSync('hub/delegation_watchdog.json','utf8'))"
@@ -56,6 +59,7 @@ jobs:
         run: |
           chmod +x tools/cls_force_wo_hook.zsh
           # If any stuck=true → trigger (CI uses DRY_RUN=1 for safety)
+          # Use GITHUB_WORKSPACE to match the path used in Run watchdog step
           if jq -e '.items[]?|select(.stuck==true)' hub/delegation_watchdog.json >/dev/null; then
             echo "Stuck tasks detected → running hook (CI DRY_RUN=1)"
             DRY_RUN=1 LUKA_HOME="$GITHUB_WORKSPACE" tools/cls_force_wo_hook.zsh
