@@ -55,10 +55,12 @@ jobs:
           if [ -z "$VAL" ]; then VAL=0; fi
           echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
       - name: Check CI_STRICT
-        if: env.CI_STRICT != '1'
+        shell: bash
         run: |
-          echo "Soft-green: skipping selfcheck (set CI_STRICT=1 to enable)"
-          exit 0
+          if [ "${CI_STRICT}" != "1" ]; then
+            echo "Soft-green: skipping selfcheck (set CI_STRICT=1 to enable)"
+            exit 0
+          fi
       - name: Determine OS flag
         shell: bash
         run: |
