@@ -32,8 +32,9 @@ jobs:
       - name: Run Phase15 Quick Health (CI mode)
         run: |
           chmod +x ./tools/phase15_quick_health.zsh
-          ./tools/phase15_quick_health.zsh --json | tee health.json
+          ./tools/phase15_quick_health.zsh --json | tee health.json || true
         shell: bash
+        continue-on-error: true
 
       - name: Upload JSON artifact
         uses: actions/upload-artifact@v4
@@ -52,4 +53,3 @@ jobs:
             exit 1
           }
           echo "✅ Phase15 Quick Health: OK"
-
