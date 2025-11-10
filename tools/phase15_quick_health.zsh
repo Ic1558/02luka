@@ -133,9 +133,9 @@ check_mcp_bridge() {
   local permissions_ok=true
   local owner_ok=true
 
-  # Skip launchctl checks on non-macOS systems
-  if [[ "$(uname)" != "Darwin" ]]; then
-    # CI mode - skip MCP bridge checks
+  # Skip launchctl checks on non-macOS systems (but still emit JSON below)
+  local OS_NAME="$(uname)"
+  if [[ "${OS_NAME}" != "Darwin" ]]; then
     MCP_OK=1
     pid=""
     last_exit="unknown"
@@ -148,103 +148,108 @@ check_mcp_bridge() {
     program_ok=true
     permissions_ok=true
     owner_ok=true
-    return 0
   fi
 
-  # 1. Service Status & PID
-  if launchctl list | grep -q "${SERVICE_MCP_BRIDGE}"; then
-    pid=$(launchctl list | grep "${SERVICE_MCP_BRIDGE}" | awk '{print $1}')
-    if [[ "$pid" == "-" ]]; then
-      pid=""
-    fi
-  else
-    MCP_OK=0
-    plist_ok=false
-  fi
-
-  # 2. Service Details
-  if launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" >/dev/null 2>&1; then
-    last_exit=$(launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null | grep "LastExitStatus" | awk '{print $2}' || echo "unknown")
-    if [[ "$last_exit" != "0" ]] && [[ "$last_exit" != "unknown" ]]; then
-      MCP_OK=0
-    fi
-  fi
-
-  # 3. Plist Validation
-  if [[ ! -f "${PLIST_MCP_BRIDGE}" ]]; then
-    MCP_OK=0
-    plist_ok=false
-  else
-    # Check syntax
-    if ! plutil -lint "${PLIST_MCP_BRIDGE}" >/dev/null 2>&1; then
+  if [[ "${OS_NAME}" == "Darwin" ]]; then
+    # 1. Service Status & PID
+    if launchctl list | grep -q "${SERVICE_MCP_BRIDGE}"; then
+      pid=$(launchctl list | grep "${SERVICE_MCP_BRIDGE}" | awk '{print $1}')
+      if [[ "$pid" == "-" ]]; then
+        pid=""
+      fi
+    else
       MCP_OK=0
       plist_ok=false
     fi
+  fi
 
-    # Check Label
-    local label=$(grep -A 1 "<key>Label</key>" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/' || echo "")
-    if [[ "$label" != "${SERVICE_MCP_BRIDGE}" ]]; then
-      MCP_OK=0
-      label_ok=false
+  if [[ "${OS_NAME}" == "Darwin" ]]; then
+    # 2. Service Details
+    if launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" >/dev/null 2>&1; then
+      last_exit=$(launchctl print "gui/${USER_ID}/${SERVICE_MCP_BRIDGE}" 2>/dev/null | grep "LastExitStatus" | awk '{print $2}' || echo "unknown")
+      if [[ "$last_exit" != "0" ]] && [[ "$last_exit" != "unknown" ]]; then
+        MCP_OK=0
+      fi
     fi
+  fi
 
-    # Check ProgramArguments
-    if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}" && command -v jq >/dev/null 2>&1; then
-      local args_json=$(plutil -convert json -o - "${PLIST_MCP_BRIDGE}" 2>/dev/null | jq -r '.ProgramArguments[]?' 2>/dev/null)
-      if [[ -n "$args_json" ]]; then
-        local arg_count=0
-        while IFS= read -r arg; do
-          arg=$(echo "$arg" | sed "s|\$HOME|${HOME}|g")
-          if [[ $arg_count -eq 0 ]]; then
-            program="$arg"
-            if [[ ! -f "$arg" ]] && ! command -v "$arg" >/dev/null 2>&1; then
-              MCP_OK=0
-              program_ok=false
-            fi
-          elif [[ "$arg" != "-lc" ]] && [[ "$arg" != "-c" ]] && echo "$arg" | grep -qE "^${HOME}|^/"; then
-            script_path="$arg"
-            if [[ ! -f "$arg" ]]; then
-              # Script not found - but don't fail if service is running
-              if [[ -z "$pid" ]]; then
+  if [[ "${OS_NAME}" == "Darwin" ]]; then
+    # 3. Plist Validation
+    if [[ ! -f "${PLIST_MCP_BRIDGE}" ]]; then
+      MCP_OK=0
+      plist_ok=false
+    else
+      # Check syntax
+      if ! plutil -lint "${PLIST_MCP_BRIDGE}" >/dev/null 2>&1; then
+        MCP_OK=0
+        plist_ok=false
+      fi
+
+      # Check Label
+      local label=$(grep -A 1 "<key>Label</key>" "${PLIST_MCP_BRIDGE}" | grep "<string>" | sed 's/.*<string>\(.*\)<\/string>.*/\1/' || echo "")
+      if [[ "$label" != "${SERVICE_MCP_BRIDGE}" ]]; then
+        MCP_OK=0
+        label_ok=false
+      fi
+
+      # Check ProgramArguments
+      if grep -q "ProgramArguments" "${PLIST_MCP_BRIDGE}" && command -v jq >/dev/null 2>&1; then
+        local args_json=$(plutil -convert json -o - "${PLIST_MCP_BRIDGE}" 2>/dev/null | jq -r '.ProgramArguments[]?' 2>/dev/null)
+        if [[ -n "$args_json" ]]; then
+          local arg_count=0
+          while IFS= read -r arg; do
+            arg=$(echo "$arg" | sed "s|\$HOME|${HOME}|g")
+            if [[ $arg_count -eq 0 ]]; then
+              program="$arg"
+              if [[ ! -f "$arg" ]] && ! command -v "$arg" >/dev/null 2>&1; then
                 MCP_OK=0
                 program_ok=false
               fi
+            elif [[ "$arg" != "-lc" ]] && [[ "$arg" != "-c" ]] && echo "$arg" | grep -qE "^${HOME}|^/"; then
+              script_path="$arg"
+              if [[ ! -f "$arg" ]]; then
+                # Script not found - but don't fail if service is running
+                if [[ -z "$pid" ]]; then
+                  MCP_OK=0
+                  program_ok=false
+                fi
+              fi
+              break
             fi
-            break
-          fi
-          arg_count=$((arg_count + 1))
-        done <<< "$args_json"
+            arg_count=$((arg_count + 1))
+          done <<< "$args_json"
+        fi
       fi
-    fi
 
-    # Check KeepAlive
-    if grep -q "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}"; then
-      keep_alive=$(grep -A 1 "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
-    fi
-
-    # Check RunAtLoad
-    if grep -q "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}"; then
-      run_at_load=$(grep -A 1 "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
-    fi
-
-    # Check permissions (should be 600) - warning only, not critical
-    local perms=$(stat -f %Lp "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "0")
-    if [[ "$perms" -gt 600 ]]; then
-      # Don't fail if service is running - just warn
-      if [[ -z "$pid" ]]; then
-        MCP_OK=0
+      # Check KeepAlive
+      if grep -q "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}"; then
+        keep_alive=$(grep -A 1 "<key>KeepAlive</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
       fi
-      permissions_ok=false
-    fi
 
-    # Check owner (should be current user) - warning only, not critical
-    local owner=$(stat -f %Su "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "")
-    if [[ "$owner" != "$CURRENT_USER" ]]; then
-      # Don't fail if service is running - just warn
-      if [[ -z "$pid" ]]; then
-        MCP_OK=0
+      # Check RunAtLoad
+      if grep -q "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}"; then
+        run_at_load=$(grep -A 1 "<key>RunAtLoad</key>" "${PLIST_MCP_BRIDGE}" | grep -E "<true/>|<false/>" | grep -q "<true/>" && echo "true" || echo "false")
       fi
-      owner_ok=false
+
+      # Check permissions (should be 600) - warning only, not critical
+      local perms=$(stat -f %Lp "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "0")
+      if [[ "$perms" -gt 600 ]]; then
+        # Don't fail if service is running - just warn
+        if [[ -z "$pid" ]]; then
+          MCP_OK=0
+        fi
+        permissions_ok=false
+      fi
+
+      # Check owner (should be current user) - warning only, not critical
+      local owner=$(stat -f %Su "${PLIST_MCP_BRIDGE}" 2>/dev/null || echo "")
+      if [[ "$owner" != "$CURRENT_USER" ]]; then
+        # Don't fail if service is running - just warn
+        if [[ -z "$pid" ]]; then
+          MCP_OK=0
+        fi
+        owner_ok=false
+      fi
     fi
   fi
 
@@ -355,11 +360,9 @@ check_mls() {
 
   # Output
   if [[ "$JSON_MODE" == "true" ]]; then
-    # Ensure numeric values are valid JSON numbers
-    streak_num=${streak:-0}
-    entries_num=${entries_today:-0}
-    streak_num=$((streak_num + 0))
-    entries_num=$((entries_num + 0))
+    # Ensure numeric values are valid
+    streak_num=$((streak + 0))
+    entries_num=$((entries_today + 0))
     jq -n \
       --argjson streak_exists "$([[ "$streak_exists" == "true" ]] && echo true || echo false)" \
       --argjson streak "$streak_num" \
