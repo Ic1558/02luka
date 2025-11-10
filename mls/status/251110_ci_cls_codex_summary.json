@@ -19,24 +19,12 @@
       }
     }
   ],
-  "runs": {
-    "last_strict": {
-      "run_id": "19237209545",
-      "head_sha": "5b84bdfdb7346d08489f44d6d7646b7d6549bebd",
-      "conclusion": "success",
-      "artifact": {
-        "name": "selfcheck-report",
-        "path_local": "~/02luka/__artifacts__/cls_strict/selfcheck.json",
-        "size_bytes": 926,
-        "status": "healthy",
-        "summary": {
-          "total_agents": 1,
-          "healthy_count": 1,
-          "warning_count": 0,
-          "critical_count": 0,
-          "total_issues": 0
-        }
-      }
-    }
+  "summary": {
+    "total_runs": 19228950594,
+    "last_run_id": "19228950594",
+    "last_run_status": "success",
+    "last_run_sha": "845090da0c72d635ae9762c6586a1153fd6745d5",
+    "last_run_artifact": "selfcheck-report",
+    "last_run_artifact_size": 926
   }
 }
