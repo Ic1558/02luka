@@ -211,6 +211,13 @@ jobs:
           WF="cls-ci.yml"
           ART="selfcheck-report"
           ART_PATH="output/reports/selfcheck.json"
+          
+          # Get artifact size in bytes
+          if [ -f "$ART_PATH" ]; then
+            ART_SIZE=$(stat -f%z "$ART_PATH" 2>/dev/null || stat -c%s "$ART_PATH" 2>/dev/null || echo "0")
+          else
+            ART_SIZE="0"
+          fi
 
           # Build JSON once (compact, single-line), then append with a guaranteed newline
           ENTRY="$(jq -n -c \
@@ -226,6 +233,7 @@ jobs:
             --arg sha "$SHA" \
             --arg artifact "$ART" \
             --arg artifact_path "$ART_PATH" \
+            --argjson artifact_size "$ART_SIZE" \
             --arg author "gg" \
             --argjson confidence 0.9 \
             '
@@ -242,7 +250,8 @@ jobs:
                 workflow: $workflow,
                 sha: $sha,
                 artifact: $artifact,
-                artifact_path: $artifact_path
+                artifact_path: $artifact_path,
+                artifact_size: $artifact_size
               },
               links: { followup_id: null, wo_id: null },
               tags: ["bridge","strict","artifact","healthy"],
