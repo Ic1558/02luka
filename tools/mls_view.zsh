@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
 # ======================================================================
-# MLS Viewer — quick terminal viewer for MLS ledger entries
+# MLS Viewer — unified viewer for MLS ledger entries
+# Supports: daily JSONL ledgers + legacy database fallback
 # Usage:
 #   mls_view.zsh --today
-#   mls_view.zsh --by type=solution
-#   mls_view.zsh --producer=cls
-#   mls_view.zsh --grep 'artifact'
+#   mls_view.zsh --summary
+#   mls_view.zsh --producer=cls --limit=5
+#   mls_view.zsh --grep 'artifact' --type=solution
 # ======================================================================
 
 set -euo pipefail
 
-# Resolve script directory and repo root
+# Resolve script directory and repo root (CI-friendly, no $HOME dependency)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 LEDGER_DIR="$REPO_ROOT/mls/ledger"
 LEGACY_DB="$REPO_ROOT/g/knowledge/mls_lessons.jsonl"
+MLS_INDEX="$REPO_ROOT/g/knowledge/mls_index.json"
+
+# Timezone alignment with mls_add.zsh (Asia/Bangkok)
+export TZ="${TZ:-Asia/Bangkok}"
+
 # LEDGER_FILE will be computed after parsing CLI options
 
 # --- HELPERS ----------------------------------------------------------
@@ -200,73 +206,74 @@ if [ "$USING_LEGACY" = true ]; then
   }]')
 fi
 
-# --- APPLY FILTERS ----------------------------------------------------
+# --- APPLY FILTERS (OPTIMIZED: single jq pass) -----------------------
 
-# Filter by producer
-if [ -n "$PRODUCER" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.source.producer == \"$PRODUCER\")]")
+# Build jq filter expression dynamically to reduce subprocess calls
+JQ_FILTER='.'
+
+# Start with array selection
+if [ -n "$PRODUCER" ] || [ -n "$TYPE" ] || [ -n "$CONTEXT" ] || [ -n "$FILTER_BY" ] || [ -n "$GREP_PATTERN" ]; then
+  JQ_FILTER='[.[] | select('
+  FILTERS=()
+
+  [ -n "$PRODUCER" ] && FILTERS+=("(.source.producer == \"$PRODUCER\")")
+  [ -n "$TYPE" ] && FILTERS+=("(.type == \"$TYPE\")")
+  [ -n "$CONTEXT" ] && FILTERS+=("(.source.context == \"$CONTEXT\")")
+
+  if [ -n "$FILTER_BY" ]; then
+    FIELD="${FILTER_BY%%=*}"
+    VALUE="${FILTER_BY#*=}"
+    FILTERS+=("(.\"$FIELD\" == \"$VALUE\")")
+  fi
+
+  if [ -n "$GREP_PATTERN" ]; then
+    FILTERS+=("((.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or (.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or ((.tags | type == \"array\") and (.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\"))))")
+  fi
+
+  # Join filters with AND operator
+  FILTER_EXPR=""
+  for i in "${!FILTERS[@]}"; do
+    if [ $i -eq 0 ]; then
+      FILTER_EXPR="${FILTERS[$i]}"
+    else
+      FILTER_EXPR="${FILTER_EXPR} and ${FILTERS[$i]}"
+    fi
+  done
+
+  JQ_FILTER="${JQ_FILTER}${FILTER_EXPR})]"
+else
+  JQ_FILTER='.'
 fi
 
-# Filter by type
-if [ -n "$TYPE" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.type == \"$TYPE\")]")
-fi
+# Add limit if specified
+[ -n "$LIMIT" ] && JQ_FILTER="${JQ_FILTER} | .[:$LIMIT]"
 
-# Filter by context
-if [ -n "$CONTEXT" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.source.context == \"$CONTEXT\")]")
-fi
-
-# Filter by --by field=value
-if [ -n "$FILTER_BY" ]; then
-  FIELD="${FILTER_BY%%=*}"
-  VALUE="${FILTER_BY#*=}"
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.\"$FIELD\" == \"$VALUE\")]")
-fi
-
-# Grep in title/summary/tags
-if [ -n "$GREP_PATTERN" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(
-    (.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or
-    (.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or
-    ((.tags | type == \"array\") and (.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\")))
-  )]")
-fi
-
-# Limit
-if [ -n "$LIMIT" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq ".[:$LIMIT]")
-fi
+# Apply all filters in ONE jq call
+ENTRIES=$(echo "$ENTRIES" | jq "$JQ_FILTER")
 
 # --- OUTPUT -----------------------------------------------------------
 
+# Check if we have any entries after filtering
+if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
+  echo "ℹ️  No entries match the specified filters"
+  exit 0
+fi
+
 if [ "$SHOW_SUMMARY" = true ]; then
-  # Show summary statistics
-  COUNT=$(echo "$ENTRIES" | jq 'length')
-  echo "📊 MLS Summary Statistics"
-  echo "========================="
-  echo ""
-  echo "Total entries: $COUNT"
-  echo ""
-
-  echo "By Type:"
-  echo "$ENTRIES" | jq -r 'group_by(.type) | map({type: .[0].type, count: length}) | sort_by(-.count) | .[] | "  \(.type): \(.count)"'
-  echo ""
-
-  echo "By Producer:"
-  echo "$ENTRIES" | jq -r 'group_by(.source.producer) | map({producer: .[0].source.producer, count: length}) | sort_by(-.count) | .[] | "  \(.producer): \(.count)"'
-  echo ""
-
-  echo "By Context:"
-  echo "$ENTRIES" | jq -r 'group_by(.source.context) | map({context: .[0].source.context, count: length}) | sort_by(-.count) | .[] | "  \(.context): \(.count)"'
-  echo ""
-
-  # Show date range
-  FIRST_TS=$(echo "$ENTRIES" | jq -r 'map(.ts) | min')
-  LAST_TS=$(echo "$ENTRIES" | jq -r 'map(.ts) | max')
-  echo "Date Range:"
-  echo "  First: $FIRST_TS"
-  echo "  Last:  $LAST_TS"
+  # Show summary statistics (optimized: single jq call for all stats)
+  STATS=$(echo "$ENTRIES" | jq -r '
+    . as $entries |
+    {
+      count: ($entries | length),
+      by_type: ($entries | group_by(.type) | map({type: .[0].type, count: length}) | sort_by(-.count)),
+      by_producer: ($entries | group_by(.source.producer) | map({producer: .[0].source.producer, count: length}) | sort_by(-.count)),
+      by_context: ($entries | group_by(.source.context) | map({context: .[0].source.context, count: length}) | sort_by(-.count)),
+      first_ts: ($entries | map(.ts) | min),
+      last_ts: ($entries | map(.ts) | max)
+    } |
+    "📊 MLS Summary Statistics\n=========================\n\nTotal entries: \(.count)\n\nBy Type:\n\(.by_type | map("  \(.type): \(.count)") | join("\n"))\n\nBy Producer:\n\(.by_producer | map("  \(.producer): \(.count)") | join("\n"))\n\nBy Context:\n\(.by_context | map("  \(.context): \(.count)") | join("\n"))\n\nDate Range:\n  First: \(.first_ts)\n  Last:  \(.last_ts)"
+  ')
+  echo -e "$STATS"
 
 elif [ "$JSON_OUTPUT" = true ]; then
   echo "$ENTRIES" | jq '.'
@@ -283,3 +290,12 @@ else
     Tags: \(.tags | join(", "))
     ---"'
 fi
+
+# ======================================================================
+# Performance Notes:
+# - Single jq pass for all filters (was 5+ separate calls)
+# - Summary stats computed in one jq invocation
+# - Repo-relative paths (CI-friendly, no $HOME dependency)
+# - TZ-aware date handling aligned with mls_add.zsh
+# - Legacy format auto-normalized to modern schema
+# ======================================================================
