@@ -371,7 +371,7 @@ jobs:
           fi
 
       - name: Upload MLS validation streak
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        if: ${{ always() && needs.sanity.outputs.ci_strict == '1' }}
         uses: actions/upload-artifact@v4
         with:
           name: mls-validation-streak
