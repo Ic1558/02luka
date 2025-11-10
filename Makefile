@@ -1,4 +1,4 @@
-.PHONY: help test smoke clean proof validate-zones
+.PHONY: help test smoke clean proof validate-zones quick-health quick-health-json
 
 help: ## Show this help message
 	@echo "Available targets:"
@@ -39,6 +39,12 @@ install: ## Install CLS hooks (if not already installed)
 	else \
 		echo "❌ CLS hooks not found. Please run installation script."; \
 	fi
+
+quick-health: ## Run Phase15 Quick Health Check (human-readable)
+	@TZ=Asia/Bangkok ./tools/phase15_quick_health.zsh
+
+quick-health-json: ## Run Phase15 Quick Health Check (JSON output)
+	@TZ=Asia/Bangkok ./tools/phase15_quick_health.zsh --json | jq .
 
 status: ## Show system status
 	@echo "═══════════════════════════════════════"
