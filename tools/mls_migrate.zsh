@@ -61,44 +61,34 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   [[ -z "$ts" ]] && ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   day="$(derive_day "$ts")"
 
-  
-  
-  new_json="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -c --arg ts "" '{
- .
-  qq(# --- validation & histograms ---
-) .
-  qq(if [[ -n "" ]]; then
-) .
-  qq(  if [[ -n "${seen_ts[]-}" ]]; then
-) .
-  qq(    ((dup_ts++)); echo "warn: duplicate ts " >> ""
-) .
-  qq(  else
-) .
-  qq(    seen_ts[]=1
-) .
-  qq(  fi
-) .
-  qq(fi
+  # --- validation & histograms ---
+  if [[ -n "$ts" ]]; then
+    if [[ -n "${seen_ts[$ts]-}" ]]; then
+      ((dup_ts++))
+      echo "warn: duplicate ts $ts" >> "$REPORT"
+    else
+      seen_ts[$ts]=1
+    fi
+  fi
 
-) .
-  qq(title_ok="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.title | tostring | length')") . "
-" .
-  qq(summary_ok="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.summary | tostring | length')") . "
-" .
-  qq(if [[ "" -eq 0 || "" -eq 0 ]]; then ((missing_critical++)); echo "warn: missing critical fields @ " >> ""; fi
+  title_ok="$(echo "$line" | jq -r '.title | tostring | length')"
+  summary_ok="$(echo "$line" | jq -r '.summary | tostring | length')"
+  if [[ "$title_ok" -eq 0 || "$summary_ok" -eq 0 ]]; then
+    ((missing_critical++))
+    echo "warn: missing critical fields @ $ts" >> "$REPORT"
+  fi
 
-) .
-  qq(tkey="20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400echo "" | jq -r '.type')") . "
-" .
-  qq([[ -z "" || "" == "null" ]] && tkey="(unset)") . "
-" .
-  qq((( type_hist[]++ )); (( day_hist[]++ ))
+  tkey="$(echo "$line" | jq -r '.type')"
+  [[ -z "$tkey" || "$tkey" == "null" ]] && tkey="(unset)"
+  (( type_hist[$tkey]++ ))
+  (( day_hist[$day]++ ))
 
-) .
-  qq(if [[ "20 20 12 61 79 80 81 98 399 702 33 100 204 250 395 398 400wc -l < "" | tr -d ' ')" -lt 5 ]]; then printf '%s\n' "" >> ""; fi
-)
-    ts: ,
+  if [[ "$(wc -l < "$SAMPLE" | tr -d ' ')" -lt 5 ]]; then
+    printf '%s\n' "$line" >> "$SAMPLE"
+  fi
+
+  new_json="$(echo "$line" | jq -c --arg ts "$ts" '{
+    ts: $ts,
     type: (.type // "improvement"),
     title: (.title // "Untitled"),
     summary: (.summary // .description // "—"),
@@ -137,7 +127,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     tags: (.tags // []),
     author: (.author // "clc"),
     confidence: ((.confidence // 0.8) | tonumber)
-  }' )"
+  }')"
 
 
   if [[ "$MODE" == "--dry-run" ]]; then
