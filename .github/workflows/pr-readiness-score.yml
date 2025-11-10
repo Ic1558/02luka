@@ -1,24 +1,30 @@
+---
 name: PR Readiness Score
+run-name: "PR Score (#${{ github.event.pull_request.number || 'manual' }}): ${{ github.event_name }}"
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
-    branches: [main, develop]
   workflow_dispatch: {}
 
 permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: pr-score-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   score:
+    name: Compute PR readiness score
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history for accurate analysis
+          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,5 +44,4 @@ jobs:
         if: ${{ !github.event.pull_request.head.repo.fork }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          node tools/pr_score.mjs
+        run: node tools/pr_score.mjs
