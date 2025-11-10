@@ -1,41 +1,73 @@
+---
 name: PR Readiness Score
+run-name: "PR Score (#${{ github.event.pull_request.number || inputs.pr_number || 'manual' }}): ${{ github.event_name }}"
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
-    branches: [main, develop]
-  workflow_dispatch: {}
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+    # Note: No 'branches:' filter = scores PRs targeting ANY branch
+    # (main, develop, feature/*, release/*, hotfix/*, etc.)
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to score (for manual runs)'
+        required: false
+        type: number
 
 permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: pr-score-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   score:
+    name: Compute PR readiness score
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Skip draft PRs - they're not ready for scoring yet
+    if: ${{ github.event.pull_request.draft != true }}
+    outputs:
+      score: ${{ steps.compute.outputs.score }}
+      label: ${{ steps.compute.outputs.label }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history for accurate analysis
+          fetch-depth: 1
+          persist-credentials: false
+          # Sparse checkout - only fetch what we need
+          sparse-checkout: |
+            .github/workflows
+            config
+            tools
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         if: ${{ !github.event.pull_request.head.repo.fork }}
-        run: npm ci --omit=dev
+        run: npm ci --omit=dev --prefer-offline --no-audit
 
       - name: Skip scoring for forked PR
         if: ${{ github.event.pull_request.head.repo.fork }}
-        run: echo "Skipping readiness scoring for forks due to read-only token permissions."
+        run: |
+          echo "::notice ::Skipping readiness scoring for forked PRs (read-only token permissions)"
+          echo "score=N/A" >> $GITHUB_OUTPUT
+          echo "label=fork" >> $GITHUB_OUTPUT
 
       - name: Compute readiness score and comment
+        id: compute
         if: ${{ !github.event.pull_request.head.repo.fork }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          node tools/pr_score.mjs
+        run: node tools/pr_score.mjs

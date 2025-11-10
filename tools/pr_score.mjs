@@ -101,23 +101,53 @@ function getHeaders(token) {
   };
 }
 
-async function ghRequest(method, url, token, body) {
-  const response = await fetch(url, {
-    method,
-    headers: {
-      ...getHeaders(token),
-      "Content-Type": body ? "application/json" : undefined,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    fatal(`GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`);
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function ghRequest(method, url, token, body, retries = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          ...getHeaders(token),
+          "Content-Type": body ? "application/json" : undefined,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        // Retry on 5xx errors or rate limits
+        if (response.status >= 500 || response.status === 429) {
+          lastError = new Error(
+            `GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`
+          );
+          if (attempt < retries - 1) {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+            console.error(`::warning ::Retrying after ${delay}ms (attempt ${attempt + 1}/${retries})...`);
+            await sleep(delay);
+            continue;
+          }
+        }
+        fatal(`GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`);
+      }
+      if (response.status === 204) {
+        return null;
+      }
+      return response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        console.error(`::warning ::Network error, retrying after ${delay}ms (attempt ${attempt + 1}/${retries})...`);
+        await sleep(delay);
+        continue;
+      }
+    }
   }
-  if (response.status === 204) {
-    return null;
-  }
-  return response.json();
+  fatal("GitHub API request failed after retries", lastError);
 }
 
 async function paginate(url, token) {
@@ -320,13 +350,20 @@ async function upsertComment(token, owner, repo, prNumber, body) {
   const prNumber = event.number || event.pull_request.number;
   const { owner, repo } = getRepoInfo();
   const prUrl = `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`;
+
+  // Parallel fetch: get PR data first, then parallelize files and status
+  const startTime = Date.now();
   const pr = await ghRequest("GET", prUrl, token);
-  const files = await paginate(`${prUrl}/files?per_page=100`, token);
-  const status = await ghRequest(
-    "GET",
-    `https://api.github.com/repos/${owner}/${repo}/commits/${pr.head.sha}/status`,
-    token
-  );
+
+  // Fetch files and status in parallel (both depend on pr.head.sha)
+  const [files, status] = await Promise.all([
+    paginate(`${prUrl}/files?per_page=100`, token),
+    ghRequest(
+      "GET",
+      `https://api.github.com/repos/${owner}/${repo}/commits/${pr.head.sha}/status`,
+      token
+    ),
+  ]);
 
   const ci = evaluateCiStatus(status.state);
   const scope = evaluateScopeRisk(files, config.scope_risk);
@@ -433,8 +470,54 @@ async function upsertComment(token, owner, repo, prNumber, body) {
 
   const commentBody = buildComment(totalScore, breakdown, labelName, jsonPayload);
 
-  await ensureLabel(token, owner, repo, prNumber, labelName);
-  await upsertComment(token, owner, repo, prNumber, commentBody);
+  // Update label and comment in parallel (independent operations)
+  await Promise.all([
+    ensureLabel(token, owner, repo, prNumber, labelName),
+    upsertComment(token, owner, repo, prNumber, commentBody),
+  ]);
 
-  console.log(`Readiness score for PR #${prNumber}: ${formatScore(totalScore)}`);
+  // Output for GitHub Actions
+  const finalScore = formatScore(totalScore);
+  const executionTime = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`Readiness score for PR #${prNumber}: ${finalScore} (computed in ${executionTime}s)`);
+  console.log(
+    `::notice title=PR Readiness Score::Score: ${finalScore}/100 | Label: ${labelName} | Time: ${executionTime}s`
+  );
+
+  // Write to GITHUB_OUTPUT if available
+  const outputFile = process.env.GITHUB_OUTPUT;
+  if (outputFile) {
+    const outputs = [
+      `score=${finalScore}`,
+      `label=${labelName}`,
+      `pr_number=${prNumber}`,
+      `execution_time=${executionTime}`,
+    ].join("\n");
+    await fs.appendFile(outputFile, `${outputs}\n`);
+  }
+
+  // Write to GITHUB_STEP_SUMMARY if available
+  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryFile) {
+    // Determine emoji based on score
+    const emoji =
+      finalScore >= 90 ? "🟢" : finalScore >= 80 ? "🟡" : finalScore >= 70 ? "🟠" : "🔴";
+    const summaryLines = [
+      `## ${emoji} PR Readiness Score: ${finalScore}/100`,
+      "",
+      `**Label:** \`${labelName}\` | **PR:** #${prNumber} | **Computed in:** ${executionTime}s`,
+      "",
+      "### Score Breakdown",
+      "",
+      "| Signal | Weight | Score | Contribution | Notes |",
+      "| --- | --- | --- | --- | --- |",
+      ...breakdown.map(
+        (item) =>
+          `| ${item.name} | ${(item.weight * 100).toFixed(0)}% | ${item.raw.toFixed(2)} | ${item.contribution.toFixed(2)} | ${item.notes || "-"} |`
+      ),
+      "",
+      `**Total:** ${finalScore}/100`,
+    ].join("\n");
+    await fs.appendFile(summaryFile, `${summaryLines}\n`);
+  }
 })();
