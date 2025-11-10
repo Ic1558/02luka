@@ -77,13 +77,8 @@ jobs:
           sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
           sudo chmod +x /usr/local/bin/yq
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install root npm packages
-        run: npm ci || echo "⚠️ No root package-lock.json, skipping"
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
 
       - name: Install boss-api dependencies
         run: |

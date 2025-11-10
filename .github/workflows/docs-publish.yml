@@ -34,9 +34,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/node-setup
         with:
-          node-version: '18'
+          install-dependencies: 'false'
 
       - name: Create output directory
         run: mkdir -p dist/docs

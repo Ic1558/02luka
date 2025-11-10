@@ -20,10 +20,10 @@ jobs:
         with:
           fetch-depth: 0 # Full history for accurate analysis
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
         with:
-          node-version: '20'
+          install-dependencies: 'false'
 
       - name: Install dependencies
         if: ${{ !github.event.pull_request.head.repo.fork }}

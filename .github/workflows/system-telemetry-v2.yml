@@ -54,12 +54,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
 
       - name: Install system dependencies
         run: |
@@ -74,17 +70,6 @@ jobs:
           mkdir -p g/schemas
           mkdir -p logs
           echo "✅ Directories created"
-
-      - name: Install Node.js dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          elif [ -f package.json ]; then
-            npm install --no-audit --no-fund
-          else
-            npm install ajv ajv-formats --no-audit --no-fund
-          fi
-        shell: bash
 
       - name: Verify configuration files
         run: |
