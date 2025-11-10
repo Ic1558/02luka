@@ -11,8 +11,7 @@
 set -euo pipefail
 
 LEDGER_DIR="$HOME/02luka/mls/ledger"
-DAY="$(date +%Y-%m-%d)"
-LEDGER="$LEDGER_DIR/${DAY}.jsonl"
+# LEDGER_FILE will be computed after parsing CLI options
 
 # --- HELPERS ----------------------------------------------------------
 
@@ -27,6 +26,8 @@ Usage: mls_view.zsh [OPTIONS]
 
 Options:
   --today              Show all entries from today
+  --date YYYY-MM-DD    Pick a specific ledger date (local timezone)
+  --file PATH          Read from an explicit ledger file (overrides --date/--today)
   --by TYPE=VALUE      Filter by field (e.g., type=solution, producer=cls)
   --producer=PROD      Filter by producer (cls, codex, clc, gemini)
   --grep PATTERN       Search in title/summary/tags
@@ -41,6 +42,8 @@ Examples:
   mls_view.zsh --producer=cls --limit=5
   mls_view.zsh --grep 'artifact'
   mls_view.zsh --type=solution --context=bridge
+  mls_view.zsh --date 2025-11-10
+  mls_view.zsh --file "$HOME/02luka/mls/ledger/2025-11-10.jsonl"
 EOF
   exit 0
 }
@@ -55,6 +58,8 @@ TYPE=""
 CONTEXT=""
 LIMIT=""
 JSON_OUTPUT=false
+DATE_OVERRIDE=""
+FILE_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -90,6 +95,22 @@ while [[ $# -gt 0 ]]; do
       JSON_OUTPUT=true
       shift
       ;;
+    --date)
+      DATE_OVERRIDE="$2"
+      shift 2
+      ;;
+    --date=*)
+      DATE_OVERRIDE="${1#*=}"
+      shift
+      ;;
+    --file)
+      FILE_PATH="$2"
+      shift 2
+      ;;
+    --file=*)
+      FILE_PATH="${1#*=}"
+      shift
+      ;;
     --help|-h)
       usage
       ;;
@@ -100,20 +121,39 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# --- RESOLVE LEDGER FILE --------------------------------------------
+
+# Precedence: --file > --date > --today/default
+LEDGER_FILE=""
+if [[ -n "$FILE_PATH" ]]; then
+  LEDGER_FILE="$FILE_PATH"
+else
+  if [[ -n "$DATE_OVERRIDE" ]]; then
+    if ! echo "$DATE_OVERRIDE" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+      die "Invalid --date format. Use YYYY-MM-DD"
+    fi
+    DAY="$DATE_OVERRIDE"
+  else
+    # --today or default to today
+    DAY="$(date +%Y-%m-%d)"
+  fi
+  LEDGER_FILE="$LEDGER_DIR/${DAY}.jsonl"
+fi
+
 # --- VALIDATE ---------------------------------------------------------
 
-if [ ! -f "$LEDGER" ]; then
-  die "Ledger file not found: $LEDGER"
+if [ ! -f "$LEDGER_FILE" ]; then
+  die "Ledger file not found: $LEDGER_FILE"
 fi
 
 command -v jq >/dev/null || die "jq not found"
 
 # --- READ ENTRIES -----------------------------------------------------
 
-ENTRIES=$(awk 'NF' "$LEDGER" | jq -s '.')
+ENTRIES=$(awk 'NF' "$LEDGER_FILE" | jq -s '.')
 
 if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
-  echo "ℹ️  No entries found in $LEDGER"
+  echo "ℹ️  No entries found in $LEDGER_FILE"
   exit 0
 fi
 
@@ -168,4 +208,3 @@ else
     Tags: \(.tags | join(", "))
     ---"'
 fi
-
