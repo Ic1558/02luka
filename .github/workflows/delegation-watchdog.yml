@@ -48,7 +48,7 @@ jobs:
 
       - name: Run watchdog
         run: |
-          LUKA_HOME="$HOME/02luka" node hub/delegation_watchdog.mjs
+          LUKA_HOME="$GITHUB_WORKSPACE" node hub/delegation_watchdog.mjs
           test -f hub/delegation_watchdog.json
           node -e "JSON.parse(require('fs').readFileSync('hub/delegation_watchdog.json','utf8'))"
 
@@ -58,7 +58,7 @@ jobs:
           # If any stuck=true → trigger (CI uses DRY_RUN=1 for safety)
           if jq -e '.items[]?|select(.stuck==true)' hub/delegation_watchdog.json >/dev/null; then
             echo "Stuck tasks detected → running hook (CI DRY_RUN=1)"
-            DRY_RUN=1 LUKA_HOME="$HOME/02luka" tools/cls_force_wo_hook.zsh
+            DRY_RUN=1 LUKA_HOME="$GITHUB_WORKSPACE" tools/cls_force_wo_hook.zsh
           else
             echo "No stuck tasks."
           fi
