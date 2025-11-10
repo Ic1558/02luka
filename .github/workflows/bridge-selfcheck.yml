@@ -17,8 +17,12 @@ on:
 permissions:
   contents: write
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
-  group: cls-ci-${{ github.ref }}
+  group: bridge-selfcheck-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
