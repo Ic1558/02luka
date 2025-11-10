@@ -355,9 +355,11 @@ check_mls() {
 
   # Output
   if [[ "$JSON_MODE" == "true" ]]; then
-    # Ensure numeric values are valid
-    streak_num=$((streak + 0))
-    entries_num=$((entries_today + 0))
+    # Ensure numeric values are valid JSON numbers
+    streak_num=${streak:-0}
+    entries_num=${entries_today:-0}
+    streak_num=$((streak_num + 0))
+    entries_num=$((entries_num + 0))
     jq -n \
       --argjson streak_exists "$([[ "$streak_exists" == "true" ]] && echo true || echo false)" \
       --argjson streak "$streak_num" \
