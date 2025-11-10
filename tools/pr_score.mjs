@@ -101,23 +101,53 @@ function getHeaders(token) {
   };
 }
 
-async function ghRequest(method, url, token, body) {
-  const response = await fetch(url, {
-    method,
-    headers: {
-      ...getHeaders(token),
-      "Content-Type": body ? "application/json" : undefined,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    fatal(`GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`);
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function ghRequest(method, url, token, body, retries = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          ...getHeaders(token),
+          "Content-Type": body ? "application/json" : undefined,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        // Retry on 5xx errors or rate limits
+        if (response.status >= 500 || response.status === 429) {
+          lastError = new Error(
+            `GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`
+          );
+          if (attempt < retries - 1) {
+            const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+            console.error(`::warning ::Retrying after ${delay}ms (attempt ${attempt + 1}/${retries})...`);
+            await sleep(delay);
+            continue;
+          }
+        }
+        fatal(`GitHub API request failed: ${method} ${url} -> ${response.status} ${response.statusText}\n${text}`);
+      }
+      if (response.status === 204) {
+        return null;
+      }
+      return response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt < retries - 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000);
+        console.error(`::warning ::Network error, retrying after ${delay}ms (attempt ${attempt + 1}/${retries})...`);
+        await sleep(delay);
+        continue;
+      }
+    }
   }
-  if (response.status === 204) {
-    return null;
-  }
-  return response.json();
+  fatal("GitHub API request failed after retries", lastError);
 }
 
 async function paginate(url, token) {
@@ -436,5 +466,38 @@ async function upsertComment(token, owner, repo, prNumber, body) {
   await ensureLabel(token, owner, repo, prNumber, labelName);
   await upsertComment(token, owner, repo, prNumber, commentBody);
 
-  console.log(`Readiness score for PR #${prNumber}: ${formatScore(totalScore)}`);
+  // Output for GitHub Actions
+  const finalScore = formatScore(totalScore);
+  console.log(`Readiness score for PR #${prNumber}: ${finalScore}`);
+  console.log(`::notice title=PR Readiness Score::Score: ${finalScore}/100 | Label: ${labelName}`);
+
+  // Write to GITHUB_OUTPUT if available
+  const outputFile = process.env.GITHUB_OUTPUT;
+  if (outputFile) {
+    const outputs = [
+      `score=${finalScore}`,
+      `label=${labelName}`,
+      `pr_number=${prNumber}`,
+    ].join("\n");
+    await fs.appendFile(outputFile, `${outputs}\n`);
+  }
+
+  // Write to GITHUB_STEP_SUMMARY if available
+  const summaryFile = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryFile) {
+    const summaryLines = [
+      `## PR Readiness Score: ${finalScore}/100`,
+      "",
+      `**Label:** \`${labelName}\``,
+      `**PR:** #${prNumber}`,
+      "",
+      "| Signal | Weight | Score | Contribution |",
+      "| --- | --- | --- | --- |",
+      ...breakdown.map(
+        (item) =>
+          `| ${item.name} | ${(item.weight * 100).toFixed(0)}% | ${item.raw.toFixed(2)} | ${item.contribution.toFixed(2)} |`
+      ),
+    ].join("\n");
+    await fs.appendFile(summaryFile, `${summaryLines}\n`);
+  }
 })();
