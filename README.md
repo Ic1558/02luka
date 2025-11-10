@@ -1,6 +1,7 @@
 # 02luka Automation Console
 
 ![CLS CI](https://github.com/Ic1558/02luka/actions/workflows/cls-ci.yml/badge.svg)
+![LaunchAgent Self-Recovery Check](https://github.com/Ic1558/02luka/actions/workflows/launchd-selfcheck.yml/badge.svg?branch=main)
 
 ## Dashboard Service
 - LaunchAgent: `~/Library/LaunchAgents/com.02luka.dashboard.plist`
