@@ -67,6 +67,8 @@ for rec in "${labels[@]}"; do
 done
 
 # สร้าง JSON (ใช้ Python เพื่อความปลอดภัยในการ escape)
+# ใช้ single quotes เพื่อป้องกัน variable expansion ใน heredoc
+NOW="$(_now)"
 python3 - <<PY > "$OUT"
 import json, os, sys
 rows=[]
@@ -85,7 +87,7 @@ for line in open("${tmp}", "r"):
 doc = {
     "_meta": {
         "created_by": "GG_Agent_02luka",
-        "created_at": "${_now()}",
+        "created_at": "${NOW}",
         "source": "tools/launchd_selfcheck.zsh",
         "prefix": os.environ.get("LABEL_PREFIX","com.02luka."),
         "total": len(rows),
