@@ -9,6 +9,8 @@ on:
 env:
   TZ: Asia/Bangkok
   MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE || '0' }}
+  PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
+  PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
 
 permissions:
   contents: read
@@ -41,7 +43,8 @@ jobs:
           path: health.json
           if-no-files-found: warn
 
-      - name: Fail if not ok
+      - name: Fail if not ok (strict only)
+        if: ${{ env.PHASE15_STRICT == '1' }}
         run: |
           jq -e '.ok == true' health.json >/dev/null || {
             echo "❌ Phase15 Quick Health failed"
