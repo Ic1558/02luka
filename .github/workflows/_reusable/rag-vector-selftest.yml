@@ -82,6 +82,58 @@ jobs:
           chmod +x tools/*.zsh
           chmod +x tools/*.py
 
+      - name: "Debug: Verify script versions"
+        shell: bash
+        run: |
+          echo "=== Checking script versions ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== Checking vector_build.zsh ==="
+          if [ -f tools/vector_build.zsh ]; then
+            echo "✅ vector_build.zsh exists"
+            echo "First 25 lines:"
+            head -25 tools/vector_build.zsh
+            echo ""
+            echo "Checking for problematic commands (excluding comments):"
+            if grep -E "^[^#]*mapfile" tools/vector_build.zsh >/dev/null 2>&1; then
+              echo "❌ ERROR: mapfile command found in vector_build.zsh!"
+              grep -n "^[^#]*mapfile" tools/vector_build.zsh
+              exit 1
+            else
+              echo "✅ No mapfile command found"
+            fi
+          else
+            echo "❌ ERROR: vector_build.zsh not found!"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking rag_vector_selftest.zsh ==="
+          if [ -f tools/rag_vector_selftest.zsh ]; then
+            echo "✅ rag_vector_selftest.zsh exists"
+            echo "First 25 lines:"
+            head -25 tools/rag_vector_selftest.zsh
+            echo ""
+            echo "Checking for problematic commands (excluding comments):"
+            if grep -E "^[^#]*mapfile" tools/rag_vector_selftest.zsh >/dev/null 2>&1; then
+              echo "❌ ERROR: mapfile command found in rag_vector_selftest.zsh!"
+              grep -n "^[^#]*mapfile" tools/rag_vector_selftest.zsh
+              exit 1
+            else
+              echo "✅ No mapfile command found"
+            fi
+          else
+            echo "❌ ERROR: rag_vector_selftest.zsh not found!"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking required Python script ==="
+          if [ -f tools/vector_index.py ]; then
+            echo "✅ vector_index.py exists"
+          else
+            echo "⚠️  WARNING: vector_index.py not found (may be created during build)"
+          fi
+
       - name: Build vector index
         run: |
           export LUKA_HOME=$PWD
