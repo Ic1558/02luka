@@ -2,6 +2,12 @@ name: _reusable-router-selftest
 
 on:
   workflow_call:
+    inputs:
+      node_version:
+        description: Node.js version for router AKR self-test
+        required: false
+        type: string
+        default: '20'
 
 jobs:
   sanity:
@@ -60,6 +66,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
 
       - name: Install system dependencies
         run: |
