@@ -93,39 +93,97 @@ jobs:
             echo "⚠️  Warning: _meta.config_path points to a non-existent file in CI: $CFG"
           fi
 
+      - name: Check if branch is protected
+        id: check-protected
+        run: |
+          # Check if branch protection is enabled (non-fatal check)
+          if [ "${{ github.ref_protected }}" = "true" ]; then
+            echo "protected=true" >> "$GITHUB_OUTPUT"
+            echo "🔒 Branch is protected - push may require status checks"
+          else
+            echo "protected=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Commit and push index.json
         working-directory: code-repo
         run: |
+          set -eo pipefail
+          
           git config user.name "02LUKA Bot"
           git config user.email "bot@02luka.local"
           
           # Stage without modifying index to detect changes against HEAD
           git add -N hub/index.json hub/mcp_registry.json 2>/dev/null || true
+          
           if git status --porcelain hub/index.json hub/mcp_registry.json | grep -q .; then
+            echo "📝 Changes detected in hub files"
             git add hub/index.json hub/mcp_registry.json
-            git commit -m "chore(hub): Auto-update index & MCP registry [skip ci]" -m "🤖 Automated update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
-
-            # Retry push with pull-rebase on race condition
-            # Note: Protected branch may require status checks; push failures are non-fatal for auto-updates
-            for i in 1 2 3; do
-              if git push origin main; then
-                echo "✅ Push succeeded on attempt $i"
+            
+            # Commit changes (non-fatal - may fail if nothing to commit)
+            git commit -m "chore(hub): Auto-update index & MCP registry [skip ci]" \
+              -m "🤖 Automated update via GitHub Actions" \
+              -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com" || {
+              echo "⚠️  Commit failed (may be empty or already committed)"
+              exit 0
+            }
+            
+            # Push with retry logic (non-fatal for protected branches)
+            # Default to false if check-protected step didn't run or output is missing
+            IS_PROTECTED="${{ steps.check-protected.outputs.protected || 'false' }}"
+            
+            if [ "$IS_PROTECTED" = "true" ]; then
+              echo "🔒 Protected branch detected - attempting push (may be blocked by status checks)"
+            fi
+            
+            attempt=0
+            max_attempts=3
+            push_success=false
+            
+            while [ $attempt -lt $max_attempts ]; do
+              attempt=$((attempt + 1))
+              
+              # Capture push output and exit code
+              if PUSH_OUTPUT=$(git push origin main 2>&1); then
+                echo "✅ Push succeeded on attempt $attempt"
+                push_success=true
                 break
               else
-                PUSH_ERROR=$(git push origin main 2>&1 || true)
-                if echo "$PUSH_ERROR" | grep -q "protected branch\|Required status check"; then
-                  echo "⚠️  Push blocked by branch protection (status checks required)"
+                PUSH_EXIT=$?
+                echo "⚠️  Push failed on attempt $attempt (exit code: $PUSH_EXIT)"
+                echo "Push output: $PUSH_OUTPUT"
+                
+                # Check if failure is due to branch protection
+                if echo "$PUSH_OUTPUT" | grep -qiE "protected branch|Required status check|remote rejected"; then
+                  echo "🔒 Push blocked by branch protection (status checks required)"
                   echo "ℹ️  This is expected for protected branches; commit is created locally"
+                  echo "ℹ️  The commit will be included in the next successful push or manual merge"
+                  push_success=false
                   break
-                else
-                  echo "⚠️  Push failed on attempt $i, pulling latest changes..."
-                  git pull --rebase origin main || { echo "❌ Rebase failed"; exit 1; }
-                  [ $i -lt 3 ] && sleep 2
+                fi
+                
+                # For other errors, retry with pull-rebase
+                if [ $attempt -lt $max_attempts ]; then
+                  echo "🔄 Pulling latest changes before retry..."
+                  if git pull --rebase origin main; then
+                    echo "✅ Rebase successful, retrying push..."
+                    sleep 2
+                  else
+                    echo "❌ Rebase failed - aborting push attempts"
+                    exit 1
+                  fi
                 fi
               fi
             done
+            
+            if [ "$push_success" = "false" ] && [ "$IS_PROTECTED" != "true" ]; then
+              echo "❌ Push failed after $max_attempts attempts (non-protected branch)"
+              exit 1
+            elif [ "$push_success" = "false" ]; then
+              echo "⚠️  Push blocked by branch protection (non-fatal for auto-updates)"
+              exit 0
+            fi
           else
-            echo "No changes to hub files"
+            echo "ℹ️  No changes to hub files - skipping commit"
           fi
 
       - name: Update memory repo symlinks
