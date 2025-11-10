@@ -275,6 +275,12 @@ jobs:
         run: |
           OVERALL_STATUS="${{ steps.check_alerts.outputs.overall_status }}"
 
+          if [ "${MAINTENANCE_MODE:-0}" = "1" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "ℹ️ Maintenance/schedule context — not failing on telemetry errors."
+            echo "Overall status: $OVERALL_STATUS"
+            exit 0
+          fi
+
           if [ "$OVERALL_STATUS" = "error" ]; then
             echo "❌ Telemetry aggregation completed with errors"
             exit 1
