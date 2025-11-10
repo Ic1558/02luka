@@ -51,10 +51,10 @@ jobs:
           path: memory-repo
           token: ${{ secrets.MEM_REPO_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js with cache
+        uses: ./code-repo/.github/actions/node-setup
         with:
-          node-version: '20'
+          install-dependencies: 'false'
 
       - name: Install dependencies
         working-directory: code-repo/hub
