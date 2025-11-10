@@ -34,3 +34,5 @@ jobs:
        !contains(github.event.pull_request.title, '[skip-smoke]') &&
        contains(github.event.pull_request.labels.*.name, 'run-smoke'))
     uses: .github/workflows/_reusable/router-selftest.yml
+    with:
+      node_version: '20'
