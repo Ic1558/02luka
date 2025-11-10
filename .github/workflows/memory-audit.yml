@@ -1,3 +1,4 @@
+---
 name: Memory Consistency & Checksum Auditor
 
 # Phase 21.2 - SOT Memory Verification with SHA-256 checksums
@@ -76,14 +77,20 @@ jobs:
           mkdir -p g/telemetry
           echo "✅ Output directories created"
 
-      - name: Self-test - Log resolved input values
+      - name: "Debug: Log resolved input values"
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🔍 Memory Audit - Input Values Self-Test"
+          echo "🔍 Memory Audit - Input Resolution Debug"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  alert_on_mismatch: ${{ inputs.alert_on_mismatch }}"
-          echo "  force_full_scan: ${{ inputs.force_full_scan }}"
-          echo "  Trigger: ${{ github.event_name }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo ""
+          echo "Input values (raw):"
+          echo "  alert_on_mismatch: '${{ inputs.alert_on_mismatch }}'"
+          echo "  force_full_scan: '${{ inputs.force_full_scan }}'"
+          echo ""
+          echo "Resolved for env (booleans):"
+          echo "  ALERT_ON_MISMATCH: ${{ inputs.alert_on_mismatch || true }}"
+          echo "  FORCE_FULL_SCAN: ${{ inputs.force_full_scan || false }}"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
       - name: Run Memory Audit
@@ -101,8 +108,10 @@ jobs:
             exit 1
           fi
         env:
+          # Note: These env vars are reserved for future use
+          # The script currently reads configuration from config/memory_audit.yaml
           FORCE_FULL_SCAN: ${{ inputs.force_full_scan || false }}
-          ALERT_ON_MISMATCH: ${{ inputs.alert_on_mismatch != false }}
+          ALERT_ON_MISMATCH: ${{ inputs.alert_on_mismatch || true }}
 
       - name: Display Audit Report
         if: always()
