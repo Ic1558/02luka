@@ -1,8 +1,8 @@
 ▶️ MLS Migration v2 (--plan)
 Source: /home/user/02luka/g/knowledge/mls_lessons.jsonl
-Started: 2025-11-10T20:21:12Z
+Started: 2025-11-10T20:26:43Z
 ---
-Flattened to: /tmp/mls_migrate_5253_flat.jsonl
+Using pre-flattened: /home/user/02luka/g/knowledge/mls_lessons_flat.jsonl
 2025-11-05: Two-Phase GD Sync Deployment
 2025-11-05: Archive with README Pattern
 2025-11-05: Direct Complex Merge Approach
@@ -34,4 +34,4 @@ By Day:
 ---
 📈 SUMMARY
 Total: 15 | OK: 15 | Skipped: 0 | Duplicates: 0
-Finished: 2025-11-10T20:21:14Z
+Finished: 2025-11-10T20:26:46Z
