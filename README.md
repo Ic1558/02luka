@@ -37,7 +37,7 @@ Quick Ops:
 | Feature | Details |
 |---------|---------|
 | 🏥 Daily Health | Runs at 08:15 ICT via `phase15-quick-health.yml` |
-| 🛡️ Maintenance Mode | Set `MAINTENANCE_MODE=1` to freeze all Phase15 workflows |
+| 🛡️ Maintenance Mode | Set `MAINTENANCE_MODE=1` to pause daily health checks |
 | 📊 SLO Targets | Routing ≥95% accuracy, <100ms latency, ≥90% delegation success |
 | 📦 Artifacts | `g/reports/phase15/`, `hub/`, `g/telemetry_unified/` |
 

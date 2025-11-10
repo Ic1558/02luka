@@ -26,32 +26,35 @@
 
 ## Maintenance Guard Policy
 
-Phase15 uses a three-tier guard system:
+Phase15 uses a two-tier guard system:
 
-### 1. MAINTENANCE_MODE (v2.0)
+### 1. MAINTENANCE_MODE
 - **Type**: Binary flag (0 or 1)
-- **Effect**: When `1`, all Phase15 workflows exit gracefully without running
-- **Use case**: System-wide freeze for emergency maintenance or debugging
-- **Checked by**: All operational workflows at startup
+- **Effect**: When `1`, the `phase15-quick-health` workflow skips execution
+- **Use case**: Pause daily health checks during emergency maintenance
+- **Set via**: Repository variable `MAINTENANCE_MODE`
+- **Applies to**: `phase15-quick-health.yml` only
 
-### 2. PHASE15_STRICT
-- **Type**: Boolean control
-- **Effect**: When enabled, health check failures cause workflow to fail (strict mode)
-- **Default**: Soft failures (warnings only)
-- **Use case**: Enforce SLO compliance during critical periods
-
-### 3. CI_STRICT (Soft-Green Gate)
+### 2. CI_STRICT (Soft-Green Gate)
 - **Type**: Binary flag (0 or 1)
-- **Effect**: When `0`, expensive/optional jobs are skipped
-- **Purpose**: Prevent resource exhaustion, enable "green by default" CI
-- **Pattern**: Optional jobs check `if: vars.CI_STRICT == '1'`
+- **Effect**: When `0`, Phase15 self-test workflows exit early (skipped)
+- **Default**: `0` (tests skipped by default)
+- **Purpose**: Opt-in for expensive vector/router validation
+- **Set via**: Repository variable `CI_STRICT`
+- **Applies to**: `rag-vector-selftest.yml`, `router-selftest.yml`
+
+### Internal: PHASE15_STRICT
+- **Scope**: Internal flag for `phase15-quick-health.yml`
+- **Effect**: When `1`, workflow fails if health check returns `ok: false`
+- **Default**: `0` (soft failure, logs warning only)
 
 ## Strict Gating Mechanisms
 
-### Soft-Green Gate
-- **Trigger**: `CI_STRICT != 1`
-- **Behavior**: Heavy jobs (expensive tests, long-running checks) are skipped
-- **Benefit**: Fast feedback loop; opt-in for comprehensive validation
+### Soft-Green Gate (CI_STRICT)
+- **Trigger**: `CI_STRICT != 1` (default)
+- **Behavior**: Phase15 self-tests (`rag-vector-selftest`, `router-selftest`) exit early
+- **Benefit**: Skips expensive vector search and router validation by default
+- **Enable**: Set repository variable `CI_STRICT=1`
 
 ### Confidence Threshold Gating
 - **Threshold**: Router requires ≥0.75 confidence for autonomous routing
