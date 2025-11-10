@@ -74,7 +74,7 @@ jobs:
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y jq zsh
+          sudo apt-get install -y jq yq redis-tools zsh
 
       - name: Create output directories
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -260,7 +260,6 @@ jobs:
 
       - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
