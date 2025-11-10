@@ -106,14 +106,22 @@ jobs:
             git commit -m "chore(hub): Auto-update index & MCP registry [skip ci]" -m "🤖 Automated update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
 
             # Retry push with pull-rebase on race condition
+            # Note: Protected branch may require status checks; push failures are non-fatal for auto-updates
             for i in 1 2 3; do
               if git push origin main; then
                 echo "✅ Push succeeded on attempt $i"
                 break
               else
-                echo "⚠️  Push failed on attempt $i, pulling latest changes..."
-                git pull --rebase origin main || { echo "❌ Rebase failed"; exit 1; }
-                [ $i -lt 3 ] && sleep 2
+                PUSH_ERROR=$(git push origin main 2>&1 || true)
+                if echo "$PUSH_ERROR" | grep -q "protected branch\|Required status check"; then
+                  echo "⚠️  Push blocked by branch protection (status checks required)"
+                  echo "ℹ️  This is expected for protected branches; commit is created locally"
+                  break
+                else
+                  echo "⚠️  Push failed on attempt $i, pulling latest changes..."
+                  git pull --rebase origin main || { echo "❌ Rebase failed"; exit 1; }
+                  [ $i -lt 3 ] && sleep 2
+                fi
               fi
             done
           else
