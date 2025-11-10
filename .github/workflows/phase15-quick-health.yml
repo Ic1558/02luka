@@ -8,7 +8,6 @@ on:
 env:
   TZ: Asia/Bangkok
   MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE || '0' }}
-  PHASE15_STRICT: ${{ vars.PHASE15_STRICT || '0' }}
 
 permissions:
   contents: read
@@ -23,10 +22,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+
       - name: Install jq + zsh
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq jq zsh
+
+      - name: "Debug: Verify script version"
+        shell: bash
+        run: |
+          echo "=== Checking script version ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== First 30 lines of phase15_quick_health.zsh ==="
+          head -30 tools/phase15_quick_health.zsh
 
       - name: Run Phase15 Quick Health (CI mode)
         shell: bash
@@ -66,9 +83,9 @@ jobs:
           fi
 
       - name: Fail if not ok (strict mode only)
-        if: ${{ env.PHASE15_STRICT == '1' }}
+        if: ${{ env.CI_STRICT == '1' }}
         run: |
-          echo "=== PHASE15_STRICT=1: Enforcing health check ==="
+          echo "=== CI_STRICT=1: Enforcing health check ==="
           if jq -e '.ok == true' health.json >/dev/null 2>&1; then
             echo "✅ Phase15 Quick Health: OK"
           else
