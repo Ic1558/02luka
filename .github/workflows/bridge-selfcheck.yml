@@ -96,7 +96,7 @@ jobs:
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y jq zsh
+          sudo apt-get install -y jq yq redis-tools zsh
 
       - name: Create output directories
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -115,52 +115,80 @@ jobs:
           BRIDGE_STUCK_THRESHOLD_HOURS: ${{ github.event.inputs.stuck_threshold_hours || '24' }}
           LUKA_HOME: ${{ github.workspace }}
 
+      - name: "Debug: list hub directory"
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          echo "📂 Listing hub/ after self-check"
+          pwd
+          ls -la
+          echo "---- hub/ ----"
+          ls -la hub/ || true
+          echo "---- output/reports/ ----"
+          ls -la output/reports/ || true
+
       - name: Verify Self-Check Output
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
+          set -euo pipefail
           echo "📊 Bridge Self-Check Results"
           echo "=============================="
 
-          if [[ -f hub/bridge_selfcheck.json ]]; then
-            echo ""
-            echo "✅ Self-check report generated"
-            echo ""
-            echo "📄 Report Summary:"
-            jq -r '.summary | "  Total Agents: \(.total_agents)\n  Healthy: \(.healthy_count)\n  Warnings: \(.warning_count)\n  Critical: \(.critical_count)\n  Total Issues: \(.total_issues)"' hub/bridge_selfcheck.json
-
-            echo ""
-            echo "🔍 Agent Details:"
-            jq -r '.agents[] | "  \(.agent_id): \(.status) (\(.metrics.pending_work_orders) pending, \(.metrics.stuck_files) stuck)"' hub/bridge_selfcheck.json
-
-            # Show issues if any
-            issue_count=$(jq '[.agents[].issues[]] | length' hub/bridge_selfcheck.json)
-            if [[ $issue_count -gt 0 ]]; then
-              echo ""
-              echo "⚠️  Issues Detected:"
-              jq -r '.agents[] | select(.issues | length > 0) | "  [\(.agent_id)] \(.issues[] | "\(.severity | ascii_upcase): \(.message)")"' hub/bridge_selfcheck.json
+          CANDIDATE="hub/bridge_selfcheck.json"
+          if [[ ! -s "$CANDIDATE" ]]; then
+            echo "ℹ️ Primary path missing or empty: $CANDIDATE"
+            # Look for any matching file in hub/ just in case script wrote with a suffix
+            ALT=$(find hub -maxdepth 1 -type f -name 'bridge_selfcheck*.json' -size +0c | head -n1 || true)
+            if [[ -n "${ALT:-}" ]]; then
+              echo "✅ Found alternative report: $ALT"
+              CANDIDATE="$ALT"
+            else
+              echo "❌ Self-check report not found in hub/"
+              echo "hub/ contents:"; ls -la hub/ || true
+              exit 1
             fi
-          else
-            echo "❌ Self-check report not found!"
-            exit 1
           fi
+
+          echo ""
+          echo "✅ Self-check report: $CANDIDATE"
+          echo ""
+          echo "📄 Report Summary:"
+          jq -r '.summary | "  Total Agents: \(.total_agents)\n  Healthy: \(.healthy_count)\n  Warnings: \(.warning_count)\n  Critical: \(.critical_count)\n  Total Issues: \(.total_issues)"' "$CANDIDATE"
+
+          echo ""
+          echo "🔍 Agent Details:"
+          jq -r '.agents[] | "  \(.agent_id): \(.status) (\(.metrics.pending_work_orders) pending, \(.metrics.stuck_files) stuck)"' "$CANDIDATE"
+
+          # Show issues if any
+          issue_count=$(jq '[.agents[].issues[]] | length' "$CANDIDATE")
+          if [[ $issue_count -gt 0 ]]; then
+            echo ""
+            echo "⚠️  Issues Detected:"
+            jq -r '.agents[] | select(.issues | length > 0) | "  [\(.agent_id)] \(.issues[] | "\(.severity | ascii_upcase): \(.message)")"' "$CANDIDATE"
+          fi
+
+          # Export the chosen path for later steps
+          echo "SELFCHECK_JSON=$CANDIDATE" >> "$GITHUB_ENV"
 
       - name: Stage report for artifacts
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p output/reports
-          if [ ! -f hub/bridge_selfcheck.json ]; then
-            echo "❌ hub/bridge_selfcheck.json not found!"
+          SRC="${SELFCHECK_JSON:-hub/bridge_selfcheck.json}"
+          if [ ! -f "$SRC" ]; then
+            echo "❌ selfcheck source missing: $SRC"
             ls -la hub/ || true
             exit 1
           fi
-          cp hub/bridge_selfcheck.json output/reports/selfcheck.json
+          cp "$SRC" output/reports/selfcheck.json
           if [ ! -f output/reports/selfcheck.json ]; then
             echo "❌ Failed to copy selfcheck.json"
             ls -la output/reports || true
             exit 1
           fi
-          echo "✅ Staged selfcheck.json successfully"
+          echo "✅ Staged selfcheck.json successfully from $SRC"
 
       - name: "Guard: ensure staged artifact exists"
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -245,7 +273,7 @@ jobs:
           RUN_ID="${{ github.run_id }}"
           SHA="${{ github.sha }}"
           REPO="${{ github.repository }}"
-          WF="cls-ci.yml"
+          WF="bridge-selfcheck.yml"
           ART="selfcheck-report"
           ART_PATH="output/reports/selfcheck.json"
 
@@ -337,6 +365,59 @@ jobs:
           ' /tmp/mls_last.json >/dev/null || { echo "❌ Schema validation failed"; exit 1; }
 
           echo "✅ MLS event is valid (jq schema-lite)"
+
+      - name: Setup Node.js for deep validation
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        continue-on-error: true
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            tools/package-lock.json
+
+      - name: Deep validate MLS (AJV, if schema present)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          SCHEMA="mls/schema/mls_event.schema.json"
+          if [ ! -f "$SCHEMA" ]; then
+            echo "ℹ️ No MLS schema found at $SCHEMA — skipping deep validation"
+            exit 0
+          fi
+
+          if ! command -v npx >/dev/null 2>&1; then
+            echo "❌ npx not found (Node not installed?). Skipping deep validation."
+            exit 0
+          fi
+
+          # Use the last valid JSON extracted earlier
+          if [ ! -f /tmp/mls_last.json ]; then
+            echo "ℹ️ /tmp/mls_last.json not found (schema-lite step likely skipped). Trying to rebuild from today's ledger."
+            DAY="$(date +%Y-%m-%d)"
+            LEDGER="mls/ledger/${DAY}.jsonl"
+            if [ -s "$LEDGER" ]; then
+              LAST_LINE=""
+              while IFS= read -r line; do
+                if [ -n "$line" ] && echo "$line" | jq -e . >/dev/null 2>&1; then
+                  LAST_LINE="$line"
+                fi
+              done < "$LEDGER"
+              [ -n "$LAST_LINE" ] && printf '%s\n' "$LAST_LINE" > /tmp/mls_last.json || true
+            fi
+          fi
+
+          if [ ! -f /tmp/mls_last.json ]; then
+            echo "ℹ️ No valid event to deep-validate — skip (non-fatal)"
+            exit 0
+          fi
+
+          echo "▶️ Running AJV strict validation against schema"
+          npx --yes ajv-cli@5 ajv-formats@3 validate -s "$SCHEMA" -d /tmp/mls_last.json --strict=false
+          echo "✅ AJV deep validation passed (or step allowed to continue if warnings)"
 
       - name: Update MLS validation streak
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -435,7 +516,8 @@ jobs:
           fi
 
       - name: Auto-commit snapshot
-        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        if: ${{ needs.sanity.outputs.ci_strict == '1' && !github.ref_protected }}
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -484,3 +566,8 @@ jobs:
             echo "✅ All bridge folders are healthy"
             exit 0
           fi
+
+      - name: Skip auto-commit on protected branch
+        if: ${{ needs.sanity.outputs.ci_strict == '1' && github.ref_protected }}
+        run: |
+          echo "🔒 Branch is protected (${GITHUB_REF}). Skipping auto-commit snapshot by design."
