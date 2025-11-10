@@ -1,3 +1,8 @@
+---
+# MCP Health Check
+# Monitors MCP server health status, validates against schema, and commits snapshots
+# Dependencies: ajv, ajv-formats (installed via npm ci)
+
 name: MCP Health
 
 on:
@@ -22,24 +27,42 @@ jobs:
     timeout-minutes: 3
 
     steps:
-      - name: Maintenance guard
+      - name: Maintenance mode guard
         if: env.MAINTENANCE_MODE == '1'
-        run: echo "Repo in maintenance mode; skipping." && exit 0
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js with cache
-        uses: ./.github/actions/node-setup
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Assert required files exist
         run: |
           set -euo pipefail
           test -f hub/mcp_health.mjs
+          test -f hub/validate_mcp_health.mjs
           test -f config/schemas/mcp_health.schema.json
           # mcp_registry.json may be generated in next step, so don't assert it here
+
+      - name: "Debug: Verify validation script"
+        run: |
+          echo "=== Verifying validation script ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== hub/validate_mcp_health.mjs (first 15 lines) ==="
+          head -15 hub/validate_mcp_health.mjs
+          echo ""
+          echo "✅ Validation script verified"
 
       - name: Generate MCP registry (if missing)
         run: |
@@ -55,26 +78,15 @@ jobs:
           set -euo pipefail
           node hub/mcp_health.mjs
           test -f hub/mcp_health.json
+          # Quick JSON syntax check before full validation
           node -e "JSON.parse(require('fs').readFileSync('hub/mcp_health.json','utf8'))"
 
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
       - name: Validate health schema
-        run: |
-          # Use ajv-formats for date-time format support
-          node -e "
-            const Ajv = require('ajv');
-            const addFormats = require('ajv-formats');
-            const ajv = new Ajv({strict: true});
-            addFormats(ajv);
-            const schema = require('./config/schemas/mcp_health.schema.json');
-            const data = require('./hub/mcp_health.json');
-            const valid = ajv.validate(schema, data);
-            if (!valid) {
-              console.error('Schema validation failed:');
-              console.error(JSON.stringify(ajv.errors, null, 2));
-              process.exit(1);
-            }
-            console.log('✅ Schema validation passed');
-          "
+        # Uses hub/validate_mcp_health.mjs with ajv + ajv-formats for schema validation
+        run: node hub/validate_mcp_health.mjs
 
       - name: Commit health snapshot (if changed)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

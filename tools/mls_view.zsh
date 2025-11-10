@@ -1,16 +1,27 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 # ======================================================================
-# MLS Viewer — quick terminal viewer for MLS ledger entries
+# MLS Viewer — unified viewer for MLS ledger entries
+# Supports: daily JSONL ledgers + legacy database fallback
 # Usage:
 #   mls_view.zsh --today
-#   mls_view.zsh --by type=solution
-#   mls_view.zsh --producer=cls
-#   mls_view.zsh --grep 'artifact'
+#   mls_view.zsh --summary
+#   mls_view.zsh --producer=cls --limit=5
+#   mls_view.zsh --grep 'artifact' --type=solution
 # ======================================================================
 
 set -euo pipefail
 
-LEDGER_DIR="$HOME/02luka/mls/ledger"
+# Resolve script directory and repo root (CI-friendly, no $HOME dependency)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+LEDGER_DIR="$REPO_ROOT/mls/ledger"
+LEGACY_DB="$REPO_ROOT/g/knowledge/mls_lessons.jsonl"
+MLS_INDEX="$REPO_ROOT/g/knowledge/mls_index.json"
+
+# Timezone alignment with mls_add.zsh (Asia/Bangkok)
+export TZ="${TZ:-Asia/Bangkok}"
+
 # LEDGER_FILE will be computed after parsing CLI options
 
 # --- HELPERS ----------------------------------------------------------
@@ -28,6 +39,7 @@ Options:
   --today              Show all entries from today
   --date YYYY-MM-DD    Pick a specific ledger date (local timezone)
   --file PATH          Read from an explicit ledger file (overrides --date/--today)
+  --summary            Show summary statistics only (count by type, producer, context)
   --by TYPE=VALUE      Filter by field (e.g., type=solution, producer=cls)
   --producer=PROD      Filter by producer (cls, codex, clc, gemini)
   --grep PATTERN       Search in title/summary/tags
@@ -38,6 +50,8 @@ Options:
 
 Examples:
   mls_view.zsh --today
+  mls_view.zsh --summary
+  mls_view.zsh --today --summary
   mls_view.zsh --by type=solution
   mls_view.zsh --producer=cls --limit=5
   mls_view.zsh --grep 'artifact'
@@ -51,6 +65,7 @@ EOF
 # --- PARSE ARGS -------------------------------------------------------
 
 SHOW_TODAY=false
+SHOW_SUMMARY=false
 FILTER_BY=""
 PRODUCER=""
 GREP_PATTERN=""
@@ -65,6 +80,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --today)
       SHOW_TODAY=true
+      shift
+      ;;
+    --summary)
+      SHOW_SUMMARY=true
       shift
       ;;
     --by)
@@ -142,13 +161,21 @@ fi
 
 # --- VALIDATE ---------------------------------------------------------
 
-if [ ! -f "$LEDGER_FILE" ]; then
-  die "Ledger file not found: $LEDGER_FILE"
-fi
-
 command -v jq >/dev/null || die "jq not found"
 
 # --- READ ENTRIES -----------------------------------------------------
+
+# Try daily ledger first, fall back to legacy DB if not found or empty
+USING_LEGACY=false
+if [ ! -f "$LEDGER_FILE" ] || [ ! -s "$LEDGER_FILE" ]; then
+  if [ -f "$LEGACY_DB" ]; then
+    echo "ℹ️  Daily ledger not found or empty, using legacy database: $LEGACY_DB" >&2
+    LEDGER_FILE="$LEGACY_DB"
+    USING_LEGACY=true
+  else
+    die "Neither daily ledger ($LEDGER_FILE) nor legacy DB ($LEGACY_DB) found"
+  fi
+fi
 
 ENTRIES=$(awk 'NF' "$LEDGER_FILE" | jq -s '.')
 
@@ -157,50 +184,111 @@ if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
   exit 0
 fi
 
-# --- APPLY FILTERS ----------------------------------------------------
-
-# Filter by producer
-if [ -n "$PRODUCER" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.source.producer == \"$PRODUCER\")]")
+# Detect legacy format: check if first entry lacks source.producer field
+if [ "$USING_LEGACY" = false ]; then
+  HAS_SOURCE=$(echo "$ENTRIES" | jq -r '.[0].source.producer // "null"')
+  [ "$HAS_SOURCE" = "null" ] && USING_LEGACY=true
 fi
 
-# Filter by type
-if [ -n "$TYPE" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.type == \"$TYPE\")]")
+# Normalize legacy format to modern format
+if [ "$USING_LEGACY" = true ]; then
+  ENTRIES=$(echo "$ENTRIES" | jq '[.[] | {
+    ts: (.timestamp // .ts),
+    type: .type,
+    title: .title,
+    summary: (.description // .summary),
+    memo: (.context // .memo // ""),
+    source: {
+      producer: "legacy",
+      context: "legacy",
+      session: (.related_session // "unknown")
+    },
+    links: {
+      wo_id: (.related_wo // "")
+    },
+    tags: (.tags // []),
+    author: "legacy",
+    confidence: 0.5
+  }]')
 fi
 
-# Filter by context
-if [ -n "$CONTEXT" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.source.context == \"$CONTEXT\")]")
+# --- APPLY FILTERS (OPTIMIZED: single jq pass) -----------------------
+
+# Build jq filter expression dynamically to reduce subprocess calls
+JQ_FILTER='.'
+
+# Start with array selection
+if [ -n "$PRODUCER" ] || [ -n "$TYPE" ] || [ -n "$CONTEXT" ] || [ -n "$FILTER_BY" ] || [ -n "$GREP_PATTERN" ]; then
+  JQ_FILTER='[.[] | select('
+  FILTERS=()
+
+  [ -n "$PRODUCER" ] && FILTERS+=("(.source.producer == \"$PRODUCER\")")
+  [ -n "$TYPE" ] && FILTERS+=("(.type == \"$TYPE\")")
+  [ -n "$CONTEXT" ] && FILTERS+=("(.source.context == \"$CONTEXT\")")
+
+  if [ -n "$FILTER_BY" ]; then
+    FIELD="${FILTER_BY%%=*}"
+    VALUE="${FILTER_BY#*=}"
+    FILTERS+=("(.\"$FIELD\" == \"$VALUE\")")
+  fi
+
+  if [ -n "$GREP_PATTERN" ]; then
+    FILTERS+=("((.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or (.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or ((.tags | type == \"array\") and (.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\"))))")
+  fi
+
+  # Join filters with AND operator
+  FILTER_EXPR=""
+  for i in "${!FILTERS[@]}"; do
+    if [ $i -eq 0 ]; then
+      FILTER_EXPR="${FILTERS[$i]}"
+    else
+      FILTER_EXPR="${FILTER_EXPR} and ${FILTERS[$i]}"
+    fi
+  done
+
+  JQ_FILTER="${JQ_FILTER}${FILTER_EXPR})]"
+else
+  JQ_FILTER='.'
 fi
 
-# Filter by --by field=value
-if [ -n "$FILTER_BY" ]; then
-  FIELD="${FILTER_BY%%=*}"
-  VALUE="${FILTER_BY#*=}"
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.\"$FIELD\" == \"$VALUE\")]")
-fi
+# Add limit if specified
+[ -n "$LIMIT" ] && JQ_FILTER="${JQ_FILTER} | .[:$LIMIT]"
 
-# Grep in title/summary/tags
-if [ -n "$GREP_PATTERN" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq "[.[] | select(.title | ascii_downcase | contains(\"$GREP_PATTERN\")) or select(.summary | ascii_downcase | contains(\"$GREP_PATTERN\")) or select(.tags[]? | ascii_downcase | contains(\"$GREP_PATTERN\"))]")
-fi
-
-# Limit
-if [ -n "$LIMIT" ]; then
-  ENTRIES=$(echo "$ENTRIES" | jq ".[:$LIMIT]")
-fi
+# Apply all filters in ONE jq call
+ENTRIES=$(echo "$ENTRIES" | jq "$JQ_FILTER")
 
 # --- OUTPUT -----------------------------------------------------------
 
-if [ "$JSON_OUTPUT" = true ]; then
+# Check if we have any entries after filtering
+if [ -z "$ENTRIES" ] || [ "$ENTRIES" = "[]" ]; then
+  echo "ℹ️  No entries match the specified filters"
+  exit 0
+fi
+
+if [ "$SHOW_SUMMARY" = true ]; then
+  # Show summary statistics (optimized: single jq call for all stats)
+  STATS=$(echo "$ENTRIES" | jq -r '
+    . as $entries |
+    {
+      count: ($entries | length),
+      by_type: ($entries | group_by(.type) | map({type: .[0].type, count: length}) | sort_by(-.count)),
+      by_producer: ($entries | group_by(.source.producer) | map({producer: .[0].source.producer, count: length}) | sort_by(-.count)),
+      by_context: ($entries | group_by(.source.context) | map({context: .[0].source.context, count: length}) | sort_by(-.count)),
+      first_ts: ($entries | map(.ts) | min),
+      last_ts: ($entries | map(.ts) | max)
+    } |
+    "📊 MLS Summary Statistics\n=========================\n\nTotal entries: \(.count)\n\nBy Type:\n\(.by_type | map("  \(.type): \(.count)") | join("\n"))\n\nBy Producer:\n\(.by_producer | map("  \(.producer): \(.count)") | join("\n"))\n\nBy Context:\n\(.by_context | map("  \(.context): \(.count)") | join("\n"))\n\nDate Range:\n  First: \(.first_ts)\n  Last:  \(.last_ts)"
+  ')
+  echo -e "$STATS"
+
+elif [ "$JSON_OUTPUT" = true ]; then
   echo "$ENTRIES" | jq '.'
 else
   COUNT=$(echo "$ENTRIES" | jq 'length')
   echo "📊 Found $COUNT entries"
   echo ""
-  
-  echo "$ENTRIES" | jq -r '.[] | 
+
+  echo "$ENTRIES" | jq -r '.[] |
     "\(.ts) | \(.type) | \(.title)
     Producer: \(.source.producer) | Context: \(.source.context // "N/A") | Workflow: \(.source.workflow // "N/A")
     Run ID: \(.source.run_id // "N/A") | Artifact: \(.source.artifact // "N/A") | Size: \(.source.artifact_size // "N/A") bytes
@@ -208,3 +296,12 @@ else
     Tags: \(.tags | join(", "))
     ---"'
 fi
+
+# ======================================================================
+# Performance Notes:
+# - Single jq pass for all filters (was 5+ separate calls)
+# - Summary stats computed in one jq invocation
+# - Repo-relative paths (CI-friendly, no $HOME dependency)
+# - TZ-aware date handling aligned with mls_add.zsh
+# - Legacy format auto-normalized to modern schema
+# ======================================================================

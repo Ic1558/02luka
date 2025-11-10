@@ -34,3 +34,7 @@ jobs:
        !contains(github.event.pull_request.title, '[skip-smoke]') &&
        contains(github.event.pull_request.labels.*.name, 'run-smoke'))
     uses: .github/workflows/_reusable/router-selftest.yml
+    with:
+      # Pass Node.js version to reusable workflow for actions/setup-node@v4
+      # Required for router AKR self-test script execution
+      node_version: '20'
