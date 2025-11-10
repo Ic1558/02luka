@@ -86,17 +86,24 @@ echo "---" >> "$REPORT"
 if [[ -f "${OLD%.*}_flat.jsonl" ]]; then
   SOURCE_FILE="${OLD%.*}_flat.jsonl"
   echo "Using pre-flattened: $SOURCE_FILE" >> "$REPORT"
+  CLEANUP_SOURCE=false
 else
   # Flatten JSON to temp file first (handles both pretty-printed and single-line JSON)
   SOURCE_FILE="/tmp/mls_migrate_$$_flat.jsonl"
-  trap "rm -f '$SOURCE_FILE'" EXIT
   jq -c '.' "$OLD" > "$SOURCE_FILE"
   echo "Flattened to: $SOURCE_FILE" >> "$REPORT"
+  CLEANUP_SOURCE=true
 fi
 
 # Create jq filter file for complex transformation
 JQ_FILTER="/tmp/mls_migrate_filter_$$.jq"
-trap "rm -f '$SOURCE_FILE' '$JQ_FILTER'" EXIT
+
+# Only cleanup temp files, not pre-existing flat file
+if [[ "$CLEANUP_SOURCE" == "true" ]]; then
+  trap "rm -f '$SOURCE_FILE' '$JQ_FILTER'" EXIT
+else
+  trap "rm -f '$JQ_FILTER'" EXIT
+fi
 
 cat > "$JQ_FILTER" << 'EOFFILTER'
 {
