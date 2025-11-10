@@ -334,6 +334,74 @@ jobs:
 
           echo "✅ MLS event is valid (jq schema-lite)"
 
+      - name: Update MLS validation streak
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        id: mls_streak
+        shell: bash
+        run: |
+          set -euo pipefail
+          STREAK_FILE="mls/status/mls_validation_streak.json"
+          mkdir -p mls/status
+
+          # ประเมินสถานะ entries ล่าสุดซ้ำอีกครั้งแบบ schema-lite
+          DAY="$(date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
+          LAST_STATUS="fail"
+          if [ -s "$LEDGER" ]; then
+            LAST_LINE=""
+            while IFS= read -r line; do
+              if [ -n "$line" ] && echo "$line" | jq -e . >/dev/null 2>&1; then
+                LAST_LINE="$line"
+              fi
+            done < "$LEDGER"
+            if [ -n "$LAST_LINE" ] && echo "$LAST_LINE" | jq -e . >/dev/null 2>&1; then
+              echo "$LAST_LINE" > /tmp/mls_last.json
+              if jq -e '
+                (.ts|type=="string") and
+                (.type as $t | ["solution","failure","improvement","pattern","antipattern"] | index($t) != null) and
+                (.title|type=="string" and (.|length)>0) and
+                (.summary|type=="string" and (.|length)>0) and
+                (.author|type=="string") and
+                (has("confidence") and (.confidence|type=="number") and .confidence>=0 and .confidence<=1) and
+                (has("source") and (.source|type=="object")) and
+                (.source.producer as $p | ["cls","codex","clc","gemini"] | index($p) != null)
+              ' /tmp/mls_last.json >/dev/null 2>&1; then
+                LAST_STATUS="ok"
+              fi
+            fi
+          fi
+
+          # อ่านและอัปเดตสตรีค
+          if [ -f "$STREAK_FILE" ]; then
+            STREAK=$(jq -r '.success_streak // 0' "$STREAK_FILE" 2>/dev/null || echo 0)
+          else
+            STREAK=0
+          fi
+          if [ "$LAST_STATUS" = "ok" ]; then STREAK=$((STREAK+1)); else STREAK=0; fi
+
+          jq -n --arg status "$LAST_STATUS" --argjson success_streak "$STREAK" \
+                --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                '{ts:$ts,last_status:$status,success_streak:$success_streak}' > "$STREAK_FILE"
+
+          echo "last_status=$LAST_STATUS" >> "$GITHUB_OUTPUT"
+          echo "success_streak=$STREAK" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce MLS validation after 3 green runs
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STREAK_FILE="mls/status/mls_validation_streak.json"
+          LAST_STATUS=$(jq -r '.last_status' "$STREAK_FILE" 2>/dev/null || echo "unknown")
+          STREAK=$(jq -r '.success_streak // 0' "$STREAK_FILE" 2>/dev/null || echo 0)
+
+          echo "MLS streak: $STREAK (last=$LAST_STATUS)"
+          if [ "$STREAK" -ge 3 ] && [ "$LAST_STATUS" != "ok" ]; then
+            echo "❌ Enforcing strict MLS validation (>=3 greens reached). Failing run."
+            exit 1
+          else
+            echo "ℹ️ Not enforcing yet (need 3 consecutive greens)."
+          fi
 
       - name: Publish to Redis (if configured)
         if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
@@ -360,7 +428,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Add the snapshot
-          git add hub/bridge_selfcheck.json
+          git add hub/bridge_selfcheck.json mls/status/mls_validation_streak.json
 
           # Only commit if there are changes
           if git diff --staged --quiet; then
