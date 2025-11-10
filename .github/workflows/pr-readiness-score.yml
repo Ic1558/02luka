@@ -2,7 +2,7 @@ name: PR Readiness Score
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened, edited, ready_for_review]
     branches: [main, develop]
   workflow_dispatch: {}
 
@@ -24,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         if: ${{ !github.event.pull_request.head.repo.fork }}
