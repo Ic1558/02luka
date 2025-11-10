@@ -1,11 +1,26 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+# Parse arguments
+JSON_MODE=0
+for arg in "$@"; do
+  case "$arg" in
+    --json)
+      JSON_MODE=1
+      ;;
+    *)
+      echo "Unknown argument: $arg" >&2
+      exit 1
+      ;;
+  esac
+done
+
 # Script version debug header
 echo "=== launchd_selfcheck.zsh ===" >&2
 echo "Script: tools/launchd_selfcheck.zsh" >&2
 echo "Version: $(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')" >&2
 echo "Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >&2
+echo "JSON mode: $JSON_MODE" >&2
 echo "=============================" >&2
 
 # Config
@@ -14,7 +29,34 @@ echo "=============================" >&2
 : "${ALLOW_EMPTY:=1}"                 # 1 = ไม่ล้มเหลวถ้าไม่พบเอเจนต์
 : "${SELF_HEAL:=0}"                   # 1 = ลอง load เอเจนต์ที่หลุด
 
-mkdir -p "$(dirname "$OUT")"
+# Check if launchctl is available (macOS only)
+if ! command -v launchctl >/dev/null 2>&1; then
+  echo "⚠️  launchctl not available (running on Linux?)" >&2
+  # Output stub JSON for Linux environments
+  _now() { date -u +'%Y-%m-%dT%H:%M:%SZ'; }
+  NOW="$(_now)"
+  python3 - <<PY
+import json, sys
+doc = {
+    "_meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "${NOW}",
+        "source": "tools/launchd_selfcheck.zsh",
+        "prefix": "${LABEL_PREFIX}",
+        "total": 0,
+        "healthy": 0,
+        "note": "launchctl not available (Linux environment)"
+    },
+    "items": []
+}
+json.dump(doc, sys.stdout, indent=2, ensure_ascii=False)
+PY
+  exit 0
+fi
+
+if [[ $JSON_MODE -eq 0 ]]; then
+  mkdir -p "$(dirname "$OUT")"
+fi
 
 _now() { date -u +'%Y-%m-%dT%H:%M:%SZ'; }
 
@@ -76,7 +118,9 @@ done
 # สร้าง JSON (ใช้ Python เพื่อความปลอดภัยในการ escape)
 # ใช้ single quotes เพื่อป้องกัน variable expansion ใน heredoc
 NOW="$(_now)"
-python3 - <<PY > "$OUT"
+if [[ $JSON_MODE -eq 1 ]]; then
+  # Output to stdout for --json mode
+  python3 - <<PY
 import json, os, sys
 rows=[]
 for line in open("${tmp}", "r"):
@@ -104,6 +148,37 @@ doc = {
 }
 json.dump(doc, sys.stdout, indent=2, ensure_ascii=False)
 PY
+else
+  # Output to file for normal mode
+  python3 - <<PY > "$OUT"
+import json, os, sys
+rows=[]
+for line in open("${tmp}", "r"):
+    label, pid, last, reason_csv = line.rstrip("\n").split("\t")
+    reasons = [r for r in reason_csv.split(",") if r] if reason_csv else []
+    ok = (pid != "-")
+    rows.append({
+        "label": label,
+        "ok": ok,
+        "pid": None if pid=="-" else int(pid),
+        "last_exit_status": None if last=="-" else int(last),
+        "reasons": reasons
+    })
+
+doc = {
+    "_meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "${NOW}",
+        "source": "tools/launchd_selfcheck.zsh",
+        "prefix": os.environ.get("LABEL_PREFIX","com.02luka."),
+        "total": len(rows),
+        "healthy": sum(1 for r in rows if r["ok"])
+    },
+    "items": rows
+}
+json.dump(doc, sys.stdout, indent=2, ensure_ascii=False)
+PY
+  echo "✅ wrote $OUT" >&2
+fi
 
 rm -f "$tmp"
-echo "✅ wrote $OUT"
