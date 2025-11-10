@@ -1,4 +1,3 @@
----
 name: router-selftest
 
 on:
@@ -30,9 +29,13 @@ jobs:
     # Run on push or when PR has run-smoke label
     if: |
       github.event_name == 'push' ||
-      (github.event.pull_request.head.repo.fork == false &&
-       !contains(github.event.pull_request.title, '[skip-smoke]') &&
-       contains(github.event.pull_request.labels.*.name, 'run-smoke'))
+      github.event_name == 'workflow_dispatch' ||
+      (
+        (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+        (github.event.pull_request.head.repo.fork == false) &&
+        !contains(github.event.pull_request.title, '[skip-smoke]') &&
+        contains(github.event.pull_request.labels.*.name, 'run-smoke')
+      )
     uses: .github/workflows/_reusable/router-selftest.yml
     with:
       # Pass Node.js version to reusable workflow for actions/setup-node@v4
