@@ -71,6 +71,11 @@ jobs:
           mkdir -p logs
           echo "✅ Directories created"
 
+      - name: Install dependencies
+        run: |
+          npm install ajv ajv-formats
+          echo "✅ Dependencies installed"
+
       - name: Verify configuration files
         run: |
           echo "🔍 Checking configuration files..."
