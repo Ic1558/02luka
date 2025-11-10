@@ -5,6 +5,8 @@ run-name: "PR Score (#${{ github.event.pull_request.number || inputs.pr_number |
 on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
+    # Note: No 'branches:' filter = scores PRs targeting ANY branch
+    # (main, develop, feature/*, release/*, hotfix/*, etc.)
   workflow_dispatch:
     inputs:
       pr_number:
