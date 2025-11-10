@@ -619,16 +619,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add hub/bridge_selfcheck.json mls/status/mls_validation_streak.json
-          # Also commit ledger file if it was updated
+          
+          # Force add sanitized ledger
           DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER_FILE="mls/ledger/${DAY}.jsonl"
           if [ -f "$LEDGER_FILE" ]; then
-            git add "$LEDGER_FILE"
+            git add -f "$LEDGER_FILE"
           fi
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          
+          # Commit only if ledger content changed
+          if ! git diff --cached --quiet; then
+            timestamp=$(TZ=Asia/Bangkok date +"%Y-%m-%d %H:%M:%S %z")
+            git commit -m "chore(mls): auto-commit sanitized ledger – $timestamp" || echo "Commit failed (non-critical)"
+            git push || echo "Push failed (non-critical)"
+            echo "✅ Sanitized ledger committed"
           else
-            git commit -m "chore(bridge): auto-update self-check snapshot and MLS ledger" || echo "Commit failed (non-critical)"
+            echo "ℹ️ No ledger diff detected — skip commit"
           fi
 
       - name: Check for critical issues

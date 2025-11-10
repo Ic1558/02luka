@@ -378,6 +378,25 @@ jobs:
 
           echo "📘 MLS appended → $OUTFILE"
 
+      - name: Sanitize MLS ledger (strip blanks, keep valid JSON)
+        if: ${{ needs.sanity.outputs.ci_strict == '1' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
+          LEDGER="mls/ledger/${DAY}.jsonl"
+          [ -s "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY — skip sanitize"; exit 0; }
+          TMP="$(mktemp)"
+          # Keep only non-empty lines that are valid JSON
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            if echo "$line" | jq -e . >/dev/null 2>&1; then
+              printf '%s\n' "$line" >> "$TMP"
+            fi
+          done < "$LEDGER"
+          mv "$TMP" "$LEDGER"
+          echo "✅ Sanitized ledger → $LEDGER"
+
       - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
@@ -578,20 +597,19 @@ jobs:
 
           # Add the snapshot
           git add hub/bridge_selfcheck.json mls/status/mls_validation_streak.json
-          # Also commit ledger file if it was updated
+          
+          # Force add sanitized ledger
           DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER_FILE="mls/ledger/${DAY}.jsonl"
           if [ -f "$LEDGER_FILE" ]; then
-            git add "$LEDGER_FILE"
+            git add -f "$LEDGER_FILE"
           fi
-
-          # Only commit if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
+          
+          # Commit only if ledger content changed
+          if ! git diff --cached --quiet; then
             timestamp=$(TZ=Asia/Bangkok date +"%Y-%m-%d %H:%M:%S %z")
-            git commit -m "chore(bridge): auto-update self-check snapshot and MLS ledger - $timestamp"
-
+            git commit -m "chore(mls): auto-commit sanitized ledger – $timestamp" || echo "Commit failed (non-critical)"
+            
             # Push with retry logic
             attempt=0
             until git push; do
@@ -604,8 +622,10 @@ jobs:
               sleep 2
               git pull --rebase
             done
-
-            echo "✅ Snapshot committed and pushed"
+            
+            echo "✅ Sanitized ledger committed"
+          else
+            echo "ℹ️ No ledger diff detected — skip commit"
           fi
 
       - name: Check for critical issues
