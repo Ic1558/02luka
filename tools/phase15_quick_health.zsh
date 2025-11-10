@@ -2,7 +2,8 @@
 # Phase 15 Quick Health Check
 # Quick diagnostic commands for MCP Bridge and MLS services
 
-set -euo pipefail
+# Note: In JSON mode, we disable errexit to guarantee output
+set -uo pipefail
 
 # ============================================================
 # Configuration
@@ -26,6 +27,18 @@ FIX_LEDGER=false
 # Health status
 MCP_OK=1
 LEDGER_OK=1
+
+# Error trap for JSON mode - guarantee output on failure
+emit_error_json() {
+  if [[ "$JSON_MODE" == "true" ]]; then
+    local error_msg="${1:-unknown error}"
+    local ts=$(TZ=Asia/Bangkok date '+%Y-%m-%dT%H:%M:%S%z' 2>/dev/null || date -u +%FT%TZ)
+    echo "{\"ok\":false,\"error\":\"${error_msg}\",\"ts_ict\":\"${ts}\"}"
+  fi
+}
+
+# Trap errors in JSON mode
+trap 'emit_error_json "script failed unexpectedly"' ERR EXIT
 
 # ============================================================
 # Parse arguments
@@ -255,15 +268,25 @@ check_mcp_bridge() {
 
   # Output
   if [[ "$JSON_MODE" == "true" ]]; then
+    # Sanitize boolean values for --argjson
+    local keep_alive_json="false"
+    [[ "$keep_alive" == "true" ]] && keep_alive_json="true"
+
+    local run_at_load_json="false"
+    [[ "$run_at_load" == "true" ]] && run_at_load_json="true"
+
+    local ok_json="false"
+    [[ $MCP_OK -eq 1 ]] && ok_json="true"
+
     jq -n \
       --arg label "${SERVICE_MCP_BRIDGE}" \
       --arg pid "$pid" \
       --arg last_exit "$last_exit" \
       --arg program "$program" \
       --arg script_path "$script_path" \
-      --argjson keep_alive "$(echo "$keep_alive" | grep -q "true" && echo true || echo false)" \
-      --argjson run_at_load "$(echo "$run_at_load" | grep -q "true" && echo true || echo false)" \
-      --argjson ok "$([[ $MCP_OK -eq 1 ]] && echo true || echo false)" \
+      --argjson keep_alive "$keep_alive_json" \
+      --argjson run_at_load "$run_at_load_json" \
+      --argjson ok "$ok_json" \
       '{
         label: $label,
         pid: (if $pid == "" then null else ($pid | tonumber) end),
@@ -273,7 +296,7 @@ check_mcp_bridge() {
         keep_alive: $keep_alive,
         run_at_load: $run_at_load,
         ok: $ok
-      }'
+      }' 2>/dev/null || echo '{"ok":false,"error":"jq failed in check_mcp_bridge"}'
   else
     log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     log_info "📡 MCP Bridge: ${SERVICE_MCP_BRIDGE}"
@@ -361,16 +384,30 @@ check_mls() {
   # Output
   if [[ "$JSON_MODE" == "true" ]]; then
     # Ensure numeric values are valid
-    streak_num=$((streak + 0))
-    entries_num=$((entries_today + 0))
+    local streak_num=$((streak + 0))
+    local entries_num=$((entries_today + 0))
+
+    # Sanitize boolean values for --argjson
+    local streak_exists_json="false"
+    [[ "$streak_exists" == "true" ]] && streak_exists_json="true"
+
+    local ledger_exists_json="false"
+    [[ "$ledger_exists" == "true" ]] && ledger_exists_json="true"
+
+    local ledger_jsonl_ok_json="false"
+    [[ "$ledger_jsonl_ok" == "true" ]] && ledger_jsonl_ok_json="true"
+
+    local ok_json="false"
+    [[ $LEDGER_OK -eq 1 ]] && ok_json="true"
+
     jq -n \
-      --argjson streak_exists "$([[ "$streak_exists" == "true" ]] && echo true || echo false)" \
+      --argjson streak_exists "$streak_exists_json" \
       --argjson streak "$streak_num" \
       --arg ledger_path "${LEDGER_FILE}" \
-      --argjson ledger_exists "$([[ "$ledger_exists" == "true" ]] && echo true || echo false)" \
-      --argjson ledger_jsonl_ok "$([[ "$ledger_jsonl_ok" == "true" ]] && echo true || echo false)" \
+      --argjson ledger_exists "$ledger_exists_json" \
+      --argjson ledger_jsonl_ok "$ledger_jsonl_ok_json" \
       --argjson entries_today "$entries_num" \
-      --argjson ok "$([[ $LEDGER_OK -eq 1 ]] && echo true || echo false)" \
+      --argjson ok "$ok_json" \
       '{
         streak_file_exists: $streak_exists,
         streak: $streak,
@@ -379,7 +416,7 @@ check_mls() {
         ledger_jsonl_ok: $ledger_jsonl_ok,
         entries_today: $entries_today,
         ok: $ok
-      }'
+      }' 2>/dev/null || echo '{"ok":false,"error":"jq failed in check_mls"}'
   else
     log_info ""
     log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -414,28 +451,32 @@ check_mls() {
 # Main execution
 # ============================================================
 if [[ "$JSON_MODE" == "true" ]]; then
+  # Disable trap for normal exit
+  trap - EXIT
+
   # JSON output mode
-  mcp_json=$(check_mcp_bridge)
-  mls_json=$(check_mls)
-  
-  overall_ok=$([[ $MCP_OK -eq 1 ]] && [[ $LEDGER_OK -eq 1 ]] && echo true || echo false)
-  
+  mcp_json=$(check_mcp_bridge 2>/dev/null) || mcp_json='{"ok":false,"error":"check_mcp_bridge failed"}'
+  mls_json=$(check_mls 2>/dev/null) || mls_json='{"ok":false,"error":"check_mls failed"}'
+
   # Re-check MCP_OK and LEDGER_OK after functions run
-  mcp_ok_json=$(echo "$mcp_json" | jq -r '.ok')
-  mls_ok_json=$(echo "$mls_json" | jq -r '.ok')
-  overall_ok=$([[ "$mcp_ok_json" == "true" ]] && [[ "$mls_ok_json" == "true" ]] && echo true || echo false)
-  
+  mcp_ok_json=$(echo "$mcp_json" | jq -r '.ok' 2>/dev/null || echo "false")
+  mls_ok_json=$(echo "$mls_json" | jq -r '.ok' 2>/dev/null || echo "false")
+
+  # Sanitize boolean for --argjson
+  local overall_ok_json="false"
+  [[ "$mcp_ok_json" == "true" ]] && [[ "$mls_ok_json" == "true" ]] && overall_ok_json="true"
+
   jq -n \
     --arg ts_ict "$TS_ICT" \
     --argjson mcp_bridge "$mcp_json" \
     --argjson mls "$mls_json" \
-    --argjson ok "$overall_ok" \
+    --argjson ok "$overall_ok_json" \
     '{
       ts_ict: $ts_ict,
       mcp_bridge: $mcp_bridge,
       mls: $mls,
       ok: $ok
-    }'
+    }' 2>/dev/null || echo '{"ok":false,"error":"final jq failed","ts_ict":"'"$TS_ICT"'"}'
 else
   # Human-readable output mode
   log_info "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -467,16 +508,15 @@ fi
 # ============================================================
 # Exit with appropriate code
 # ============================================================
-if [[ $MCP_OK -eq 1 ]] && [[ $LEDGER_OK -eq 1 ]]; then
-  if [[ "$JSON_MODE" == "false" ]]; then
-    log_info "✅ Phase15 Quick Health: OK"
-  fi
+if [[ "$JSON_MODE" == "true" ]]; then
+  # In JSON mode, always exit 0 - CI will check the JSON content
+  exit 0
+elif [[ $MCP_OK -eq 1 ]] && [[ $LEDGER_OK -eq 1 ]]; then
+  log_info "✅ Phase15 Quick Health: OK"
   exit 0
 else
-  if [[ "$JSON_MODE" == "false" ]]; then
-    log_info "❌ Phase15 Quick Health: FAILED"
-    [[ $MCP_OK -ne 1 ]] && log_info "   - MCP Bridge issues detected"
-    [[ $LEDGER_OK -ne 1 ]] && log_info "   - Ledger issues detected"
-  fi
+  log_info "❌ Phase15 Quick Health: FAILED"
+  [[ $MCP_OK -ne 1 ]] && log_info "   - MCP Bridge issues detected"
+  [[ $LEDGER_OK -ne 1 ]] && log_info "   - Ledger issues detected"
   exit 1
 fi
