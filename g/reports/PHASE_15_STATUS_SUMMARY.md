@@ -38,7 +38,7 @@ launchctl kickstart -k system/com.02luka.mcp.fs
 
 launchctl kickstart -k system/com.02luka.mcp.puppeteer
 
-launchctl kickstart -k system/com.02luka.webbridge
+launchctl kickstart -k system/com.02luka.gg.mcp-bridge
 
 
 
@@ -92,9 +92,9 @@ cp -R ~/02luka/g/reports ~/02luka/snapshots/phase15_final/
 
 
 
-# Check 3 green streak in CLS
+# Check 3 green streak in CLS (creates file if missing)
 
-cat ~/02luka/mls/status/mls_validation_streak.json | jq .
+cat ~/02luka/mls/status/mls_validation_streak.json 2>/dev/null | jq . || echo "⚠️  File not found - will be created on first validation"
 
 
 
