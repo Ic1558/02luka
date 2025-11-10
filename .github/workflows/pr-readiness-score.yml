@@ -84,12 +84,14 @@ jobs:
       - name: Install dependencies
         if: |
           steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
           !github.event.pull_request.head.repo.fork
         run: npm ci --omit=dev --prefer-offline --no-audit
 
       - name: Skip scoring for forked PR
         if: |
           steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
           github.event.pull_request.head.repo.fork
         run: |
           echo "::notice ::Skipping readiness scoring for forked PRs (read-only token permissions)"
@@ -100,6 +102,7 @@ jobs:
         id: compute
         if: |
           steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
           !github.event.pull_request.head.repo.fork
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
