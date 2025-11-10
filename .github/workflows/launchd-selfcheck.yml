@@ -73,6 +73,24 @@ jobs:
       - name: Ensure hub dir
         run: mkdir -p hub
 
+      - name: Debug: Verify script version
+        shell: bash
+        run: |
+          echo "=== Checking script version ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== First 25 lines of launchd_selfcheck.zsh ==="
+          head -25 tools/launchd_selfcheck.zsh
+          echo ""
+          echo "=== Checking for mapfile ==="
+          if grep -q "mapfile" tools/launchd_selfcheck.zsh; then
+            echo "❌ ERROR: mapfile still found in script!"
+            exit 1
+          else
+            echo "✅ No mapfile found - using while loop"
+          fi
+
       - name: Run selfcheck (allow empty, no self-heal in CI)
         shell: zsh {0}
         run: |
