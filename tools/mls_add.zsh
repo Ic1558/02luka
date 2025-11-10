@@ -68,8 +68,8 @@ done
 LEDGER_DIR="$HOME/02luka/mls/ledger"
 mkdir -p "$LEDGER_DIR"
 
-TS="$(date +%Y-%m-%dT%H:%M:%S%z)"
-DAY="$(date +%Y-%m-%d)"
+TS="$(TZ=Asia/Bangkok date +%Y-%m-%dT%H:%M:%S%z)"
+DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
 F="$LEDGER_DIR/${DAY}.jsonl"
 
 # build JSON safely with jq
@@ -116,4 +116,3 @@ jq -n --arg ts "$TS" \
 ' -c >> "$F"
 
 echo "Appended MLS event → $F"
-
