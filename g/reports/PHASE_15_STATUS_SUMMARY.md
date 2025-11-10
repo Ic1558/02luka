@@ -103,3 +103,42 @@ cat ~/02luka/mls/status/mls_validation_streak.json 2>/dev/null | jq . || echo "�
 tail -n 5 ~/02luka/mls/ledger/$(TZ=Asia/Bangkok date +%Y-%m-%d).jsonl | jq .
 
 ⸻
+
+⸻
+
+🔍 Quick Health Check Commands
+
+MCP Bridge: com.02luka.gg.mcp-bridge
+
+# สถานะ + PID
+launchctl list | grep com.02luka.gg.mcp-bridge
+
+# รายละเอียดบริการ (ตรวจ Program, KeepAlive, RunAtLoad, LastExitStatus)
+launchctl print gui/$(id -u)/com.02luka.gg.mcp-bridge
+
+# รีสตาร์ตอย่างปลอดภัย
+launchctl bootout gui/$(id -u)/com.02luka.gg.mcp-bridge 2>/dev/null || true
+launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/com.02luka.gg.mcp-bridge.plist"
+launchctl kickstart -k gui/$(id -u)/com.02luka.gg.mcp-bridge
+
+# ดู log สด (ถ้าใช้ stdout/stderr ของ plist)
+log stream --predicate 'subsystem CONTAINS "02luka" OR process == "mcp-bridge"' --info
+
+# ตรวจ plist ให้ชัวร์
+plutil -lint "$HOME/Library/LaunchAgents/com.02luka.gg.mcp-bridge.plist"
+grep -A 1 "Label" "$HOME/Library/LaunchAgents/com.02luka.gg.mcp-bridge.plist" | grep "com.02luka.gg.mcp-bridge"
+
+MLS Streak & Ledger (ชุดดูเร็ว)
+
+# ดู streak (ปลอดภัยแม้ไฟล์ยังไม่ถูกสร้าง)
+cat "$HOME/02luka/mls/status/mls_validation_streak.json" 2>/dev/null | jq . \
+  || echo "⚠️  streak file not found (จะถูกสร้างเมื่อ validate ครั้งแรก)"
+
+# ดู entry วันนี้ (ICT)
+"$HOME/02luka/tools/mls_view.zsh" --today
+
+# ยืนยันไฟล์ ledger วันนี้เป็น JSONL และมี newline ปิดท้าย
+LEDGER="$HOME/02luka/mls/ledger/$(TZ=Asia/Bangkok date +%Y-%m-%d).jsonl"
+[ -f "$LEDGER" ] && tail -n 3 "$LEDGER" | jq -c . >/dev/null && echo "JSONL ✅" || echo "ยังไม่พบ/ไม่ใช่ JSONL"
+
+⸻
