@@ -89,38 +89,34 @@ jobs:
           echo "Current commit: $(git rev-parse HEAD)"
           echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
           echo ""
-          echo "=== Checking vector_build.zsh ==="
+          echo "=== First 25 lines of vector_build.zsh ==="
           if [ -f tools/vector_build.zsh ]; then
-            echo "✅ vector_build.zsh exists"
-            echo "First 25 lines:"
             head -25 tools/vector_build.zsh
             echo ""
-            echo "Checking for problematic commands (excluding comments):"
+            echo "=== Checking for mapfile command (excluding comments) ==="
             if grep -E "^[^#]*mapfile" tools/vector_build.zsh >/dev/null 2>&1; then
-              echo "❌ ERROR: mapfile command found in vector_build.zsh!"
+              echo "❌ ERROR: mapfile command still found in script!"
               grep -n "^[^#]*mapfile" tools/vector_build.zsh
               exit 1
             else
-              echo "✅ No mapfile command found"
+              echo "✅ No mapfile command found - using while loop"
             fi
           else
             echo "❌ ERROR: vector_build.zsh not found!"
             exit 1
           fi
           echo ""
-          echo "=== Checking rag_vector_selftest.zsh ==="
+          echo "=== First 25 lines of rag_vector_selftest.zsh ==="
           if [ -f tools/rag_vector_selftest.zsh ]; then
-            echo "✅ rag_vector_selftest.zsh exists"
-            echo "First 25 lines:"
             head -25 tools/rag_vector_selftest.zsh
             echo ""
-            echo "Checking for problematic commands (excluding comments):"
+            echo "=== Checking for mapfile command (excluding comments) ==="
             if grep -E "^[^#]*mapfile" tools/rag_vector_selftest.zsh >/dev/null 2>&1; then
-              echo "❌ ERROR: mapfile command found in rag_vector_selftest.zsh!"
+              echo "❌ ERROR: mapfile command still found in script!"
               grep -n "^[^#]*mapfile" tools/rag_vector_selftest.zsh
               exit 1
             else
-              echo "✅ No mapfile command found"
+              echo "✅ No mapfile command found - using while loop"
             fi
           else
             echo "❌ ERROR: rag_vector_selftest.zsh not found!"
