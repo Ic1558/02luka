@@ -57,7 +57,13 @@ for rec in "${labels[@]}"; do
     fi
   fi
 
-  printf "%s\t%s\t%s\t%s\n" "$label" "${pid}" "${last}" "${(j:,:)"${reason[@]:-}"}" >> "$tmp"
+  # Join reason array with comma (compatible with both Zsh and Bash)
+  if [[ ${#reason[@]} -gt 0 ]]; then
+    IFS=, reason_csv="${reason[*]}"
+  else
+    reason_csv=""
+  fi
+  printf "%s\t%s\t%s\t%s\n" "$label" "${pid}" "${last}" "$reason_csv" >> "$tmp"
 done
 
 # สร้าง JSON (ใช้ Python เพื่อความปลอดภัยในการ escape)
