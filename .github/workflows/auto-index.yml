@@ -33,9 +33,15 @@ jobs:
           path: code-repo
 
       - name: Memory self-check
-        uses: ./.github/actions/memory-selfcheck
-        with:
-          working-directory: code-repo
+        working-directory: code-repo
+        run: |
+          set -euo pipefail
+          test -d _memory || { echo "ERR: _memory/ not found"; exit 1; }
+          ls -la _memory | head -50
+          test -f _memory/GG/context/LATEST.json
+          test -f _memory/GG/context/LATEST.meta.json
+          jq -e '.date and .digest' _memory/GG/context/LATEST.meta.json >/dev/null
+          echo "OK: _memory subtree present and GG/context latest files valid"
 
       - name: Setup Node.js with cache
         uses: ./code-repo/.github/actions/node-setup
