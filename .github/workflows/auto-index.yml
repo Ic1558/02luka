@@ -65,12 +65,22 @@ jobs:
         working-directory: code-repo/hub
         run: |
           set -euo pipefail
-          if node -e "require('fs').accessSync('node_modules/redis', 0)" 2>/dev/null; then
-            echo "redis already present"
+          # Check if redis is available (works even if node_modules doesn't exist yet)
+          if node -e "require.resolve('redis')" 2>/dev/null; then
+            echo "✅ redis already available"
           else
-            echo "Installing minimal dependency: redis"
-            npm i --no-audit --no-fund --no-save redis@^4
+            echo "📦 Installing minimal dependency: redis"
+            # Ensure node_modules exists
+            mkdir -p node_modules
+            # Install redis (--no-save to avoid modifying package.json)
+            npm install --no-audit --no-fund --no-save redis@^4
+            echo "✅ redis installed successfully"
           fi
+          # Verify installation
+          node -e "require('redis'); console.log('✅ redis module verified')" || {
+            echo "❌ Failed to verify redis installation"
+            exit 1
+          }
 
       - name: Run auto-indexer
         working-directory: code-repo
