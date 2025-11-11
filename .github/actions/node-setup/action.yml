@@ -8,8 +8,8 @@ inputs:
     required: false
     default: '20'
 
-  cache-dependency-path:
-    description: 'Path(s) to package-lock.json files (newline-separated for multiple paths)'
+  lockfile:
+    description: 'Path to the lockfile for cache key'
     required: false
     default: 'package-lock.json'
 
@@ -30,9 +30,9 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'npm'
-        cache-dependency-path: ${{ inputs.cache-dependency-path }}
-      continue-on-error: ${{ inputs.continue-on-error == 'true' }}
+        cache: ${{ inputs.install-dependencies == 'true' && 'npm' || '' }}
+        cache-dependency-path: ${{ inputs.lockfile != '' && inputs.lockfile || '' }}
+      continue-on-error: ${{ inputs.continue-on-error == 'true' || inputs.install-dependencies == 'false' }}
 
     - name: Install dependencies
       if: ${{ inputs.install-dependencies == 'true' }}
