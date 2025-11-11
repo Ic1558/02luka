@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 
 from redis import Redis
 from telegram import Update
@@ -36,10 +37,53 @@ redis_client = Redis(
 )
 
 
+def build_payload(update: Update) -> dict:
+    message = update.message
+    chat = message.chat
+    sender = message.from_user
+    payload = {
+        "type": "telegram_message",
+        "text": (message.text or "").strip(),
+        "message_id": message.message_id,
+        "date": message.date.isoformat() if message.date else None,
+        "chat": {
+            "id": chat.id,
+            "type": chat.type,
+            "title": chat.title,
+            "username": chat.username,
+        },
+        "from": {
+            "id": sender.id if sender else None,
+            "is_bot": sender.is_bot if sender else None,
+            "username": sender.username if sender else None,
+            "first_name": sender.first_name if sender else None,
+            "last_name": sender.last_name if sender else None,
+            "language_code": sender.language_code if sender else None,
+        },
+        "source": "telegram",
+        "reply_to": f"kim:reply:telegram:{chat.id}",
+        "published_at": datetime.utcnow().isoformat() + "Z",
+    }
+    if message.entities:
+        payload["entities"] = [entity.to_dict() for entity in message.entities]
+    return payload
+
+
+def ack_text(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("/use"):
+        parts = stripped.split(maxsplit=1)
+        target = parts[1].strip() if len(parts) > 1 else "(missing)"
+        return f"Requested profile switch → {target}"
+    if stripped.startswith("/k2"):
+        return "Dispatching question via Kim K2 profile (one-off)."
+    return f"Dispatching message via Kim ({REDIS_CHANNEL})."
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
         await update.message.reply_text(
-            "Kim online ✅  Send an intent (e.g., 'backup now')."
+            "Kim online ✅  Send /use <profile> or /k2 <question> to access K2."
         )
 
 
@@ -50,11 +94,11 @@ async def to_nlp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not text:
         return
 
-    payload = json.dumps({"text": text})
+    payload = build_payload(update)
     try:
-        redis_client.publish(REDIS_CHANNEL, payload)
+        redis_client.publish(REDIS_CHANNEL, json.dumps(payload))
         logging.info("PUB → %s : %s", REDIS_CHANNEL, payload)
-        await update.message.reply_text(f"ACK → {REDIS_CHANNEL}")
+        await update.message.reply_text(ack_text(text))
     except Exception:  # pragma: no cover - defensive logging
         logging.exception("Redis publish failed")
         await update.message.reply_text("ERR: cannot reach NLP bridge")
@@ -63,7 +107,7 @@ async def to_nlp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, to_nlp))
+    app.add_handler(MessageHandler(filters.TEXT, to_nlp))
     app.run_polling(close_loop=False)
 
 
