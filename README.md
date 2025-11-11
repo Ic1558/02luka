@@ -1,3 +1,7 @@
+<!-- badges:start -->
+[![Auto-Index OK](https://img.shields.io/badge/Auto--Index-OK-brightgreen)](./.github/workflows/auto-index.yml) [![Phase15 OK](https://img.shields.io/badge/Phase15-OK-brightgreen)](./.github/workflows/phase15-quick-health.yml)
+<!-- badges:end -->
+
 # 02luka Automation Console
 
 ![CLS CI](https://github.com/Ic1558/02luka/actions/workflows/cls-ci.yml/badge.svg)
@@ -42,3 +46,16 @@ Quick Ops:
 | 📦 Artifacts | `g/reports/phase15/`, `hub/`, `g/telemetry_unified/` |
 
 > See full guide: [`docs/PHASE15_OPERATIONS.md`](docs/PHASE15_OPERATIONS.md)
+
+<!-- metrics:start -->
+
+### Claude Code Metrics 202511
+
+# Claude Code Metrics 202511
+- Generated: 2025-11-11T17:42:16Z
+- plan_mode_usage: (stub)
+- hooks: pre_commit=OK quality_gate=OK verify_deployment=OK
+- subagents_used: (stub)
+- deployments_success_rate: (stub)
+- rollback_frequency: (stub)
+<!-- metrics:end -->
