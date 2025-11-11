@@ -1,83 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-11T16:49:43.420Z",
+    "created_at": "2025-11-11T16:57:47.556Z",
     "source": "hub_autoindex.cjs",
     "total": 19,
     "mem_root": "/home/runner/work/02luka/02luka/memory-repo"
   },
   "items": [
     {
-      "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 03:38:07 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
-    },
-    {
       "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
+      "mtime": "2025-11-11T16:57:45.037Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -94,7 +26,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
+      "mtime": "2025-11-11T16:57:45.037Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -111,7 +43,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-11T16:49:37.215Z",
+      "mtime": "2025-11-11T16:57:45.037Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -121,7 +53,7 @@
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -138,7 +70,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -154,7 +86,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -163,39 +95,8 @@
       "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
     },
     {
-      "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-11T16:49:37.214Z",
-      "bytes": 15223,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
-      "meta": {
-        "generated_at": "2025-11-07T20:21:38Z",
-        "revision": "f67de55",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": 20
-      },
-      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
-    },
-    {
-      "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
-      "bytes": 9360,
-      "kind": "md",
-      "title": "Context Summary - 02LUKA System",
-      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:21:38 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
-      "meta": {
-        "created_by": "GG_Agent_02luka",
-        "created_at": "2025-11-07 20:21:38 UTC",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": "20",
-        "revision": "f67de55"
-      },
-      "sha256": "6e42f3be0c33545497c7f3ad8195160fefdfb8cb98b33fc1f6169cb97ab7faa3"
-    },
-    {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -212,7 +113,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -228,7 +129,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -238,7 +139,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 458,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -248,7 +149,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -266,7 +167,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-11T16:49:37.214Z",
+      "mtime": "2025-11-11T16:57:45.036Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -283,14 +184,113 @@
       "sha256": "4347ed21c10c32fccf8f8c79db7eeea01248d3186fe322833d558af033a75fd5"
     },
     {
+      "rel": "g/reports/sessions/session_20251108_033807.md",
+      "mtime": "2025-11-11T16:57:45.036Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 03:38:07 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251108_102049.md",
+      "mtime": "2025-11-11T16:57:45.036Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215231.md",
+      "mtime": "2025-11-11T16:57:45.036Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215448.md",
+      "mtime": "2025-11-11T16:57:45.036Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
+    },
+    {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-11T16:49:37.213Z",
+      "mtime": "2025-11-11T16:57:45.035Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
       "summary": "{\"mcpServers\":{}}",
       "meta": {},
       "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_202138Z.json",
+      "mtime": "2025-11-11T16:57:45.035Z",
+      "bytes": 15223,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
+      "meta": {
+        "generated_at": "2025-11-07T20:21:38Z",
+        "revision": "f67de55",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": 20
+      },
+      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_202138Z.md",
+      "mtime": "2025-11-11T16:57:45.035Z",
+      "bytes": 9360,
+      "kind": "md",
+      "title": "Context Summary - 02LUKA System",
+      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:21:38 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
+      "meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "2025-11-07 20:21:38 UTC",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": "20",
+        "revision": "f67de55"
+      },
+      "sha256": "6e42f3be0c33545497c7f3ad8195160fefdfb8cb98b33fc1f6169cb97ab7faa3"
     }
   ]
 }
