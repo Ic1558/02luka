@@ -224,3 +224,98 @@ jobs:
           else
             echo "ℹ️  No changes to hub files - skipping commit"
           fi
+
+  claude-metrics-publish:
+    name: Publish Claude Metrics Badge
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout code repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: code-repo
+
+      - name: Gate to 06:00 ICT only
+        run: |
+          set -euo pipefail
+          # Run only at 23:00 UTC (06:00 ICT)
+          if [[ "$(date -u +%H%M)" != "2300" ]]; then
+            echo "Not 23:00 UTC; skipping metrics publish."
+            exit 0
+          fi
+
+      - name: Prepare metrics snapshot
+        working-directory: code-repo
+        id: snap
+        run: |
+          set -euo pipefail
+          Y=$(date -u +%Y%m)
+          MET="g/reports/claude_code_metrics_${Y}.md"
+          echo "yearmonth=$Y" >> "$GITHUB_OUTPUT"
+          if [[ ! -f "$MET" ]]; then
+            echo "No metrics file ($MET); nothing to publish."
+            exit 0
+          fi
+          echo "metrics_present=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update README badges + metrics section
+        if: steps.snap.outputs.metrics_present == 'true'
+        working-directory: code-repo
+        run: |
+          set -euo pipefail
+          Y="${{ steps.snap.outputs.yearmonth }}"
+          MET="g/reports/claude_code_metrics_${Y}.md"
+          README="README.md"
+          BADGES_START="<!-- badges:start -->"
+          BADGES_END="<!-- badges:end -->"
+
+          AUTO_INDEX_BADGE='[![Auto-Index OK](https://img.shields.io/badge/Auto--Index-OK-brightgreen)](./.github/workflows/auto-index.yml)'
+          PHASE15_BADGE='[![Phase15 OK](https://img.shields.io/badge/Phase15-OK-brightgreen)](./.github/workflows/phase15-quick-health.yml)'
+
+          if [[ ! -f "$README" ]]; then
+            echo "# 02luka" > "$README"
+          fi
+
+          # Insert or replace badges block
+          if grep -q "$BADGES_START" "$README"; then
+            awk -v start="$BADGES_START" -v end="$BADGES_END" -v a="$AUTO_INDEX_BADGE" -v p="$PHASE15_BADGE" '
+              BEGIN{inblk=0}
+              index($0,start){print start; print a " " p; inblk=1; next}
+              index($0,end){print end; inblk=0; next}
+              !inblk{print}
+            ' "$README" > "$README.tmp" && mv "$README.tmp" "$README"
+          else
+            printf "%s\n%s %s\n%s\n\n" "$BADGES_START" "$AUTO_INDEX_BADGE" "$PHASE15_BADGE" "$BADGES_END" | cat - "$README" > "$README.tmp" && mv "$README.tmp" "$README"
+          fi
+
+          # Insert/update metrics preview block
+          MET_START="<!-- metrics:start -->"
+          MET_END="<!-- metrics:end -->"
+          PREVIEW=$(printf "\n### Claude Code Metrics %s\n\n" "$Y"; sed -n '1,50p' "$MET")
+          if grep -q "$MET_START" "$README"; then
+            awk -v start="$MET_START" -v end="$MET_END" -v pre="$PREVIEW" '
+              BEGIN{inblk=0}
+              index($0,start){print start; print pre; inblk=1; next}
+              index($0,end){print end; inblk=0; next}
+              !inblk{print}
+            ' "$README" > "$README.tmp" && mv "$README.tmp" "$README"
+          else
+            printf "\n%s\n%s\n%s\n" "$MET_START" "$PREVIEW" "$MET_END" >> "$README"
+          fi
+
+      - name: Commit and push README update
+        if: steps.snap.outputs.metrics_present == 'true'
+        working-directory: code-repo
+        run: |
+          set -euo pipefail
+          git config user.name "02LUKA Bot"
+          git config user.email "bot@02luka.local"
+          git add README.md
+          if git commit -m "docs(metrics): publish Claude metrics & badges [skip ci]"; then
+            git push origin HEAD:main || true
+            echo "README updated and pushed."
+          else
+            echo "No README changes to commit."
+          fi
