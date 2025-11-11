@@ -8,7 +8,7 @@ on:  # yamllint disable-line rule:truthy
       - 'tools/ci/**'
       - 'scripts/**'
       - '.github/workflows/ci.yml'
-      - '.github/workflows/_reusable/validate-core.yml'
+      - '.github/workflows/validate-core-reusable.yml'
       - 'package.json'
       - 'package-lock.json'
   pull_request:
@@ -41,7 +41,7 @@ jobs:
   # This is the only job required to pass for PRs to be green
   # ============================================================
   validate:
-    uses: ./.github/workflows/_reusable/validate-core.yml
+    uses: Ic1558/02luka/.github/workflows/validate-core-reusable.yml@main
     with:
       node_version: '20'
 
