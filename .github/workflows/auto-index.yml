@@ -65,8 +65,8 @@ jobs:
         working-directory: code-repo/hub
         run: |
           set -euo pipefail
-          # Check if redis is available (works even if node_modules doesn't exist yet)
-          if node -e "require.resolve('redis')" 2>/dev/null; then
+          # Check if redis is available using ES module syntax (since hub_autoindex.mjs uses import)
+          if node --input-type=module -e "import('redis').then(() => console.log('✅ redis available')).catch(() => process.exit(1))" 2>/dev/null; then
             echo "✅ redis already available"
           else
             echo "📦 Installing minimal dependency: redis"
@@ -76,8 +76,8 @@ jobs:
             npm install --no-audit --no-fund --no-save redis@^4
             echo "✅ redis installed successfully"
           fi
-          # Verify installation
-          node -e "require('redis'); console.log('✅ redis module verified')" || {
+          # Verify installation using ES module syntax (matches hub_autoindex.mjs)
+          node --input-type=module -e "import('redis').then(() => console.log('✅ redis module verified')).catch((e) => { console.error('❌ Failed to verify redis:', e.message); process.exit(1); })" || {
             echo "❌ Failed to verify redis installation"
             exit 1
           }
