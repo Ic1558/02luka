@@ -30,13 +30,18 @@ env:
   NODE_VERSION: '20'
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+# Concurrency: Cancel in-progress runs to reduce inbox noise
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ============================================================
   # REQUIRED JOB: validate (phase 4/5/6 smoke)
   # This is the only job required to pass for PRs to be green
   # ============================================================
   validate:
-    uses: .github/workflows/_reusable/validate-core.yml
+    uses: ./.github/workflows/_reusable/validate-core.yml
     with:
       node_version: '20'
 

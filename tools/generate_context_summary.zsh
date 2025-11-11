@@ -5,17 +5,33 @@
 
 set -eo pipefail
 
+# Parse arguments
+JSON_MODE=0
+for arg in "$@"; do
+  case "$arg" in
+    --json)
+      JSON_MODE=1
+      ;;
+    *)
+      ;;
+  esac
+done
+
 ROOT="${HOME}/02luka"
 REPORT_DIR="${ROOT}/g/reports/context"
 REPORT_FILE="${REPORT_DIR}/context_summary_$(date -u +%Y%m%d_%H%M%SZ).md"
 LATEST_FILE="${REPORT_DIR}/LATEST.md"
+SIGNALS_FILE="${REPORT_DIR}/signals.json"
 
 mkdir -p "$REPORT_DIR"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📋 Generating Context Summary"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+# Only print banner in non-JSON mode
+if [ "$JSON_MODE" -eq 0 ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📋 Generating Context Summary"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
 
 # Generate summary
 {
@@ -103,11 +119,32 @@ SECTION
 SECTION
 
   REDIS_URL="${LUKA_REDIS_URL:-redis://127.0.0.1:6379}"
-  if redis-cli -u "$REDIS_URL" PING 2>/dev/null | grep -q PONG; then
+  REDIS_TIMEOUT="${REDIS_TIMEOUT:-5}"
+  REDIS_RETRIES="${REDIS_RETRIES:-3}"
+  REDIS_STATUS="failed"
+  
+  # Try to connect with timeout and retries
+  for i in $(seq 1 "$REDIS_RETRIES"); do
+    if timeout "$REDIS_TIMEOUT" redis-cli -u "$REDIS_URL" PING 2>/dev/null | grep -q PONG; then
+      REDIS_STATUS="ok"
+      break
+    else
+      if [ "$i" -lt "$REDIS_RETRIES" ]; then
+        echo "⚠️  Redis connection attempt $i/$REDIS_RETRIES failed, retrying..." >&2
+        sleep 1
+      fi
+    fi
+  done
+  
+  if [ "$REDIS_STATUS" = "ok" ]; then
     echo "- **Status**: ✅ Connected"
   else
-    echo "- **Status**: ⚠️  Connection failed (may need auth)"
+    echo "- **Status**: ⚠️  Connection failed (timeout: ${REDIS_TIMEOUT}s, retries: ${REDIS_RETRIES})"
+    echo "- **Note**: Continuing without Redis connection (graceful degradation)"
   fi
+  
+  # Export Redis status for JSON output
+  export REDIS_STATUS
 
   cat <<'SECTION'
 
@@ -175,11 +212,35 @@ FOOTER
 # Create/update LATEST.md symlink
 ln -sf "$(basename "$REPORT_FILE")" "$LATEST_FILE" 2>/dev/null || cp "$REPORT_FILE" "$LATEST_FILE"
 
-echo "✅ Context summary generated:"
-echo "   Full: $REPORT_FILE"
-echo "   Latest: $LATEST_FILE"
-echo ""
-echo "📊 Summary:"
-wc -l "$REPORT_FILE" | awk '{print "   Lines: " $1}'
-du -h "$REPORT_FILE" | awk '{print "   Size: " $1}'
+# Generate signals JSON (for workflow validation)
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+python3 - <<PY > "$SIGNALS_FILE"
+import json, sys, os
 
+signals = {
+    "redis": os.environ.get("REDIS_STATUS", "failed"),
+    "hub": "unknown",  # Could be enhanced to check hub status
+    "generated_at": "${NOW}",
+    "source": "tools/generate_context_summary.zsh"
+}
+
+json.dump(signals, sys.stdout, indent=2, ensure_ascii=False)
+PY
+
+if [ "$JSON_MODE" -eq 1 ]; then
+  # Output JSON to stdout
+  cat "$SIGNALS_FILE"
+else
+  # Output markdown summary
+  echo "✅ Context summary generated:"
+  echo "   Full: $REPORT_FILE"
+  echo "   Latest: $LATEST_FILE"
+  echo "   Signals: $SIGNALS_FILE"
+  echo ""
+  echo "📊 Summary:"
+  wc -l "$REPORT_FILE" | awk '{print "   Lines: " $1}'
+  du -h "$REPORT_FILE" | awk '{print "   Size: " $1}'
+  echo ""
+  echo "📡 Signals:"
+  cat "$SIGNALS_FILE" | jq '.' 2>/dev/null || cat "$SIGNALS_FILE"
+fi

@@ -19,13 +19,23 @@ permissions:
   pull-requests: read
   actions: read
 
+# Concurrency: Cancel in-progress runs to reduce inbox noise
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   rag-vector-selftest:
     # Skip on forks and when [skip-smoke] in PR title
     # Run on push or when PR has run-smoke label
+    # Quiet-by-default: Only run when explicitly requested
     if: |
       github.event_name == 'push' ||
-      (github.event.pull_request.head.repo.fork == false &&
-       !contains(github.event.pull_request.title, '[skip-smoke]') &&
-       contains(github.event.pull_request.labels.*.name, 'run-smoke'))
-    uses: .github/workflows/_reusable/rag-vector-selftest.yml
+      github.event_name == 'workflow_dispatch' ||
+      (
+        (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+        (github.event.pull_request.head.repo.fork == false) &&
+        !contains(github.event.pull_request.title, '[skip-smoke]') &&
+        contains(github.event.pull_request.labels.*.name, 'run-smoke')
+      )
+    uses: ./.github/workflows/_reusable/rag-vector-selftest.yml
