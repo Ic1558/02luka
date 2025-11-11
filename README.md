@@ -59,3 +59,11 @@ Quick Ops:
 - deployments_success_rate: (stub)
 - rollback_frequency: (stub)
 <!-- metrics:end -->
+
+<!-- router:start -->
+## WO Router + Dispatch (Phase 2.5–2.6)
+- `/do` → ENTRY → Mary dispatcher → CLC (fallback shell)
+- `/clc` → CLC inbox (ready for SIP patches)
+- `/local` → shell inbox (Redis `shell` channel)
+- Logs: `logs/wo_drop_history/history.log`
+<!-- router:end -->
