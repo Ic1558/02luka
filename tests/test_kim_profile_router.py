@@ -131,3 +131,137 @@ def test_force_profile_override(tmp_path):
     event_channel, event_payload = published[1]
     assert event_channel == "kim:dispatcher:events"
     assert event_payload["event"] == "kim.dispatch.sent"
+
+
+def test_use_command_missing_profile_id(tmp_path):
+    """Test /use command with missing profile ID."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "/use",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert result["action"] == "profile_update"
+    assert "profile id required" in result["error"].lower()
+    assert "available_profiles" in result
+
+
+def test_use_command_unknown_profile(tmp_path):
+    """Test /use command with unknown profile."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "/use unknown_profile",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert result["action"] == "profile_update"
+    assert "unknown profile" in result["error"].lower()
+    assert "available_profiles" in result
+
+
+def test_k2_command_missing_question(tmp_path):
+    """Test /k2 command with missing question."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "/k2",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert result["action"] == "dispatch"
+    assert "question required" in result["error"].lower()
+
+
+def test_k2_command_empty_question(tmp_path):
+    """Test /k2 command with empty question."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "/k2   ",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert "question required" in result["error"].lower()
+
+
+def test_missing_chat_id(tmp_path):
+    """Test handling payload without chat ID."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "Hello",
+    })
+    assert not result["ok"]
+    assert "chat id missing" in result["error"].lower()
+
+
+def test_empty_message(tmp_path):
+    """Test handling empty message."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert "empty message" in result["error"].lower()
+
+
+def test_whitespace_only_message(tmp_path):
+    """Test handling whitespace-only message."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, _ = make_dispatcher(tmp_path, published)
+
+    result = dispatcher.handle_payload({
+        "text": "   \n\t  ",
+        "chat": {"id": "123456"},
+    })
+    assert not result["ok"]
+    assert "empty message" in result["error"].lower()
+
+
+def test_unknown_profile_fallback(tmp_path):
+    """Test fallback to default when stored profile doesn't exist."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, store = make_dispatcher(tmp_path, published)
+    
+    # Manually set a profile that doesn't exist in dispatcher
+    # (simulating profile removed from config)
+    store.set_profile("123456", "nonexistent_profile")
+    
+    # Should fallback to default
+    result = dispatcher.handle_payload({
+        "text": "Hello",
+        "chat": {"id": "123456"},
+    })
+    assert result["ok"]
+    assert result["profile"] == DEFAULT_PROFILE.id
+
+
+def test_profile_reset_clears_store(tmp_path):
+    """Test that /use default clears the store."""
+    published: list[tuple[str, dict]] = []
+    dispatcher, store = make_dispatcher(tmp_path, published)
+    
+    # Set profile
+    store.set_profile("123456", "kim_k2_poc")
+    assert store.get_profile("123456").profile_id == "kim_k2_poc"
+    
+    # Reset
+    result = dispatcher.handle_payload({
+        "text": "/use default",
+        "chat": {"id": "123456"},
+    })
+    assert result["ok"]
+    
+    # Verify cleared (returns default)
+    record = store.get_profile("123456")
+    assert record.profile_id == DEFAULT_PROFILE.id
