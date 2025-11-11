@@ -33,18 +33,20 @@ jobs:
           path: code-repo
 
       - name: 'Preflight: check MEM_REPO_TOKEN'
+        id: preflight
         run: |
           TOKEN="${{ secrets.MEM_REPO_TOKEN }}"
           if [ -z "$TOKEN" ]; then
-            echo '::error title=Missing secret::MEM_REPO_TOKEN is not configured in repo secrets'
-            echo 'Go to Settings → Secrets and variables → Actions → New repository secret'
-            echo 'Name: MEM_REPO_TOKEN (fine‑grained PAT with Contents: Read/Write on Ic1558/02luka-memory)'
-            exit 1
+            echo '::notice title=Missing secret::MEM_REPO_TOKEN is not configured in repo secrets'
+            echo '::notice ::This run will SKIP pushing to memory repo but continue indexing locally.'
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
           else
             echo '✅ MEM_REPO_TOKEN present (value is masked)'
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout memory repository
+        if: ${{ steps.preflight.outputs.has_token == 'true' }}
         uses: actions/checkout@v4
         with:
           repository: Ic1558/02luka-memory
@@ -55,9 +57,20 @@ jobs:
         uses: ./code-repo/.github/actions/node-setup
         with:
           node-version: '20'
-          install-dependencies: 'true'
-          continue-on-error: 'false'
+          install-dependencies: 'false'
+          continue-on-error: 'true'
           lockfile: 'code-repo/hub/package-lock.json'
+
+      - name: Ensure minimal deps for indexer (redis only)
+        working-directory: code-repo/hub
+        run: |
+          set -euo pipefail
+          if node -e "require('fs').accessSync('node_modules/redis', 0)" 2>/dev/null; then
+            echo "redis already present"
+          else
+            echo "Installing minimal dependency: redis"
+            npm i --no-audit --no-fund --no-save redis@^4
+          fi
 
       - name: Run auto-indexer
         working-directory: code-repo
@@ -99,6 +112,7 @@ jobs:
           fi
 
       - name: Commit and push index.json
+        if: ${{ steps.preflight.outputs.has_token == 'true' }}
         working-directory: code-repo
         run: |
           set -eo pipefail
@@ -212,6 +226,7 @@ jobs:
           fi
 
       - name: Update memory repo symlinks
+        if: ${{ steps.preflight.outputs.has_token == 'true' }}
         working-directory: memory-repo
         run: |
           git config user.name "02LUKA Bot"
