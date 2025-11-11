@@ -32,26 +32,10 @@ jobs:
           fetch-depth: 0
           path: code-repo
 
-      - name: 'Preflight: check MEM_REPO_TOKEN'
-        id: preflight
-        run: |
-          TOKEN="${{ secrets.MEM_REPO_TOKEN }}"
-          if [ -z "$TOKEN" ]; then
-            echo '::notice title=Missing secret::MEM_REPO_TOKEN is not configured in repo secrets'
-            echo '::notice ::This run will SKIP pushing to memory repo but continue indexing locally.'
-            echo "has_token=false" >> "$GITHUB_OUTPUT"
-          else
-            echo '✅ MEM_REPO_TOKEN present (value is masked)'
-            echo "has_token=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Checkout memory repository
-        if: ${{ steps.preflight.outputs.has_token == 'true' }}
-        uses: actions/checkout@v4
+      - name: Memory self-check
+        uses: ./.github/actions/memory-selfcheck
         with:
-          repository: Ic1558/02luka-memory
-          path: memory-repo
-          token: ${{ secrets.MEM_REPO_TOKEN }}
+          working-directory: code-repo
 
       - name: Setup Node.js with cache
         uses: ./code-repo/.github/actions/node-setup
@@ -85,7 +69,7 @@ jobs:
       - name: Run auto-indexer
         working-directory: code-repo
         env:
-          LUKA_MEM_REPO_ROOT: ${{ github.workspace }}/memory-repo
+          LUKA_MEM_REPO_ROOT: ${{ github.workspace }}/code-repo/_memory
           HUB_INDEX_PATH: ${{ github.workspace }}/code-repo/hub/index.json
         run: |
           export REDIS_URL="${REDIS_URL:-redis://localhost:6379}"
@@ -122,7 +106,6 @@ jobs:
           fi
 
       - name: Commit and push index.json
-        if: ${{ steps.preflight.outputs.has_token == 'true' }}
         working-directory: code-repo
         run: |
           set -eo pipefail
@@ -233,26 +216,4 @@ jobs:
             fi
           else
             echo "ℹ️  No changes to hub files - skipping commit"
-          fi
-
-      - name: Update memory repo symlinks
-        if: ${{ steps.preflight.outputs.has_token == 'true' }}
-        working-directory: memory-repo
-        run: |
-          git config user.name "02LUKA Bot"
-          git config user.email "bot@02luka.local"
-          
-          # Create/update symlinks for latest index
-          INDEX_FILE="${{ github.workspace }}/code-repo/hub/index.json"
-          if [ -f "$INDEX_FILE" ]; then
-            mkdir -p GG/context
-            ln -sf "$INDEX_FILE" GG/context/LATEST.index.json || true
-            echo "Updated symlink: GG/context/LATEST.index.json"
-          fi
-          
-          # Commit if there are changes
-          if ! git diff --quiet; then
-            git add -A
-            git commit -m "chore: Update index symlinks" -m "🤖 Automated symlink update via GitHub Actions" -m "Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>" || true
-            git push origin main || true
           fi
