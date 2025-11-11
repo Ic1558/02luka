@@ -59,7 +59,7 @@ jobs:
           node-version: '20'
           install-dependencies: 'false'
           continue-on-error: 'true'
-          lockfile: 'code-repo/hub/package-lock.json'
+          lockfile: ''  # Empty to prevent cache path resolution when not installing deps
 
       - name: Ensure minimal deps for indexer (redis only)
         working-directory: code-repo/hub
