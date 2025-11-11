@@ -25,10 +25,13 @@ SIGNALS_FILE="${REPORT_DIR}/signals.json"
 
 mkdir -p "$REPORT_DIR"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📋 Generating Context Summary"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+# Only print banner in non-JSON mode
+if [ "$JSON_MODE" -eq 0 ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📋 Generating Context Summary"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
 
 # Generate summary
 {
@@ -241,4 +244,3 @@ else
   echo "📡 Signals:"
   cat "$SIGNALS_FILE" | jq '.' 2>/dev/null || cat "$SIGNALS_FILE"
 fi
-
