@@ -38,9 +38,10 @@ jobs:
           set -euo pipefail
           test -d _memory || { echo "ERR: _memory/ not found"; exit 1; }
           ls -la _memory | head -50
-          test -f _memory/GG/context/LATEST.json
-          test -f _memory/GG/context/LATEST.meta.json
-          jq -e '.date and .digest' _memory/GG/context/LATEST.meta.json >/dev/null
+          test -f _memory/GG/context/LATEST.json || { echo "ERR: LATEST.json not found"; exit 1; }
+          test -f _memory/GG/context/LATEST.meta.json || { echo "ERR: LATEST.meta.json not found"; exit 1; }
+          # Validate meta.json has required fields (date/digest OR generated_at)
+          jq -e '.generated_at or (.date and .digest)' _memory/GG/context/LATEST.meta.json >/dev/null || { echo "ERR: Invalid LATEST.meta.json structure"; exit 1; }
           echo "OK: _memory subtree present and GG/context latest files valid"
 
       - name: Setup Node.js with cache
