@@ -9,7 +9,7 @@ on:
       - 'tools/rag_*.zsh'
       - 'knowledge/**'
       - '.github/workflows/rag-vector-selftest.yml'
-      - '.github/workflows/_reusable/rag-vector-selftest.yml'
+      - '.github/workflows/rag-vector-selftest-reusable.yml'
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
@@ -38,4 +38,4 @@ jobs:
         !contains(github.event.pull_request.title, '[skip-smoke]') &&
         contains(github.event.pull_request.labels.*.name, 'run-smoke')
       )
-    uses: ./.github/workflows/_reusable/rag-vector-selftest.yml
+    uses: Ic1558/02luka/.github/workflows/rag-vector-selftest-reusable.yml@main

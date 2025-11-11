@@ -7,7 +7,7 @@ on:
       - 'tools/router_*.zsh'
       - 'config/routing/**'
       - '.github/workflows/router-selftest.yml'
-      - '.github/workflows/_reusable/router-selftest.yml'
+      - '.github/workflows/router-selftest-reusable.yml'
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
@@ -42,7 +42,7 @@ jobs:
         !contains(github.event.pull_request.title, '[skip-smoke]') &&
         contains(github.event.pull_request.labels.*.name, 'run-smoke')
       )
-    uses: ./.github/workflows/_reusable/router-selftest.yml
+    uses: Ic1558/02luka/.github/workflows/router-selftest-reusable.yml@main
     with:
       # Pass Node.js version to reusable workflow for actions/setup-node@v4
       # Required for router AKR self-test script execution
