@@ -438,7 +438,7 @@ info "Fetching $BASE..."
 git fetch "$(echo "$BASE" | cut -d/ -f1)" "$(echo "$BASE" | cut -d/ -f2-)" || error "Failed to fetch $BASE"
 
 # Initialize state file
-STATE_JSON='{"started":"'$(date -Iseconds)'","base":"'$BASE'","results":{}}'
+STATE_JSON='{"started":"'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'","base":"'$BASE'","results":{}}'
 echo "$STATE_JSON" > "$STATE_FILE"
 
 # Track results
@@ -523,7 +523,7 @@ for PR_NUM in "${!CANDIDATES[@]}"; do
   RESULTS[$PR_NUM]="OK"
 
   # Update state file
-  STATE_JSON=$(cat "$STATE_FILE" | jq ".results[\"$PR_NUM\"] = {\"status\":\"OK\",\"branch\":\"$BRANCH\",\"timestamp\":\"$(date -Iseconds)\"}")
+  STATE_JSON=$(cat "$STATE_FILE" | jq ".results[\"$PR_NUM\"] = {\"status\":\"OK\",\"branch\":\"$BRANCH\",\"timestamp\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}")
   echo "$STATE_JSON" > "$STATE_FILE"
 done
 

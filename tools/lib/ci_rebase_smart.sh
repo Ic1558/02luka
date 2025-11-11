@@ -293,7 +293,7 @@ init_metrics() {
   cat > "$metrics_file" <<EOF
 {
   "session_id": "$(uuidgen || date +%s)",
-  "started_at": "$(date -Iseconds)",
+  "started_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "prs_processed": 0,
   "prs_succeeded": 0,
   "prs_failed": 0,
@@ -334,7 +334,7 @@ record_metric() {
     --arg status "$status" \
     --arg duration "$duration" \
     --arg details "$details" \
-    --arg ts "$(date -Iseconds)" \
+    --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
     '{pr: $pr, status: $status, duration_sec: $duration, details: $details, timestamp: $ts}')
 
   metrics=$(echo "$metrics" | jq ".operations += [$operation]")
@@ -350,7 +350,7 @@ finalize_metrics() {
 
   local metrics=$(cat "$CI_REBASE_METRICS")
 
-  metrics=$(echo "$metrics" | jq ".completed_at = \"$(date -Iseconds)\"")
+  metrics=$(echo "$metrics" | jq ".completed_at = \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"")
 
   # Calculate total duration
   local started=$(echo "$metrics" | jq -r '.started_at')

@@ -143,7 +143,7 @@ case "$COMMAND" in
       --arg owner "$OWNER" \
       --arg wo "$CURRENT_WO" \
       --arg session "$CURRENT_SESSION" \
-      --arg created "$(date -Iseconds)" \
+      --arg created "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
       '{
         id: $id,
         type: $type,
@@ -200,7 +200,7 @@ case "$COMMAND" in
     jq --arg id "$TASK_ID" \
        --arg field "$FIELD" \
        --arg value "$VALUE" \
-       --arg updated "$(date -Iseconds)" \
+       --arg updated "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
        'if .id == $id then .[$field] = $value | .updated_at = $updated else . end' \
        "$TASK_DB" > "$TEMP_FILE"
 
@@ -227,7 +227,7 @@ case "$COMMAND" in
     fi
 
     # Mark as done
-    COMPLETED=$(date -Iseconds)
+    COMPLETED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     TEMP_FILE=$(mktemp)
     jq --arg id "$TASK_ID" \
        --arg completed "$COMPLETED" \
@@ -278,7 +278,7 @@ case "$COMMAND" in
       exit 1
     fi
 
-    CANCELLED=$(date -Iseconds)
+    CANCELLED=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     TEMP_FILE=$(mktemp)
     jq --arg id "$TASK_ID" \
        --arg reason "$REASON" \

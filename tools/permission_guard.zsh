@@ -40,7 +40,7 @@ permission_guard() {
   # Alert + request permission
   mkdir -p "$log_dir"
   {
-    echo "time: $(date -Iseconds)"
+    echo "time: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
     echo "script: $0"
     echo "argv: $cmd_str"
     echo "matched_sensitive: $hit"

@@ -54,7 +54,7 @@ LESSON=$(jq -n \
   --arg context "$CONTEXT" \
   --arg wo "$CURRENT_WO" \
   --arg session "$CURRENT_SESSION" \
-  --arg ts "$(date -Iseconds)" \
+  --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
   '{
     id: $id,
     type: $type,
@@ -82,7 +82,7 @@ fi
 # Increment counts
 NEW_INDEX=$(echo "$INDEX" | jq \
   --arg type "$TYPE" \
-  --arg ts "$(date -Iseconds)" \
+  --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
   '.total += 1 | .by_type[$type] = (.by_type[$type] // 0) + 1 | .last_updated = $ts')
 
 echo "$NEW_INDEX" > "$MLS_INDEX"

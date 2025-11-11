@@ -25,7 +25,7 @@ payload=$(jq -cn --arg tid "$TASK_ID" --arg cmd "$CMD" --arg rk "$REPLY_KEY" '
   {type:"shell", task_id:$tid, command:$cmd, reply_key:$rk, created_at:now|todate}')
 # fallback if jq missing
 if [[ -z "${payload}" || "${payload}" == "null" ]]; then
-  payload="{\"type\":\"shell\",\"task_id\":\"$TASK_ID\",\"command\":\"$CMD\",\"reply_key\":\"$REPLY_KEY\",\"created_at\":\"$(date -Iseconds)\"}"
+  payload="{\"type\":\"shell\",\"task_id\":\"$TASK_ID\",\"command\":\"$CMD\",\"reply_key\":\"$REPLY_KEY\",\"created_at\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"}"
 fi
 
 redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" -a "$REDIS_PASSWORD" PUBLISH shell "$payload" >/dev/null

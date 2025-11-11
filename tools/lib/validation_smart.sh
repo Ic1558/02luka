@@ -539,7 +539,7 @@ init_validation_metrics() {
   cat > "$metrics_file" <<EOF
 {
   "session_id": "$(uuidgen 2>/dev/null || date +%s)",
-  "started_at": "$(date -Iseconds)",
+  "started_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "validators": [],
   "summary": {
     "total": 0,
@@ -590,7 +590,7 @@ finalize_validation_metrics() {
      .summary.passed = ($passed | tonumber) |
      .summary.failed = ($failed | tonumber) |
      .summary.warned = ($warned | tonumber) |
-     .completed_at = "'$(date -Iseconds)'"')
+     .completed_at = "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"')
 
   echo "$metrics" > "$VALIDATION_METRICS"
 }
