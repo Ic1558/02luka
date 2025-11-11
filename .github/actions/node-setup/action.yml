@@ -23,16 +23,16 @@ inputs:
     required: false
     default: 'false'
 
-runs:
+  runs:
   using: 'composite'
   steps:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ inputs.node-version }}
-        cache: 'npm'
+        cache: ${{ inputs.install-dependencies == 'true' && 'npm' || '' }}
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
-      continue-on-error: ${{ inputs.continue-on-error == 'true' }}
+      continue-on-error: ${{ inputs.continue-on-error == 'true' || inputs.install-dependencies == 'false' }}
 
     - name: Install dependencies
       if: ${{ inputs.install-dependencies == 'true' }}
