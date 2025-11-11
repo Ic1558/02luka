@@ -23,7 +23,7 @@ inputs:
     required: false
     default: 'false'
 
-  runs:
+runs:
   using: 'composite'
   steps:
     - name: Setup Node.js

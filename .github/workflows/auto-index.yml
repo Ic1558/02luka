@@ -55,6 +55,7 @@ jobs:
         uses: ./code-repo/.github/actions/node-setup
         with:
           install-dependencies: 'false'
+          continue-on-error: 'true'
           cache-dependency-path: code-repo/hub/package-lock.json
 
       - name: Install dependencies
