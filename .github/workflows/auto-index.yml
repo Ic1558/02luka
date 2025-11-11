@@ -55,18 +55,9 @@ jobs:
         uses: ./code-repo/.github/actions/node-setup
         with:
           node-version: '20'
-          install-dependencies: 'false'
-          continue-on-error: 'true'
+          install-dependencies: 'true'
+          continue-on-error: 'false'
           lockfile: 'code-repo/hub/package-lock.json'
-
-      - name: Install dependencies
-        working-directory: code-repo/hub
-        run: |
-          if [ -f package.json ]; then
-            npm ci --no-audit --no-fund
-          else
-            echo "No package.json found, skipping npm install"
-          fi
 
       - name: Run auto-indexer
         working-directory: code-repo
