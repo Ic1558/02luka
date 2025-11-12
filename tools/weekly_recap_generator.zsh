@@ -64,6 +64,7 @@ say ""
   
   # Process each daily digest
   FOUND_ANY=0
+  setopt null_glob  # Don't error on unmatched globs
   for f in g/reports/system/daily_digest_*.md; do
     [[ -f "$f" ]] || continue
     

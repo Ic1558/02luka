@@ -12,7 +12,8 @@ VALID_DAYS=${GOVERNANCE_CERT_VALID_DAYS:-30}
 mkdir -p "$(dirname "$OUTPUT")"
 
 # Find latest certificate
-LATEST_CERT=$(ls -1t "$REPO/g/reports/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -1 || echo "")
+# Check both phase5 and phase6 for certificates
+LATEST_CERT=$(ls -1t "$REPO/g/reports/phase5_governance/DEPLOYMENT_CERTIFICATE_"*.md "$REPO/g/reports/phase6_paula/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -1 || echo "")
 
 valid_count=0
 invalid_count=0
@@ -39,7 +40,7 @@ if [[ -z "$LATEST_CERT" ]]; then
 fi
 
 # Validate each certificate
-for cert in "$REPO/g/reports/DEPLOYMENT_CERTIFICATE_"*.md; do
+for cert in "$REPO/g/reports/phase5_governance/DEPLOYMENT_CERTIFICATE_"*.md "$REPO/g/reports/phase6_paula/DEPLOYMENT_CERTIFICATE_"*.md; do
   [[ ! -f "$cert" ]] && continue
   
   total_count=$((total_count + 1))

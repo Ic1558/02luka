@@ -93,8 +93,8 @@ fi
 # Check daily digest (missing for > 24 hours)
 TODAY=$(date +%Y%m%d)
 YESTERDAY=$(date -v-1d +%Y%m%d 2>/dev/null || date -d "yesterday" +%Y%m%d 2>/dev/null || echo "")
-DIGEST_TODAY="$REPO/g/reports/memory_digest_${TODAY}.md"
-DIGEST_YESTERDAY="$REPO/g/reports/memory_digest_${YESTERDAY}.md"
+DIGEST_TODAY="$REPO/g/reports/system/memory_digest_${TODAY}.md"
+DIGEST_YESTERDAY="$REPO/g/reports/system/memory_digest_${YESTERDAY}.md"
 
 if [[ ! -f "$DIGEST_TODAY" && ! -f "$DIGEST_YESTERDAY" ]]; then
   msg="[GOVERNANCE] Alert: Daily Digest Missing

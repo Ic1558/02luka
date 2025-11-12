@@ -9,7 +9,7 @@ REDIS_PASS="${REDIS_PASSWORD:-changeme-02luka}"
 [[ -n "${REDIS_ALT_PASSWORD:-}" ]] && REDIS_PASS="$REDIS_ALT_PASSWORD"
 
 TODAY=$(date +%Y%m%d)
-OUTPUT="$REPO/g/reports/governance_audit_${TODAY}.md"
+OUTPUT="$REPO/g/reports/phase5_governance/governance_audit_${TODAY}.md"
 
 mkdir -p "$(dirname "$OUTPUT")"
 
