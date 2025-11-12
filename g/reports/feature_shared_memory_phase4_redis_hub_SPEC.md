@@ -335,4 +335,3 @@ redis-cli -a changeme-02luka SUBSCRIBE memory:updates
 - **Phase 2:** `g/reports/feature_shared_memory_phase2_gc_cls_SPEC.md`
 - **Phase 3:** `g/reports/feature_shared_memory_phase3_remaining_agents_SPEC.md`
 - **Redis Config:** `localhost:6379` (password: `changeme-02luka`)
-

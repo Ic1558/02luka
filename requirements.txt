@@ -2,7 +2,7 @@
 # Phase 15 - FAISS/HNSW Vector Index + Kim Proxy Gateway Integration
 
 # Vector Search (FAISS)
-faiss-cpu==1.7.4
+faiss-cpu>=1.8.0
 numpy>=1.24.0,<2.0.0
 
 # OpenAI API for embeddings
@@ -14,6 +14,7 @@ werkzeug>=3.0.0
 
 # Utilities
 python-dotenv>=1.0.0
+requests>=2.31.0  # For kim_proxy.py HTTP client with retry logic
 
 # Optional: GPU-accelerated FAISS (uncomment if GPU available)
 # faiss-gpu==1.7.4

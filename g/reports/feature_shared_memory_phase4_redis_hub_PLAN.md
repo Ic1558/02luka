@@ -227,4 +227,3 @@ rm -rf ~/02luka/agents/memory_hub
 - **SPEC:** `g/reports/feature_shared_memory_phase4_redis_hub_SPEC.md`
 - **Phase 1-3:** Previous phase SPECs
 - **Redis Config:** `localhost:6379` (password: `changeme-02luka`)
-
