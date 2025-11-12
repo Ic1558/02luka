@@ -20,9 +20,12 @@ JSON
 fi
 
 # Collect agent metrics from Redis
+REDIS_PASS="${REDIS_PASSWORD:-changeme-02luka}"
+[[ -n "${REDIS_ALT_PASSWORD:-}" ]] && REDIS_PASS="$REDIS_ALT_PASSWORD"
+
 if command -v redis-cli >/dev/null 2>&1; then
   for agent in mary rnd claude; do
-    agent_data=$(redis-cli -a changeme-02luka HGETALL memory:agents:${agent} 2>/dev/null || echo "")
+    agent_data=$(redis-cli -a "$REDIS_PASS" HGETALL memory:agents:${agent} 2>/dev/null || echo "")
     if [[ -n "$agent_data" && "$agent_data" != "NOAUTH"* && "$agent_data" != "AUTH failed"* ]]; then
       # Convert Redis HGETALL output to JSON
       agent_json=$(echo "$agent_data" | awk 'NR%2==1 {key=$0} NR%2==0 {print key":"$0}' | jq -Rs 'split("\n") | map(select(length>0)) | map(split(":")) | reduce .[] as $pair ({}; .[$pair[0]] = ($pair[1:] | join(":")))' 2>/dev/null || echo "{}")
