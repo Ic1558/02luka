@@ -193,3 +193,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1762977555",
+  "type": "pattern",
+  "title": "WO Creation Decision Pattern",
+  "description": "When handling multiple issues: 0-1 critical issues should be fixed directly (immediate action), but 2+ issues should be sent as Work Orders to agents for processing. This prevents bypassing the WO system and ensures proper tracking.",
+  "context": "Pattern confirmed by user. Dashboard fix had 3 issues but was fixed directly instead of creating WO. Root cause: Pattern not followed. Solution: Document pattern, add pattern check before direct fixes, verify WO creation after promises.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-12T19:59:15Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}

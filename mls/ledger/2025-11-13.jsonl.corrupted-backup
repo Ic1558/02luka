@@ -1,8 +1,9 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 set -euo pipefail
 
+# Function to collect WO IDs from various directories
 collect_ids() {
-  local BASE="${1:-.}"
+  local BASE="$1"
   local ids=()
 
   # CLC directory - RECURSIVE SEARCH (handles nested WO folders)
@@ -11,10 +12,13 @@ collect_ids() {
       [[ -f "$f" ]] && echo "$(basename "$f" .yaml)" | sed 's/\.json$//; s/\.zsh$//; s/\.md$//' || true
     done < <(find "$BASE/bridge/inbox/CLC" -type f \( -name "WO-*.yaml" -o -name "WO-*.json" -o -name "WO-*.zsh" -o -name "WO-*.md" \) 2>/dev/null)
   fi
+
+  # Additional collection logic here...
 }
 
+# Function to render WO rows
 render() {
-  local ids=("$@")
+  local -a ids=("$@")
 
   # Protect against per-row failures to avoid terminating the watch loop
   set +e
