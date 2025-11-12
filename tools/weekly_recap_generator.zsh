@@ -11,6 +11,9 @@ set -euo pipefail
 REPO="${LUKA_SOT:-$HOME/02luka}"
 cd "$REPO"
 
+# Set HTML_OUTPUT_DIR for index generator integration
+HTML_OUTPUT_DIR="g/reports/system"
+
 # Determine week end date
 if [[ -n "${1:-}" ]]; then
   WEEK_END="$1"
@@ -233,6 +236,41 @@ say ""
 } > "$OUTPUT"
 
 say "✅ Weekly recap generated: $OUTPUT"
+
+# Generate index and HTML snapshot (non-fatal)
+if [[ -x "$REPO/tools/governance_index_generator.zsh" ]]; then
+  say ""
+  say "Generating governance index..."
+  if "$REPO/tools/governance_index_generator.zsh" "$WEEK_END" 2>&1; then
+    say "✅ Index and snapshot generated"
+    
+    # Add link to HTML snapshot if it exists
+    HTML_SNAPSHOT="$REPO/$HTML_OUTPUT_DIR/trends_snapshot_${WEEK_END}.html"
+    if [[ -f "$HTML_SNAPSHOT" ]]; then
+      # Insert link after "Adaptive Insights Summary" section
+      if grep -q "## Adaptive Insights Summary" "$OUTPUT"; then
+        # Find line number of "## Recommendations" (after Adaptive Insights)
+        rec_line=$(grep -n "^## Recommendations" "$OUTPUT" | cut -d: -f1 || echo "")
+        if [[ -n "$rec_line" ]]; then
+          # Insert link before Recommendations section
+          sed -i.bak "${rec_line}i\\
+\\
+## Trend Visualization\\
+\\
+[View Trends Snapshot](trends_snapshot_${WEEK_END}.html)\\
+\\
+" "$OUTPUT"
+          rm -f "$OUTPUT.bak"
+        fi
+      fi
+    fi
+  else
+    say "⚠️  Index generation failed (non-fatal)"
+  fi
+else
+  say "ℹ️  Index generator not found (skipping)"
+fi
+
 say ""
 say "Next steps:"
 say "  1. Review: cat $OUTPUT"
