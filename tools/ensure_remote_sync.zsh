@@ -12,23 +12,36 @@ REMOTE_COMMITS=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
 
 if [[ $LOCAL_COMMITS -gt 0 ]]; then
   echo "⚠️  Local is ahead by $LOCAL_COMMITS commit(s)"
+  
+  # First, try to pull and rebase if remote is also ahead
+  if [[ $REMOTE_COMMITS -gt 0 ]]; then
+    echo "🔄 Remote is also ahead, pulling first..."
+    git pull --rebase 2>/dev/null || {
+      echo "⚠️  Rebase failed, trying merge..."
+      git pull --no-rebase 2>/dev/null || echo "⚠️  Pull failed, continuing with push attempt"
+    }
+  fi
+  
   echo "🔄 Pushing to remote..."
   
   # Push with retry
   attempt=0
   max_attempts=3
   while [[ $attempt -lt $max_attempts ]]; do
-    if git push origin HEAD; then
+    if git push origin HEAD 2>/dev/null; then
       echo "✅ Pushed $LOCAL_COMMITS commit(s) to remote"
       exit 0
     fi
     ((attempt++))
-    echo "⚠️  Push attempt $attempt failed, retrying..."
-    sleep 2
-    git pull --rebase 2>/dev/null || true
+    if [[ $attempt -lt $max_attempts ]]; then
+      echo "⚠️  Push attempt $attempt failed, pulling and retrying..."
+      git pull --rebase 2>/dev/null || git pull --no-rebase 2>/dev/null || true
+      sleep 2
+    fi
   done
   
   echo "❌ Failed to push after $max_attempts attempts"
+  echo "💡 Manual intervention may be needed: git pull --rebase && git push"
   exit 1
 fi
 
@@ -41,4 +54,3 @@ fi
 if [[ $LOCAL_COMMITS -eq 0 ]] && [[ $REMOTE_COMMITS -eq 0 ]]; then
   echo "✅ Local and remote are in sync"
 fi
-
