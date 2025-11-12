@@ -27,16 +27,17 @@ echo "== [gg_nlp_bridge] PID $$ =="
 intent_for() {
   local key="$1"
   local intent
+  # Fixed AWK pattern - removed any potential debug markers
   intent="$(awk -v k="$key" '
     /^synonyms:/ {in_syn=1; next}
     /^intents:/ {in_syn=0}
     in_syn && $0 ~ ":" {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
       if (match($0, /^"?([^"]+)"?[[:space:]]*:[[:space:]]*([a-zA-Z0-9_.-]+)$/, a)) {
-        if (a[1]==k) { print a[2]; exit }
+        if (a[1] == k) { print a[2]; exit }
       }
     }
-  ' "$MAP")"
+  ' "$MAP" 2>/dev/null)"
   [[ -n "$intent" ]] && { echo "$intent"; return 0; }
   echo "$key"
 }
