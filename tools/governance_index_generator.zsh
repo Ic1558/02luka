@@ -44,11 +44,14 @@ find_latest_file() {
   setopt null_glob
   for f in "$dir"/$~pattern; do
     [[ -f "$f" ]] || continue
-    local m; m=$(get_mtime "$f")
+    local m; m=$(get_mtime "$f" 2>/dev/null || echo "0")
+    # Handle case where get_mtime returns multiple lines (shouldn't happen, but be safe)
+    m=$(echo "$m" | head -1)
     (( m > latest_m )) && { latest_m=$m; latest_file="$f"; }
   done
   unsetopt null_glob
   
+  # Return only the file path, not mtime
   [[ -n "$latest_file" ]] && echo "$latest_file" || true
 }
 
