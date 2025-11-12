@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="300">
+    <title>02LUKA Adaptive Governance Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .health-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4CAF50;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .trend {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .trend.up {
+            background: #4CAF50;
+            color: white;
+        }
+        .trend.down {
+            background: #f44336;
+            color: white;
+        }
+        .trend.stable {
+            background: #9E9E9E;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        .recommendations {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>02LUKA Adaptive Governance Dashboard</h1>
+        
+        <div class="health-score" id="health-score">Loading...</div>
+        
+        <h2>Trends (Last 7 Days)</h2>
+        <table id="trends-table">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Trend</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody id="trends-body">
+                <tr><td colspan="3">Loading...</td></tr>
+            </tbody>
+        </table>
+        
+        <h2>Anomalies</h2>
+        <div id="anomalies">Loading...</div>
+        
+        <h2>Recommendations</h2>
+        <div class="recommendations" id="recommendations">
+            Loading...
+        </div>
+        
+        <div class="footer">
+            Last updated: <span id="last-updated">-</span><br>
+            Auto-refresh: Every 5 minutes
+        </div>
+    </div>
+    
+    <script>
+        // Load insights data
+        async function loadInsights() {
+            try {
+                const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const response = await fetch(`/mls/adaptive/insights_${today}.json`);
+                const data = await response.json();
+                
+                // Update health score (placeholder - would come from health check)
+                document.getElementById('health-score').textContent = '92%';
+                
+                // Update trends table
+                const trendsBody = document.getElementById('trends-body');
+                trendsBody.innerHTML = '';
+                Object.entries(data.trends || {}).forEach(([metric, info]) => {
+                    const row = trendsBody.insertRow();
+                    row.insertCell(0).textContent = metric;
+                    const trendCell = row.insertCell(1);
+                    trendCell.innerHTML = `<span class="trend ${info.trend}">${info.trend.toUpperCase()}</span>`;
+                    row.insertCell(2).textContent = info.change || '0%';
+                });
+                
+                // Update anomalies
+                const anomaliesDiv = document.getElementById('anomalies');
+                if (data.anomalies && data.anomalies.length > 0) {
+                    anomaliesDiv.innerHTML = data.anomalies.map(a => 
+                        `<p><strong>${a.metric}:</strong> ${a.value} (expected: ${a.expected}) - ${a.severity}</p>`
+                    ).join('');
+                } else {
+                    anomaliesDiv.textContent = 'No anomalies detected.';
+                }
+                
+                // Update recommendations
+                const recDiv = document.getElementById('recommendations');
+                if (data.recommendation_summary) {
+                    recDiv.textContent = data.recommendation_summary;
+                } else if (data.recommendations && data.recommendations.length > 0) {
+                    recDiv.innerHTML = '<ul>' + data.recommendations.map(r => `<li>${r}</li>`).join('') + '</ul>';
+                } else {
+                    recDiv.textContent = 'No recommendations at this time.';
+                }
+                
+                // Update last updated
+                document.getElementById('last-updated').textContent = new Date().toLocaleString();
+            } catch (error) {
+                console.error('Error loading insights:', error);
+                document.getElementById('health-score').textContent = 'Error';
+            }
+        }
+        
+        // Load on page load
+        loadInsights();
+        
+        // Reload every 5 minutes
+        setInterval(loadInsights, 300000);
+    </script>
+</body>
+</html>
