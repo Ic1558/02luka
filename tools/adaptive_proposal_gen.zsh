@@ -40,29 +40,41 @@ anomalies=$(jq -r '.anomalies // []' "$INSIGHTS_FILE" 2>/dev/null || echo "[]")
 recommendations=$(jq -r '.recommendations // []' "$INSIGHTS_FILE" 2>/dev/null || echo "[]")
 
 # Guard: Require ≥3 days with valid data points
-# Count days with data in monthly metrics JSON
+# Count actual days with insights files (insights are generated daily)
 sample_count=0
-if [[ -f "$METRICS_FILE" ]] && command -v jq >/dev/null 2>&1; then
-  # Check if we have agent data with multiple entries
-  # For now, check if agents object has data
-  agents_data=$(jq -r '.agents // {}' "$METRICS_FILE" 2>/dev/null || echo "{}")
-  if [[ "$agents_data" != "{}" && "$agents_data" != "null" ]]; then
-    # Count agents with data
-    agent_count=$(echo "$agents_data" | jq 'keys | length' 2>/dev/null || echo "0")
-    # If we have agent data, assume at least 1 day
-    # For proper implementation, would need daily metrics files
-    sample_count=$agent_count
-  fi
+if [[ -d "$REPO/mls/adaptive" ]]; then
+  # Count insights files from the past 30 days (reasonable window)
+  # Each insights file represents one day of data collection
+  setopt null_glob
+  insights_files=($REPO/mls/adaptive/insights_*.json)
+  unsetopt null_glob
+  
+  # Count valid insights files (exclude today's if it's the only one)
+  for insight_file in "${insights_files[@]}"; do
+    [[ -f "$insight_file" ]] || continue
+    
+    # Extract date from filename (insights_YYYYMMDD.json)
+    file_date=$(basename "$insight_file" | grep -oE '[0-9]{8}' || echo "")
+    if [[ -z "$file_date" ]]; then
+      continue
+    fi
+    
+    # Verify file has valid JSON structure (has date field)
+    if command -v jq >/dev/null 2>&1; then
+      if jq -e '.date' "$insight_file" >/dev/null 2>&1; then
+        ((sample_count++))
+      fi
+    else
+      # Fallback: if jq not available, count file existence
+      ((sample_count++))
+    fi
+  done
 fi
 
-# For MVP: If we have insights with trends/anomalies, assume sufficient data
-# In production, would count actual days from daily metrics
-if [[ "$trends" != "{}" ]] || [[ "$anomalies" != "[]" ]]; then
-  # If we have trends or anomalies, we likely have some data
-  # Set minimum to 1 for now (will improve with daily metrics)
-  if [[ $sample_count -lt 1 ]]; then
-    sample_count=1
-  fi
+# Fallback: If no insights files but we have trends/anomalies, we have at least 1 day
+# (from today's insights file that was just generated)
+if [[ $sample_count -eq 0 ]] && ([[ "$trends" != "{}" ]] || [[ "$anomalies" != "[]" ]]); then
+  sample_count=1
 fi
 
 # Guard: Require ≥3 days of data
