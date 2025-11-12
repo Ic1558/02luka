@@ -27,14 +27,23 @@
   - Modify `tools/memory_daily_digest.zsh`
   - Add "Adaptive Insights" section
   - Read from `mls/adaptive/insights_YYYYMMDD.json`
+  - Add recommendation summary (2-3 lines) at end
   - Handle missing insights gracefully
 
-- [ ] **Task 1.4:** Create LaunchAgent
+- [ ] **Task 1.4:** Create/modify HTML dashboard
+  - Find existing HTML dashboard template
+  - Modify to include adaptive insights
+  - Add trend indicators (up/down/stable)
+  - Add recommendation summary
+  - Auto-refresh every 5 minutes
+  - Output: `g/reports/dashboard/index.html`
+
+- [ ] **Task 1.5:** Create LaunchAgent
   - Create `com.02luka.adaptive.collector.daily.plist`
   - Schedule: Daily 06:30
   - Load and test
 
-- [ ] **Task 1.5:** Week 1 acceptance tests
+- [ ] **Task 1.6:** Week 1 acceptance tests
   - Create `tools/phase6_1_acceptance.zsh`
   - Test collector execution
   - Test insights generation
@@ -44,6 +53,7 @@
 - `tools/adaptive_collector.zsh`
 - `mls/adaptive/insights_YYYYMMDD.json` (daily)
 - Enhanced `tools/memory_daily_digest.zsh`
+- HTML dashboard: `g/reports/dashboard/index.html`
 - LaunchAgent: `com.02luka.adaptive.collector.daily`
 
 ---
@@ -60,6 +70,7 @@
   - Only for declining metrics (3+ days)
   - Only for metrics below threshold
   - Only for low-risk changes
+  - **Guard:** Require ≥3 data points (samples) to avoid noise
   - Include context and suggestion
 
 - [ ] **Task 2.3:** Safety mechanisms
@@ -75,7 +86,8 @@
 - [ ] **Task 2.5:** Week 2 acceptance tests
   - Create `tools/phase6_2_acceptance.zsh`
   - Test proposal generation
-  - Test safety mechanisms
+  - Test safety mechanisms (guard: ≥3 samples)
+  - Test "no data → skip proposal" case
   - Test R&D integration
 
 **Deliverables:**

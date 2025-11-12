@@ -64,9 +64,9 @@ Metrics (Redis) → Adaptive Collector → Insights JSON → Daily Digest
 **Trend Detection (Simple):**
 ```bash
 # Compare last 7 days vs previous 7 days
-if current_avg > previous_avg * 1.1: "improving"
-if current_avg < previous_avg * 0.9: "declining"
-else: "stable"
+if current_avg > previous_avg * 1.1: "improving" (trend: "up")
+if current_avg < previous_avg * 0.9: "declining" (trend: "down")
+else: "stable" (trend: "stable")
 ```
 
 **Anomaly Detection (Simple):**
@@ -113,6 +113,7 @@ else: "stable"
 - Metric declining for 3+ days
 - Metric below threshold (e.g., health < 85%)
 - Anomaly detected
+- **Guard:** Metric must have ≥3 data points (samples) to avoid noise
 
 **What it generates:**
 - Simple R&D proposal YAML
@@ -144,16 +145,29 @@ auto_generated: true
 {
   "date": "2025-11-12",
   "trends": {
-    "claude_hook_success": {"direction": "improving", "change": "+5%"},
-    "rnd_acceptance": {"direction": "stable", "change": "0%"},
-    "mary_completion": {"direction": "declining", "change": "-3%"}
+    "claude_hook_success": {
+      "direction": "improving",
+      "trend": "up",
+      "change": "+5%"
+    },
+    "rnd_acceptance": {
+      "direction": "stable",
+      "trend": "stable",
+      "change": "0%"
+    },
+    "mary_completion": {
+      "direction": "declining",
+      "trend": "down",
+      "change": "-3%"
+    }
   },
   "anomalies": [
     {"metric": "mary_completion", "value": 0.88, "expected": 0.95, "severity": "medium"}
   ],
   "recommendations": [
     "Investigate Mary task completion decline"
-  ]
+  ],
+  "recommendation_summary": "Mary completion declining (-3%). Review task logs for patterns."
 }
 ```
 
@@ -219,11 +233,35 @@ com.02luka.adaptive.proposal.gen
 
 ---
 
+## HTML Dashboard (Simple)
+
+**Purpose:** Simple HTML dashboard based on existing HTML templates.
+
+**Approach:**
+- Modify existing HTML dashboard (if available)
+- Or create simple static HTML with embedded data
+- Auto-refresh: Every 5 minutes (via meta refresh or simple JS)
+- Show: Current metrics, trends, health score, recommendations
+
+**Output:**
+- `g/reports/dashboard/index.html`
+- Accessible via: `ops.theedges.work` or `dashboard.theedges.work`
+
+**Features:**
+- Current health score
+- Trend indicators (up/down/stable)
+- Recent anomalies
+- Top recommendations
+- Last updated timestamp
+
+**No complex real-time updates, just simple periodic refresh.**
+
+---
+
 ## What We're NOT Building (Yet)
 
 **Explicitly excluded to avoid over-engineering:**
 - ❌ Complex predictive analytics (linear regression, ML)
-- ❌ HTML dashboard (can add later if needed)
 - ❌ Real-time pub/sub (Redis channels optional)
 - ❌ Complex correlation analysis
 - ❌ Confidence scoring algorithms
@@ -235,10 +273,11 @@ com.02luka.adaptive.proposal.gen
 
 ## Rollout Strategy
 
-### Week 1: Adaptive Collector
+### Week 1: Adaptive Collector + Dashboard
 - Build collector
 - Test trend detection
 - Integrate with daily digest
+- Create/modify HTML dashboard
 
 ### Week 2: Auto-Proposals
 - Build proposal generator
