@@ -191,4 +191,3 @@ generate_legacy_reports() {
 **Reviewer:** CLS  
 **Date:** 2025-11-12  
 **Status:** ✅ **APPROVED - READY FOR COMMIT AND PUSH**
-
