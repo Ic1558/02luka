@@ -206,3 +206,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1762980694",
+  "type": "solution",
+  "title": "Docs Publisher Workflow Fix",
+  "description": "GitHub Actions workflow docs-publish.yml failed because run/publish_docs.cjs was missing. The workflow expected a Node.js script to convert markdown files from docs/ to HTML in dist/docs/ for GitHub Pages deployment.",
+  "context": "Created run/publish_docs.cjs that: 1) Processes all markdown files from docs/ directory recursively, 2) Converts them to HTML using pandoc (with fallback to basic conversion), 3) Generates CSS and JavaScript assets for dark mode and copy-link functionality, 4) Creates an index.html page listing all documents. The script matches the workflow's expected output structure (dist/docs/ with assets/docs.css and assets/docs.js).",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-12T20:51:34Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
