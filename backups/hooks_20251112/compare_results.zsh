@@ -164,30 +164,4 @@ fi
 
 log "✅ Compare results saved → $COMPARE_JSON"
 log "✅ Report generated → $REPORT_FILE"
-
-# MLS Capture: Record code review lesson
-if [[ -f "$BASE/tools/mls_capture.zsh" ]] && [[ -x "$BASE/tools/mls_capture.zsh" ]]; then
-  # Extract feature name from report file or use default
-  FEATURE_NAME="$(basename "$REPORT_FILE" .md | sed 's/code_review_//' || echo "unknown")"
-  
-  # Extract review summary from orchestrator summary if available
-  if [[ -f "$ORCHESTRATOR_SUMMARY" ]] && command -v jq >/dev/null 2>&1; then
-    BACKEND=$(jq -r '.backend // "unknown"' "$ORCHESTRATOR_SUMMARY" 2>/dev/null || echo "unknown")
-    STRATEGY=$(jq -r '.strategy // "unknown"' "$ORCHESTRATOR_SUMMARY" 2>/dev/null || echo "unknown")
-    NUM_AGENTS=$(jq -r '.num_agents // 0' "$ORCHESTRATOR_SUMMARY" 2>/dev/null || echo "0")
-    WINNER=$(jq -r '.winner // "unknown"' "$ORCHESTRATOR_SUMMARY" 2>/dev/null || echo "unknown")
-    
-    SUMMARY="Code review completed with $NUM_AGENTS agents (backend: $BACKEND, strategy: $STRATEGY, winner: $WINNER)"
-    CONTEXT="Backend=$BACKEND, Strategy=$STRATEGY, Agents=$NUM_AGENTS"
-  else
-    SUMMARY="Code review completed"
-    CONTEXT="Review strategy"
-  fi
-  
-  # Capture lesson (wrapped in || true to prevent hook failure)
-  "$BASE/tools/mls_capture.zsh" solution "Code Review: $FEATURE_NAME" "$SUMMARY" "$CONTEXT" || {
-    log "⚠️  MLS capture failed (non-blocking)"
-  }
-fi
-
 echo "$REPORT_FILE"
