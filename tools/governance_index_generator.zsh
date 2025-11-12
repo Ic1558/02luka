@@ -111,15 +111,25 @@ insights_summary_json() {
     return
   fi
   
+  # Read insights file and generate summary (compatible with older jq)
+  local trends_count anomalies_count recommendations_count last_updated
+  trends_count=$(jq -r '.trends // {} | length' "$latest_insights" 2>/dev/null || echo "0")
+  anomalies_count=$(jq -r '.anomalies // [] | length' "$latest_insights" 2>/dev/null || echo "0")
+  recommendations_count=$(jq -r '.recommendations // [] | length' "$latest_insights" 2>/dev/null || echo "0")
+  last_updated=$(jq -r '.generated_at // .date // "unknown"' "$latest_insights" 2>/dev/null || echo "unknown")
+  
   jq -n \
-    --argfile ins "$latest_insights" \
+    --arg tc "$trends_count" \
+    --arg ac "$anomalies_count" \
+    --arg rc "$recommendations_count" \
+    --arg lu "$last_updated" \
     --arg lf "$latest_insights" \
     '{
       summary: {
-        trends_count: ($ins.trends // {} | length),
-        anomalies_count: ($ins.anomalies // [] | length),
-        recommendations_count: ($ins.recommendations // [] | length),
-        last_updated: ($ins.generated_at // $ins.date // "unknown")
+        trends_count: ($tc | tonumber),
+        anomalies_count: ($ac | tonumber),
+        recommendations_count: ($rc | tonumber),
+        last_updated: $lu
       },
       latest_file: $lf
     }'
