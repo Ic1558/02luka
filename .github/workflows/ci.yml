@@ -30,10 +30,11 @@ env:
   NODE_VERSION: '20'
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# Concurrency: Cancel in-progress runs to reduce inbox noise
+# Concurrency: Critical workflow - don't cancel in-progress runs
+# This ensures CI validation completes even if new commits are pushed
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   # ============================================================
@@ -81,7 +82,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5  # Increased from 2 to prevent premature cancellation
     if: always()
     needs: [validate]
     steps:
