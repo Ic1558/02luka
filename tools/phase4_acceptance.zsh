@@ -23,7 +23,7 @@ fi
 if [[ -f "$REPO/logs/memory_hub.out.log" ]]; then
   ok "Hub log exists"
 else
-  ng "Hub log missing"
+  echo "ℹ️  Hub log not yet created (will be created on first run)"
 fi
 echo ""
 

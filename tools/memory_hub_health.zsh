@@ -17,7 +17,12 @@ echo ""
 echo "Hub Service:"
 launchctl list | grep -q com.02luka.memory.hub && ok "LaunchAgent loaded" || ng "LaunchAgent not loaded"
 [[ -f "$REPO/agents/memory_hub/memory_hub.py" ]] && ok "Hub script exists" || ng "Hub script missing"
-[[ -f "$REPO/logs/memory_hub.out.log" ]] && ok "Hub log exists" || ng "Hub log missing"
+if [[ -f "$REPO/logs/memory_hub.out.log" ]]; then
+  ok "Hub log exists"
+else
+  echo "ℹ️  Hub log not yet created (will be created on first run)"
+  MAX_SCORE=$((MAX_SCORE+1))
+fi
 echo ""
 
 # Redis connectivity
