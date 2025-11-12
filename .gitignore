@@ -89,3 +89,5 @@ hub/node_modules/
 # Kim NLP session state
 core/nlp/kim_session_profiles.json
 
+mls/paula/intel/*.json
+mls/memory/adaptive/*.json
