@@ -29,6 +29,34 @@ log() {
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >&2
 }
 
+# Calculate cutoff date from SINCE (e.g., "7d" -> date 7 days ago)
+# Support formats: "7d", "30d", "1w", "2w", etc.
+CUTOFF_DATE=""
+if [[ "$SINCE" =~ ^([0-9]+)d$ ]]; then
+  DAYS="${match[1]}"
+  # macOS date command
+  if date -v-${DAYS}d +%Y-%m-%d >/dev/null 2>&1; then
+    CUTOFF_DATE=$(date -v-${DAYS}d -u +%Y-%m-%dT%H:%M:%SZ)
+  # GNU date command
+  elif date -d "${DAYS} days ago" +%Y-%m-%d >/dev/null 2>&1; then
+    CUTOFF_DATE=$(date -d "${DAYS} days ago" -u +%Y-%m-%dT%H:%M:%SZ)
+  else
+    log "⚠️  Cannot calculate date from SINCE=$SINCE, using all runs"
+  fi
+elif [[ "$SINCE" =~ ^([0-9]+)w$ ]]; then
+  WEEKS="${match[1]}"
+  DAYS=$((WEEKS * 7))
+  if date -v-${DAYS}d +%Y-%m-%d >/dev/null 2>&1; then
+    CUTOFF_DATE=$(date -v-${DAYS}d -u +%Y-%m-%dT%H:%M:%SZ)
+  elif date -d "${DAYS} days ago" +%Y-%m-%d >/dev/null 2>&1; then
+    CUTOFF_DATE=$(date -d "${DAYS} days ago" -u +%Y-%m-%dT%H:%M:%SZ)
+  else
+    log "⚠️  Cannot calculate date from SINCE=$SINCE, using all runs"
+  fi
+else
+  log "⚠️  Unsupported SINCE format: $SINCE (expected format: 7d, 30d, 1w, etc.), using all runs"
+fi
+
 log "Fetching cancelled runs for $GITHUB_REPO (last $SINCE)..."
 
 # Check if gh CLI is available
@@ -45,12 +73,24 @@ fi
 
 # Fetch cancelled runs
 TMP=$(mktemp)
-gh run list -R "$GITHUB_REPO" --limit 200 --json databaseId,displayTitle,conclusion,status,workflowName,createdAt,headBranch \
-  --jq '.[] | select(.conclusion=="cancelled" or .status=="cancelled")' > "$TMP" 2>/dev/null || {
-  log "❌ Failed to fetch runs. Check GITHUB_REPO and authentication."
-  rm -f "$TMP"
-  exit 1
-}
+# Fetch runs and filter by cancellation status AND date (if CUTOFF_DATE is set)
+if [[ -n "$CUTOFF_DATE" ]]; then
+  # Filter by both cancellation status and date
+  gh run list -R "$GITHUB_REPO" --limit 200 --json databaseId,displayTitle,conclusion,status,workflowName,createdAt,headBranch \
+    --jq ".[] | select((.conclusion==\"cancelled\" or .status==\"cancelled\") and .createdAt >= \"$CUTOFF_DATE\")" > "$TMP" 2>/dev/null || {
+    log "❌ Failed to fetch runs. Check GITHUB_REPO and authentication."
+    rm -f "$TMP"
+    exit 1
+  }
+else
+  # Fallback: filter only by cancellation status (no date filtering)
+  gh run list -R "$GITHUB_REPO" --limit 200 --json databaseId,displayTitle,conclusion,status,workflowName,createdAt,headBranch \
+    --jq '.[] | select(.conclusion=="cancelled" or .status=="cancelled")' > "$TMP" 2>/dev/null || {
+    log "❌ Failed to fetch runs. Check GITHUB_REPO and authentication."
+    rm -f "$TMP"
+    exit 1
+  }
+fi
 
 # Analyze cancellations
 log "Analyzing cancellations..."
