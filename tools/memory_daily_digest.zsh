@@ -19,8 +19,8 @@ rnd_data=$(redis-cli -a "$REDIS_PASS" HGETALL memory:agents:rnd 2>/dev/null || e
 rnd_context=$(jq -r '.agents.rnd // {}' "$REPO/shared_memory/context.json" 2>/dev/null || echo "{}")
 
 # Count activities from logs (last 24h)
-mary_tasks=$(grep -c "mary_result" "$REPO/bridge/memory/inbox"/*.json 2>/dev/null || echo "0")
-rnd_proposals=$(grep -c "rnd_outcome" "$REPO/bridge/memory/inbox"/*.json 2>/dev/null || echo "0")
+mary_tasks=$(find "$REPO/bridge/memory/inbox" -name "*mary*" -type f 2>/dev/null | wc -l | tr -d ' ' || echo "0")
+rnd_proposals=$(find "$REPO/bridge/memory/inbox" -name "*rnd*" -type f 2>/dev/null | wc -l | tr -d ' ' || echo "0")
 
 cat > "$OUTPUT" <<MARKDOWN
 # Memory System Daily Digest — $(date +%Y-%m-%d)
