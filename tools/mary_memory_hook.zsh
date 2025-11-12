@@ -6,9 +6,9 @@ export LUKA_SOT="${LUKA_SOT:-$HOME/02luka}"
 MEM_SYNC="$LUKA_SOT/tools/memory_sync.sh"
 MEM_HUB="$LUKA_SOT/agents/memory_hub/memory_hub.py"
 
-# Usage: mary_memory_hook.zsh <task_id> <status> <result_json>
+# Usage: mary_memory_hook.zsh <task_id> <task_status> <result_json>
 task_id="${1:-unknown}"
-status="${2:-completed}"
+task_status="${2:-completed}"
 result_json="${3:-{}}"
 
 # Update Mary status
@@ -23,7 +23,7 @@ hub = UnifiedMemoryHub()
 result = json.loads('${result_json}')
 hub.update_agent_context('mary', {
     'last_task': '${task_id}',
-    'status': '${status}',
+    'task_status': '${task_status}',
     'result': result,
     'timestamp': '$(date -Iseconds)'
 })
