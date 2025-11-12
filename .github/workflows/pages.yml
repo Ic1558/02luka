@@ -11,9 +11,11 @@ permissions:
   pages: write
   id-token: write
 
+# Concurrency: Let deployments complete even if new commits arrive
+# Latest deployment will still be served by GitHub Pages
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
