@@ -1,35 +1,40 @@
-# PD17 AI Formwork Calculator
+# PD17 AI QS Calculator
 
-> **AI-Powered Formwork Calculator** สำหรับงานก่อสร้าง รองรับภาษาไทย ✨
+> **AI-Powered QS Calculator** สำหรับงาน QS ทุกสาขา: **Architecture • Structural • Interior • MEP** ✨
 
 [![PWA](https://img.shields.io/badge/PWA-Enabled-blue)](https://www.theedges.work)
+[![Open Source First](https://img.shields.io/badge/Open%20Source-Ollama%2FQwen-green)](https://ollama.ai/)
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange)](https://workers.cloudflare.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🌟 Features
 
 ### Core Features
+- 🏗️ **All QS Disciplines** - Architecture, Structural, Interior, MEP with templates
+- 📋 **Editable BOQ Table** - Real-time calculation, add/delete rows, auto-totals
 - 📄 **File Upload Support** - อัปโหลด PDF/Excel/รูปภาพ แล้วแยกข้อมูลอัตโนมัติ
-- 🤖 **AI Chatbox** - สนทนากับ AI ด้วยภาษาไทย/อังกฤษ
-- 🧠 **Reasoning Engine** - AI + Rule-Based Logic
+- 🤖 **AI Chatbox** - สนทนากับ AI ด้วยภาษาไทย/อังกฤษ (Ollama/Qwen priority)
+- 🧠 **Reasoning Engine** - Hybrid LLM + Rule-Based Logic
 - 📊 **Gantt Chart** - แสดงแผนงานแบบ Timeline
 - 📑 **Export** - ส่งออกเป็น Excel และ PDF
 - 💾 **PWA Support** - ใช้งานแบบ Offline ได้
 - ⚡ **Cloudflare Workers** - Backend รวดเร็ว Edge Computing
 
 ### AI Capabilities
+- **Open-Source First**: Ollama/Qwen as primary (FREE, Local, No API key needed)
 - แยกข้อมูลจากไฟล์ PDF/Excel อัตโนมัติ
 - รับข้อมูลด้วยภาษาธรรมชาติ (Natural Language Input)
 - วิเคราะห์และให้คำแนะนำตามมาตรฐาน ACI 318 และ TIS
 - คำนวณต้นทุนและปริมาณวัสดุอย่างแม่นยำ
+- `ollamaReason()` - Direct reasoning engine API
 
-### Supported LLM Providers
-- ✅ OpenRouter (DeepSeek, Llama, etc.)
-- ✅ Kimi (Moonshot AI)
-- ✅ GLM-4 (ChatGLM)
-- 🔜 GPT-4o (OpenAI)
-- 🔜 Claude (Anthropic)
-- 🔜 Ollama (Local)
+### Supported LLM Providers (Priority Order)
+1. ✅ **Ollama (Qwen 2.5)** - Primary, FREE, Local, Open-Source
+2. ✅ Kimi (Moonshot AI) - Cloud alternative
+3. ✅ GLM-4 (ChatGLM) - Cloud alternative
+4. ✅ OpenRouter (DeepSeek) - Cloud alternative
+5. 🔜 GPT-4o (OpenAI) - Premium option
+6. 🔜 Claude (Anthropic) - Premium option
 
 ## 🚀 Quick Start
 

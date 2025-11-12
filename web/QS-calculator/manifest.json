@@ -1,7 +1,7 @@
 {
-  "name": "PD17 AI Formwork Calculator",
-  "short_name": "Formwork Calc",
-  "description": "AI-powered formwork calculator for construction projects",
+  "name": "PD17 AI QS Calculator",
+  "short_name": "QS Calc",
+  "description": "AI-powered QS Calculator for all disciplines: Arch, Str, Int, MEP with Editable BOQ",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

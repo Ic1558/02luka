@@ -3,27 +3,29 @@
 
 const AIService = {
     // Configuration for multiple LLM providers
+    // PRIORITIZE OLLAMA/QWEN (Open-Source First)
     config: {
-        provider: 'openrouter', // 'openrouter', 'ollama', 'kimi', 'gpt4o', 'claude'
+        provider: 'ollama', // Default: 'ollama' | Alternatives: 'kimi', 'glm', 'openrouter'
         models: {
-            openrouter: {
-                endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-                model: 'deepseek/deepseek-chat', // Free model, good for Thai
-                apiKey: '' // Will be set from Cloudflare Workers
-            },
             ollama: {
-                endpoint: 'http://localhost:11434/api/generate',
-                model: 'qwen2.5:latest' // Good for Thai language
+                endpoint: 'http://localhost:11434/api/generate', // Change to your Ollama URL
+                model: 'qwen2.5:latest', // Primary model - Good for Thai, free, local
+                chatEndpoint: 'http://localhost:11434/api/chat' // For chat format
             },
             kimi: {
                 endpoint: 'https://api.moonshot.cn/v1/chat/completions',
                 model: 'moonshot-v1-8k',
-                apiKey: ''
+                apiKey: '' // Set via Cloudflare Worker
             },
             glm: {
                 endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
                 model: 'glm-4-flash',
-                apiKey: ''
+                apiKey: '' // Set via Cloudflare Worker
+            },
+            openrouter: {
+                endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+                model: 'deepseek/deepseek-chat', // Free model
+                apiKey: '' // Set via Cloudflare Worker
             }
         }
     },
@@ -314,6 +316,72 @@ ${JSON.stringify(context, null, 2)}
     hideTyping() {
         const typing = document.getElementById('typing-indicator');
         if (typing) typing.remove();
+    },
+
+    // OLLAMA REASONING ENGINE (Open-Source Priority)
+    // Direct call to Ollama for reasoning tasks
+    async ollamaReason(prompt, data = {}) {
+        try {
+            const config = this.config.models.ollama;
+
+            // Build full prompt with context
+            const fullPrompt = `คุณคือ AI ผู้เชี่ยวชาญด้าน QS (Quantity Surveyor) สำหรับงานก่อสร้าง
+
+บริบท:
+${JSON.stringify(data, null, 2)}
+
+คำถาม/ข้อมูล:
+${prompt}
+
+กรุณาวิเคราะห์และให้คำแนะนำ:
+1. ความถูกต้องของข้อมูล
+2. จุดที่ต้องระวัง (Warnings)
+3. ข้อเสนอแนะเพิ่มเติม (Recommendations)
+
+ตอบเป็นภาษาไทยที่เข้าใจง่าย`;
+
+            console.log('[Ollama Reason] Calling Ollama...', config.model);
+
+            const response = await fetch(config.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: config.model,
+                    prompt: fullPrompt,
+                    stream: false,
+                    options: {
+                        temperature: 0.7,
+                        num_ctx: 4096
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Ollama Error: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log('[Ollama Reason] Response:', result);
+
+            return {
+                success: true,
+                reasoning: result.response || result.message,
+                model: config.model,
+                provider: 'ollama'
+            };
+        } catch (error) {
+            console.error('[Ollama Reason] Error:', error);
+
+            // Fallback to rule-based reasoning if Ollama fails
+            return {
+                success: false,
+                reasoning: 'ไม่สามารถเชื่อมต่อ Ollama ได้ กรุณาตรวจสอบว่า Ollama ทำงานอยู่ที่ http://localhost:11434',
+                error: error.message,
+                fallback: true
+            };
+        }
     }
 };
 
@@ -338,6 +406,16 @@ async function sendMessage() {
 async function sendToAI(message, context = {}) {
     return await AIService.sendMessage(message, context);
 }
+
+// PUBLIC: Call Ollama Reasoning Engine directly
+// Use this for BOQ analysis, cost verification, etc.
+async function ollamaReason(prompt, data = {}) {
+    return await AIService.ollamaReason(prompt, data);
+}
+
+// EXAMPLE USAGE:
+// const result = await ollamaReason("วิเคราะห์ BOQ นี้", {items: [...], total: 50000});
+// if (result.success) console.log(result.reasoning);
 
 // Get current form data
 function getCurrentFormData() {

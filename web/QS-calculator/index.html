@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI-Powered Formwork Calculator สำหรับงานก่อสร้าง">
-    <title>PD17 AI Formwork Calculator | คำนวณแบบหล่อคอนกรีตอัจฉริยะ</title>
+    <meta name="description" content="AI-Powered QS Calculator สำหรับงาน QS ทุกสาขา: Arch, Str, Int, MEP">
+    <title>PD17 AI QS Calculator | คำนวณ BOQ อัจฉริยะด้วย AI</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,8 +40,8 @@
         <div class="container mx-auto px-4 py-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold">PD17 AI Formwork Calculator</h1>
-                    <p class="text-blue-100 mt-1">คำนวณแบบหล่อคอนกรีตอัจฉริยะด้วย AI</p>
+                    <h1 class="text-3xl font-bold">PD17 AI QS Calculator</h1>
+                    <p class="text-blue-100 mt-1">BOQ อัจฉริยะทุกสาขา: Arch • Str • Int • MEP</p>
                 </div>
                 <div class="flex gap-3">
                     <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg transition flex items-center gap-2">
@@ -129,6 +129,26 @@
                     </h2>
 
                     <form id="project-form" class="space-y-4">
+                        <!-- QS Discipline Selector -->
+                        <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border-2 border-blue-200">
+                            <label class="block text-sm font-bold text-gray-800 mb-2">สาขา QS</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" onclick="selectDiscipline('arch')" id="btn-arch" class="discipline-btn bg-white hover:bg-blue-100 border-2 border-blue-300 px-3 py-2 rounded-lg transition font-medium text-sm">
+                                    <i class="fas fa-building mr-1"></i> Architecture
+                                </button>
+                                <button type="button" onclick="selectDiscipline('structural')" id="btn-structural" class="discipline-btn bg-white hover:bg-green-100 border-2 border-green-300 px-3 py-2 rounded-lg transition font-medium text-sm">
+                                    <i class="fas fa-hard-hat mr-1"></i> Structural
+                                </button>
+                                <button type="button" onclick="selectDiscipline('interior')" id="btn-interior" class="discipline-btn bg-white hover:bg-orange-100 border-2 border-orange-300 px-3 py-2 rounded-lg transition font-medium text-sm">
+                                    <i class="fas fa-couch mr-1"></i> Interior
+                                </button>
+                                <button type="button" onclick="selectDiscipline('mep')" id="btn-mep" class="discipline-btn bg-white hover:bg-purple-100 border-2 border-purple-300 px-3 py-2 rounded-lg transition font-medium text-sm">
+                                    <i class="fas fa-bolt mr-1"></i> MEP
+                                </button>
+                            </div>
+                            <input type="hidden" id="selected-discipline" value="structural">
+                        </div>
+
                         <!-- Project Info -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อโครงการ</label>
@@ -276,6 +296,139 @@
             </div>
 
         </div>
+
+        <!-- Editable BOQ Table Section (Full Width) -->
+        <div class="mt-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        <i class="fas fa-table text-blue-600"></i>
+                        Editable BOQ (Bill of Quantities)
+                    </h2>
+                    <div class="flex gap-2">
+                        <button onclick="addBOQRow()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i class="fas fa-plus"></i> เพิ่มรายการ
+                        </button>
+                        <button onclick="calculateBOQ()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition flex items-center gap-2">
+                            <i class="fas fa-sync"></i> คำนวณใหม่
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table id="boq-table" class="w-full border-collapse border border-gray-300">
+                        <thead class="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                            <tr>
+                                <th class="border border-gray-300 px-3 py-2 text-left w-12">#</th>
+                                <th class="border border-gray-300 px-3 py-2 text-left">รายการ (Item)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-left">รายละเอียด (Description)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-center w-24">จำนวน (Qty)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-center w-24">หน่วย (Unit)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-right w-32">ราคา/หน่วย (Unit Price)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-right w-32">รวม (Amount)</th>
+                                <th class="border border-gray-300 px-3 py-2 text-center w-20">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boq-tbody" class="bg-white">
+                            <!-- Sample rows -->
+                            <tr class="boq-row hover:bg-gray-50">
+                                <td class="border border-gray-300 px-3 py-2 text-center row-number">1</td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="ไม้อัดหนา 12 มม." onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="ขนาด 1.22x2.44 ม." onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-qty w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="50" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="แผ่น" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-price w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-right" value="320" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2 text-right font-semibold boq-amount">16,000.00</td>
+                                <td class="border border-gray-300 px-3 py-2 text-center">
+                                    <button onclick="deleteBOQRow(this)" class="text-red-500 hover:text-red-700 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="boq-row hover:bg-gray-50">
+                                <td class="border border-gray-300 px-3 py-2 text-center row-number">2</td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="ไม้แปรรูป 2x4" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="ยาว 4 เมตร" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-qty w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="200" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="ม." onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-price w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-right" value="15" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2 text-right font-semibold boq-amount">3,000.00</td>
+                                <td class="border border-gray-300 px-3 py-2 text-center">
+                                    <button onclick="deleteBOQRow(this)" class="text-red-500 hover:text-red-700 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="boq-row hover:bg-gray-50">
+                                <td class="border border-gray-300 px-3 py-2 text-center row-number">3</td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="ค้ำยัน (Props)" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded" value="เหล็กปรับระดับได้" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-qty w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="45" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="text" class="w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-center" value="ต้น" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2">
+                                    <input type="number" step="0.01" class="boq-price w-full px-2 py-1 border-0 focus:ring-2 focus:ring-blue-500 rounded text-right" value="25" onchange="updateBOQRow(this)">
+                                </td>
+                                <td class="border border-gray-300 px-3 py-2 text-right font-semibold boq-amount">1,125.00</td>
+                                <td class="border border-gray-300 px-3 py-2 text-center">
+                                    <button onclick="deleteBOQRow(this)" class="text-red-500 hover:text-red-700 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="bg-gray-100">
+                            <tr class="font-bold">
+                                <td colspan="6" class="border border-gray-300 px-3 py-3 text-right">รวมทั้งหมด (Total):</td>
+                                <td class="border border-gray-300 px-3 py-3 text-right text-lg text-blue-700" id="boq-total">20,125.00</td>
+                                <td class="border border-gray-300"></td>
+                            </tr>
+                            <tr class="font-bold">
+                                <td colspan="6" class="border border-gray-300 px-3 py-3 text-right">VAT 7%:</td>
+                                <td class="border border-gray-300 px-3 py-3 text-right text-blue-700" id="boq-vat">1,408.75</td>
+                                <td class="border border-gray-300"></td>
+                            </tr>
+                            <tr class="font-bold text-lg">
+                                <td colspan="6" class="border border-gray-300 px-3 py-3 text-right bg-blue-100">รวมทั้งสิ้น (Grand Total):</td>
+                                <td class="border border-gray-300 px-3 py-3 text-right bg-blue-100 text-blue-800" id="boq-grand-total">21,533.75</td>
+                                <td class="border border-gray-300"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-sm text-gray-600">
+                    <p><i class="fas fa-info-circle mr-1"></i> <strong>คำแนะนำ:</strong> แก้ไขรายการได้โดยตรงในตาราง ระบบจะคำนวณอัตโนมัติ</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Footer -->
@@ -299,6 +452,7 @@
     <script src="src/services/ai-chatbox.js"></script>
     <script src="src/services/reasoning-engine.js"></script>
     <script src="src/utils/calculations.js"></script>
+    <script src="src/utils/boq.js"></script>
     <script src="src/utils/gantt-chart.js"></script>
     <script src="src/utils/export.js"></script>
     <script src="src/services/api.js"></script>
