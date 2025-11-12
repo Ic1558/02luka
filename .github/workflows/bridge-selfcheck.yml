@@ -13,6 +13,11 @@ on:
         required: false
         default: '0'
         type: string
+      stuck_threshold_hours:
+        description: 'Hours threshold for stuck bridge files'
+        required: false
+        default: '24'
+        type: string
 
 permissions:
   contents: write
@@ -63,6 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: sanity
+    env:
+      LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL }}
 
     steps:
       - name: Show workflow version
@@ -83,7 +90,7 @@ jobs:
           if [ -z "$VAL" ]; then VAL=0; fi
           echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
           
-          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          REDIS_VAL="${LUKA_REDIS_URL:-}"
           if [ -z "$REDIS_VAL" ]; then REDIS_VAL=""; fi
           echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
       - name: Checkout repository
@@ -108,12 +115,13 @@ jobs:
 
       - name: Run Bridge Self-Check
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
-        run: |
-          echo "🔍 Starting bridge self-check..."
-          zsh tools/bridge_selfcheck.zsh
         env:
           BRIDGE_STUCK_THRESHOLD_HOURS: ${{ github.event.inputs.stuck_threshold_hours || '24' }}
           LUKA_HOME: ${{ github.workspace }}
+        run: |
+          echo "🔍 Starting bridge self-check..."
+          echo "Strict=$CI_STRICT  Redis=${LUKA_REDIS_URL:+set}  THRESH=$BRIDGE_STUCK_THRESHOLD_HOURS"
+          zsh tools/bridge_selfcheck.zsh
 
       - name: "Debug: list hub directory"
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
