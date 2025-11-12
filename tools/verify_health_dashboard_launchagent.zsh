@@ -24,8 +24,10 @@ fi
 
 # Check if LaunchAgent is loaded
 log "🔍 Checking LaunchAgent status..."
-if launchctl list | grep -q "com.02luka.health.dashboard"; then
+LAUNCHCTL_OUTPUT=$(launchctl list 2>/dev/null | grep "com.02luka.health.dashboard" || true)
+if [[ -n "$LAUNCHCTL_OUTPUT" ]]; then
   log "✅ LaunchAgent is loaded"
+  log "   $LAUNCHCTL_OUTPUT"
 else
   log "❌ LaunchAgent is not loaded"
   exit 1
@@ -96,4 +98,3 @@ fi
 
 echo ""
 log "✅ Verification complete"
-
