@@ -9,8 +9,8 @@ BASE="${LUKA_SOT:-$HOME/02luka}"
 cd "$BASE"
 
 REPORT_DIR="$BASE/g/reports/system"
-ORCHESTRATOR="$BASE/tools/claude_subagents/orchestrator.zsh"
-COMPARE="$BASE/tools/claude_subagents/compare_results.zsh"
+ORCHESTRATOR="$BASE/tools/subagents/orchestrator.zsh"
+COMPARE="$BASE/tools/subagents/compare_results.zsh"
 
 log() {
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >&2
@@ -41,7 +41,9 @@ log "▶ Running orchestrator with compete strategy..."
 log "✅ Orchestrator execution completed"
 
 # Test 4: Verify summary JSON was created
-SUMMARY_JSON="$REPORT_DIR/claude_orchestrator_summary.json"
+SUMMARY_JSON="$REPORT_DIR/subagent_orchestrator_summary.json"
+# Fallback to old filename for backward compatibility
+[[ ! -f "$SUMMARY_JSON" ]] && SUMMARY_JSON="$REPORT_DIR/claude_orchestrator_summary.json"
 if [[ ! -f "$SUMMARY_JSON" ]]; then
   log "❌ Summary JSON not found: $SUMMARY_JSON"
   exit 1
@@ -80,7 +82,9 @@ log "▶ Running compare_results..."
 log "✅ Compare results execution completed"
 
 # Test 7: Verify compare JSON was created
-COMPARE_JSON="$REPORT_DIR/claude_compare_summary.json"
+COMPARE_JSON="$REPORT_DIR/subagent_compare_summary.json"
+# Fallback to old filename for backward compatibility
+[[ ! -f "$COMPARE_JSON" ]] && COMPARE_JSON="$REPORT_DIR/claude_compare_summary.json"
 if [[ ! -f "$COMPARE_JSON" ]]; then
   log "❌ Compare JSON not found: $COMPARE_JSON"
   exit 1
@@ -103,7 +107,7 @@ else
 fi
 
 # Test 9: Verify metrics log was created
-METRICS_LOG="$BASE/logs/claude_subagent_metrics.log"
+METRICS_LOG="$BASE/logs/subagent_metrics.log"
 if [[ -f "$METRICS_LOG" ]]; then
   if ! grep -q "strategy=compete" "$METRICS_LOG"; then
     log "⚠️  Metrics log exists but doesn't contain expected entry"
@@ -117,4 +121,3 @@ fi
 log ""
 log "✅ All smoke tests passed!"
 exit 0
-
