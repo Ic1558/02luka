@@ -361,4 +361,3 @@ launchctl unload ~/Library/LaunchAgents/com.02luka.certificate.validator.plist
 - **SPEC:** `g/reports/feature_claude_code_governance_phased_deployment_SPEC.md`
 - **Full Integration SPEC:** `g/reports/feature_claude_code_governance_integration_SPEC.md`
 - **Phase 5 SPEC:** `g/reports/feature_phase5_governance_reporting_SPEC.md`
-

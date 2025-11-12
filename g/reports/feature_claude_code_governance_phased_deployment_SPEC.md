@@ -201,4 +201,3 @@ Phase 3 (Reporting)
 - **Full Integration SPEC:** `g/reports/feature_claude_code_governance_integration_SPEC.md`
 - **Full Integration PLAN:** `g/reports/feature_claude_code_governance_integration_PLAN.md`
 - **Phase 5 SPEC:** `g/reports/feature_phase5_governance_reporting_SPEC.md`
-

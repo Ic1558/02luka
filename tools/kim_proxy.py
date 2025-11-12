@@ -23,9 +23,14 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 
 try:
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
+    import requests  # type: ignore[import-untyped]
+    from requests.adapters import HTTPAdapter  # type: ignore[import-untyped]
+    # Try multiple import paths for Retry (compatible with different urllib3 versions)
+    try:
+        from urllib3.util.retry import Retry  # type: ignore[import-untyped]
+    except ImportError:
+        # Fallback: use requests' bundled urllib3 (guaranteed to work if requests is installed)
+        from requests.packages.urllib3.util.retry import Retry  # type: ignore[import-untyped]
 except ImportError as e:
     import sys
     print(f"Error: Missing dependencies. Install with: pip install requests", file=sys.stderr)
