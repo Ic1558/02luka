@@ -46,7 +46,7 @@ echo ""
 
 # Test 4: LaunchAgent
 echo "Test 4: LaunchAgent"
-if launchctl list | grep -q com.02luka.claude.metrics.collector; then
+if launchctl list 2>/dev/null | grep -q com.02luka.claude.metrics.collector; then
   ok "LaunchAgent loaded"
 else
   ng "LaunchAgent not loaded"
