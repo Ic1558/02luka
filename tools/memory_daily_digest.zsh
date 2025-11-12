@@ -8,7 +8,8 @@ OUTPUT="$REPO/g/reports/memory_digest_${TODAY}.md"
 
 mkdir -p "$(dirname "$OUTPUT")"
 
-ts() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+# Get timestamp
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # Get Mary activity
 mary_data=$(redis-cli -a "$REDIS_PASS" HGETALL memory:agents:mary 2>/dev/null || echo "")
@@ -25,7 +26,7 @@ rnd_proposals=$(find "$REPO/bridge/memory/inbox" -name "*rnd*" -type f 2>/dev/nu
 cat > "$OUTPUT" <<MARKDOWN
 # Memory System Daily Digest — $(date +%Y-%m-%d)
 
-**Generated:** $(ts())  
+**Generated:** $TIMESTAMP  
 **System:** Phase 4 (Redis Hub + Mary/R&D Integration)
 
 ---
