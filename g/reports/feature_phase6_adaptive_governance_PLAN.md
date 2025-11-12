@@ -30,7 +30,12 @@
   - Add recommendation summary (2-3 lines) at end
   - Handle missing insights gracefully
 
-- [ ] **Task 1.4:** Create/modify HTML dashboard
+- [ ] **Task 1.4: Create dashboard generator script
+  - Create `tools/dashboard_generator.zsh`
+  - Generate HTML from insights JSON
+  - Include health score, trends, anomalies, recommendations
+  - Auto-refresh every 5 minutes
+  - Output: `g/reports/dashboard/index.html`
   - Find existing HTML dashboard template
   - Modify to include adaptive insights
   - Add trend indicators (up/down/stable)
@@ -51,9 +56,10 @@
 
 **Deliverables:**
 - `tools/adaptive_collector.zsh`
+- `tools/dashboard_generator.zsh`
 - `mls/adaptive/insights_YYYYMMDD.json` (daily)
 - Enhanced `tools/memory_daily_digest.zsh`
-- HTML dashboard: `g/reports/dashboard/index.html`
+- HTML dashboard: `g/reports/dashboard/index.html` (auto-generated)
 - LaunchAgent: `com.02luka.adaptive.collector.daily`
 
 ---
