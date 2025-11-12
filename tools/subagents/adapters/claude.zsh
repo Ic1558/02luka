@@ -10,4 +10,3 @@ run_backend_task() {
   # For now, same as CLS (can be enhanced later with Claude API calls)
   eval "$*"
 }
-
