@@ -91,3 +91,6 @@ core/nlp/kim_session_profiles.json
 
 mls/paula/intel/*.json
 mls/memory/adaptive/*.json
+# Generated governance index
+g/reports/system/index.json
+g/reports/system/trends_snapshot_*.html
