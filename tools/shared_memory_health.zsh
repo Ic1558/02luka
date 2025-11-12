@@ -17,6 +17,13 @@ test -x "$LUKA_SOT/tools/gc_memory_sync.sh" && ok "gc_memory_sync.sh executable"
 test -f "$LUKA_SOT/agents/cls_bridge/cls_memory.py" && ok "cls_memory.py exists" || ng "cls_memory.py missing"
 launchctl list | grep -q com.02luka.memory.metrics && ok "LaunchAgent: metrics loaded" || ng "LaunchAgent: metrics not loaded"
 
+# Phase 4 checks
+test -f "$LUKA_SOT/agents/memory_hub/memory_hub.py" && ok "memory_hub.py exists" || ng "memory_hub.py missing"
+launchctl list | grep -q com.02luka.memory.hub && ok "LaunchAgent: hub loaded" || ng "LaunchAgent: hub not loaded"
+test -x "$LUKA_SOT/tools/mary_memory_hook.zsh" && ok "mary_memory_hook.zsh executable" || ng "mary_memory_hook.zsh not executable"
+test -x "$LUKA_SOT/tools/rnd_memory_hook.zsh" && ok "rnd_memory_hook.zsh executable" || ng "rnd_memory_hook.zsh not executable"
+command -v redis-cli >/dev/null 2>&1 && redis-cli -a changeme-02luka ping >/dev/null 2>&1 && ok "Redis: connected" || echo "ℹ️  Redis: not available (optional)"
+
 if [ ${#errors[@]} -eq 0 ]; then
   ok "health passed"
   exit 0
@@ -24,10 +31,3 @@ else
   echo "Failures: ${errors[*]}"
   exit 1
 fi
-
-# Phase 4 checks
-test -f "$LUKA_SOT/agents/memory_hub/memory_hub.py" && ok "memory_hub.py exists" || ng "memory_hub.py missing"
-launchctl list | grep -q com.02luka.memory.hub && ok "LaunchAgent: hub loaded" || ng "LaunchAgent: hub not loaded"
-test -x "$LUKA_SOT/tools/mary_memory_hook.zsh" && ok "mary_memory_hook.zsh executable" || ng "mary_memory_hook.zsh not executable"
-test -x "$LUKA_SOT/tools/rnd_memory_hook.zsh" && ok "rnd_memory_hook.zsh executable" || ng "rnd_memory_hook.zsh not executable"
-command -v redis-cli >/dev/null 2>&1 && redis-cli -a changeme-02luka ping >/dev/null 2>&1 && ok "Redis: connected" || echo "ℹ️  Redis: not available (optional)"
