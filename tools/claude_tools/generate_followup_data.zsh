@@ -1,108 +1,102 @@
 #!/usr/bin/env zsh
 # Generate followup.json from real data sources:
-# 1. Work Orders (WO) from bridge/inbox/
+# 1. Work Orders (WO) from g/followup/state/*.json (processed state files)
 # 2. Local agent tasks from g/knowledge/tasks.jsonl
 set -euo pipefail
 
 BASE="${LUKA_SOT:-$HOME/02luka}"
 OUTPUT="$BASE/g/apps/dashboard/data/followup.json"
 TEMP_FILE="${OUTPUT}.tmp"
+STATE_DIR="$BASE/g/followup/state"
 
 mkdir -p "$(dirname "$OUTPUT")"
+mkdir -p "$STATE_DIR"
 
-# Collect Work Orders
+# Collect Work Orders from STATE FILES (not inbox)
 collect_work_orders() {
-  local wo_dir="$BASE/bridge/inbox"
   local items=()
   
-  # Find all WO files
-  local wo_files=()
-  if [[ -d "$wo_dir/CLC" ]]; then
-    while IFS= read -r file; do
-      [[ -f "$file" ]] && wo_files+=("$file")
-    done < <(find "$wo_dir/CLC" -type f \( -name "WO-*.yaml" -o -name "WO-*.yml" -o -name "WO-*.zsh" -o -name "WO-*.md" \) 2>/dev/null | head -20)
+  # Check if state directory exists
+  if [[ ! -d "$STATE_DIR" ]]; then
+    echo "[]"
+    return
   fi
   
-  if [[ -d "$wo_dir/ENTRY" ]]; then
-    while IFS= read -r file; do
-      [[ -f "$file" ]] && wo_files+=("$file")
-    done < <(find "$wo_dir/ENTRY" -type f \( -name "WO-*.yaml" -o -name "WO-*.yml" \) 2>/dev/null | head -10)
+  # Find all state JSON files
+  local state_files=()
+  setopt null_glob
+  for state_file in "$STATE_DIR"/*.json(.N); do
+    [[ -f "$state_file" ]] && state_files+=("$state_file")
+  done
+  
+  if [[ ${#state_files[@]} -eq 0 ]]; then
+    echo "[]"
+    return
   fi
   
-  for wo_file in "${wo_files[@]}"; do
-    local wo_id=$(basename "$wo_file" | sed 's/\.[^.]*$//')
-    local wo_data=""
+  for state_file in "${state_files[@]}"; do
+    local wo_id=$(basename "$state_file" .json)
     
-    # Try to parse YAML
-    if command -v yq >/dev/null 2>&1; then
-      wo_data=$(yq eval '.' "$wo_file" 2>/dev/null || echo "")
+    # Read state JSON file
+    if [[ ! -f "$state_file" ]]; then
+      continue
     fi
     
-    # Extract fields from YAML or filename
-    local title=""
-    local description=""
-    local wo_status=""
-    local priority=""
-    local due_date=""
-    local goal=""
-    local progress=""
-    
-    if [[ -n "$wo_data" ]]; then
-      title=$(echo "$wo_data" | yq eval '.title // .summary // .wo_id // ""' - 2>/dev/null || echo "")
-      description=$(echo "$wo_data" | yq eval '.description // .intent // ""' - 2>/dev/null || echo "")
-      wo_status=$(echo "$wo_data" | yq eval '.status // "active"' - 2>/dev/null || echo "active")
-      priority=$(echo "$wo_data" | yq eval '.priority // "medium"' - 2>/dev/null || echo "medium")
-      due_date=$(echo "$wo_data" | yq eval '.due_date // .deadline // ""' - 2>/dev/null || echo "")
-      goal=$(echo "$wo_data" | yq eval '.goal // .deliverables[0] // ""' - 2>/dev/null || echo "")
-      
-      # Calculate progress if available
-      if echo "$wo_data" | yq eval '.progress // .completion_percentage // null' - 2>/dev/null | grep -q '[0-9]'; then
-        progress=$(echo "$wo_data" | yq eval '.progress // .completion_percentage' - 2>/dev/null || echo "0")
-      else
-        # Estimate progress from status
-        case "$wo_status" in
-          completed|done) progress="100" ;;
-          in_progress|active) progress="50" ;;
-          pending|open) progress="0" ;;
-          *) progress="0" ;;
-        esac
-      fi
-    else
-      # Fallback: use filename
-      title="$wo_id"
-      description="Work Order: $wo_id"
-      wo_status="active"
-      priority="medium"
+    # Parse JSON state file
+    local wo_data=$(cat "$state_file" 2>/dev/null || echo "")
+    if [[ -z "$wo_data" ]]; then
+      continue
     fi
+    
+    # Extract fields from state JSON using jq
+    local title=$(echo "$wo_data" | jq -r '.title // .id // ""' 2>/dev/null || echo "")
+    local description=$(echo "$wo_data" | jq -r '.description // .summary // ""' 2>/dev/null || echo "")
+    local wo_status=$(echo "$wo_data" | jq -r '.status // "Open"' 2>/dev/null || echo "Open")
+    local priority=$(echo "$wo_data" | jq -r '.priority // "Medium"' 2>/dev/null || echo "Medium")
+    local due_date=$(echo "$wo_data" | jq -r '.due_date // .due // ""' 2>/dev/null || echo "")
+    local goal=$(echo "$wo_data" | jq -r '.goal // ""' 2>/dev/null || echo "")
+    local progress=$(echo "$wo_data" | jq -r '.progress // 0' 2>/dev/null || echo "0")
+    local owner=$(echo "$wo_data" | jq -r '.owner // "Work Order System"' 2>/dev/null || echo "Work Order System")
     
     # Normalize status
     local normalized_status=""
     case "$wo_status" in
-      active|open|pending) normalized_status="Open" ;;
-      in_progress|processing) normalized_status="In Progress" ;;
-      completed|done|finished) normalized_status="Done" ;;
+      Complete|completed|done|finished) normalized_status="Done" ;;
+      InProgress|in_progress|processing|active) normalized_status="In Progress" ;;
+      Paused|paused) normalized_status="Paused" ;;
+      Open|open|pending) normalized_status="Open" ;;
       *) normalized_status="Open" ;;
     esac
     
     # Normalize priority
     case "$priority" in
-      high|urgent) priority="High" ;;
-      medium|normal) priority="Medium" ;;
-      low) priority="Low" ;;
+      high|High|urgent|Urgent) priority="High" ;;
+      medium|Medium|normal|Normal) priority="Medium" ;;
+      low|Low) priority="Low" ;;
       *) priority="Medium" ;;
     esac
+    
+    # Ensure progress is numeric
+    if ! [[ "$progress" =~ ^[0-9]+$ ]]; then
+      progress="0"
+    fi
+    
+    # Use WO ID as title fallback
+    if [[ -z "$title" ]]; then
+      title="$wo_id"
+    fi
     
     # Create item JSON
     local item=$(jq -n \
       --arg id "$wo_id" \
-      --arg title "${title:-$wo_id}" \
-      --arg desc "${description:-Work Order}" \
+      --arg title "$title" \
+      --arg desc "${description:-Work Order: $wo_id}" \
       --arg status "$normalized_status" \
       --arg priority "$priority" \
       --arg due "${due_date:-}" \
       --arg goal "${goal:-}" \
-      --arg progress "${progress:-0}" \
-      --arg owner "Work Order System" \
+      --arg progress "$progress" \
+      --arg owner "$owner" \
       --arg source "work_order" \
       '{
         id: $id,

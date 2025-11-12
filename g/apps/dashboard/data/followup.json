@@ -1,56 +1,5 @@
 {
-  "updated_at": "2025-11-07T10:15:00Z",
+  "updated_at": "2025-11-12T20:38:22Z",
   "owner": "Operations Command Center",
-  "items": [
-    {
-      "id": "FU-3101",
-      "title": "Confirm renewal paperwork for Atlas Logistics",
-      "status": "Open",
-      "priority": "High",
-      "due_date": "2025-11-08",
-      "owner": "Procurement",
-      "tags": ["Vendor", "Contract"],
-      "notes": "Legal signed the revision. Waiting on vendor counter-signature."
-    },
-    {
-      "id": "FU-3102",
-      "title": "Schedule security patch window with Platform",
-      "status": "In Progress",
-      "priority": "Medium",
-      "due_date": "2025-11-11",
-      "owner": "SRE",
-      "tags": ["Security", "Platform"],
-      "notes": "SRE to confirm maintenance window in PagerDuty by Friday."
-    },
-    {
-      "id": "FU-3103",
-      "title": "Deliver Q4 invoice summary to Finance",
-      "status": "Open",
-      "priority": "High",
-      "due_date": "2025-11-12",
-      "owner": "Revenue Ops",
-      "tags": ["Finance", "Billing"],
-      "notes": "Need updated spend figures from vendor exports before finalizing."
-    },
-    {
-      "id": "FU-3104",
-      "title": "Backfill CRM notes for enterprise leads",
-      "status": "In Progress",
-      "priority": "Low",
-      "due_date": "2025-11-18",
-      "owner": "Sales Ops",
-      "tags": ["CRM", "Sales"],
-      "notes": "Automations imported 210 leads; manual triage still required."
-    },
-    {
-      "id": "FU-3105",
-      "title": "Document new escalation runbook",
-      "status": "Done",
-      "priority": "Medium",
-      "due_date": "2025-11-05",
-      "owner": "Support",
-      "tags": ["Runbook", "Support"],
-      "notes": "Waiting for QA sign-off to publish in knowledge base."
-    }
-  ]
+  "items": []
 }
