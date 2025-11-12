@@ -71,28 +71,28 @@ save_state() {
 }
 
 # Extract prompts from database with retry logic
+# Returns path to temp file containing JSON (to avoid shell variable issues)
 extract_prompts() {
   local db_file="$1"
+  local output_file="$2"  # Temp file to write JSON to
   local retries=3
   local backoff=1
   
   for i in $(seq 1 $retries); do
-    # Use PRAGMA read_uncommitted for read-only queries
-    # Note: PRAGMA must be on separate line or use separate connection
-    local result=$(sqlite3 "$db_file" <<SQL 2>&1
-PRAGMA read_uncommitted=1;
-SELECT value FROM ItemTable WHERE key = 'aiService.prompts';
-SQL
-)
+    # Write directly to file to avoid shell variable issues with control characters
+    sqlite3 "$db_file" "PRAGMA read_uncommitted=1; SELECT value FROM ItemTable WHERE key = 'aiService.prompts';" > "$output_file" 2>&1
     local exit_code=$?
     
-    if [[ $exit_code -eq 0 ]] && [[ -n "$result" ]]; then
-      echo "$result"
-      return 0
+    # Check if file has content and is valid JSON
+    if [[ $exit_code -eq 0 ]] && [[ -s "$output_file" ]]; then
+      # Quick validation - check if it starts with '[' (JSON array)
+      if [[ $(head -c 1 "$output_file") == "[" ]]; then
+        return 0
+      fi
     fi
     
     # Check for SQLITE_BUSY error
-    if echo "$result" | grep -q "SQLITE_BUSY\|database is locked"; then
+    if grep -q "SQLITE_BUSY\|database is locked" "$output_file" 2>/dev/null; then
       if [[ $i -lt $retries ]]; then
         log "Database locked, retrying in ${backoff}s (attempt $i/$retries)"
         sleep $backoff
@@ -104,7 +104,8 @@ SQL
     else
       # Don't log error on first attempt (might be normal)
       if [[ $i -eq $retries ]]; then
-        log_error "Failed to extract prompts (exit=$exit_code): ${result:0:200}"
+        local error_msg=$(head -c 200 "$output_file" 2>/dev/null || echo "unknown error")
+        log_error "Failed to extract prompts (exit=$exit_code): $error_msg"
       fi
       # Continue to retry
     fi
@@ -190,18 +191,38 @@ process_new_prompts() {
   
   log "Processing prompts from: $db_file"
   
-  # Extract prompts with retry logic
-  local prompts_json=$(extract_prompts "$db_file")
-  if [[ -z "$prompts_json" ]]; then
-    log_error "Failed to extract prompts"
+  # Extract prompts to temp file (avoids shell variable issues with control characters)
+  local temp_json=$(mktemp)
+  extract_prompts "$db_file" "$temp_json"
+  local extract_exit=$?
+  
+  if [[ $extract_exit -ne 0 ]] || [[ ! -s "$temp_json" ]]; then
+    log_error "Failed to extract prompts (exit=$extract_exit)"
+    rm -f "$temp_json"
     return 1
   fi
   
-  # Parse prompts - handle potential JSON parsing errors
-  local current_count=$(echo "$prompts_json" | python3 -c "import sys, json; data=json.load(sys.stdin); print(len(data) if isinstance(data, list) else 0)" 2>/dev/null || echo "0")
+  local json_size=$(stat -f%z "$temp_json" 2>/dev/null || echo "0")
+  log "Extracted prompts JSON (size: $json_size bytes)"
+  
+  # Parse prompts - read directly from file
+  local current_count=$(python3 <<PYTHON 2>>"$LOG_FILE" || echo "0"
+import json
+import sys
+
+try:
+    with open("$temp_json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    print(len(data) if isinstance(data, list) else 0)
+except Exception as e:
+    print(f"ERROR: {e}", file=sys.stderr)
+    sys.exit(1)
+PYTHON
+)
   
   if [[ $current_count -eq 0 ]]; then
     log_error "Failed to parse prompts JSON or empty array"
+    rm -f "$temp_json"
     return 1
   fi
   
@@ -225,15 +246,24 @@ process_new_prompts() {
   local new_prompts=$((current_count - last_count))
   log "Found $new_prompts new prompt(s)"
   
-  # Extract new prompts (last N prompts) - use temp file for Python output
+  if [[ $new_prompts -le 0 ]]; then
+    log "No new prompts to process"
+    rm -f "$temp_json"
+    return 0
+  fi
+  
+  # Extract new prompts (last N prompts) - read directly from temp file
   local temp_prompts=$(mktemp)
-  echo "$prompts_json" | python3 <<PYTHON > "$temp_prompts"
-import sys
+  
+  python3 <<PYTHON > "$temp_prompts" 2>>"$LOG_FILE"
 import json
 import hashlib
+import sys
 
 try:
-    prompts = json.load(sys.stdin)
+    with open("$temp_json", "r", encoding="utf-8") as f:
+        prompts = json.load(f)
+    
     state_count = int("${last_count}")
     
     # Get new prompts (from last_count to end)
@@ -246,13 +276,23 @@ try:
         # Generate hash
         prompt_hash = hashlib.sha256(text.encode()).hexdigest()
         
-        # Output: text|commandType|hash
-        print(f"{text}|{cmd_type}|{prompt_hash}")
+        # Output: text|commandType|hash (escape newlines and pipes for shell)
+        text_escaped = text.replace('\n', '\\n').replace('\r', '\\r').replace('|', '\\|')
+        print(f"{text_escaped}|{cmd_type}|{prompt_hash}")
         
 except Exception as e:
     print(f"ERROR: {e}", file=sys.stderr)
     sys.exit(1)
 PYTHON
+  
+  local py_exit=$?
+  if [[ $py_exit -ne 0 ]]; then
+    log_error "Failed to process prompts JSON"
+    rm -f "$temp_json" "$temp_prompts"
+    return 1
+  fi
+  
+  rm -f "$temp_json"
   
   local processed=0
   while IFS='|' read -r prompt_text command_type prompt_hash; do
@@ -316,4 +356,3 @@ main() {
 
 # Run main
 main "$@"
-
