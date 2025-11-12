@@ -131,6 +131,93 @@ say ""
     echo ""
   fi
   
+  echo "## Adaptive Insights Summary"
+  echo ""
+  
+  # Aggregate adaptive insights from past week
+  INSIGHTS_FOUND=0
+  declare -a week_trends
+  declare -a week_anomalies
+  declare -a week_recommendations
+  
+  if command -v jq >/dev/null 2>&1 && [[ -d "mls/adaptive" ]]; then
+    while IFS= read -r insight_file; do
+      [[ -f "$insight_file" ]] || continue
+      
+      # Extract date from filename
+      DATE_MATCH=$(basename "$insight_file" | grep -oE '[0-9]{8}' || echo "")
+      if [[ -z "$DATE_MATCH" ]]; then
+        continue
+      fi
+      
+      # Check if date is within week range
+      if [[ -n "$WEEK_START" ]] && [[ "$DATE_MATCH" -lt "$WEEK_START" ]]; then
+        continue
+      fi
+      if [[ "$DATE_MATCH" -gt "$WEEK_END" ]]; then
+        continue
+      fi
+      
+      INSIGHTS_FOUND=1
+      
+      # Extract trends
+      trends=$(jq -r '.trends // {}' "$insight_file" 2>/dev/null || echo "{}")
+      if [[ "$trends" != "{}" ]]; then
+        echo "$trends" | jq -r 'to_entries[] | "\(.key): \(.value.direction) (\(.value.change))"' 2>/dev/null | while read trend_line; do
+          week_trends+=("$trend_line")
+        done
+      fi
+      
+      # Extract anomalies
+      anomalies=$(jq -r '.anomalies // []' "$insight_file" 2>/dev/null || echo "[]")
+      if [[ "$anomalies" != "[]" ]]; then
+        echo "$anomalies" | jq -r '.[] | "\(.metric): \(.severity) severity"' 2>/dev/null | while read anomaly_line; do
+          week_anomalies+=("$anomaly_line")
+        done
+      fi
+      
+      # Extract recommendations
+      recs=$(jq -r '.recommendations // []' "$insight_file" 2>/dev/null || echo "[]")
+      if [[ "$recs" != "[]" ]]; then
+        echo "$recs" | jq -r '.[]' 2>/dev/null | while read rec_line; do
+          week_recommendations+=("$rec_line")
+        done
+      fi
+    done < <(find mls/adaptive -maxdepth 1 -name "insights_*.json" 2>/dev/null || true)
+  fi
+  
+  if [[ $INSIGHTS_FOUND -eq 0 ]]; then
+    echo "ℹ️  No adaptive insights available for this week."
+    echo ""
+  else
+    echo "### Trends (Last 7 Days)"
+    echo ""
+    if [[ ${#week_trends[@]} -gt 0 ]]; then
+      printf '%s\n' "${week_trends[@]}" | sort -u | sed 's/^/- /'
+    else
+      echo "- No significant trends detected"
+    fi
+    echo ""
+    
+    echo "### Anomalies"
+    echo ""
+    if [[ ${#week_anomalies[@]} -gt 0 ]]; then
+      printf '%s\n' "${week_anomalies[@]}" | sort -u | sed 's/^/- /'
+    else
+      echo "- No anomalies detected"
+    fi
+    echo ""
+    
+    echo "### Recommendations"
+    echo ""
+    if [[ ${#week_recommendations[@]} -gt 0 ]]; then
+      printf '%s\n' "${week_recommendations[@]}" | sort -u | sed 's/^/- /'
+    else
+      echo "- No specific recommendations"
+    fi
+    echo ""
+  fi
+  
   echo "## Recommendations"
   echo ""
   echo "Based on this week's activity:"

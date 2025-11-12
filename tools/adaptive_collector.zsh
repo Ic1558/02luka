@@ -5,7 +5,9 @@ set -euo pipefail
 # Simple trend detection and anomaly spotting
 
 REPO="$HOME/02luka"
-REDIS_PASS="changeme-02luka"
+REDIS_PASS="${REDIS_PASSWORD:-changeme-02luka}"
+[[ -n "${REDIS_ALT_PASSWORD:-}" ]] && REDIS_PASS="$REDIS_ALT_PASSWORD"
+
 TODAY=$(date +%Y%m%d)
 OUTPUT="$REPO/mls/adaptive/insights_${TODAY}.json"
 
@@ -26,9 +28,14 @@ calculate_trend() {
   local current_avg="$2"
   local previous_avg="$3"
   
-  if (( $(echo "$current_avg > $previous_avg * 1.1" | bc -l) )); then
+  if [[ -z "$previous_avg" || "$previous_avg" == "0" ]]; then
+    echo "stable"  # No historical data
+    return
+  fi
+  
+  if (( $(echo "$current_avg > $previous_avg * 1.1" | bc -l 2>/dev/null || echo "0") )); then
     echo "improving"
-  elif (( $(echo "$current_avg < $previous_avg * 0.9" | bc -l) )); then
+  elif (( $(echo "$current_avg < $previous_avg * 0.9" | bc -l 2>/dev/null || echo "0") )); then
     echo "declining"
   else
     echo "stable"
@@ -52,30 +59,145 @@ calculate_change() {
   if [[ -z "$previous" || "$previous" == "0" ]]; then
     echo "0%"
   else
-    local change=$(echo "($current - $previous) / $previous * 100" | bc -l)
+    local change=$(echo "($current - $previous) / $previous * 100" | bc -l 2>/dev/null || echo "0")
     printf "%.1f%%" "$change"
   fi
 }
 
-# Read metrics from monthly JSON (if available)
-if [[ -f "$METRICS_FILE" ]]; then
-  # Extract Claude Code metrics
-  claude_data=$(jq -r '.agents.claude // {}' "$METRICS_FILE" 2>/dev/null || echo "{}")
+# Guard: Check if metrics file exists
+if [[ ! -f "$METRICS_FILE" ]]; then
+  echo "⚠️  Metrics file not found: $METRICS_FILE"
+  echo "ℹ️  Generating minimal insights (no historical data)"
   
-  # TODO: Implement trend calculation from historical data
-  # For now, use current Redis values
+  # Generate minimal insights
+  cat > "$OUTPUT" <<JSON
+{
+  "date": "${TODAY}",
+  "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "trends": {},
+  "anomalies": [],
+  "recommendations": ["Collect more historical data for trend analysis"],
+  "recommendation_summary": "Insufficient historical data. System operating normally."
+}
+JSON
+  echo "✅ Adaptive insights generated (minimal): $OUTPUT"
+  exit 0
 fi
 
-# Get current metrics from Redis
+# Read current metrics from Redis
+declare -A current_metrics
 if command -v redis-cli >/dev/null 2>&1; then
-  # Get Claude Code metrics
-  claude_current=$(redis-cli -a "$REDIS_PASS" HGET memory:agents:claude hook_success_rate 2>/dev/null || echo "0")
+  for agent in mary rnd claude; do
+    agent_data=$(redis-cli -a "$REDIS_PASS" HGETALL memory:agents:${agent} 2>/dev/null || echo "")
+    if [[ -n "$agent_data" && "$agent_data" != "NOAUTH"* && "$agent_data" != "AUTH failed"* ]]; then
+      # Extract key metrics
+      hook_success=$(echo "$agent_data" | grep -E "^hook_success_rate|^success_rate" | head -1 | cut -d' ' -f2 || echo "0")
+      if [[ -n "$hook_success" && "$hook_success" != "0" ]]; then
+        current_metrics[${agent}_hook_success]="$hook_success"
+      fi
+    fi
+  done
+fi
+
+# Read historical metrics from JSON
+declare -A historical_metrics
+if command -v jq >/dev/null 2>&1; then
+  # Extract agent metrics from monthly JSON
+  for agent in mary rnd claude; do
+    agent_data=$(jq -r ".agents.${agent} // {}" "$METRICS_FILE" 2>/dev/null || echo "{}")
+    if [[ "$agent_data" != "{}" && "$agent_data" != "null" ]]; then
+      hook_success=$(echo "$agent_data" | jq -r '.hook_success_rate // .success_rate // 0' 2>/dev/null || echo "0")
+      if [[ -n "$hook_success" && "$hook_success" != "0" && "$hook_success" != "null" ]]; then
+        historical_metrics[${agent}_hook_success]="$hook_success"
+      fi
+    fi
+  done
+fi
+
+# Calculate trends
+for metric_key in ${(k)current_metrics}; do
+  current_val="${current_metrics[$metric_key]}"
+  previous_val="${historical_metrics[$metric_key]:-}"
   
-  # TODO: Compare with historical averages
-  # For MVP: Mark as stable if no historical data
-  if [[ -n "$claude_current" && "$claude_current" != "0" ]]; then
-    trends[claude_hook_success]="stable"
+  if [[ -n "$previous_val" && "$previous_val" != "0" ]]; then
+    trend=$(calculate_trend "$metric_key" "$current_val" "$previous_val")
+    change=$(calculate_change "$current_val" "$previous_val")
+    trends[$metric_key]="$trend|$change"
+    
+    # Detect anomalies (>2x or <0.5x)
+    if (( $(echo "$current_val > $previous_val * 2" | bc -l 2>/dev/null || echo "0") )); then
+      anomalies+=("{\"metric\":\"$metric_key\",\"value\":$current_val,\"expected\":$previous_val,\"severity\":\"high\"}")
+    elif (( $(echo "$current_val < $previous_val * 0.5" | bc -l 2>/dev/null || echo "0") )); then
+      anomalies+=("{\"metric\":\"$metric_key\",\"value\":$current_val,\"expected\":$previous_val,\"severity\":\"medium\"}")
+    fi
+  else
+    # No historical data - mark as stable
+    trends[$metric_key]="stable|0%"
   fi
+done
+
+# Generate recommendations
+if [[ ${#anomalies[@]} -gt 0 ]]; then
+  recommendations+=("Investigate metric anomalies detected in adaptive insights")
+fi
+
+for metric_key in ${(k)trends}; do
+  trend_info="${trends[$metric_key]}"
+  trend="${trend_info%%|*}"
+  if [[ "$trend" == "declining" ]]; then
+    recommendations+=("Monitor $metric_key - showing declining trend")
+  fi
+done
+
+# Build trends JSON
+trends_json="{"
+first=true
+for metric_key in ${(k)trends}; do
+  trend_info="${trends[$metric_key]}"
+  trend="${trend_info%%|*}"
+  change="${trend_info##*|}"
+  direction=$(get_trend_direction "$trend")
+  
+  if [[ "$first" == "true" ]]; then
+    first=false
+  else
+    trends_json+=","
+  fi
+  trends_json+="\"$metric_key\":{\"direction\":\"$trend\",\"trend\":\"$direction\",\"change\":\"$change\"}"
+done
+trends_json+="}"
+
+# Build anomalies JSON array
+anomalies_json="["
+first=true
+for anomaly in "${anomalies[@]}"; do
+  if [[ "$first" == "true" ]]; then
+    first=false
+  else
+    anomalies_json+=","
+  fi
+  anomalies_json+="$anomaly"
+done
+anomalies_json+="]"
+
+# Build recommendations array
+recommendations_json="["
+first=true
+for rec in "${recommendations[@]}"; do
+  if [[ "$first" == "true" ]]; then
+    first=false
+  else
+    recommendations_json+=","
+  fi
+  recommendations_json+="\"$rec\""
+done
+recommendations_json+="]"
+
+# Generate recommendation summary
+if [[ ${#recommendations[@]} -gt 0 ]]; then
+  summary="${recommendations[1]}"
+else
+  summary="No significant trends detected. System operating normally."
 fi
 
 # Generate insights JSON
@@ -83,16 +205,10 @@ cat > "$OUTPUT" <<JSON
 {
   "date": "${TODAY}",
   "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "trends": {
-    "claude_hook_success": {
-      "direction": "${trends[claude_hook_success]:-stable}",
-      "trend": "$(get_trend_direction "${trends[claude_hook_success]:-stable}")",
-      "change": "0%"
-    }
-  },
-  "anomalies": [],
-  "recommendations": [],
-  "recommendation_summary": "No significant trends detected. System operating normally."
+  "trends": ${trends_json},
+  "anomalies": ${anomalies_json},
+  "recommendations": ${recommendations_json},
+  "recommendation_summary": "${summary}"
 }
 JSON
 
