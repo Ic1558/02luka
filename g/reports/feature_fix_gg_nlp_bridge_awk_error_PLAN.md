@@ -9,35 +9,38 @@
 
 ## Task Breakdown
 
-- [ ] **Task 1:** Locate the script causing the error
-  - Search for `gg_nlp_bridge` references
-  - Check LaunchAgents (`com.02luka.gg.nlp-bridge`)
-  - Check `agents/` directory for Python scripts
-  - Check `tools/` directory for shell scripts
-  - Identify exact file and line number
+- [x] **Task 1:** Locate the script causing the error
+  - ✅ Found: `tools/gg_nlp_bridge.zsh` (line 35)
+  - ✅ LaunchAgent: `com.02luka.gg.nlp-bridge` (loaded)
+  - ✅ Script exists and is executable
 
-- [ ] **Task 2:** Analyze the AWK code
-  - Read the problematic AWK section
-  - Understand the intended pattern matching
-  - Identify all syntax issues
-  - Document the correct pattern
+- [x] **Task 2:** Analyze the AWK code
+  - ✅ Read AWK section (line 30-39)
+  - ✅ Pattern is correct: `/^"?([^"]+)"?[[:space:]]*:[[:space:]]*([a-zA-Z0-9_.-]+)$/`
+  - ✅ AWK `match()` syntax is correct
+  - ✅ No `>>>` or `<<<` in current file
 
-- [ ] **Task 3:** Fix AWK syntax
-  - Remove `>>>` and `<<<` debug markers
-  - Fix regex pattern syntax
-  - Ensure proper `match()` function usage
-  - Add proper error handling
+- [ ] **Task 3:** Fix the issue
+  - Verify script is clean (no hidden characters)
+  - Reload LaunchAgent to pick up current version
+  - Add error handling to AWK call
+  - Test with sample input
 
-- [ ] **Task 4:** Test the fix
+- [ ] **Task 4:** Reload LaunchAgent
+  - Unload current LaunchAgent
+  - Load LaunchAgent again (picks up current script)
+  - Verify process restarts
+  - Check logs for errors
+
+- [ ] **Task 5:** Test the fix
   - Create test input (sample key-value pairs)
-  - Run script with test input
-  - Verify no AWK errors
+  - Publish to `gg:nlp` channel
+  - Verify no AWK errors in logs
   - Verify parsing works correctly
 
-- [ ] **Task 5:** Validate in production
-  - Check log files for errors
+- [ ] **Task 6:** Validate in production
+  - Monitor log files for 24 hours
   - Verify NLP bridge functionality
-  - Monitor for 24 hours
   - Confirm no regressions
 
 ---

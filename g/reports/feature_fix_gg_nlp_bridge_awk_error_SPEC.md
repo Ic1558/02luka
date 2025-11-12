@@ -38,19 +38,26 @@ awk: illegal statement at source line 6
 
 ## Root Cause Analysis
 
-**Likely Causes:**
-1. **Regex Pattern Issue:** The pattern `/^"?([^"]+)"?[[:space:]]*:[[:space:]]*([a-zA-Z0-9_.-]+)$/` is malformed
-   - May be missing proper escaping
-   - May have incorrect delimiter placement
-   - The `>>>` and `<<<` suggest debug markers left in code
+**Script Located:** `tools/gg_nlp_bridge.zsh` (line 35)
 
-2. **AWK Syntax:** AWK `match()` function requires:
+**Findings:**
+1. **Current Code is Correct:** The script at line 35 has proper AWK syntax:
+   ```awk
+   if (match($0, /^"?([^"]+)"?[[:space:]]*:[[:space:]]*([a-zA-Z0-9_.-]+)$/, a)) {
+   ```
+
+2. **Error Source:** The `>>>` and `<<<` markers in the error log suggest:
+   - Old process still running (needs LaunchAgent reload)
+   - Cached/compiled version
+   - Debug output that got captured incorrectly
+
+3. **AWK Syntax:** The current code is correct. AWK `match()` function:
    ```awk
    if (match($0, /pattern/, arr)) { ... }
    ```
-   Not: `if (match($0, >>> /pattern/, <<< arr))`
+   This is what the script uses (correct).
 
-3. **Script Location:** Need to find the actual script causing this error
+4. **Solution:** Reload LaunchAgent to pick up current script version
 
 ---
 
