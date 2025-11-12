@@ -39,19 +39,25 @@ find_latest_file() {
   local pattern="$1"
   local dir="$2"
   local latest_file=""
-  local latest_m=0
   
+  # Use find with -print0 and sort by mtime, more reliable than glob
+  if command -v find >/dev/null 2>&1; then
+    # Try find with -printf (GNU) or -print0 + stat (macOS)
+    if find "$dir" -maxdepth 1 -name "$pattern" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- | read -r latest_file; then
+      [[ -n "$latest_file" ]] && echo "$latest_file"
+      return
+    fi
+    # Fallback: use find + ls -t
+    latest_file=$(find "$dir" -maxdepth 1 -name "$pattern" -type f -exec ls -1t {} + 2>/dev/null | head -1)
+    [[ -n "$latest_file" ]] && echo "$latest_file"
+    return
+  fi
+  
+  # Fallback: use glob with ls -t
   setopt null_glob
-  for f in "$dir"/$~pattern; do
-    [[ -f "$f" ]] || continue
-    local m; m=$(get_mtime "$f" 2>/dev/null || echo "0")
-    # Handle case where get_mtime returns multiple lines (shouldn't happen, but be safe)
-    m=$(echo "$m" | head -1)
-    (( m > latest_m )) && { latest_m=$m; latest_file="$f"; }
-  done
+  latest_file=$(ls -1t "$dir"/$~pattern 2>/dev/null | head -1)
   unsetopt null_glob
   
-  # Return only the file path, not mtime
   [[ -n "$latest_file" ]] && echo "$latest_file" || true
 }
 
