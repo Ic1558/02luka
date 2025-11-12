@@ -46,6 +46,36 @@ jobs:
       node_version: '20'
 
   # ============================================================
+  # PATH GUARD: Enforce function-first structure for reports
+  # ============================================================
+  path_guard:
+    name: Path Guard (Reports)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check report paths
+        run: |
+          BAD=$(git diff --name-only origin/main...HEAD | grep -E '^g/reports/[^/]+\.md$' || true)
+          if [ -n "$BAD" ]; then
+            echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system}/ only"
+            echo ""
+            echo "Files in wrong location:"
+            echo "$BAD" | sed 's/^/  - /'
+            echo ""
+            echo "Please move to appropriate subdirectory:"
+            echo "  - Phase 5 reports → g/reports/phase5_governance/"
+            echo "  - Phase 6 reports → g/reports/phase6_paula/"
+            echo "  - System reports → g/reports/system/"
+            exit 1
+          fi
+          echo "✅ All reports in correct subdirectories"
+
+  # ============================================================
   # SUMMARY JOB: Always runs to show overall status
   # ============================================================
   ci-summary:

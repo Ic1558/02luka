@@ -24,10 +24,10 @@ YEARMONTH=$(date +%Y%m)
 METRICS_FILE="$REPO/g/reports/memory_metrics_${YEARMONTH}.json"
 
 # Get latest daily digest
-LATEST_DIGEST=$(ls -1t "$REPO/g/reports/memory_digest_"*.md 2>/dev/null | head -1 || echo "")
+LATEST_DIGEST=$(ls -1t "$REPO/g/reports/system/memory_digest_"*.md 2>/dev/null | head -1 || echo "")
 
-# Get latest certificate
-LATEST_CERT=$(ls -1t "$REPO/g/reports/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -1 || echo "")
+# Get latest certificate (check both phase5 and phase6)
+LATEST_CERT=$(ls -1t "$REPO/g/reports/phase5_governance/DEPLOYMENT_CERTIFICATE_"*.md "$REPO/g/reports/phase6_paula/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -1 || echo "")
 
 # Generate report
 cat > "$OUTPUT" <<MARKDOWN
@@ -84,7 +84,7 @@ else
 fi)
 
 ### Deployment History
-$(ls -1t "$REPO/g/reports/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -5 | while read cert; do
+$(ls -1t "$REPO/g/reports/phase5_governance/DEPLOYMENT_CERTIFICATE_"*.md "$REPO/g/reports/phase6_paula/DEPLOYMENT_CERTIFICATE_"*.md 2>/dev/null | head -5 | while read cert; do
   echo "- $(basename "$cert")"
 done || echo "No deployment history")
 

@@ -4,7 +4,7 @@ set -euo pipefail
 REPO="$HOME/02luka"
 REDIS_PASS="changeme-02luka"
 TODAY=$(date +%Y%m%d)
-OUTPUT="$REPO/g/reports/memory_digest_${TODAY}.md"
+OUTPUT="$REPO/g/reports/system/memory_digest_${TODAY}.md"
 
 mkdir -p "$(dirname "$OUTPUT")"
 
