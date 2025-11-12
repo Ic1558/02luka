@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-Powered Formwork Calculator สำหรับงานก่อสร้าง">
+    <title>PD17 AI Formwork Calculator | คำนวณแบบหล่อคอนกรีตอัจฉริยะ</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- jsPDF for Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Chart.js for Gantt -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="public/icon-192.png">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">PD17 AI Formwork Calculator</h1>
+                    <p class="text-blue-100 mt-1">คำนวณแบบหล่อคอนกรีตอัจฉริยะด้วย AI</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                        <i class="fas fa-file-excel"></i> Export Excel
+                    </button>
+                    <button onclick="exportToPDF()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Left Panel: File Upload & AI Chat -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- File Upload Section -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-upload text-blue-600"></i>
+                        อัปโหลดไฟล์
+                    </h2>
+
+                    <div id="drop-zone" class="border-3 border-dashed border-blue-300 rounded-lg p-8 text-center hover:border-blue-500 transition cursor-pointer bg-blue-50">
+                        <i class="fas fa-cloud-upload-alt text-5xl text-blue-400 mb-3"></i>
+                        <p class="text-gray-600 mb-2">ลากไฟล์มาวางที่นี่</p>
+                        <p class="text-sm text-gray-500 mb-4">หรือคลิกเพื่อเลือกไฟล์</p>
+                        <input type="file" id="file-upload" accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png" class="hidden" multiple>
+                        <button onclick="document.getElementById('file-upload').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                            เลือกไฟล์
+                        </button>
+                        <p class="text-xs text-gray-400 mt-3">รองรับ: PDF, Excel, รูปภาพ</p>
+                    </div>
+
+                    <!-- File Preview -->
+                    <div id="file-preview" class="mt-4 space-y-2"></div>
+                </div>
+
+                <!-- AI Chatbox -->
+                <div class="bg-white rounded-xl shadow-lg p-6 flex flex-col" style="height: 500px;">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-robot text-purple-600"></i>
+                        AI Assistant (ภาษาไทย)
+                    </h2>
+
+                    <!-- Messages Container -->
+                    <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-start gap-2">
+                            <div class="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-robot text-sm"></i>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg shadow-sm max-w-[80%]">
+                                <p class="text-sm text-gray-700">สวัสดีครับ! ผมคือ AI Assistant พร้อมช่วยคุณคำนวณแบบหล่อคอนกรีต</p>
+                                <p class="text-sm text-gray-700 mt-2">ลองพิมพ์ เช่น: <br>"ชั้น 1 มีเสา 40x40 สูง 3.5 เมตร 24 ต้น"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="chat-input"
+                            placeholder="พิมพ์ข้อความหา AI..."
+                            class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            onkeypress="if(event.key==='Enter') sendMessage()"
+                        >
+                        <button onclick="sendMessage()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Panel: Input Form -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <i class="fas fa-edit text-blue-600"></i>
+                        ข้อมูลโครงการ
+                    </h2>
+
+                    <form id="project-form" class="space-y-4">
+                        <!-- Project Info -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อโครงการ</label>
+                            <input type="text" id="project-name" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" placeholder="เช่น อาคาร PD17">
+                        </div>
+
+                        <!-- Floor Level -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ชั้น</label>
+                            <input type="number" id="floor-level" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" placeholder="1, 2, 3...">
+                        </div>
+
+                        <!-- Column Section -->
+                        <div class="border-t pt-4">
+                            <h3 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fas fa-columns text-blue-500"></i>
+                                เสา (Column)
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">กว้าง (ซม.)</label>
+                                    <input type="number" id="column-width" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="40">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">ยาว (ซม.)</label>
+                                    <input type="number" id="column-length" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="40">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">สูง (ม.)</label>
+                                    <input type="number" step="0.1" id="column-height" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="3.5">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">จำนวน (ต้น)</label>
+                                    <input type="number" id="column-count" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="24">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Beam Section -->
+                        <div class="border-t pt-4">
+                            <h3 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fas fa-minus text-blue-500"></i>
+                                คาน (Beam)
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">กว้าง (ซม.)</label>
+                                    <input type="number" id="beam-width" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="25">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">สูง (ซม.)</label>
+                                    <input type="number" id="beam-height" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="50">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs text-gray-600 mb-1">ความยาวรวม (ม.)</label>
+                                    <input type="number" step="0.1" id="beam-length" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="120">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slab Section -->
+                        <div class="border-t pt-4">
+                            <h3 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fas fa-th-large text-blue-500"></i>
+                                พื้น (Slab)
+                            </h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">พื้นที่ (ตร.ม.)</label>
+                                    <input type="number" step="0.1" id="slab-area" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="183">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">หนา (ซม.)</label>
+                                    <input type="number" id="slab-thickness" class="w-full border border-gray-300 rounded px-2 py-1" placeholder="12">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Material Properties -->
+                        <div class="border-t pt-4">
+                            <h3 class="font-semibold text-gray-700 mb-3">คุณสมบัติวัสดุ</h3>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">f'c (MPa)</label>
+                                    <input type="number" id="concrete-fc" class="w-full border border-gray-300 rounded px-2 py-1" value="28">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Reuse (รอบ)</label>
+                                    <input type="number" step="0.5" id="reuse-rate" class="w-full border border-gray-300 rounded px-2 py-1" value="2.5">
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-xs text-gray-600 mb-1">ค้ำยัน (ชุด)</label>
+                                    <input type="number" id="support-sets" class="w-full border border-gray-300 rounded px-2 py-1" value="2">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Calculate Button -->
+                        <button type="button" onclick="calculateFormwork()" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition font-semibold text-lg shadow-lg">
+                            <i class="fas fa-calculator mr-2"></i>
+                            คำนวณ
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Panel: Results & Gantt -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Results Section -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-green-600"></i>
+                        ผลการคำนวณ
+                    </h2>
+
+                    <div id="results-container" class="space-y-4">
+                        <div class="text-center text-gray-400 py-8">
+                            <i class="fas fa-calculator text-5xl mb-3"></i>
+                            <p>กรอกข้อมูลและกดคำนวณ</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Chart -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-tasks text-orange-600"></i>
+                        Gantt Chart
+                    </h2>
+
+                    <div id="gantt-container">
+                        <canvas id="gantt-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <div id="ai-insights" class="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl shadow-lg p-6 hidden">
+                    <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-yellow-500"></i>
+                        AI Reasoning & Insights
+                    </h3>
+                    <div id="insights-content" class="text-sm text-gray-700 space-y-2"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-12 py-6">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2025 PD17 AI Formwork Calculator | Powered by AI</p>
+            <p class="text-sm text-gray-400 mt-2">www.theedges.work</p>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p class="text-gray-700 font-semibold">กำลังประมวลผล...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="src/utils/file-parser.js"></script>
+    <script src="src/services/ai-chatbox.js"></script>
+    <script src="src/services/reasoning-engine.js"></script>
+    <script src="src/utils/calculations.js"></script>
+    <script src="src/utils/gantt-chart.js"></script>
+    <script src="src/utils/export.js"></script>
+    <script src="src/services/api.js"></script>
+    <script src="script.js"></script>
+
+    <!-- Service Worker for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registered', reg))
+                .catch(err => console.log('Service Worker registration failed', err));
+        }
+    </script>
+</body>
+</html>

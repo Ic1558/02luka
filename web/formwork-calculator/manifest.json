@@ -1,0 +1,46 @@
+{
+  "name": "PD17 AI Formwork Calculator",
+  "short_name": "Formwork Calc",
+  "description": "AI-powered formwork calculator for construction projects",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "public/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "public/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["construction", "productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "public/screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Calculation",
+      "short_name": "Calculate",
+      "description": "Start a new formwork calculation",
+      "url": "/?action=calculate",
+      "icons": [
+        {
+          "src": "public/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

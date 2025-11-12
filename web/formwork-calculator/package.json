@@ -1,0 +1,42 @@
+{
+  "name": "pd17-ai-formwork-calculator",
+  "version": "1.0.0",
+  "description": "AI-powered formwork calculator for architecture and interior construction with Thai language support",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "worker:dev": "cd workers && wrangler dev",
+    "worker:deploy": "cd workers && wrangler deploy",
+    "worker:tail": "cd workers && wrangler tail",
+    "lint": "eslint src/**/*.js",
+    "build": "echo 'No build step required - using vanilla JS'",
+    "deploy": "npm run worker:deploy && echo 'Deploy frontend to Cloudflare Pages or Vercel'"
+  },
+  "keywords": [
+    "formwork",
+    "calculator",
+    "construction",
+    "ai",
+    "llm",
+    "thai",
+    "architecture",
+    "interior",
+    "quantity-surveyor",
+    "cloudflare-workers",
+    "pwa"
+  ],
+  "author": "PD17 Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/formwork-calculator.git"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "eslint": "^8.0.0"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
