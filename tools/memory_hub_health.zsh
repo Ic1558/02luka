@@ -91,3 +91,44 @@ else
   echo "✅ All checks passed"
   exit 0
 fi
+
+# Claude Code health
+echo "Claude Code:"
+if [[ -f "$REPO/tools/claude_tools/metrics_collector.zsh" ]]; then
+  ok "Metrics collector exists"
+else
+  ng "Metrics collector missing"
+fi
+
+# Check dependencies
+if command -v shellcheck >/dev/null 2>&1; then
+  ok "shellcheck available"
+else
+  ng "shellcheck missing"
+fi
+
+if command -v pylint >/dev/null 2>&1; then
+  ok "pylint available"
+else
+  ng "pylint missing"
+fi
+
+if command -v jq >/dev/null 2>&1; then
+  ok "jq available"
+else
+  ng "jq missing"
+fi
+
+# Check Redis metrics
+if redis-cli -a "$REDIS_PASS" HGETALL memory:agents:claude >/dev/null 2>&1; then
+  hook_rate=$(redis-cli -a "$REDIS_PASS" HGET memory:agents:claude hook_success_rate 2>/dev/null || echo "0")
+  if [[ -n "$hook_rate" && $(echo "$hook_rate >= 80" | bc 2>/dev/null || echo "0") -eq 1 ]]; then
+    ok "Hook success rate acceptable (${hook_rate}%)"
+  else
+    echo "ℹ️  Hook success rate: ${hook_rate}%"
+    MAX_SCORE=$((MAX_SCORE+1))
+  fi
+else
+  echo "ℹ️  No Claude Code metrics in Redis yet"
+  MAX_SCORE=$((MAX_SCORE+1))
+fi
