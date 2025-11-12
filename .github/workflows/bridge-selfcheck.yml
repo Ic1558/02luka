@@ -210,51 +210,26 @@ jobs:
           fi
           echo "✅ Guard passed: selfcheck.json exists"
 
-      - name: Normalize MLS entries (backfill artifact_size if missing)
+      - name: Clean MLS entries (remove invalid artifact_size field)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         shell: bash
         run: |
           set -euo pipefail
           DAY="$(TZ=Asia/Bangkok date +%Y-%m-%d)"
           LEDGER="mls/ledger/${DAY}.jsonl"
-          [ -f "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY yet — skip normalize"; exit 0; }
+          [ -f "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY yet — skip clean"; exit 0; }
 
-          # Find the last non-empty line that parses as JSON
-          LAST_LINE=""
+          # Remove artifact_size from source object if present (schema violation)
+          TMP="$(mktemp)"
           while IFS= read -r line; do
-            if [ -n "$line" ] && echo "$line" | jq -e . >/dev/null 2>&1; then
-              LAST_LINE="$line"
+            [ -z "$line" ] && continue
+            if echo "$line" | jq -e . >/dev/null 2>&1; then
+              # Remove artifact_size from source if present
+              echo "$line" | jq -c 'if .source.artifact_size then del(.source.artifact_size) else . end' >> "$TMP"
             fi
           done < "$LEDGER"
-          [ -n "$LAST_LINE" ] || { echo "ℹ️ No valid entry — skip"; exit 0; }
-
-          # If artifact_size already present and non-zero, skip
-          HAS_SIZE=$(echo "$LAST_LINE" | jq -r 'try (.source.artifact_size|tostring) catch ""')
-          if [ -n "$HAS_SIZE" ] && [ "$HAS_SIZE" != "0" ] && [ "$HAS_SIZE" != "null" ]; then
-            echo "ℹ️ Last entry already has artifact_size=$HAS_SIZE — skip"
-            exit 0
-          fi
-
-          # Try to compute size from the artifact on disk
-          ART_PATH=$(echo "$LAST_LINE" | jq -r '.source.artifact_path // empty')
-          if [ -z "$ART_PATH" ] || [ ! -f "$ART_PATH" ]; then
-            echo "ℹ️ Artifact path not available ($ART_PATH) — skip normalize"
-            exit 0
-          fi
-
-          ART_SIZE=$(stat -f%z "$ART_PATH" 2>/dev/null || stat -c%s "$ART_PATH" 2>/dev/null || echo "0")
-          if [ "$ART_SIZE" = "0" ]; then
-            echo "ℹ️ Artifact size could not be determined — skip"
-            exit 0
-          fi
-
-          # Append a normalized copy (append-only) with artifact_size filled
-          NEW_ENTRY=$(echo "$LAST_LINE" | jq -c --argjson size "$ART_SIZE" '
-            .source.artifact_size = $size
-            | .tags = ((.tags // []) + ["normalized"])
-            | .summary = (.summary + " (normalized artifact_size)")')
-          printf '%s\n' "$NEW_ENTRY" >> "$LEDGER"
-          echo "✅ Appended normalized entry with artifact_size=$ART_SIZE"
+          mv "$TMP" "$LEDGER"
+          echo "✅ Cleaned ledger (removed invalid artifact_size fields)"
 
       - name: Upload artifact (selfcheck-report)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -352,7 +327,6 @@ jobs:
             --arg sha "$SHA" \
             --arg artifact "$ART" \
             --arg artifact_path "$ART_PATH" \
-            --argjson artifact_size "$ART_SIZE" \
             --arg author "gg" \
             --argjson confidence 0.9 \
             '
@@ -369,8 +343,7 @@ jobs:
                 workflow: $workflow,
                 sha: $sha,
                 artifact: $artifact,
-                artifact_path: $artifact_path,
-                artifact_size: $artifact_size
+                artifact_path: $artifact_path
               },
               links: { followup_id: null, wo_id: null },
               tags: ["bridge","strict","artifact","healthy"],
@@ -395,15 +368,24 @@ jobs:
           LEDGER="mls/ledger/${DAY}.jsonl"
           [ -s "$LEDGER" ] || { echo "ℹ️ No ledger for $DAY — skip sanitize"; exit 0; }
           TMP="$(mktemp)"
+          VALID_LINES=0
           # Keep only non-empty lines that are valid JSON
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             if echo "$line" | jq -e . >/dev/null 2>&1; then
               printf '%s\n' "$line" >> "$TMP"
+              ((VALID_LINES++))
             fi
           done < "$LEDGER"
-          mv "$TMP" "$LEDGER"
-          echo "✅ Sanitized ledger → $LEDGER"
+          # Only replace if we have valid lines (preserve file even if all lines invalid)
+          if [ "$VALID_LINES" -gt 0 ]; then
+            mv "$TMP" "$LEDGER"
+            echo "✅ Sanitized ledger → $LEDGER ($VALID_LINES valid lines)"
+          else
+            # Original had content but all invalid - preserve original for debugging
+            rm -f "$TMP"
+            echo "⚠️  Ledger has no valid JSON lines - preserving original for debugging: $LEDGER"
+          fi
 
       - name: Validate MLS (jq schema-lite, no npm)
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
