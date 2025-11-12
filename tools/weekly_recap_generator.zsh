@@ -19,12 +19,10 @@ else
 fi
 
 # Calculate week start (7 days ago)
-if command -v gdate >/dev/null 2>&1; then
-  WEEK_START=$(gdate -d "$WEEK_END -6 days" +%Y%m%d 2>/dev/null || date -v-6d -j -f %Y%m%d "$WEEK_END" +%Y%m%d)
-else
-  # macOS date fallback
-  WEEK_START=$(date -v-6d -j -f %Y%m%d "$WEEK_END" +%Y%m%d 2>/dev/null || echo "")
-fi
+# Try macOS date first, then fallback
+WEEK_START=$(date -v-6d -j -f %Y%m%d "$WEEK_END" +%Y%m%d 2>/dev/null || \
+  date -d "$(echo "$WEEK_END" | sed 's/\(....\)\(..\)\(..\)/\1-\2-\3/') -6 days" +%Y%m%d 2>/dev/null || \
+  echo "")
 
 OUTPUT="g/reports/system/system_governance_WEEKLY_${WEEK_END}.md"
 
@@ -64,8 +62,8 @@ say ""
   
   # Process each daily digest
   FOUND_ANY=0
-  setopt null_glob  # Don't error on unmatched globs
-  for f in g/reports/system/daily_digest_*.md; do
+  # Use find to avoid glob expansion issues
+  while IFS= read -r f; do
     [[ -f "$f" ]] || continue
     
     # Extract date from filename
@@ -104,7 +102,7 @@ say ""
     
     echo "---"
     echo ""
-  done
+  done < <(find g/reports/system -maxdepth 1 -name "daily_digest_*.md" 2>/dev/null || true)
   
   if [[ $FOUND_ANY -eq 0 ]]; then
     echo "ℹ️  No daily digests found for this week."
