@@ -1,7 +1,7 @@
-# Feature SPEC: Phase 6 - Adaptive Governance & Predictive Analytics
+# Feature SPEC: Phase 6 - Adaptive Governance (Simplified)
 
 **Feature ID:** `phase6_adaptive_governance`  
-**Version:** 1.0.0  
+**Version:** 1.1.0 (Simplified)  
 **Date:** 2025-11-12  
 **Status:** Ready for Development
 
@@ -9,271 +9,155 @@
 
 ## Objective
 
-Build an adaptive governance layer that learns from system behavior, predicts trends, and automatically improves itself through a closed-loop feedback system. This phase integrates Claude Code metrics, R&D proposal outcomes, and Mary execution patterns to create predictive insights and an operational dashboard.
+Add adaptive insights to Phase 5 by learning from metrics patterns and automatically suggesting improvements. Keep it simple, practical, and immediately useful.
 
 ---
 
 ## Problem Statement
 
 **Current State:**
-- Phase 5 provides governance and reporting, but it's reactive
-- Metrics are collected but not analyzed for trends
-- No predictive capabilities to anticipate issues
-- No unified dashboard for real-time system health
-- R&D proposals and Claude Code improvements happen in isolation
+- Phase 5 collects metrics but doesn't learn from them
+- No trend detection or pattern recognition
+- Manual analysis required to spot issues
+- No automatic improvement suggestions
 
 **Desired State:**
-- Proactive governance with trend prediction
-- Adaptive insights that learn from patterns
-- Unified dashboard showing real-time system health
-- Auto-improvement loop connecting metrics → insights → actions
-- Predictive analytics to prevent issues before they occur
+- Simple trend detection (improving/declining/stable)
+- Basic anomaly alerts (when metrics spike/drop)
+- Automatic R&D proposal generation for obvious improvements
+- Enhanced daily digest with insights
 
 ---
 
-## Architecture Overview
+## Architecture (Simplified)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│              Phase 6: Adaptive Governance                │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────┐ │
-│  │   Metrics    │    │   Adaptive   │    │Predictive│ │
-│  │  Collector   │───▶│   Insights   │───▶│ Analytics │ │
-│  │              │    │   Engine     │    │  Engine   │ │
-│  └──────────────┘    └──────────────┘    └──────────┘ │
-│         │                    │                   │       │
-│         │                    │                   │       │
-│         ▼                    ▼                   ▼       │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │         Redis Pub/Sub: governance:insight          │  │
-│  └──────────────────────────────────────────────────┘  │
-│         │                    │                   │       │
-│         ▼                    ▼                   ▼       │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────┐ │
-│  │   Daily      │    │   HTML       │    │   Auto   │ │
-│  │   Digest     │    │  Dashboard   │    │Improvement│ │
-│  │  (Enhanced)  │    │  (Real-time) │    │   Loop   │ │
-│  └──────────────┘    └──────────────┘    └──────────┘ │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
+Metrics (Redis) → Adaptive Collector → Insights JSON → Daily Digest
+                                      ↓
+                              R&D Proposal (if needed)
 ```
+
+**Key Principle:** Start simple, add complexity only when needed.
 
 ---
 
 ## Core Components
 
-### 1. Adaptive Insight Collector (`tools/adaptive_collector.zsh`)
+### 1. Adaptive Collector (`tools/adaptive_collector.zsh`)
 
-**Purpose:** Collect and analyze metrics from multiple sources to generate adaptive insights.
+**Purpose:** Simple trend detection and anomaly spotting.
+
+**What it does:**
+- Reads last 7 days of metrics from monthly JSON files
+- Calculates simple trends: improving (+), declining (-), stable (=)
+- Detects anomalies: values >2x or <0.5x average
+- Generates insights JSON
 
 **Inputs:**
-- Claude Code metrics (from `memory:agents:claude`)
-- R&D proposal outcomes (from `memory:agents:rnd`)
-- Mary execution patterns (from `memory:agents:mary`)
-- Historical trends (from monthly metrics JSON files)
-
-**Processing:**
-- Calculate trend slopes (improving/declining/stable)
-- Detect anomalies (spikes, drops, patterns)
-- Identify correlations between metrics
-- Generate confidence scores for predictions
-
-**Outputs:**
-- JSON insights file: `mls/adaptive/insights_YYYYMMDD.json`
-- Redis pub/sub: `governance:insight` channel
-- Markdown summary: `g/reports/adaptive_insights_YYYYMMDD.md`
-
-**Key Features:**
-- Trend detection (7-day, 30-day windows)
-- Anomaly detection (statistical outliers)
-- Correlation analysis (which metrics move together)
-- Prediction confidence scoring (0-100%)
-
----
-
-### 2. Predictive Analytics Engine (`tools/predictive_analytics.zsh`)
-
-**Purpose:** Predict future system behavior based on historical patterns.
-
-**Capabilities:**
-- **Trend Prediction:** Forecast metric values 7/30 days ahead
-- **Risk Assessment:** Identify metrics approaching thresholds
-- **Pattern Recognition:** Detect recurring patterns (daily/weekly cycles)
-- **Recommendation Generation:** Suggest actions based on predictions
-
-**Outputs:**
-- Predictions JSON: `mls/adaptive/predictions_YYYYMMDD.json`
-- Risk alerts: Published to `governance:risk` channel
-- Recommendations: Included in daily digest
-
-**Algorithms:**
-- Simple linear regression for trend prediction
-- Moving averages for smoothing
-- Z-score for anomaly detection
-- Correlation coefficients for relationship analysis
-
----
-
-### 3. HTML Dashboard (`tools/dashboard_generator.zsh`)
-
-**Purpose:** Generate real-time HTML dashboard for system monitoring.
-
-**Features:**
-- **Real-time Metrics:** Live data from Redis
-- **Trend Charts:** Visual representation of metrics over time
-- **Health Score:** Overall system health indicator
-- **Agent Status:** Status of all agents (Mary, R&D, Claude, etc.)
-- **Predictive Insights:** Upcoming predictions and risks
-- **Action Items:** Recommended actions from adaptive insights
+- `g/reports/memory_metrics_YYYYMM.json` (last 2-3 months)
+- Redis current values: `memory:agents:claude`, `memory:agents:rnd`, `memory:agents:mary`
 
 **Output:**
-- HTML file: `g/reports/dashboard/index.html`
-- Auto-refresh: Every 60 seconds
-- Accessible via: `ops.theedges.work` or `dashboard.theedges.work`
+- `mls/adaptive/insights_YYYYMMDD.json` (simple structure)
+- Publish to Redis: `governance:insight` (optional, for future use)
 
-**Technologies:**
-- HTML5 + CSS3
-- Chart.js for visualizations
-- JavaScript for real-time updates
-- Redis WebSocket or polling for live data
+**Trend Detection (Simple):**
+```bash
+# Compare last 7 days vs previous 7 days
+if current_avg > previous_avg * 1.1: "improving"
+if current_avg < previous_avg * 0.9: "declining"
+else: "stable"
+```
 
----
+**Anomaly Detection (Simple):**
+```bash
+# If value > 2x average or < 0.5x average: anomaly
+```
 
-### 4. Auto-Improvement Loop (`tools/auto_improvement_loop.zsh`)
-
-**Purpose:** Automatically create R&D proposals based on adaptive insights.
-
-**Workflow:**
-1. Receive adaptive insights from collector
-2. Identify improvement opportunities (low scores, declining trends)
-3. Generate R&D proposal automatically
-4. Submit to R&D inbox (`bridge/inbox/RND/`)
-5. Track proposal outcome
-6. Learn from results (update confidence scores)
-
-**Integration Points:**
-- R&D Consumer: Processes auto-generated proposals
-- Mary Dispatcher: Executes approved improvements
-- MLS: Records outcomes for learning
-
-**Safety:**
-- Only auto-generate for low-risk changes
-- Require human approval for high-risk proposals
-- Track success rate of auto-proposals
+**No complex math, no ML, just simple comparisons.**
 
 ---
 
-### 5. Enhanced Daily Digest
+### 2. Enhanced Daily Digest
 
-**Purpose:** Add "Adaptive Insights" section to existing daily digest.
+**Purpose:** Add "Adaptive Insights" section to existing digest.
 
-**New Section:**
+**What it adds:**
 ```markdown
 ## Adaptive Insights
 
-### Trend Analysis
-- Claude Code hook success rate: Improving (+5% over 7 days)
-- R&D proposal acceptance: Stable (85% average)
-- Mary task completion: Declining (-2% over 7 days) ⚠️
+### Trends (Last 7 Days)
+- Claude Code hook success: Improving (+5%)
+- R&D proposal acceptance: Stable (85%)
+- Mary task completion: Declining (-3%) ⚠️
 
-### Predictions
-- Health score expected to drop to 88% in 3 days (current: 92%)
-- R&D proposal volume expected to increase 15% next week
+### Anomalies
+- Mary completion dropped to 88% (expected: 95%)
 
 ### Recommendations
 - Investigate Mary task completion decline
-- Review Claude Code hook failures (3 in last 24h)
 ```
 
-**Integration:**
+**Implementation:**
 - Modify `tools/memory_daily_digest.zsh`
-- Read from `mls/adaptive/insights_YYYYMMDD.json`
-- Append adaptive insights section
+- Read `mls/adaptive/insights_YYYYMMDD.json`
+- Append section if insights exist
 
 ---
 
-## Data Flow
+### 3. Simple Auto-Proposal Generator (`tools/adaptive_proposal_gen.zsh`)
 
-### Collection Flow
-```
-Claude Metrics → Redis (memory:agents:claude)
-R&D Outcomes → Redis (memory:agents:rnd)
-Mary Patterns → Redis (memory:agents:mary)
-     ↓
-Adaptive Collector (tools/adaptive_collector.zsh)
-     ↓
-Insights JSON (mls/adaptive/insights_YYYYMMDD.json)
-     ↓
-Redis Pub/Sub (governance:insight)
-```
+**Purpose:** Generate R&D proposals for obvious improvements.
 
-### Prediction Flow
-```
-Historical Metrics (monthly JSON files)
-     ↓
-Predictive Analytics Engine
-     ↓
-Predictions JSON (mls/adaptive/predictions_YYYYMMDD.json)
-     ↓
-Risk Alerts (governance:risk channel)
-     ↓
-Daily Digest (Adaptive Insights section)
-```
+**When it triggers:**
+- Metric declining for 3+ days
+- Metric below threshold (e.g., health < 85%)
+- Anomaly detected
 
-### Dashboard Flow
-```
-Redis (memory:agents:*)
-     ↓
-Dashboard Generator (tools/dashboard_generator.zsh)
-     ↓
-HTML Dashboard (g/reports/dashboard/index.html)
-     ↓
-Web Server (ops.theedges.work)
+**What it generates:**
+- Simple R&D proposal YAML
+- Only for low-risk changes (docs, tests, CI)
+- Submit to `bridge/inbox/RND/`
+
+**Safety:**
+- Max 1 proposal per day
+- Only for metrics we understand well
+- Human approval still required (via R&D gate)
+
+**Example Proposal:**
+```yaml
+id: RND-ADAPTIVE-20251112-001
+type: adaptive_insight
+metric: mary_completion_rate
+issue: Declining for 3 days (95% → 88%)
+suggestion: Review Mary task logs for patterns
+risk: low
+auto_generated: true
 ```
 
 ---
 
-## Integration Points
+## Data Structures (Simplified)
 
-### Phase 5 Integration
-- **Governance Reports:** Include adaptive insights in weekly report
-- **Health Checks:** Use predictions to warn of upcoming issues
-- **Alert System:** Trigger alerts based on predicted risks
+### Insights JSON
+```json
+{
+  "date": "2025-11-12",
+  "trends": {
+    "claude_hook_success": {"direction": "improving", "change": "+5%"},
+    "rnd_acceptance": {"direction": "stable", "change": "0%"},
+    "mary_completion": {"direction": "declining", "change": "-3%"}
+  },
+  "anomalies": [
+    {"metric": "mary_completion", "value": 0.88, "expected": 0.95, "severity": "medium"}
+  ],
+  "recommendations": [
+    "Investigate Mary task completion decline"
+  ]
+}
+```
 
-### R&D Integration
-- **Auto-Proposals:** Generate R&D proposals from insights
-- **Outcome Tracking:** Learn from proposal results
-- **Feedback Loop:** Update confidence scores based on outcomes
-
-### Claude Code Integration
-- **Metrics Collection:** Use existing Claude Code metrics
-- **Trend Analysis:** Analyze hook success rates, conflicts, reviews
-- **Improvement Suggestions:** Recommend Claude Code improvements
-
----
-
-## Success Criteria
-
-### Functional Requirements
-- ✅ Adaptive insights generated daily
-- ✅ Predictions with >70% confidence for 7-day forecasts
-- ✅ HTML dashboard accessible and auto-refreshing
-- ✅ Daily digest includes adaptive insights section
-- ✅ Auto-improvement loop generates proposals for low-risk improvements
-
-### Performance Requirements
-- Insight generation: < 30 seconds
-- Dashboard load time: < 2 seconds
-- Prediction accuracy: > 70% for 7-day forecasts
-- Real-time updates: < 5 second latency
-
-### Quality Requirements
-- All insights include confidence scores
-- All predictions include uncertainty ranges
-- Dashboard shows data freshness timestamp
-- Auto-proposals include risk assessment
+**Simple, readable, actionable.**
 
 ---
 
@@ -282,163 +166,121 @@ Web Server (ops.theedges.work)
 ### 1. Adaptive Collector (Daily 06:30)
 ```xml
 com.02luka.adaptive.collector.daily
-- Runs: Daily 06:30 (after metrics collection)
+- Runs: Daily 06:30 (after metrics collection at 23:55)
 - Script: tools/adaptive_collector.zsh
 - Output: mls/adaptive/insights_YYYYMMDD.json
 ```
 
-### 2. Predictive Analytics (Daily 07:00)
+### 2. Auto-Proposal Generator (Daily 07:00)
 ```xml
-com.02luka.predictive.analytics.daily
+com.02luka.adaptive.proposal.gen
 - Runs: Daily 07:00 (after adaptive collector)
-- Script: tools/predictive_analytics.zsh
-- Output: mls/adaptive/predictions_YYYYMMDD.json
-```
-
-### 3. Dashboard Generator (Every 5 minutes)
-```xml
-com.02luka.dashboard.generator
-- Runs: Every 5 minutes
-- Script: tools/dashboard_generator.zsh
-- Output: g/reports/dashboard/index.html
-```
-
-### 4. Auto-Improvement Loop (Every 30 minutes)
-```xml
-com.02luka.auto.improvement.loop
-- Runs: Every 30 minutes
-- Script: tools/auto_improvement_loop.zsh
+- Script: tools/adaptive_proposal_gen.zsh
 - Output: R&D proposals in bridge/inbox/RND/
 ```
 
----
-
-## Data Structures
-
-### Adaptive Insights JSON
-```json
-{
-  "date": "2025-11-12",
-  "generated_at": "2025-11-12T07:00:00Z",
-  "trends": {
-    "claude_hook_success": {
-      "direction": "improving",
-      "slope": 0.05,
-      "confidence": 0.85,
-      "period": "7d"
-    },
-    "rnd_acceptance": {
-      "direction": "stable",
-      "slope": 0.0,
-      "confidence": 0.92,
-      "period": "7d"
-    }
-  },
-  "anomalies": [
-    {
-      "metric": "mary_completion_rate",
-      "value": 0.88,
-      "expected": 0.95,
-      "severity": "medium",
-      "timestamp": "2025-11-12T06:00:00Z"
-    }
-  ],
-  "correlations": [
-    {
-      "metric1": "claude_hook_success",
-      "metric2": "rnd_acceptance",
-      "coefficient": 0.72,
-      "significance": "high"
-    }
-  ]
-}
-```
-
-### Predictions JSON
-```json
-{
-  "date": "2025-11-12",
-  "generated_at": "2025-11-12T07:00:00Z",
-  "predictions": [
-    {
-      "metric": "health_score",
-      "current": 0.92,
-      "forecast_7d": 0.88,
-      "forecast_30d": 0.85,
-      "confidence": 0.75,
-      "uncertainty_range": [0.85, 0.91],
-      "risk_level": "medium"
-    }
-  ],
-  "risks": [
-    {
-      "metric": "mary_completion_rate",
-      "threshold": 0.90,
-      "predicted_value": 0.87,
-      "days_until_threshold": 3,
-      "severity": "high",
-      "recommendation": "Investigate Mary task completion decline"
-    }
-  ]
-}
-```
+**That's it. No complex scheduling.**
 
 ---
 
-## Security & Privacy
+## Integration Points
 
-- **Data Access:** All insights stored in `mls/adaptive/` (internal)
-- **Dashboard:** Accessible only via authenticated web server
-- **Redis Channels:** Internal pub/sub, not exposed externally
-- **Auto-Proposals:** Only low-risk changes auto-generated
+### Phase 5
+- Read from monthly metrics JSON
+- Enhance daily digest
+- Use existing health checks
+
+### R&D System
+- Generate proposals in existing format
+- Use existing R&D gate for approval
+
+### Daily Digest
+- Append insights section
+- No breaking changes
+
+---
+
+## Success Criteria
+
+### Functional
+- ✅ Insights generated daily
+- ✅ Daily digest includes insights
+- ✅ Auto-proposals generated when needed
+- ✅ Trends detected correctly (>80% accuracy)
+
+### Performance
+- Insight generation: < 10 seconds
+- No impact on existing systems
+
+### Quality
+- Insights are actionable
+- Proposals are relevant
+- No false positives (>90% accuracy)
+
+---
+
+## What We're NOT Building (Yet)
+
+**Explicitly excluded to avoid over-engineering:**
+- ❌ Complex predictive analytics (linear regression, ML)
+- ❌ HTML dashboard (can add later if needed)
+- ❌ Real-time pub/sub (Redis channels optional)
+- ❌ Complex correlation analysis
+- ❌ Confidence scoring algorithms
+- ❌ Multi-week forecasts
+
+**Rationale:** Start simple, prove value, add complexity only when needed.
+
+---
+
+## Rollout Strategy
+
+### Week 1: Adaptive Collector
+- Build collector
+- Test trend detection
+- Integrate with daily digest
+
+### Week 2: Auto-Proposals
+- Build proposal generator
+- Test with real metrics
+- Monitor proposal quality
+
+**Total: 2 weeks (not 4)**
 
 ---
 
 ## Dependencies
 
 ### External
-- Redis (for pub/sub and metrics storage)
-- Chart.js (for dashboard visualizations)
+- Redis (for current metrics)
 - jq (for JSON processing)
-- bc (for calculations)
+- bc (for simple math)
 
 ### Internal
-- Phase 5 governance system
-- R&D proposal system
-- Mary dispatcher
-- Claude Code metrics collector
+- Phase 5 metrics collection
 - Daily digest generator
+- R&D proposal system
+
+**No new dependencies.**
 
 ---
 
-## Rollout Strategy
+## Risk Assessment
 
-### Phase 6.1: Foundation (Week 1)
-- Adaptive collector
-- Basic trend detection
-- Enhanced daily digest
+### Low Risk
+- Simple trend detection (proven approach)
+- Read-only analysis (doesn't change system)
+- Auto-proposals go through existing R&D gate
 
-### Phase 6.2: Predictions (Week 2)
-- Predictive analytics engine
-- Risk assessment
-- Prediction accuracy tracking
-
-### Phase 6.3: Dashboard (Week 3)
-- HTML dashboard generator
-- Real-time updates
-- Web server integration
-
-### Phase 6.4: Auto-Improvement (Week 4)
-- Auto-improvement loop
-- R&D proposal generation
-- Outcome learning
+### Mitigation
+- Start with conservative thresholds
+- Monitor proposal quality
+- Easy to disable if issues
 
 ---
 
 ## References
 
 - **Phase 5 SPEC:** `g/reports/feature_phase5_governance_reporting_SPEC.md`
-- **R&D System:** `g/reports/feature_rnd_autopilot_SPEC.md`
-- **Claude Code Integration:** `g/reports/feature_claude_code_governance_integration_SPEC.md`
 - **System Status:** `g/reports/SYSTEM_STATUS_phase5_20251112.md`
-
+- **Daily Digest:** `tools/memory_daily_digest.zsh`
