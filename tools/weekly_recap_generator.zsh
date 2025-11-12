@@ -47,9 +47,11 @@ say ""
   
   # Count daily digests
   DIGEST_COUNT=0
-  for f in g/reports/system/daily_digest_${WEEK_START:-*}*.md g/reports/system/daily_digest_${WEEK_END}*.md; do
+  setopt null_glob
+  for f in g/reports/system/daily_digest_*.md; do
     [[ -f "$f" ]] && ((DIGEST_COUNT++))
   done
+  unsetopt null_glob
   
   echo "- **Daily Digests:** $DIGEST_COUNT"
   echo "- **System Health:** See daily summaries below"
