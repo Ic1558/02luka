@@ -10,4 +10,3 @@ run_backend_task() {
   # For now we just exec the shell task; swap here if you later wrap CLS RPC.
   eval "$*"
 }
-
