@@ -1,15 +1,101 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-13T21:40:34.195Z",
+    "created_at": "2025-11-13T21:51:23.891Z",
     "source": "hub_autoindex.cjs",
     "total": 22,
     "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
   },
   "items": [
     {
+      "rel": "GG/context/LATEST.json",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 14873,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
+      "meta": {
+        "generated_at": "2025-11-07T20:32:06Z",
+        "revision": "bf119ef",
+        "created_by": "GG_Agent_02luka",
+        "source_script": "tools/generate_context_summary.zsh",
+        "gh_auth": "ok",
+        "phase": 20
+      },
+      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
+    },
+    {
+      "rel": "GG/context/LATEST.md",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 8969,
+      "kind": "md",
+      "title": "Context Summary - 02LUKA System",
+      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
+      "meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "2025-11-07 20:32:06 UTC",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": "20",
+        "revision": "bf119ef"
+      },
+      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
+    },
+    {
+      "rel": "GG/context/LATEST.meta.json",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 453,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
+      "meta": {},
+      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_203206Z.json",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 14873,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
+      "meta": {
+        "generated_at": "2025-11-07T20:32:06Z",
+        "revision": "bf119ef",
+        "created_by": "GG_Agent_02luka",
+        "source_script": "tools/generate_context_summary.zsh",
+        "gh_auth": "ok",
+        "phase": 20
+      },
+      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_203206Z.md",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 8969,
+      "kind": "md",
+      "title": "Context Summary - 02LUKA System",
+      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
+      "meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "2025-11-07 20:32:06 UTC",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": "20",
+        "revision": "bf119ef"
+      },
+      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
+      "mtime": "2025-11-13T21:51:21.536Z",
+      "bytes": 453,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
+      "meta": {},
+      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
+    },
+    {
       "rel": "README.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -19,7 +105,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -37,7 +123,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -55,7 +141,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -72,7 +158,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -89,7 +175,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -106,7 +192,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -123,7 +209,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -140,7 +226,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -157,7 +243,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-13T21:40:25.182Z",
+      "mtime": "2025-11-13T21:51:21.536Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -167,7 +253,7 @@
     },
     {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
@@ -177,7 +263,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 229,
       "kind": "md",
       "title": "Integration Test Ping",
@@ -187,7 +273,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -197,7 +283,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -206,51 +292,8 @@
       "sha256": "dec324bcee7fbfd520b16d91dca0b4586e529a95e9c95b53f0f09652fab0ca94"
     },
     {
-      "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 14873,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
-      "meta": {
-        "generated_at": "2025-11-07T20:32:06Z",
-        "revision": "bf119ef",
-        "created_by": "GG_Agent_02luka",
-        "source_script": "tools/generate_context_summary.zsh",
-        "gh_auth": "ok",
-        "phase": 20
-      },
-      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
-    },
-    {
-      "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 8969,
-      "kind": "md",
-      "title": "Context Summary - 02LUKA System",
-      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
-      "meta": {
-        "created_by": "GG_Agent_02luka",
-        "created_at": "2025-11-07 20:32:06 UTC",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": "20",
-        "revision": "bf119ef"
-      },
-      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
-    },
-    {
-      "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 453,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
-      "meta": {},
-      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
-    },
-    {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -265,7 +308,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
+      "mtime": "2025-11-13T21:51:21.535Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -278,49 +321,6 @@
         "revision": "f67de55"
       },
       "sha256": "6e42f3be0c33545497c7f3ad8195160fefdfb8cb98b33fc1f6169cb97ab7faa3"
-    },
-    {
-      "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 14873,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
-      "meta": {
-        "generated_at": "2025-11-07T20:32:06Z",
-        "revision": "bf119ef",
-        "created_by": "GG_Agent_02luka",
-        "source_script": "tools/generate_context_summary.zsh",
-        "gh_auth": "ok",
-        "phase": 20
-      },
-      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
-    },
-    {
-      "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 8969,
-      "kind": "md",
-      "title": "Context Summary - 02LUKA System",
-      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
-      "meta": {
-        "created_by": "GG_Agent_02luka",
-        "created_at": "2025-11-07 20:32:06 UTC",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": "20",
-        "revision": "bf119ef"
-      },
-      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
-    },
-    {
-      "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-13T21:40:25.181Z",
-      "bytes": 453,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
-      "meta": {},
-      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
     }
   ]
 }
