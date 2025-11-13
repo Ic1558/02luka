@@ -258,3 +258,29 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763021897",
+  "type": "improvement",
+  "title": "CLS Session Recording Gap Fixed",
+  "description": "Problem: No CLS sessions saved for Nov 12-13 despite extensive work. User expected 'save' to trigger session creation. System had no automatic session recording.",
+  "context": "Solution: Created missing session records manually. Identified gap: session saving is manual, not automatic. Need to implement auto-session-save trigger when user says 'save' or at end of major work sessions.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T08:18:17Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763022867",
+  "type": "solution",
+  "title": "Session Auto-Save System Fixed",
+  "description": "Problem: session_save.zsh had hardcoded content from Phase 20. No dynamic session generation. When user says 'save', old MCP/Phase20 content was written instead of current work.",
+  "context": "Solution: Rewrote session_save.zsh to dynamically read from MLS ledger. Now extracts today's activities, groups by type (solutions/improvements/failures/patterns), generates markdown summary, and auto-commits. Tested with 289 entries, 32KB output. 3-layer save chain working: (1) MLS real-time, (2) Session summary on demand, (3) Git commit to memory repo.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T08:34:27Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}

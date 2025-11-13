@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
-# @created_by: CLC (Claude Code)
-# @phase: 20+
-# @purpose: Modern session save with auto-indexing
+# @created_by: CLC (Claude Code) - Updated by CLS 2025-11-13
+# @phase: 20+ (Enhanced for dynamic MLS integration)
+# @purpose: Dynamic session save from MLS ledger
 
 set -euo pipefail
 
@@ -11,140 +11,190 @@ if [ -f ~/02luka/.env.local ]; then
 fi
 
 MEM_REPO="${LUKA_MEM_REPO_ROOT:-$HOME/LocalProjects/02luka-memory}"
-TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SESSION_FILE="$MEM_REPO/g/reports/sessions/session_$TIMESTAMP.md"
+TODAY=$(date +"%Y-%m-%d")
+MLS_LEDGER="$HOME/02luka/mls/ledger/$(date +%Y-%m-%d).jsonl"
 
 # Ensure directories exist
 mkdir -p "$MEM_REPO/g/reports/sessions"
 
-# Create session report
-cat > "$SESSION_FILE" <<'EOSESSION'
+# Check if MLS ledger exists
+if [[ ! -f "$MLS_LEDGER" ]]; then
+  echo "⚠️  No MLS ledger found for today: $MLS_LEDGER"
+  echo "Creating minimal session record..."
+fi
+
+# Extract session data from MLS
+extract_mls_data() {
+  if [[ ! -f "$MLS_LEDGER" ]]; then
+    echo '{"total":0,"types":{},"entries":[]}'
+    return
+  fi
+  
+  cat "$MLS_LEDGER" | jq -s '{
+    total: length,
+    types: (group_by(.type) | map({(.[0].type): length}) | add // {}),
+    entries: map({
+      ts: .ts,
+      type: .type,
+      title: .title,
+      problem: .problem // "",
+      solution: .solution // "",
+      tags: .tags // []
+    })
+  }'
+}
+
+# Get agent name (CLS/CLC/GG)
+AGENT="${SESSION_AGENT:-CLS}"
+
+# Generate session content
+echo "📝 Generating session from MLS ledger..."
+MLS_DATA=$(extract_mls_data)
+TOTAL_ENTRIES=$(echo "$MLS_DATA" | jq -r '.total')
+
+# Count by type
+SOLUTIONS=$(echo "$MLS_DATA" | jq -r '.types.solution // 0')
+IMPROVEMENTS=$(echo "$MLS_DATA" | jq -r '.types.improvement // 0')
+FAILURES=$(echo "$MLS_DATA" | jq -r '.types.failure // 0')
+PATTERNS=$(echo "$MLS_DATA" | jq -r '.types.pattern // 0')
+
+# Start writing session file
+cat > "$SESSION_FILE" <<EOHEADER
 ---
-title: "CLC Session Summary"
-date: {{DATE}}
+title: "$AGENT Session Summary — $(date +"%Y-%m-%d")"
+date: $TODAY
 type: session
-category: conversation
+category: system
+source: $AGENT
 auto_generated: true
-tags: [clc, session, conversation-log]
+tags: [$AGENT, session, auto-generated, mls-derived]
 ---
 
-# CLC Session Summary
+# $AGENT Session Summary — $TODAY
 
-**Date**: {{DATE}}
-**Timestamp**: {{TIMESTAMP}}
-**Agent**: CLC (Claude Code)
-
-## Session Highlights
-
-### Major Accomplishments
-- MCP Configuration Crisis Resolution
-  - Fixed configuration format errors
-  - Reduced tool count from 149 → 55 tools (63% reduction)
-  - Created locked config snapshots for stability
-  - Eliminated MCP_DOCKER duplication across 3 configs
-
-- Phase 20: Hub Dashboard Auto-Index & Memory Sync
-  - Deployed hub_autoindex.mjs (YAML front-matter aware)
-  - Created health_check.mjs for staleness monitoring
-  - Configured LaunchAgent for 15-minute auto-refresh
-  - Integrated Redis pub/sub notifications
-  - Indexed 13 items from memory repository
-
-### Technical Work Completed
-1. **Multi-Root Workspace Setup**
-   - 02luka (code) + 02luka-memory (reports)
-   - Cursor launcher with graceful shutdown
-   - ENV configuration for repo separation
-
-2. **Repository Cleanup (Phase 1)**
-   - Moved 2GB to _trash/ (venv, sync_conflicts, logs)
-   - Updated .gitignore
-   - Prepared Phase 2 script (Git history surgery)
-
-3. **MCP Configuration Stabilization**
-   - Global: MCP_DOCKER (41 tools)
-   - Project: local_02luka (14 tools)
-   - Total: 55 tools (within 80 limit)
-   - PR #220 created with labels
-
-4. **Hub Auto-Index System**
-   - ES module support (package.json + .mjs)
-   - Health monitoring (healthy/stale/error states)
-   - LaunchAgent enabled and running
-   - 13 items indexed successfully
-
-### Files Created/Modified
-- `hub/hub_autoindex.mjs` - Main indexer
-- `hub/health_check.mjs` - Health monitoring
-- `hub/package.json` - ES module config
-- `hub/index.json` - Generated index (13 items)
-- `tools/hub_sync.zsh` - LaunchAgent runner
-- `tools/hub_index_now.zsh` - One-shot helper
-- `.cursor/mcp.json` - Fixed format, locked snapshots
-- `02luka-memory/g/reports/MCP_CONFIG_FIX_20251107.md`
-- `02luka-memory/g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md`
-
-### Deployment Status
-✅ MCP Config: Stable, locked, 55 tools
-✅ Hub Indexer: Running every 15 minutes
-✅ Health Check: Passing (status=healthy, age=0min)
-✅ LaunchAgent: Enabled and operational
-✅ PR #220: Ready for merge (enhancement, ci, run-smoke)
-✅ Documentation: Complete in memory repo
-
-### Next Actions
-- [ ] Merge PR #220 after CI passes
-- [ ] Monitor LaunchAgent logs (first 15min cycle)
-- [ ] Integrate health check into system monitoring
-- [ ] Add /api/health/index endpoint to Hub Dashboard
-- [ ] Phase 2: Git history surgery (when ready)
-
-### System Health
-- MCP Configuration: ✅ Healthy (55/80 tools)
-- Hub Index: ✅ Healthy (13 items, 0min age)
-- Memory Repo: ✅ Operational (2 reports committed)
-- Multi-Root Workspace: ✅ Working (code + memory)
-- LaunchAgent: ✅ Running (15min interval)
+**Date:** $TODAY  
+**Timestamp:** $(date +"%Y-%m-%d %H:%M:%S %Z")  
+**Agent:** $AGENT (Cursor AI Agent)  
+**MLS Entries:** $TOTAL_ENTRIES  
 
 ---
 
-**Session End**: {{TIMESTAMP}}
-**Duration**: ~2.5 hours
-**Status**: ✅ All objectives completed
-EOSESSION
+## Session Statistics
 
-# Replace placeholders
-sed -i '' "s/{{DATE}}/$(date -u +"%Y-%m-%d")/g" "$SESSION_FILE"
-sed -i '' "s/{{TIMESTAMP}}/$(date -u +"%Y-%m-%d %H:%M:%S UTC")/g" "$SESSION_FILE"
+**MLS Entries by Type:**
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS
+- Failures: $FAILURES
+- Patterns: $PATTERNS
+
+**Total Activities:** $TOTAL_ENTRIES
+
+---
+
+## Major Activities
+
+EOHEADER
+
+# Add entries grouped by type
+for TYPE in solution improvement failure pattern; do
+  COUNT=$(echo "$MLS_DATA" | jq -r ".types.$TYPE // 0")
+  if [[ $COUNT -gt 0 ]]; then
+    # Capitalize first letter (zsh compatible)
+    TYPE_CAP="${(C)TYPE}"
+    echo "" >> "$SESSION_FILE"
+    echo "### ${TYPE_CAP}s ($COUNT)" >> "$SESSION_FILE"
+    echo "" >> "$SESSION_FILE"
+    
+    echo "$MLS_DATA" | jq -r --arg type "$TYPE" '
+      .entries[] | select(.type == $type) | 
+      "**\(.title)**\n- Time: \(.ts)\n- Problem: \(.problem // "N/A")\n- Solution: \(.solution // "N/A")\n"
+    ' >> "$SESSION_FILE"
+  fi
+done
+
+# Add footer
+cat >> "$SESSION_FILE" <<EOFOOTER
+
+---
+
+## Files Modified
+
+_(Auto-detected from MLS entries)_
+
+EOFOOTER
+
+# Extract unique tags
+echo "$MLS_DATA" | jq -r '.entries[].tags[]?' | sort -u | while read -r tag; do
+  echo "- Tag: $tag" >> "$SESSION_FILE"
+done 2>/dev/null || echo "- (No tags recorded)" >> "$SESSION_FILE"
+
+cat >> "$SESSION_FILE" <<EOFOOTER2
+
+---
+
+## Next Steps
+
+EOFOOTER2
+
+# Look for any "followup" or "todo" tags
+FOLLOWUPS=$(echo "$MLS_DATA" | jq -r '.entries[] | select(.tags[]? == "followup" or .tags[]? == "todo") | "- [ ] \(.title)"' 2>/dev/null)
+if [[ -n "$FOLLOWUPS" ]]; then
+  echo "$FOLLOWUPS" >> "$SESSION_FILE"
+else
+  echo "- Review MLS entries for patterns" >> "$SESSION_FILE"
+  echo "- Continue with current phase objectives" >> "$SESSION_FILE"
+fi
+
+cat >> "$SESSION_FILE" <<EOFOOTER3
+
+---
+
+**Generated by:** $AGENT (Auto-generated from MLS Ledger)  
+**Source:** $MLS_LEDGER  
+**Session End:** $(date +"%Y-%m-%d %H:%M:%S %Z")
+
+EOFOOTER3
 
 echo "✅ Session saved: $SESSION_FILE"
+echo "   Total entries: $TOTAL_ENTRIES"
+echo "   File size: $(du -h "$SESSION_FILE" | cut -f1)"
 
 # Auto-commit to memory repo
-cd "$MEM_REPO"
-git add g/reports/sessions/session_$TIMESTAMP.md
-git commit -m "session: CLC session summary $TIMESTAMP
+if [[ -d "$MEM_REPO/.git" ]]; then
+  echo ""
+  echo "📦 Committing to memory repo..."
+  cd "$MEM_REPO"
+  git add "g/reports/sessions/session_$TIMESTAMP.md"
+  git commit -m "session: $AGENT session summary $TODAY
 
-Auto-generated session log capturing:
-- MCP Configuration fix (149→55 tools)
-- Phase 20 Hub Auto-Index deployment
-- Multi-root workspace setup
-- Documentation and health monitoring
+Auto-generated from MLS ledger:
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS
+- Failures: $FAILURES
+- Total entries: $TOTAL_ENTRIES
 
-Duration: ~2.5 hours
-Status: All objectives completed"
+Timestamp: $TIMESTAMP" || echo "⚠️  Commit failed (may already be committed)"
+  
+  echo "✅ Committed to memory repo"
+else
+  echo "⚠️  Memory repo not a git repository, skipping commit"
+fi
 
-echo "✅ Committed to memory repo"
-
-# Trigger hub index refresh to pick up new session
-echo "🔄 Triggering index refresh..."
-cd ~/02luka
-./tools/hub_index_now.zsh
+# Trigger hub index refresh if available
+if [[ -f ~/02luka/tools/hub_index_now.zsh ]]; then
+  echo ""
+  echo "🔄 Triggering hub index refresh..."
+  ~/02luka/tools/hub_index_now.zsh 2>/dev/null || echo "⚠️  Hub index refresh failed"
+fi
 
 echo ""
 echo "📊 Session Summary"
 echo "─────────────────"
+echo "Agent: $AGENT"
+echo "Date: $TODAY"
 echo "File: $SESSION_FILE"
-echo "Size: $(du -h "$SESSION_FILE" | cut -f1)"
-echo "Indexed: $(jq '._meta.total' ~/02luka/hub/index.json) items"
+echo "Entries: $TOTAL_ENTRIES (S:$SOLUTIONS I:$IMPROVEMENTS F:$FAILURES P:$PATTERNS)"
 echo ""
 echo "✅ Save complete!"
