@@ -1,3 +1,34 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+# Phase 6: HTML Dashboard Generator
+# Generates simple HTML dashboard with adaptive insights
+
+REPO="$HOME/02luka"
+TODAY=$(date +%Y%m%d)
+DASHBOARD_DIR="$REPO/g/reports/dashboard"
+DASHBOARD_HTML="$DASHBOARD_DIR/index.html"
+INSIGHTS_FILE="$REPO/mls/adaptive/insights_${TODAY}.json"
+
+mkdir -p "$DASHBOARD_DIR"
+
+# Get health score (from health check if available)
+HEALTH_SCORE="92%"
+if [[ -f "$REPO/g/reports/health/health_${TODAY}.json" ]]; then
+  HEALTH_SCORE=$(jq -r '.health_score // .score // "92"' "$REPO/g/reports/health/health_${TODAY}.json" 2>/dev/null || echo "92")
+  if [[ "$HEALTH_SCORE" =~ ^[0-9]+$ ]]; then
+    HEALTH_SCORE="${HEALTH_SCORE}%"
+  fi
+fi
+
+# Load insights if available
+INSIGHTS_DATA="{}"
+if [[ -f "$INSIGHTS_FILE" ]]; then
+  INSIGHTS_DATA=$(cat "$INSIGHTS_FILE")
+fi
+
+# Generate HTML dashboard
+cat > "$DASHBOARD_HTML" <<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -83,7 +114,7 @@
     <div class="container">
         <h1>02LUKA Adaptive Governance Dashboard</h1>
         
-        <div class="health-score">92%</div>
+        <div class="health-score">${HEALTH_SCORE}</div>
         
         <h2>Trends (Last 7 Days)</h2>
         <table id="trends-table">
@@ -95,24 +126,27 @@
                 </tr>
             </thead>
             <tbody id="trends-body">
-                
+                $(echo "$INSIGHTS_DATA" | jq -r '.trends // {} | to_entries[] | "<tr><td>\(.key)</td><td><span class=\"trend \(.value.trend // "stable")\">\(.value.trend // "stable" | ascii_upcase)</span></td><td>\(.value.change // "0%")</td></tr>"' 2>/dev/null || echo "<tr><td colspan=\"3\">No trends available</td></tr>")
             </tbody>
         </table>
         
         <h2>Anomalies</h2>
         <div id="anomalies">
-            <p>No anomalies detected.</p>
+            $(echo "$INSIGHTS_DATA" | jq -r '.anomalies // [] | if length > 0 then .[] | "<p><strong>\(.metric):</strong> \(.value) (expected: \(.expected)) - \(.severity)</p>" else "<p>No anomalies detected.</p>" end' 2>/dev/null || echo "<p>No anomalies data available.</p>")
         </div>
         
         <h2>Recommendations</h2>
         <div class="recommendations" id="recommendations">
-            No significant trends detected. System operating normally.
+            $(echo "$INSIGHTS_DATA" | jq -r '.recommendation_summary // (.recommendations // [] | if length > 0 then join("; ") else "No recommendations at this time." end)' 2>/dev/null || echo "No recommendations available.")
         </div>
         
         <div class="footer">
-            Last updated: 2025-11-13 07:33:49 UTC<br>
+            Last updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")<br>
             Auto-refresh: Every 5 minutes
         </div>
     </div>
 </body>
 </html>
+HTML
+
+echo "✅ Dashboard generated: $DASHBOARD_HTML"
