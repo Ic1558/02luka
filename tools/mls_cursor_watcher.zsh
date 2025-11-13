@@ -71,7 +71,7 @@ save_state() {
 }
 
 # Extract prompts from database with retry logic
-# Returns path to temp file containing JSON (to avoid shell variable issues)
+# Returns path to temp file containing JSON (using -c for inline Python)
 extract_prompts() {
   local db_file="$1"
   local output_file="$2"  # Temp file to write JSON to
@@ -79,19 +79,22 @@ extract_prompts() {
   local backoff=1
   
   for i in $(seq 1 $retries); do
-    # Write directly to file to avoid shell variable issues with control characters
-    sqlite3 "$db_file" "PRAGMA read_uncommitted=1; SELECT value FROM ItemTable WHERE key = 'aiService.prompts';" > "$output_file" 2>&1
+    # Pipe sqlite3 output directly to Python -c (robust, no heredoc conflict)
+    sqlite3 "$db_file" "PRAGMA read_uncommitted=1; SELECT value FROM ItemTable WHERE key = 'aiService.prompts';" 2>&1 | \
+    python3 -c "import json,sys; raw=sys.stdin.read(); sys.exit('No JSON on stdin') if not raw.strip() else None; data=json.loads(raw); print(json.dumps(data,ensure_ascii=False))" > "$output_file" 2>&1
+    
     local exit_code=$?
     
     # Check if file has content and is valid JSON
     if [[ $exit_code -eq 0 ]] && [[ -s "$output_file" ]]; then
-      # Quick validation - check if it starts with '[' (JSON array)
-      if [[ $(head -c 1 "$output_file") == "[" ]]; then
+      # Quick validation - check if it starts with '[' or '{' (JSON)
+      local first_char=$(head -c 1 "$output_file")
+      if [[ "$first_char" == "[" ]] || [[ "$first_char" == "{" ]]; then
         return 0
       fi
     fi
     
-    # Check for SQLITE_BUSY error
+    # Check for SQLITE_BUSY or database locked errors
     if grep -q "SQLITE_BUSY\|database is locked" "$output_file" 2>/dev/null; then
       if [[ $i -lt $retries ]]; then
         log "Database locked, retrying in ${backoff}s (attempt $i/$retries)"
@@ -102,22 +105,23 @@ extract_prompts() {
         return 1
       fi
     else
-      # Don't log error on first attempt (might be normal)
+      # Log error on final attempt
       if [[ $i -eq $retries ]]; then
         local error_msg=$(head -c 200 "$output_file" 2>/dev/null || echo "unknown error")
         log_error "Failed to extract prompts (exit=$exit_code): $error_msg"
       fi
-      # Continue to retry
     fi
   done
   
   return 1
 }
 
-# Get composer metadata
+# Get composer metadata (using -c for inline Python)
 get_composer_metadata() {
   local db_file="$1"
-  sqlite3 "$db_file" "PRAGMA read_uncommitted=1; SELECT value FROM ItemTable WHERE key = 'composer.composerData';" 2>/dev/null || echo "{}"
+  
+  sqlite3 "$db_file" "PRAGMA read_uncommitted=1; SELECT value FROM ItemTable WHERE key = 'composer.composerData';" 2>/dev/null | \
+  python3 -c "import json,sys; raw=sys.stdin.read(); print('{}') if not raw.strip() else print(json.dumps(json.loads(raw),ensure_ascii=False))" 2>/dev/null || echo "{}"
 }
 
 # Generate hash for deduplication
@@ -277,7 +281,7 @@ try:
         prompt_hash = hashlib.sha256(text.encode()).hexdigest()
         
         # Output: text|commandType|hash (escape newlines and pipes for shell)
-        text_escaped = text.replace('\n', '\\n').replace('\r', '\\r').replace('|', '\\|')
+        text_escaped = text.replace('\n', r'\n').replace('\r', r'\r').replace('|', r'\|')
         print(f"{text_escaped}|{cmd_type}|{prompt_hash}")
         
 except Exception as e:

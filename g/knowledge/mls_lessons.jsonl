@@ -219,3 +219,42 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763014913",
+  "type": "solution",
+  "title": "Fixed MLS Cursor Watcher stdin hang issue",
+  "description": "CLS reported 'task hanging' when running mls_cursor_watcher.zsh. Root cause: Using heredoc (<<'PYTHON') with pipe conflicted stdin sources, causing python3 to receive empty stdin and hang waiting for input.",
+  "context": "Solution: Replaced heredoc syntax with python3 -c for inline code. Changed from: sqlite3 | python3 - <<'PYTHON' ... To: sqlite3 | python3 -c 'inline_code'. This ensures stdin flows cleanly from sqlite3 to python3 without heredoc interference. Also fixed escape sequence warning by using raw strings (r'\|' instead of '\|'). Verified with dry-run - no more hangs.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T06:21:53Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763014922",
+  "type": "pattern",
+  "title": "Correct pattern for piping to Python stdin",
+  "description": "When piping command output to Python, avoid heredoc conflict. Using 'cmd | python3 - <<HEREDOC' causes stdin confusion because both pipe and heredoc try to feed stdin.",
+  "context": "Correct patterns: 1) Short code: cmd | python3 -c 'import sys; data=sys.stdin.read(); print(len(data))' 2) Long code: write temp file, then python3 script.py. 3) Never: cmd | python3 - <<'DOC' (stdin conflict). Always add guard: raw=sys.stdin.read(); if not raw.strip(): sys.exit('empty stdin'). Use ensure_ascii=False for UTF-8.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T06:22:02Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763014930",
+  "type": "improvement",
+  "title": "Applied user feedback to fix stdin hanging",
+  "description": "User reported Phase 5 monitoring tool showed 'task hanging' for mls_cursor_watcher. User provided specific solution: avoid base64, avoid heredoc stdin conflict, use direct pipe with python3 -c, add empty stdin guard.",
+  "context": "Implemented user's recommended pattern: sqlite3 | python3 -c with inline code instead of heredoc. Added guard: if not raw.strip(): raise SystemExit('No JSON on stdin'). Result: Script no longer hangs in CLS environment. Key learning: User feedback often contains precise root cause + solution, implement exactly as specified.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T06:22:10Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
