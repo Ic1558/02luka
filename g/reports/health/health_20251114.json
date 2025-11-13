@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-11-14T06:02:40+0700",
+  "checks": [
+    {"name": "Scanner LaunchAgent", "status": "pass", "timestamp": "2025-11-14T06:02:40+0700"},
+    {"name": "Autopilot LaunchAgent", "status": "pass", "timestamp": "2025-11-14T06:02:40+0700"},
+    {"name": "WO Executor LaunchAgent", "status": "pass", "timestamp": "2025-11-14T06:02:40+0700"},
+    {"name": "JSON WO Processor", "status": "pass", "timestamp": "2025-11-14T06:02:40+0700"},
+    {"name": "Ollama installed", "status": "pass", "timestamp": "2025-11-14T06:02:40+0700"},
