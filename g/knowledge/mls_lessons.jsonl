@@ -284,3 +284,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763024092",
+  "type": "improvement",
+  "title": "Personal Workspace Folders + Git Ignore",
+  "description": "Problem: User wants drag & drop for files outside workspace (Desktop/Documents/Downloads) but doesn't want them synced to GitHub.",
+  "context": "Solution: Added Desktop/, Documents/, Downloads/, external_files/ to .gitignore with clear comment section. These folders can now be added to Cursor workspace for convenience (drag & drop, edit access) while remaining completely local. Git will never track or sync them to GitHub.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T08:54:52Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}

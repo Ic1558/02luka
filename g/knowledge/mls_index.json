@@ -1,10 +1,10 @@
 {
-  "total": 22,
+  "total": 23,
   "by_type": {
     "failure": 2,
-    "improvement": 4,
+    "improvement": 5,
     "pattern": 3,
     "solution": 13
   },
-  "last_updated": "2025-11-13T08:34:27Z"
+  "last_updated": "2025-11-13T08:54:52Z"
 }
