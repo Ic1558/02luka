@@ -423,4 +423,3 @@ ls -ld followup/state
 **DO NOT** proceed with any git operations until Phase 1 is complete.
 
 **DO NOT** push current state to GitHub (will delete entire repo).
-
