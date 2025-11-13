@@ -349,3 +349,29 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763048919",
+  "type": "pattern",
+  "title": "CLC Work Lost - WO Pipeline Needs Rebuild",
+  "description": "Pattern: CLC successfully installed apply_patch_processor on Nov 12 01:50, processed 9 WOs, created state files. But on Nov 13 22:43, everything is gone (script missing, state dir missing, 0 state files). LaunchAgents are 'loaded but not running' (likely exit 127 - script not found).",
+  "context": "Solution: This is a systemic issue with persistence of CLC's work. Need to: 1) Investigate why CLC's changes didn't persist (rollback? cleanup script? filesystem issue?), 2) Rebuild WO pipeline with proper verification, 3) Add health checks to detect when processors go missing. Using 0-1 vs 2+ rule: 7 critical issues (5 processors + state dir + apply_patch_processor) → Create WO to rebuild pipeline properly.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T15:48:39Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763049946",
+  "type": "solution",
+  "title": "CLS vs CLC Analysis Complete",
+  "description": "Problem: User asked 3 questions: 1) List all tools, 2) Why my answer differed from CLC's, 3) Timeline summary. Needed comprehensive analysis of 219 tool scripts, work differences, and 48-hour timeline.",
+  "context": "Solution: Created g/reports/ANALYSIS_CLS_vs_CLC_20251113.md with complete analysis. Key findings: CLC successfully deployed apply_patch_processor on Nov 13 01:50 (9 WOs processed, 9 state files created). But by Nov 13 22:43, everything was MISSING. Gap of 21 hours suggests rollback/cleanup. My diagnosis was accurate for CURRENT state but didn't check PAST state. Lesson: Always ask 'Did this work before?' not just 'Is it working now?'. Tool inventory: 219 scripts, 20+ created in last 48hrs. Timeline documented from Nov 12 00:00 to Nov 13 23:00.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T16:05:46Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
