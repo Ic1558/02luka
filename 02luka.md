@@ -1859,4 +1859,3 @@ _Normalized by normalize_and_report.py_
 - Fallback to local sync path if SA key missing  
 - Outputs index → 
 - **Status**: Ready for use with Service Account key
-
