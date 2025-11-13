@@ -388,3 +388,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763052101",
+  "type": "improvement",
+  "title": "Enhanced Session Save System - Complete Snapshot",
+  "description": "Problem: User requested 'save' command to not only create session file, but also update 02luka.md and all related AI context files. Previous save only created session markdown, didn't update system documentation or create AI summaries.",
+  "context": "Solution: Enhanced tools/session_save.zsh with 5-step comprehensive save: 1) Session file (.md), 2) AI summary JSON (compact, for quick AI loading with top activities, stats, links), 3) System map scan (scans LaunchAgents, tools, creates g/system_map/system_map.v1.json), 4) 02luka.md AUTO_RUNTIME section update (dynamic status), 5) Git commits to both memory and main repos. Added AUTO_RUNTIME markers to 02luka.md for automatic updates. Now 'save' = complete snapshot of session + system state + AI context. Result: 6 things saved per 'save' command.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T16:41:41Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
