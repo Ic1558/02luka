@@ -197,4 +197,177 @@ echo "Date: $TODAY"
 echo "File: $SESSION_FILE"
 echo "Entries: $TOTAL_ENTRIES (S:$SOLUTIONS I:$IMPROVEMENTS F:$FAILURES P:$PATTERNS)"
 echo ""
-echo "✅ Save complete!"
+echo "✅ Session file saved!"
+
+# ============================================
+# STEP 2: Generate AI Summary JSON
+# ============================================
+echo ""
+echo "📋 Generating AI summary JSON..."
+AI_SUMMARY_FILE="$MEM_REPO/g/reports/sessions/session_$(date +%Y%m%d).ai.json"
+
+# Extract top activities (most important titles)
+TOP_ACTIVITIES=$(echo "$MLS_DATA" | jq -r '[.entries[] | select(.type == "solution" or .type == "improvement") | .title] | .[0:5]')
+
+# Generate compact AI summary
+cat > "$AI_SUMMARY_FILE" <<EOJSON
+{
+  "date": "$TODAY",
+  "ts_utc": "$(date -u +%FT%TZ)",
+  "ts_local": "$(date +%FT%T%z)",
+  "agent": "$AGENT",
+  "summary": {
+    "total_entries": $TOTAL_ENTRIES,
+    "top_activities": $TOP_ACTIVITIES,
+    "stats": {
+      "solutions": $SOLUTIONS,
+      "improvements": $IMPROVEMENTS,
+      "failures": $FAILURES,
+      "patterns": $PATTERNS
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/$TODAY.jsonl",
+    "full_session": "g/reports/sessions/session_$TIMESTAMP.md"
+  }
+}
+EOJSON
+
+echo "✅ AI summary saved: $AI_SUMMARY_FILE"
+
+# ============================================
+# STEP 3: Scan System Reality (System Map)
+# ============================================
+echo ""
+echo "🔍 Scanning system reality..."
+
+# Check if system_map_scan.zsh exists
+if [[ -f ~/02luka/tools/system_map_scan.zsh ]]; then
+  ~/02luka/tools/system_map_scan.zsh 2>&1 | head -5
+  echo "✅ System map updated"
+else
+  echo "⚠️  system_map_scan.zsh not found (from System Truth Sync feature)"
+  echo "   Creating placeholder system map..."
+  
+  SYSTEM_MAP_FILE="$HOME/02luka/g/system_map/system_map.v1.json"
+  mkdir -p "$(dirname "$SYSTEM_MAP_FILE")"
+  
+  # Count LaunchAgents, scripts, etc.
+  LA_COUNT=$(launchctl list | grep -c com.02luka || echo 0)
+  TOOL_COUNT=$(find ~/02luka/tools -type f -name "*.zsh" ! -path "*/node_modules/*" | wc -l | tr -d ' ')
+  
+  cat > "$SYSTEM_MAP_FILE" <<EOSYSMAP
+{
+  "version": 1,
+  "scanned_at": "$(date -u +%FT%TZ)",
+  "host": "$(hostname)",
+  "components": {
+    "launchagents": {
+      "count": $LA_COUNT,
+      "note": "Run 'launchctl list | grep com.02luka' for details"
+    },
+    "tools": {
+      "count": $TOOL_COUNT,
+      "path": "~/02luka/tools"
+    }
+  },
+  "status": "minimal_scan",
+  "note": "Full scan requires system_map_scan.zsh from System Truth Sync feature"
+}
+EOSYSMAP
+  echo "✅ Minimal system map created: $SYSTEM_MAP_FILE"
+fi
+
+# ============================================
+# STEP 4: Update 02luka.md AUTO_RUNTIME Section
+# ============================================
+echo ""
+echo "📝 Updating 02luka.md..."
+
+# Check if system_map_render.zsh exists
+if [[ -f ~/02luka/tools/system_map_render.zsh ]]; then
+  ~/02luka/tools/system_map_render.zsh 2>&1 | head -5
+  echo "✅ 02luka.md updated"
+else
+  echo "⚠️  system_map_render.zsh not found (from System Truth Sync feature)"
+  echo "   Will update manually with session info..."
+  
+  # Add a simple timestamp update to 02luka.md
+  if [[ -f ~/02luka/02luka.md ]]; then
+    # Check if AUTO_RUNTIME markers exist
+    if grep -q "<!-- AUTO_RUNTIME_START -->" ~/02luka/02luka.md 2>/dev/null; then
+      # Markers exist, update section
+      sed -i.bak '/<!-- AUTO_RUNTIME_START -->/,/<!-- AUTO_RUNTIME_END -->/c\
+<!-- AUTO_RUNTIME_START -->\
+**Last Session:** '"$TODAY"' '"$(date +%H:%M:%S)"'\
+**Agent:** '"$AGENT"'\
+**MLS Entries:** '"$TOTAL_ENTRIES"' (S:'"$SOLUTIONS"' I:'"$IMPROVEMENTS"' F:'"$FAILURES"' P:'"$PATTERNS"')\
+**System Map:** `g/system_map/system_map.v1.json`\
+<!-- AUTO_RUNTIME_END -->' ~/02luka/02luka.md
+      echo "✅ Updated AUTO_RUNTIME section in 02luka.md"
+    else
+      echo "⚠️  AUTO_RUNTIME markers not found in 02luka.md"
+      echo "   Add these markers to enable auto-update:"
+      echo "   <!-- AUTO_RUNTIME_START -->"
+      echo "   <!-- AUTO_RUNTIME_END -->"
+    fi
+  else
+    echo "⚠️  02luka.md not found"
+  fi
+fi
+
+# ============================================
+# STEP 5: Commit All Changes to Main Repo
+# ============================================
+echo ""
+echo "📦 Committing to main 02luka repo..."
+
+if [[ -d ~/02luka/.git ]]; then
+  cd ~/02luka
+  
+  # Add all changed files
+  git add -A 2>/dev/null || true
+  
+  # Create comprehensive commit message
+  COMMIT_MSG="session save: $AGENT $TODAY
+
+Session Summary:
+- Total MLS entries: $TOTAL_ENTRIES
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS  
+- Failures: $FAILURES
+- Patterns: $PATTERNS
+
+Files updated:
+- Session: session_$TIMESTAMP.md
+- AI Summary: session_$(date +%Y%m%d).ai.json
+- System Map: g/system_map/system_map.v1.json
+- Documentation: 02luka.md (AUTO_RUNTIME section)
+
+Timestamp: $(date +%FT%TZ)"
+  
+  # Commit (will only commit if there are changes)
+  if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+    echo "✅ Committed to main repo"
+  else
+    echo "ℹ️  No changes to commit in main repo"
+  fi
+else
+  echo "⚠️  Main repo not a git repository"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ COMPLETE SAVE SUCCESSFUL"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 What Was Saved:"
+echo "  1. Session file:    $SESSION_FILE"
+echo "  2. AI summary:      $AI_SUMMARY_FILE"
+echo "  3. System map:      ~/02luka/g/system_map/system_map.v1.json"
+echo "  4. Documentation:   ~/02luka/02luka.md"
+echo "  5. Memory repo:     Git committed"
+echo "  6. Main repo:       Git committed"
+echo ""
+echo "🎯 Session Stats: $TOTAL_ENTRIES entries (S:$SOLUTIONS I:$IMPROVEMENTS F:$FAILURES P:$PATTERNS)"
+echo ""

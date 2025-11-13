@@ -375,3 +375,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763051355",
+  "type": "improvement",
+  "title": "WO Pipeline Durability Feature Spec Complete",
+  "description": "Problem: User identified root cause: 'CLC fixed and verified → I expect that to stay true unless I explicitly undo it' - this guarantee doesn't exist. Things vanish silently via rollbacks/rsync/tree mismatch. CLS diagnosed current state but didn't check history. Pattern: 'Agent A fixed ✅ → hours later → Agent B: broken ❌'. User wants Option D (sequenced): forensics (10-15min) → rebuild → guardrail → history-aware.",
+  "context": "Solution: Created 3 documents: 1) feature_wo_pipeline_durability_SPEC.md (complete technical spec, 4 phases, risk assessment, success metrics), 2) feature_wo_pipeline_durability_PLAN.md (detailed tasks, 219 tool inventory, tasks not done/deployed lists, 3hr timeline), 3) WO_PIPELINE_DURABILITY_SUMMARY.md (executive summary for Boss). Key features: Time-boxed forensics (find what killed CLC's work), WO rebuild using CLC's pattern as reference, Guardrail system (5-min drift detection), History-aware diagnosis (check git/MLS/logs before declaring 'missing'). Builds durability guarantee: guardrail + protected rollback + tests + SSOT. Ready for execution.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T16:29:15Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
