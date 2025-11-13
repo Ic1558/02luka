@@ -15,7 +15,7 @@ mkdir -p "$DASHBOARD_DIR"
 # Get health score (from health check if available)
 HEALTH_SCORE="92%"
 if [[ -f "$REPO/g/reports/health/health_${TODAY}.json" ]]; then
-  HEALTH_SCORE=$(jq -r '.health_score // .score // "92"' "$REPO/g/reports/health/health_${TODAY}.json" 2>/dev/null || echo "92")
+  HEALTH_SCORE=$(jq -r '.summary.success_rate // .health_score // .score // "92%"' "$REPO/g/reports/health/health_${TODAY}.json" 2>/dev/null || echo "92%")
   if [[ "$HEALTH_SCORE" =~ ^[0-9]+$ ]]; then
     HEALTH_SCORE="${HEALTH_SCORE}%"
   fi
