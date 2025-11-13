@@ -310,3 +310,42 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763047986",
+  "type": "failure",
+  "title": "Dashboard WO Tracking Completely Broken",
+  "description": "Problem: Boss reported dashboard shows 0 items despite WOs existing. Investigated and found: (1) 20+ WOs in bridge/inbox/CLC/, (2) g/followup/state/ is EMPTY, (3) followup.json shows 0 items, (4) Dashboard correctly shows 0 because data is missing. Root cause: WO processors MISSING - apply_patch_processor (exit 127), wo_executor (exit 127), json_wo_processor (exit 127), mary.dispatcher (not running), followup_tracker (not running). LaunchAgents configured but scripts don't exist.",
+  "context": "Solution needed: Rebuild WO processing pipeline from scratch. Scripts were promised but never created. This is NOT a dashboard UI issue - it's a data pipeline failure. Dashboard works, but has no data to show.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T15:33:06Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763048282",
+  "type": "solution",
+  "title": "WO Status CLI Tool Created",
+  "description": "Problem: Boss asked about check_wo_progress_watch.zsh which doesn't exist. Need a simple CLI tool to check WO status and see what's pending.",
+  "context": "Solution: Created tools/check_wo_status.zsh - shows CLC inbox, ENTRY inbox, followup state files, LaunchAgent status, and warnings. Run with './tools/check_wo_status.zsh' or '--watch' for continuous monitoring. Revealed truth: 6 WOs in CLC inbox, 0 state files, all processors loaded but not running. Dashboard correctly shows 0 items because pipeline is broken.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T15:38:02Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763048547",
+  "type": "improvement",
+  "title": "WO Status Tool Enhanced with Colors and Progress Bars",
+  "description": "Problem: Basic WO status tool lacked visual clarity. Boss requested version with progress bars and colored symbols.",
+  "context": "Solution: Enhanced tools/check_wo_status.zsh with ANSI colors (red/yellow/green status), progress bars (20-char width with █/░ chars), age coloring (green <3d, yellow 3-7d, red >7d), status symbols (⏳pending, ⚙️ processing, ✅complete, ❌error, ⏸️ paused), warnings for high backlog (>5 WOs), and formatted summary with separators. Run: './tools/check_wo_status.zsh' or '--watch' for live monitoring.",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "none",
+  "timestamp": "2025-11-13T15:42:27Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
