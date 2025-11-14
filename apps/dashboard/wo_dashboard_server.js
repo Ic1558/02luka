@@ -2,7 +2,7 @@
 /**
  * WO Dashboard Server
  * API server for Work Order dashboard interactions
- * Fixed: Uses env vars for Redis password, includes /api/auth-token endpoint
+ * Fixed: Uses env vars for Redis password, enforces signed requests for WO APIs
  */
 
 const http = require('http');
@@ -10,6 +10,7 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
+const { verifySignature } = require('../../server/security/verifySignature');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -72,7 +73,10 @@ const server = http.createServer(async (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, x-luka-signature, x-luka-timestamp'
+  );
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -82,18 +86,31 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // GET /api/auth-token - FIXED: Added missing endpoint
-  if (req.method === 'GET' && pathname === '/api/auth-token') {
-    return sendJSON(res, 200, { token: AUTH_TOKEN });
-  }
-
   // Auth check for other endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
-  
-  if (pathname.startsWith('/api/') && pathname !== '/api/auth-token') {
+
+  if (pathname.startsWith('/api/')) {
     if (token !== AUTH_TOKEN) {
       return sendError(res, 401, 'Unauthorized');
+    }
+  }
+
+  const ensureSignedRequest = async (payload = '') => {
+    try {
+      verifySignature({ headers: req.headers, payload });
+      return true;
+    } catch (err) {
+      const status = err.statusCode || 401;
+      sendError(res, status, err.message);
+      return false;
+    }
+  };
+
+  if (pathname.startsWith('/api/wo/state/')) {
+    const ok = await ensureSignedRequest('');
+    if (!ok) {
+      return;
     }
   }
 
@@ -120,10 +137,16 @@ const server = http.createServer(async (req, res) => {
   }
 
   // GET /api/wo/:id - Get single WO
-  if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    const woId = pathname.replace('/api/wo/', '');
+  const woDetailMatch = pathname.match(/^\/api\/wo\/([^\/]+)$/);
+  if (req.method === 'GET' && woDetailMatch) {
+    const ok = await ensureSignedRequest('');
+    if (!ok) {
+      return;
+    }
+
+    const woId = woDetailMatch[1];
     const data = await readStateFile(woId);
-    
+
     if (!data) {
       return sendError(res, 404, 'WO not found');
     }
@@ -132,13 +155,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   // POST /api/wo/:id/action - Perform action on WO
-  if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-    
+  const woActionMatch = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/);
+  if (req.method === 'POST' && woActionMatch) {
+    const woId = woActionMatch[1];
+
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', async () => {
       try {
+        const ok = await ensureSignedRequest(body);
+        if (!ok) {
+          return;
+        }
+
         const { action } = JSON.parse(body);
         const currentData = await readStateFile(woId);
         
@@ -179,6 +208,9 @@ const server = http.createServer(async (req, res) => {
           return sendError(res, 500, 'Failed to update WO');
         }
       } catch (err) {
+        if (res.writableEnded) {
+          return;
+        }
         return sendError(res, 400, err.message);
       }
     });
@@ -206,7 +238,6 @@ async function start() {
   server.listen(PORT, () => {
     console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
     console.log(`📊 API endpoints:`);
-    console.log(`   GET  /api/auth-token`);
     console.log(`   GET  /api/wos`);
     console.log(`   GET  /api/wo/:id`);
     console.log(`   POST /api/wo/:id/action`);
