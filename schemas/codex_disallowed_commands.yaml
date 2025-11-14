@@ -36,7 +36,7 @@
       "regex": "d\\s*d\\s+if=\\/dev\\/[\\w\\/*]+"
     },
     {
-      "id": "mkfs",
+      "id": "fs_format",
       "description": "Filesystem formatting utilities",
       "regex": "m\\s*k\\s*f\\s*s"
     },
@@ -52,7 +52,7 @@
     },
     {
       "id": "curl_pipe_sh",
-      "description": "Remote install pipelines using curl | sh",
+      "description": "Remote install pipelines piping curl output directly into sh",
       "regex": "curl[^\\n]*\\|\\s*sh"
     },
     {

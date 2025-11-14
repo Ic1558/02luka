@@ -2,6 +2,7 @@
 # Codex Sandbox Checker — scans repo for banned command vocabulary.
 
 set -euo pipefail
+setopt NO_NOMATCH
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -39,7 +40,7 @@ for item in data.get("patterns", []):
     pattern_id = item.get("id", "")
     desc = item.get("description", "")
     regex = item.get("regex", "")
-    print(f"{pattern_id}\\t{desc}\\t{regex}")' "$SCHEMA_FILE")"
+    print(f"{pattern_id}\t{desc}\t{regex}")' "$SCHEMA_FILE")"
 
 if [[ -z "$pattern_lines" ]]; then
   echo "❌ codex_sandbox_check: no patterns defined in $SCHEMA_FILE" >&2
@@ -68,40 +69,53 @@ EXCLUDES=(
   "--glob" "!g/g/**"
 )
 
-INCLUDES=(
-  "--glob" "docs/**"
-  "--glob" "manuals/**"
-  "--glob" "reports/**"
-  "--glob" "g/docs/**"
-  "--glob" "g/manuals/**"
-  "--glob" "g/reports/**"
-  "--glob" "config/**"
-  "--glob" "g/config/**"
-  "--glob" "tools/**"
-  "--glob" "g/tools/**"
-  "--glob" "scripts/**"
-  "--glob" "g/scripts/**"
-  "--glob" "run/**"
-  "--glob" "g/run/**"
-  "--glob" "bridge/**"
-  "--glob" "g/bridge/**"
-  "--glob" "LaunchAgents/**"
-  "--glob" "g/LaunchAgents/**"
-  "--glob" ".github/workflows/**"
-  "--glob" "g/.github/workflows/**"
-  "--glob" "*.md"
-  "--glob" "*.yaml"
-  "--glob" "*.yml"
-  "--glob" "*.zsh"
-  "--glob" "*.sh"
-  "--glob" "*.py"
-  "--glob" "Makefile"
-  "--glob" "g/Makefile"
+PATH_CANDIDATES=(
+  docs
+  manuals
+  reports
+  g/docs
+  g/manuals
+  g/reports
+  config
+  g/config
+  tools
+  g/tools
+  scripts
+  g/scripts
+  run
+  g/run
+  bridge
+  g/bridge
+  LaunchAgents
+  g/LaunchAgents
+  .github/workflows
+  g/.github/workflows
 )
+
+SEARCH_PATHS=()
+for candidate in "${PATH_CANDIDATES[@]}"; do
+  if [[ -e "$REPO_ROOT/$candidate" ]]; then
+    SEARCH_PATHS+=("$REPO_ROOT/$candidate")
+  fi
+done
+
+for pattern in "$REPO_ROOT"/*.md "$REPO_ROOT"/*.yaml "$REPO_ROOT"/*.yml "$REPO_ROOT"/*.txt; do
+  if [[ -f "$pattern" ]]; then
+    SEARCH_PATHS+=("$pattern")
+  fi
+done
+
+[[ -f "$REPO_ROOT/Makefile" ]] && SEARCH_PATHS+=("$REPO_ROOT/Makefile")
+[[ -f "$REPO_ROOT/g/Makefile" ]] && SEARCH_PATHS+=("$REPO_ROOT/g/Makefile")
+
+if (( ${#SEARCH_PATHS[@]} == 0 )); then
+  echo "❌ codex_sandbox_check: no search paths detected" >&2
+  exit 2
+fi
 
 while IFS=$'\t' read -r pattern_id pattern_desc pattern_regex; do
   [[ -z "$pattern_id" ]] && continue
-  matches="$(rg --line-number --no-heading --color=never --pcre2 "${INCLUDES[@]}" "${EXCLUDES[@]}" -e "$pattern_regex" "$REPO_ROOT" || true)"
+  matches="$(rg --line-number --no-heading --color=never --pcre2 "${EXCLUDES[@]}" -e "$pattern_regex" "${SEARCH_PATHS[@]}" || true)"
   if [[ -n "$matches" ]]; then
     while IFS= read -r line; do
       [[ -z "$line" ]] && continue
