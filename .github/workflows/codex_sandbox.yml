@@ -34,14 +34,14 @@ jobs:
             echo "- Skipped (docs/telemetry-only changes)" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Install zsh
+      - name: Install dependencies
         if: steps.diff.outputs.has_files == 'true'
         env:
           SUDO_CMD: ${{ format('su{0}do', '') }}
         run: |
           SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
           "$SUDO_BIN" apt-get update -qq
-          "$SUDO_BIN" apt-get install -y zsh
+          "$SUDO_BIN" apt-get install -y zsh ripgrep
 
       - name: Run codex sandbox check
         if: steps.diff.outputs.has_files == 'true'
