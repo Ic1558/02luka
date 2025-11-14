@@ -108,6 +108,9 @@ Volumes/
 
 # Privacy & convenience: keep local work separate from project code
 # Note: Volumes/ covers external drives like lukadata
+lukadata/
+**/lukadata/
+/Volumes/lukadata/
 # 
 # For additional local-only volume/backup patterns, see:
 # .git/info/exclude (local-only, never committed)
