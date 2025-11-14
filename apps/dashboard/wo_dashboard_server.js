@@ -2,7 +2,7 @@
 /**
  * WO Dashboard Server
  * API server for Work Order dashboard interactions
- * Fixed: Uses env vars for Redis password, includes /api/auth-token endpoint
+ * SECURITY FIXED: Path traversal prevention + signed requests + auth-token removal
  */
 
 const http = require('http');
@@ -10,6 +10,9 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
+const { verifySignature } = require('../../server/security/verifySignature');
+const { canonicalJsonStringify } = require('../../server/security/canonicalJson');
+const { woStatePath, sanitizeWoId } = require('../../g/apps/dashboard/security/woId');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -47,19 +50,66 @@ function sendError(res, status, message) {
 
 async function readStateFile(woId) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    const filePath = woStatePath(STATE_DIR, woId);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (err) {
+    if (err.statusCode === 400) {
+      throw err;
+    }
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    console.error('Error reading state file:', err);
     return null;
   }
 }
 
+function canonicalizeWoState(data) {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid work order state: must be an object');
+  }
+
+  const canonical = {
+    id: data.id || '',
+    title: data.title || '',
+    description: data.description || '',
+    status: data.status || 'Open',
+    priority: data.priority || 'Medium',
+    progress: typeof data.progress === 'number' ? Math.max(0, Math.min(100, data.progress)) : 0,
+    owner: data.owner || '',
+    source: data.source || 'work_order',
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    notes: data.notes || '',
+    goal: data.goal || '',
+    due_date: data.due_date || ''
+  };
+
+  const now = new Date().toISOString();
+  canonical.ts_update = data.ts_update ? new Date(data.ts_update).toISOString() : now;
+  canonical.ts_create = data.ts_create ? new Date(data.ts_create).toISOString() : now;
+
+  const validStatuses = ['Open', 'InProgress', 'Complete', 'Cancelled', 'OnHold'];
+  if (!validStatuses.includes(canonical.status)) {
+    canonical.status = 'Open';
+  }
+
+  const validPriorities = ['Low', 'Medium', 'High', 'Critical'];
+  if (!validPriorities.includes(canonical.priority)) {
+    canonical.priority = 'Medium';
+  }
+
+  return canonical;
+}
+
 async function writeStateFile(woId, data) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    const filePath = woStatePath(STATE_DIR, woId);
+    const canonicalData = canonicalizeWoState(data);
+    canonicalData.id = woId;
+
     const tmpPath = `${filePath}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
+    await fs.writeFile(tmpPath, canonicalJsonStringify(canonicalData) + '\n');
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
@@ -69,10 +119,12 @@ async function writeStateFile(woId, data) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, x-luka-signature, x-luka-timestamp'
+  );
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -82,27 +134,47 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // GET /api/auth-token - FIXED: Added missing endpoint
-  if (req.method === 'GET' && pathname === '/api/auth-token') {
-    return sendJSON(res, 200, { token: AUTH_TOKEN });
+  if (pathname === '/api/auth-token') {
+    return sendError(res, 404, 'Not found');
   }
 
-  // Auth check for other endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
-  
-  if (pathname.startsWith('/api/') && pathname !== '/api/auth-token') {
+
+  if (pathname.startsWith('/api/')) {
     if (token !== AUTH_TOKEN) {
       return sendError(res, 401, 'Unauthorized');
     }
   }
 
-  // GET /api/wos - List all WOs
+  const ensureSignedRequest = async (payload = '') => {
+    try {
+      verifySignature({
+        headers: req.headers,
+        payload,
+        method: req.method,
+        path: pathname
+      });
+      return true;
+    } catch (err) {
+      const status = err.statusCode || 401;
+      sendError(res, status, err.message);
+      return false;
+    }
+  };
+
+  if (pathname.startsWith('/api/wo/state/')) {
+    const ok = await ensureSignedRequest('');
+    if (!ok) {
+      return;
+    }
+  }
+
   if (req.method === 'GET' && pathname === '/api/wos') {
     try {
       const files = await fs.readdir(STATE_DIR);
       const wos = [];
-      
+
       for (const file of files) {
         if (file.endsWith('.json')) {
           const woId = file.replace('.json', '');
@@ -112,41 +184,70 @@ const server = http.createServer(async (req, res) => {
           }
         }
       }
-      
+
       return sendJSON(res, 200, wos);
     } catch (err) {
       return sendError(res, 500, err.message);
     }
   }
 
-  // GET /api/wo/:id - Get single WO
-  if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    const woId = pathname.replace('/api/wo/', '');
-    const data = await readStateFile(woId);
-    
-    if (!data) {
-      return sendError(res, 404, 'WO not found');
+  const woDetailMatch = pathname.match(/^\/api\/wo\/([^/]+)$/);
+  if (req.method === 'GET' && woDetailMatch) {
+    const ok = await ensureSignedRequest('');
+    if (!ok) {
+      return;
     }
-    
-    return sendJSON(res, 200, data);
+
+    let woId;
+    try {
+      woId = sanitizeWoId(woDetailMatch[1]);
+    } catch (err) {
+      const status = err.statusCode || 400;
+      return sendError(res, status, err.message);
+    }
+
+    try {
+      const data = await readStateFile(woId);
+
+      if (!data) {
+        return sendError(res, 404, 'WO not found');
+      }
+
+      return sendJSON(res, 200, data);
+    } catch (err) {
+      const statusCode = err.statusCode || 500;
+      return sendError(res, statusCode, err.message);
+    }
   }
 
-  // POST /api/wo/:id/action - Perform action on WO
-  if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-    
+  const actionMatch = pathname.match(/^\/api\/wo\/([^/]+)\/action$/);
+  if (req.method === 'POST' && actionMatch) {
+    let woId;
+    try {
+      woId = sanitizeWoId(actionMatch[1]);
+    } catch (err) {
+      const status = err.statusCode || 400;
+      return sendError(res, status, err.message);
+    }
+
     let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
     req.on('end', async () => {
       try {
+        const ok = await ensureSignedRequest(body);
+        if (!ok) {
+          return;
+        }
+
         const { action } = JSON.parse(body);
         const currentData = await readStateFile(woId);
-        
+
         if (!currentData) {
           return sendError(res, 404, 'WO not found');
         }
 
-        // Update status based on action
         if (action === 'activate' || action === 'start') {
           currentData.status = 'InProgress';
         } else if (action === 'pause') {
@@ -156,14 +257,13 @@ const server = http.createServer(async (req, res) => {
         }
 
         currentData.ts_update = new Date().toISOString();
-        
+
         const success = await writeStateFile(woId, currentData);
-        
+
         if (success) {
-          // Publish to Redis if available
           if (redisClient) {
             try {
-              await redisClient.publish('wo:update', JSON.stringify({
+              await redisClient.publish('wo:update', canonicalJsonStringify({
                 wo_id: woId,
                 action: action,
                 status: currentData.status,
@@ -173,19 +273,22 @@ const server = http.createServer(async (req, res) => {
               console.error('Redis publish error:', err);
             }
           }
-          
+
           return sendJSON(res, 200, { success: true, wo: currentData });
         } else {
           return sendError(res, 500, 'Failed to update WO');
         }
       } catch (err) {
-        return sendError(res, 400, err.message);
+        if (res.writableEnded) {
+          return;
+        }
+        const statusCode = err.statusCode || 400;
+        return sendError(res, statusCode, err.message);
       }
     });
     return;
   }
 
-  // GET /api/followup - Get followup.json data
   if (req.method === 'GET' && pathname === '/api/followup') {
     try {
       const content = await fs.readFile(FOLLOWUP_DATA, 'utf8');
@@ -196,21 +299,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 404
   sendError(res, 404, 'Not found');
 });
 
 async function start() {
   await initRedis();
-  
+
   server.listen(PORT, () => {
     console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
-    console.log(`📊 API endpoints:`);
-    console.log(`   GET  /api/auth-token`);
-    console.log(`   GET  /api/wos`);
-    console.log(`   GET  /api/wo/:id`);
-    console.log(`   POST /api/wo/:id/action`);
-    console.log(`   GET  /api/followup`);
+    console.log('📊 API endpoints:');
+    console.log('   GET  /api/wos');
+    console.log('   GET  /api/wo/:id');
+    console.log('   POST /api/wo/:id/action');
+    console.log('   GET  /api/followup');
+    console.log('🔒 Security: Path traversal protection enabled');
+    console.log('🔒 Security: /api/auth-token endpoint removed');
+    console.log('🔒 Security: Replay attack protection enabled (signed requests)');
   });
 }
 

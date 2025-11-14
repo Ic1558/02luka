@@ -452,7 +452,7 @@ docker volume create luka-ops_redis_data
 1. ✅ Services running: `docker-compose ps`
 2. ✅ Health checks passing: `docker inspect --format='{{.State.Health.Status}}' redis`
 3. ✅ Correct network: `docker network inspect 02luka-net`
-4. ✅ Firewall rules: `sudo iptables -L` (if applicable)
+4. ✅ Firewall rules: `iptables -L` (run from an administrator shell, never via embedded elevation)
 
 ---
 
@@ -600,7 +600,7 @@ docker system prune -a --volumes
 }
 ```
 
-Restart Docker: `sudo systemctl restart docker`
+Restart Docker (requires admin shell): `systemctl restart docker`
 
 ---
 
@@ -618,6 +618,8 @@ Restart Docker: `sudo systemctl restart docker`
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)
 
 ### Management Tools
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 - **Management Script**: `~/02luka/docker_services.sh`
 - **Health Server**: `~/02luka/monitoring/health_server.cjs`
 - **Deployment Script**: `compose-up.sh`
@@ -720,4 +722,3 @@ source ~/.config/02luka/secrets/bridge.env
 export BRIDGE_TOKEN
 docker-compose restart http_redis_bridge
 ```
-

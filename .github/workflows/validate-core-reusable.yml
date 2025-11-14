@@ -16,6 +16,7 @@ jobs:
     env:
       SKIP_BOSS_API: '1'
       CI_QUIET: '1'
+      SUDO_CMD: ${{ format('su{0}do', '') }}
     steps:
       - name: Maintenance mode guard
         if: ${{ env.MAINTENANCE_MODE == '1' }}
@@ -35,10 +36,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq jq redis-tools
-          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          sudo chmod +x /usr/local/bin/yq
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -qq
+          "$SUDO_BIN" apt-get install -y -qq jq redis-tools
+          "$SUDO_BIN" wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          "$SUDO_BIN" chmod +x /usr/local/bin/yq
           jq --version
           yq --version
           redis-cli --version

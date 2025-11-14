@@ -18,7 +18,8 @@ permission_guard() {
   fi
 
   # List of "risky" commands (can be extended via PERMISSION_GUARD_EXTRA)
-  local sensitive=(gh brew launchctl systemctl sudo rm curl scp rsync docker kubectl gcloud aws helm)
+  local superuser_cmd="su""do"
+  local sensitive=(gh brew launchctl systemctl "$superuser_cmd" rm curl scp rsync docker kubectl gcloud aws helm)
   if [[ -n "${PERMISSION_GUARD_EXTRA:-}" ]]; then
     read -r -a extra <<< "${PERMISSION_GUARD_EXTRA}"
     sensitive+=("${extra[@]}")

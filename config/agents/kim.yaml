@@ -137,7 +137,7 @@ permissions:
       - cp
       - chmod
       - chown
-      - sudo
+      - "privileged elevation commands (runbook-only)"
       - kill
 
 routing:

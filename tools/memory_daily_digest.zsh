@@ -76,12 +76,55 @@ $(tail -n 10 "$REPO/logs/memory_hub.out.log" 2>/dev/null || echo "No logs availa
 
 ---
 
+## Adaptive Insights
+
+$(INSIGHTS_FILE="$REPO/mls/adaptive/insights_${TODAY}.json"
+if [[ -f "$INSIGHTS_FILE" ]] && command -v jq >/dev/null 2>&1; then
+  # Read insights
+  trends=$(jq -r '.trends // {}' "$INSIGHTS_FILE" 2>/dev/null || echo "{}")
+  anomalies=$(jq -r '.anomalies // []' "$INSIGHTS_FILE" 2>/dev/null || echo "[]")
+  recommendations=$(jq -r '.recommendations // []' "$INSIGHTS_FILE" 2>/dev/null || echo "[]")
+  summary=$(jq -r '.recommendation_summary // "No insights available"' "$INSIGHTS_FILE" 2>/dev/null || echo "No insights available")
+  
+  # Display trends
+  echo "### Trends (Last 7 Days)"
+  echo ""
+  if [[ "$trends" != "{}" && "$trends" != "null" ]]; then
+    echo "$trends" | jq -r 'to_entries[] | "- **\(.key):** \(.value.direction // "stable") (\(.value.change // "0%"))"' 2>/dev/null || echo "No trends available"
+  else
+    echo "No trends detected."
+  fi
+  echo ""
+  
+  # Display anomalies
+  if [[ "$anomalies" != "[]" && "$anomalies" != "null" ]]; then
+    echo "### Anomalies"
+    echo ""
+    echo "$anomalies" | jq -r '.[] | "- **\(.metric):** \(.value) (expected: \(.expected)) - \(.severity)"' 2>/dev/null || echo "No anomalies data"
+    echo ""
+  fi
+  
+  # Display recommendations
+  if [[ "$summary" != "No insights available" && "$summary" != "null" ]]; then
+    echo "### Recommendations"
+    echo ""
+    echo "$summary"
+    echo ""
+  fi
+else
+  echo "*Adaptive insights not available for today.*"
+  echo ""
+fi)
+
+---
+
 ## Next Actions
 
 - Review Mary task completions
 - Review R&D proposal outcomes
 - Check for any errors in hub logs
 - Verify Redis pub/sub activity
+- Review adaptive insights and recommendations
 
 ---
 

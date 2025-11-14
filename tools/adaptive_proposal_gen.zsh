@@ -62,11 +62,11 @@ if [[ -d "$REPO/mls/adaptive" ]]; then
     # Verify file has valid JSON structure (has date field)
     if command -v jq >/dev/null 2>&1; then
       if jq -e '.date' "$insight_file" >/dev/null 2>&1; then
-        ((sample_count++))
+        sample_count=$((sample_count + 1))
       fi
     else
       # Fallback: if jq not available, count file existence
-      ((sample_count++))
+      sample_count=$((sample_count + 1))
     fi
   done
 fi
@@ -85,12 +85,12 @@ fi
 
 # Check for actionable insights
 has_declining=false
-if echo "$trends" | jq -e '.[] | select(.direction == "declining")' >/dev/null 2>&1; then
+if echo "$trends" | jq -e '.[] | select(.direction == "declining")' >/dev/null 2>&1 || false; then
   has_declining=true
 fi
 
 has_anomalies=false
-if echo "$anomalies" | jq -e 'length > 0' >/dev/null 2>&1; then
+if echo "$anomalies" | jq -e 'length > 0' >/dev/null 2>&1 || false; then
   has_anomalies=true
 fi
 

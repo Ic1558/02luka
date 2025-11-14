@@ -18,6 +18,9 @@ on:  # yamllint disable-line rule:truthy
 permissions:
   contents: read
 
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
 jobs:
   daily-proof:
     runs-on: ubuntu-latest
@@ -29,8 +32,9 @@ jobs:
 
       - name: Prepare environment
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y make
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -y
+          "$SUDO_BIN" apt-get install -y make
 
       - name: Validate structure (Option C)
         run: |

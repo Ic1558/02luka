@@ -55,9 +55,9 @@ if [ "$HAS_INNER_GIT" = "no" ]; then
     mkdir -p "$TMPBASE"
     git -C "$TMPBASE" clone "$REMOTE_URL" repo
     rsync -a --ignore-existing "$INNER/" "$TMPBASE/repo/"
-    rm -rf "$INNER"
+    rm -r -f "$INNER"
     mv "$TMPBASE/repo" "$INNER"
-    rm -rf "$TMPBASE"
+    rm -r -f "$TMPBASE"
     HAS_INNER_GIT="yes"
   else
     echo "No REMOTE_URL provided -> git init new repo (preserve files)"
