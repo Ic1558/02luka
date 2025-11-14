@@ -1,7 +1,0 @@
-{"timestamp":"2025-10-30T06:11:22+0700","session_id":"1761779482","pattern_type":"command_usage","total_commands":1,"error_rate":0,"top_commands":"   1 echo phase3_test","working_dirs":"   1 /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive"}
-{"timestamp":"2025-10-30T06:12:06+0700","session_id":"1761779526","pattern_type":"command_usage","total_commands":2,"error_rate":0,"top_commands":"   1 git status;   1 echo phase3_test","working_dirs":"   2 /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive"}
-{"timestamp":"2025-10-30T06:12:06+0700","session_id":"1761779526","pattern_type":"session_summary","total_interactions":2,"session_duration":"unknown","interaction_breakdown":"   1 success;   1 command"}
-{"timestamp":"2025-10-30T06:18:32+0700","session_id":"1761779912","pattern_type":"command_usage","total_commands":3,"error_rate":0,"top_commands":"   1 git status;   1 echo verify;   1 echo phase3_test","working_dirs":"   3 /Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive"}
-{"timestamp":"2025-10-30T06:18:32+0700","session_id":"1761779912","pattern_type":"session_summary","total_interactions":1,"session_duration":"unknown","interaction_breakdown":"   1 command"}
-{"timestamp":"2025-10-31T02:13:33+0700","session_id":"","pattern_type":"command_usage","total_commands":4,"error_rate":25}
-{"timestamp":"2025-10-31T04:22:02+0700","session_id":"verify-session-1761859281","pattern_type":"command_usage","total_commands":8,"error_rate":25}

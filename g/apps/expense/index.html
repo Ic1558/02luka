@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>02LUKA • Expense Ledger</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;line-height:1.35}
+  h1{margin:0 0 8px}
+  .toolbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:12px 0 16px}
+  input,select,button{padding:8px 10px;border:1px solid #ddd;border-radius:8px}
+  button{cursor:pointer}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{border-bottom:1px solid #eee;padding:8px 6px;text-align:left}
+  th{background:#fafafa;position:sticky;top:0}
+  tfoot td{font-weight:700}
+  .pill{padding:3px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #e5e7eb;font-size:12px}
+  .row-btn{padding:4px 8px;border-radius:6px}
+  .right{text-align:right}
+  .muted{color:#667085}
+  .badge{background:#eef6ff;color:#1e5bb8;border:1px solid #d5e9ff}
+  .danger{color:#b21d1d}
+</style>
+</head>
+<body>
+  <h1>Expense Ledger</h1>
+  <div class="muted">Load / edit / export a JSONL ledger. Fully local. No server.</div>
+
+  <div class="toolbar">
+    <!-- Loaders -->
+    <label class="pill">Load ledger JSONL <input id="inp-ledger" type="file" accept=".jsonl"/></label>
+    <label class="pill">Load payees.json <input id="inp-payees" type="file" accept=".json,.jsonl"/></label>
+    <label class="pill">Load projects.json <input id="inp-projects" type="file" accept=".json,.jsonl"/></label>
+    <!-- Sort -->
+    <select id="f-sort">
+      <option value="date-desc">Sort: Date Newest</option>
+      <option value="date-asc">Sort: Date Oldest</option>
+      <option value="payee-asc">Sort: Payee A→Z</option>
+      <option value="payee-desc">Sort: Payee Z→A</option>
+      <option value="amount-desc">Sort: Amount High→Low</option>
+      <option value="amount-asc">Sort: Amount Low→High</option>
+    </select>
+    <!-- Filters -->
+    <input id="q" placeholder="Search note/payee/category…" style="min-width:220px"/>
+    <select id="f-project"><option value="">All projects</option></select>
+    <select id="f-payee"><option value="">All payees</option></select>
+    <input id="f-from" type="date"/> <span class="muted">→</span> <input id="f-to" type="date"/>
+    <!-- Actions -->
+    <button id="btn-add">+ Add Row</button>
+    <button id="btn-export">⬇︎ Export JSONL</button>
+    <button id="btn-csv">⬇︎ Export CSV</button>
+  </div>
+
+  <table id="grid">
+    <thead>
+      <tr>
+        <th style="width:130px">Date</th>
+        <th>Payee</th>
+        <th>Project</th>
+        <th>Category</th>
+        <th class="right">Amount</th>
+        <th class="right">VAT</th>
+        <th>Note</th>
+        <th>Attachment</th>
+        <th style="width:140px">Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" class="right">Total</td>
+        <td class="right" id="ft-amount">0.00</td>
+        <td class="right" id="ft-vat">0.00</td>
+        <td colspan="3"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+<script>
+/* ---------- tiny helpers ---------- */
+const $ = s => document.querySelector(s);
+const enc = obj => JSON.stringify(obj);
+const dec = (txt) => JSON.parse(txt);
+const toJSONL = rows => rows.map(r=>JSON.stringify(r)).join("\n");
+const fromJSONL = (txt) => txt.trim()==="" ? [] : txt.split(/\n+/).map(JSON.parse);
+const money = n => (Number(n)||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+
+/* ---------- in-memory state ---------- */
+let PAYEES = [];    // [{id,name}]
+let PROJECTS = [];  // [{id,name}]
+let ROWS = [];      // [{...entry}]
+
+/* ---------- file loaders ---------- */
+async function loadText(file){ return await file.text(); }
+
+$("#inp-payees").addEventListener("change", async (e)=>{
+  const t = await loadText(e.target.files[0]); PAYEES = dec(t);
+  hydrateSelectors();
+});
+$("#inp-projects").addEventListener("change", async (e)=>{
+  const t = await loadText(e.target.files[0]); PROJECTS = dec(t);
+  hydrateSelectors();
+});
+$("#inp-ledger").addEventListener("change", async (e)=>{
+  const t = await loadText(e.target.files[0]); ROWS = fromJSONL(t);
+  render();
+});
+
+/* ---------- initial seeds (fallback if files not loaded) ---------- */
+(async function seedDefaults(){
+  try{
+    // Try fetch local seeds if opened from file:// it may fail silently; that's OK.
+    const pj = await fetch("./projects.json").then(r=>r.ok?r.json():[]);
+    const py = await fetch("./payees.json").then(r=>r.ok?r.json():[]);
+    PROJECTS = pj?.length? pj: PROJECTS;
+    PAYEES = py?.length? py: PAYEES;
+  }catch(e){}
+  hydrateSelectors();
+  // Try load sample ledger
+  try{
+    const ltxt = await fetch("./ledger_2025.jsonl").then(r=>r.ok?r.text():"");
+    if(ltxt) { ROWS = fromJSONL(ltxt); render(); }
+  }catch(e){}
+})();
+
+/* ---------- UI population ---------- */
+function hydrateSelectors(){
+  const pj = $("#f-project"); const py = $("#f-payee");
+  if(pj){ pj.innerHTML = `<option value="">All projects</option>` + PROJECTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join(""); }
+  if(py){ py.innerHTML = `<option value="">All payees</option>` + PAYEES.map(p=>`<option value="${p.name}">${p.name}</option>`).join(""); }
+}
+
+/* ---------- filtering & sorting ---------- */
+["#q","#f-project","#f-payee","#f-from","#f-to","#f-sort"].forEach(id=>{
+  $(id).addEventListener("input", render)
+});
+
+function applyFilters(rows){
+  const q = $("#q").value.trim().toLowerCase();
+  const pj = $("#f-project").value;
+  const py = $("#f-payee").value;
+  const d1 = $("#f-from").value;
+  const d2 = $("#f-to").value;
+  const sort = $("#f-sort").value;
+
+  // Filter
+  let filtered = rows.filter(r=>{
+    const txt = `${r.payee} ${r.category} ${r.note||""}`.toLowerCase();
+    if(q && !txt.includes(q)) return false;
+    if(pj && r.project!==pj) return false;
+    if(py && r.payee!==py) return false;
+    if(d1 && r.date < d1) return false;
+    if(d2 && r.date > d2) return false;
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a,b)=>{
+    if(sort==="date-asc") return (a.date||"").localeCompare(b.date||"");
+    if(sort==="date-desc") return (b.date||"").localeCompare(a.date||"");
+    if(sort==="payee-asc") return (a.payee||"").localeCompare(b.payee||"");
+    if(sort==="payee-desc") return (b.payee||"").localeCompare(a.payee||"");
+    if(sort==="amount-asc") return (Number(a.amount)||0) - (Number(b.amount)||0);
+    if(sort==="amount-desc") return (Number(b.amount)||0) - (Number(a.amount)||0);
+    return 0;
+  });
+
+  return filtered;
+}
+
+/* ---------- grid render ---------- */
+function render(){
+  const tbody = $("#grid tbody"); tbody.innerHTML="";
+  const rows = applyFilters(ROWS);
+  let sumA=0,sumV=0;
+  rows.forEach((r,idx)=>{
+    sumA += Number(r.amount)||0; sumV += Number(r.vat)||0;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="date" value="${r.date||""}" data-k="date"/></td>
+      <td>
+        <input list="payees" value="${r.payee||""}" data-k="payee" />
+        <datalist id="payees">${PAYEES.map(p=>`<option value="${p.name}">`).join("")}</datalist>
+      </td>
+      <td>
+        <select data-k="project">
+          ${['<option value=""></option>'].concat(PROJECTS.map(p=>`<option value="${p.id}">${p.name}</option>`)).join("")}
+        </select>
+      </td>
+      <td><input value="${r.category||""}" data-k="category"/></td>
+      <td class="right"><input type="number" step="0.01" value="${r.amount||0}" data-k="amount" style="text-align:right"/></td>
+      <td class="right"><input type="number" step="0.01" value="${r.vat||0}" data-k="vat" style="text-align:right"/></td>
+      <td><input value="${r.note||""}" data-k="note"/></td>
+      <td><input value="${r.attachment||""}" data-k="attachment" placeholder="path or URL"/></td>
+      <td>
+        <button class="row-btn" data-act="dup">⧉</button>
+        <button class="row-btn danger" data-act="del">✕</button>
+      </td>`;
+    tbody.appendChild(tr);
+    // set project selected
+    tr.querySelector('select[data-k="project"]').value = r.project||"";
+    tr.addEventListener("input", (ev)=>{
+      const el = ev.target; const k = el.dataset.k; if(!k) return;
+      ROWS[idx][k] = (k==="amount"||k==="vat") ? Number(el.value||0) : el.value;
+      if(k==="project") ROWS[idx][k] = el.value;
+      updateFooter();
+    });
+    tr.querySelector('[data-act="del"]').onclick = ()=>{ ROWS.splice(idx,1); render(); };
+    tr.querySelector('[data-act="dup"]').onclick = ()=>{
+      const copy = {...ROWS[idx], id: ROWS[idx].id+"-copy"};
+      ROWS.splice(idx+1, 0, copy); render();
+    };
+  });
+  $("#ft-amount").textContent = money(sumA);
+  $("#ft-vat").textContent = money(sumV);
+}
+function updateFooter(){ // recompute totals after inline edits
+  const rows = applyFilters(ROWS);
+  let sumA=0,sumV=0; rows.forEach(r=>{sumA+=Number(r.amount)||0; sumV+=Number(r.vat)||0});
+  $("#ft-amount").textContent = money(sumA);
+  $("#ft-vat").textContent = money(sumV);
+}
+
+/* ---------- actions ---------- */
+$("#btn-add").onclick = ()=>{
+  const id = "EXP-"+Date.now();
+  ROWS.push({id, date:new Date().toISOString().slice(0,10), payee:"", project:"", category:"", amount:0, currency:"THB", vat:0, note:"", attachment:""});
+  render();
+};
+
+function download(filename, text){
+  const blob = new Blob([text], {type: "text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
+$("#btn-export").onclick = ()=>{
+  download("ledger_export.jsonl", toJSONL(ROWS));
+};
+$("#btn-csv").onclick = ()=>{
+  const cols = ["id","date","payee","project","category","amount","currency","vat","note","attachment"];
+  const csv = [cols.join(",")].concat(ROWS.map(r=>cols.map(c=>{
+    let v = r[c] ?? ""; if(typeof v==="string") v = v.replace(/"/g,'""');
+    return `"${v}"`;
+  }).join(","))).join("\n");
+  download("ledger_export.csv", csv);
+};
+</script>
+</body>
+</html>
