@@ -1,52 +1,143 @@
-const { verifySignature } = require('../../server/security/verifySignature');
-const { canonicalJsonStringify } = require('../../server/security/canonicalJson');
-const { woStatePath, assertValidWoId, sanitizeWoId } = require('./security/woId');
+#!/usr/bin/env zsh
+# Claude Code Subagent Orchestrator (Enhanced Production Edition)
+# Purpose: Coordinate multiple subagents for tasks like code review
+# Usage: orchestrator.zsh <strategy> <task> <num_agents>
 
-const fs = require('fs').promises;
-const path = require('path');
-const http = require('http');
+set -euo pipefail
 
-async function writeStateFile(filePath, canonicalData) {
-  const tmpPath = `${filePath}.tmp`;
-  // Use canonical JSON for deterministic state writes (required for signature verification)
-  await fs.writeFile(tmpPath, canonicalJsonStringify(canonicalData) + '\n');
-  await fs.rename(tmpPath, filePath);
+BASE="${LUKA_SOT:-$HOME/02luka}"
+LOG_DIR="$BASE/logs"
+REPORT_DIR="$BASE/g/reports/system"
+mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+TMP_DIR="$(mktemp -d)"
+trap 'rm -r -f "$TMP_DIR"' EXIT
+
+log() {
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >&2
 }
 
-async function ensureSignedRequest(body) {
-  // Implementation for signature verification
-  // Placeholder for actual signature verification logic
-  return true;
+run_agent() {
+  local agent_id=$1
+  local task=$2
+  local tmpo="$TMP_DIR/out_${agent_id}.log"
+  local tmpe="$TMP_DIR/err_${agent_id}.log"
+  local rc=0
+  
+  # Safe execution with error handling (check_runner pattern)
+  {
+    set +e
+    eval "$task" >"$tmpo" 2>"$tmpe"
+    rc=$?
+    set -e
+  } || true
+  
+  echo "$rc" >"$TMP_DIR/rc_${agent_id}"
+  return 0
 }
 
-const server = http.createServer(async (req, res) => {
-  const { pathname } = new URL(req.url, `http://${req.headers.host}`);
+aggregate_results() {
+  local num_agents=$1
+  local strategy="$2"
+  local summary_json="$REPORT_DIR/claude_orchestrator_summary.json"
+  local winner="" best=0
+  local agents_json=""
+  
+  log "📊 Aggregating results from $num_agents agents..."
+  
+  # Build agents array
+  for i in $(seq 1 $num_agents); do
+    local out="$(cat "$TMP_DIR/out_${i}.log" 2>/dev/null || echo "")"
+    local err="$(cat "$TMP_DIR/err_${i}.log" 2>/dev/null || echo "")"
+    local rc="$(cat "$TMP_DIR/rc_${i}" 2>/dev/null || echo 1)"
+    
+    # Simple scoring: 100 - (exit_code * 10), min 0
+    local score=$(( rc == 0 ? 100 : ((100 - (rc * 10)) < 0 ? 0 : (100 - (rc * 10))) ))
+    
+    # Escape JSON special characters
+    out="${out//\"/\\\"}"
+    out="${out//$'\n'/\\n}"
+    err="${err//\"/\\\"}"
+    err="${err//$'\n'/\\n}"
+    
+    agents_json+="{\"id\":$i,\"exit_code\":$rc,\"score\":$score,\"stdout\":\"$out\",\"stderr\":\"$err\"}"
+    [[ $i -lt $num_agents ]] && agents_json+=","
+    
+    if (( score > best )); then
+      best=$score
+      winner="agent${i}"
+    fi
+  done
+  
+  # Write JSON summary
+  {
+    echo "{"
+    echo "  \"strategy\": \"$strategy\","
+    echo "  \"num_agents\": $num_agents,"
+    echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
+    echo "  \"winner\": \"$winner\","
+    echo "  \"best_score\": $best,"
+    echo "  \"agents\": [$agents_json]"
+    echo "}"
+  } > "$summary_json"
+  
+  # Validate JSON
+  if command -v jq >/dev/null 2>&1; then
+    jq . "$summary_json" > "$summary_json.tmp" 2>/dev/null && mv "$summary_json.tmp" "$summary_json" || true
+  fi
+  
+  # Log metrics
+  echo "$(date '+%F %T') | strategy=$strategy | agents=$num_agents | winner=$winner | score=$best" \
+    >> "$LOG_DIR/claude_subagent_metrics.log"
+  
+  log "✅ Results aggregated. Winner: $winner (score: $best)"
+  echo "$summary_json"
+}
 
-  if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    // Replay attack protection: verify signature
-    const ok = await ensureSignedRequest('');
-    if (!ok) {
-      return;
-    }
+usage() {
+  echo "Usage: $0 <strategy> <task> <num_agents>" >&2
+  echo "  strategy: review, compete, or collaborate" >&2
+  echo "  task: Command or script to run" >&2
+  echo "  num_agents: Number of agents (1-10)" >&2
+  exit 1
+}
 
-    const rawWoId = pathname.replace('/api/wo/', '');
+# Validate arguments
+[[ $# -lt 3 ]] && usage
 
-    // Further processing...
-  }
+STRATEGY="$1"
+TASK="$2"
+NUM_AGENTS="$3"
 
-  if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const rawWoId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
+# Validate strategy
+case "$STRATEGY" in
+  review|compete|collaborate)
+    ;;
+  *)
+    log "⚠️  Unknown strategy: $STRATEGY (using 'review')"
+    STRATEGY="review"
+    ;;
+esac
 
-    // SECURITY: Sanitize and validate WO ID before processing
-    let woId;
-    try {
-      woId = sanitizeWoId(rawWoId); // Sanitize and normalize
-    } catch (err) {
-      // Handle error
-    }
+# Validate num_agents
+if ! [[ "$NUM_AGENTS" =~ ^[0-9]+$ ]] || [[ "$NUM_AGENTS" -lt 1 ]] || [[ "$NUM_AGENTS" -gt 10 ]]; then
+  log "⚠️  Invalid num_agents: $NUM_AGENTS (using 2)"
+  NUM_AGENTS=2
+fi
 
-    // Further processing...
-  }
-});
+log "🔀 Orchestrator: strategy=$STRATEGY, task=$TASK, agents=$NUM_AGENTS"
 
-server.listen(3000);
+# Run agents in parallel
+for i in $(seq 1 $NUM_AGENTS); do
+  run_agent "$i" "$TASK" &
+done
+
+# Wait for all agents with safety guard
+wait || {
+  log "⚠️  Some subagents failed but continuing with partial results"
+}
+
+# Aggregate results
+aggregate_results "$NUM_AGENTS" "$STRATEGY"
+
+log "✅ Orchestration complete"
