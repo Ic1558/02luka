@@ -93,6 +93,11 @@ const server = http.createServer(async (req, res) => {
   // SECURITY FIX: /api/auth-token endpoint REMOVED
   // Token should be configured via environment variables for trusted agents only
   // Public exposure of auth token is a security vulnerability
+  
+  // Explicit check for removed endpoint (return 404 before auth check)
+  if (pathname === '/api/auth-token') {
+    return sendError(res, 404, 'Not found');
+  }
 
   // Auth check for all API endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
@@ -128,11 +133,21 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
+    const woId = pathname.replace('/api/wo/', '');
+    
+    // SECURITY: Validate WO ID FIRST (before any file operations)
+    // This ensures path traversal attempts return 400, not 404
     try {
-      const woId = pathname.replace('/api/wo/', '');
-      // SECURITY: Validate WO ID before processing
       assertValidWoId(woId);
-      
+    } catch (err) {
+      if (err.statusCode === 400) {
+        return sendError(res, 400, 'Invalid work order id');
+      }
+      return sendError(res, 500, err.message);
+    }
+    
+    // Now safe to read file (validation passed)
+    try {
       const data = await readStateFile(woId);
       
       if (!data) {
@@ -141,10 +156,8 @@ const server = http.createServer(async (req, res) => {
       
       return sendJSON(res, 200, data);
     } catch (err) {
-      // Validation error
-      if (err.statusCode === 400) {
-        return sendError(res, 400, 'Invalid work order id');
-      }
+      // File read errors (shouldn't happen after validation, but handle gracefully)
+      console.error('Read state file error:', err);
       return sendError(res, 500, err.message);
     }
   }
