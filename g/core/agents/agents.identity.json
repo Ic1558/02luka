@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "agents": [
+    {
+      "id": "gg",
+      "name": "GG Core",
+      "roles": ["orchestrator","nlp-routing"],
+      "inbox": "gg:requests",
+      "outbox": "gg:events",
+      "owner": "GG",
+      "device": "mac-mini",
+      "status": "active"
+    },
+    {
+      "id": "mary",
+      "name": "Mary COO",
+      "roles": ["dispatcher","ops"],
+      "inbox": "mary:requests",
+      "outbox": "mary:events",
+      "owner": "Mary",
+      "device": "mac-mini",
+      "status": "active"
+    },
+    {
+      "id": "lisa",
+      "name": "Lisa GUI",
+      "roles": ["gui","office","pdf"],
+      "inbox": "lisa:requests",
+      "outbox": "lisa:events",
+      "owner": "Lisa",
+      "device": "macbook-pro",
+      "status": "active"
+    },
+    {
+      "id": "cls",
+      "name": "CLS CI",
+      "roles": ["ci","validator","artifact"],
+      "inbox": "cls:requests",
+      "outbox": "cls:events",
+      "owner": "CLS",
+      "device": "github-actions",
+      "status": "active"
+    }
+  ]
+}
+

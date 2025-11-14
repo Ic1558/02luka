@@ -1,0 +1,33 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "02luka"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "files.exclude": {
+      "**/.DS_Store": true
+    },
+    "files.watcherExclude": {
+      "**/node_modules/**": true,
+      "**/logs/**": true,
+      "**/.tmp/**": true
+    },
+    "git.enabled": true,
+    "git.path": "git",
+    "git.autorefresh": true,
+    "git.detectSubmodules": true,
+    "git.defaultCloneDirectory": "${workspaceFolder}",
+    "github.gitProtocol": "ssh",
+    "files.autoSave": "afterDelay"
+  },
+  "extensions": {
+    "recommendations": [
+      "github.vscode-pull-request-github",
+      "github.copilot"
+    ]
+  }
+}

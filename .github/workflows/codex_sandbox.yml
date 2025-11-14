@@ -1,0 +1,42 @@
+name: codex_sandbox
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine sandbox scope
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git diff --name-only origin/main...HEAD > changed.txt
+          : > sandbox_files.txt
+          grep -Ev '^(reports/|docs/|telemetry/|analytics/)' changed.txt >> sandbox_files.txt || true
+          if [[ -s sandbox_files.txt ]]; then
+            echo "has_files=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Codex sandbox scope"
+              sed 's/^/- `&`/' sandbox_files.txt
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+            echo "### Codex sandbox" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Skipped (docs/telemetry-only changes)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Run codex sandbox check
+        if: steps.diff.outputs.has_files == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools/codex_sandbox_check.zsh

@@ -1,0 +1,50 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+# Skill: run_shell - Execute whitelisted shell commands
+# Input: {"skill":"run_shell","params":{"cmd":"command here"}}
+# Output: {"ok":true,"stdout":"...","stderr":"...","duration_ms":123}
+
+# Read JSON input
+INPUT=$(cat)
+CMD=$(echo "$INPUT" | jq -r '.params.cmd')
+
+START=$(date +%s%3N)
+
+# Whitelist check
+ALLOWED=false
+case "$CMD" in
+  *health_server_ctl.zsh*) ALLOWED=true;;
+  *deploy_dashboard.zsh*) ALLOWED=true;;
+  *update_docker_yaml.zsh*) ALLOWED=true;;
+  *redis_bridge_ctl.zsh*) ALLOWED=true;;
+  *launchctl*) ALLOWED=true;;
+  *docker\ *) ALLOWED=true;;
+  *git\ *) ALLOWED=true;;
+  *curl\ *) ALLOWED=true;;
+  *redis-cli*) ALLOWED=true;;
+  *andy\ *) ALLOWED=true;;
+  *clcctl*) ALLOWED=true;;
+esac
+
+if [ "$ALLOWED" = "false" ]; then
+  print -r -- '{"ok":false,"error":"command not whitelisted","cmd":"'"$CMD"'"}'
+  exit 0
+fi
+
+# Execute command
+STDOUT_FILE=$(mktemp)
+STDERR_FILE=$(mktemp)
+EXIT_CODE=0
+
+eval "$CMD" > "$STDOUT_FILE" 2> "$STDERR_FILE" || EXIT_CODE=$?
+
+STDOUT=$(<"$STDOUT_FILE")
+STDERR=$(<"$STDERR_FILE")
+rm -f "$STDOUT_FILE" "$STDERR_FILE"
+
+END=$(date +%s%3N)
+DURATION=$((END - START))
+
+# Output JSON
+print -r -- "{\"ok\":$([ $EXIT_CODE -eq 0 ] && echo true || echo false),\"exit_code\":$EXIT_CODE,\"stdout\":$(echo "$STDOUT" | jq -Rs .),\"stderr\":$(echo "$STDERR" | jq -Rs .),\"duration_ms\":$DURATION}"

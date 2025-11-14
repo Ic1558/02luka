@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=./schemas/rag_pipeline.schema.json
+
+# Phase 14.4 – Minimal Retrieval-Augmented Generation Pipeline
+# Classification: Tactical Activation Patch (TAP)
+# Owner: GG Core (02LUKA Automation)
+# Timestamp: 2025-11-08T00:00:00Z
+# WO-ID: WO-251107-PR-BUNDLE
+# Notes: Bootstrap wiring for query/probe scripts + telemetry hooks.
+
+metadata:
+  schema_version: "1.0.0"
+  created_by: GG_Agent_02luka
+  created_at: "2025-11-08T00:00:00Z"
+  source: config/rag_pipeline.yaml
+  x-notes: "Tier B schema posture: strict core, flexible routing/probes via x-*"
+
+pipeline:
+  name: phase14.4-minimal
+  description: "Lightweight RAG pipeline used for verification exercises."
+  embeddings:
+    model: text-embedding-3-small
+    batch_size: 16
+  retriever:
+    backend: vectordb
+    index_path: "${LUKA_HOME:-$HOME/02luka}/memory/vector/index"
+    top_k: 8
+  generator:
+    model: gpt-4.1-mini
+    temperature: 0.3
+
+probes:
+  interval_minutes: 30
+  command: "${LUKA_HOME:-$HOME/02luka}/tools/rag_probe.zsh"
+  timeout_seconds: 25
+
+logging:
+  level: info  # allowed: debug|info|warn|error
+
+telemetry:
+  namespace: rag
+  streams:
+    - rag.ctx.session
+    - rag.ctx.hit
+    - rag.ctx.miss
+    - rag.probe.health
+    - rag.probe.error

@@ -1,0 +1,1 @@
+/Users/icmini/02luka/tools/rnd_memory_hook.zsh

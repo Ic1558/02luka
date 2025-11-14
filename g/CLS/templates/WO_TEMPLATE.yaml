@@ -1,0 +1,47 @@
+# Work Order Template for CLS→CLC
+# Minimal payload section - bridge will wrap with metadata
+
+task: "Describe the task clearly (what needs to be done)"
+
+context:
+  project: "02luka"
+  area: "ops/governance/core/etc"
+  reason: "Why this change is needed"
+
+actions:
+  - type: "patch"  # or: create, delete, config, deploy
+    target: "path/to/file/or/component"
+    spec: "Detailed steps using safe, idempotent patterns"
+    safety:
+      - "mktemp → atomic mv"
+      - "backup before change"
+      - "validate after"
+  
+  - type: "verify"
+    target: "what to check"
+    expected: "success criteria"
+
+outputs:
+  - type: "report"
+    path: "g/reports/WO_RESULT_{{wo_id}}.md"
+    include:
+      - summary
+      - results
+      - evidence (SHA256, diffs, logs)
+      - next_steps
+  
+  - type: "log"
+    path: "logs/{{wo_id}}_execution.log"
+
+constraints:
+  - "Follow AI/OP-001 governance"
+  - "No direct edits outside CLC authority zones"
+  - "Idempotent - can run multiple times safely"
+  - "Evidence-based - verify before claiming success"
+  - "Atomic operations - all-or-nothing changes"
+
+evidence_required:
+  - "SHA256 checksums of changed files"
+  - "Backup snapshots before modification"
+  - "Success/failure validation logs"
+  - "Diff output showing changes"
