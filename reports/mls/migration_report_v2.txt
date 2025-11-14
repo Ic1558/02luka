@@ -1,0 +1,37 @@
+▶️ MLS Migration v2 (--plan)
+Source: /home/user/02luka/g/knowledge/mls_lessons.jsonl
+Started: 2025-11-10T20:26:43Z
+---
+Using pre-flattened: /home/user/02luka/g/knowledge/mls_lessons_flat.jsonl
+2025-11-05: Two-Phase GD Sync Deployment
+2025-11-05: Archive with README Pattern
+2025-11-05: Direct Complex Merge Approach
+2025-11-05: Automatic Conflict Resolution Strategy
+2025-11-05: Real-Time Monitoring Dashboard
+2025-11-05: Confusing R&D Autopilot with WO Executor
+2025-11-05: Execute Directly Instead of Fake Delegation
+2025-11-05: WO-251105-test_executor succeeded
+2025-11-05: WO-251105-test_auto_pickup succeeded
+2025-11-05: WO Executor Agent Built and Operational
+2025-11-05: Multi-Session Progress Tracking System
+2025-11-05: WO-251105-gdrive_dryrun succeeded
+2025-11-05: WO-251105-gdrive_fresh_start_hybrid succeeded
+2025-11-05: WO-251105-gdrive_twoway_sync_mobile succeeded
+2025-11-10: MLS Tool Restoration
+---
+📊 HISTOGRAMS
+
+By Type:
+  solution:        10
+  failure:          2
+  improvement:      2
+  pattern:          1
+
+By Day:
+  2025-11-05   14
+  2025-11-10    1
+
+---
+📈 SUMMARY
+Total: 15 | OK: 15 | Skipped: 0 | Duplicates: 0
+Finished: 2025-11-10T20:26:46Z
