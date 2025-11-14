@@ -353,7 +353,9 @@ Potential improvements for Phase 16+:
    ```
 
 2. **Clear cache** when index updates:
-   - Remove files inside `g/bridge/rag_cache/` via Finder or `trash` (mass-deletion command removed for safety).
+   ```bash
+   rm -rf g/bridge/rag_cache/*
+   ```
 
 3. **Monitor telemetry** for performance issues:
    ```bash
@@ -377,9 +379,11 @@ Potential improvements for Phase 16+:
 
 ---
 
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
-
 **Document Version:** 1.0.0
 **Last Updated:** 2025-11-06
 **Author:** GG Core via Claude Agent
 **Review Status:** Initial Implementation
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

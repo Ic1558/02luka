@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "scanned_at": "2025-11-13T16:41:01Z",
+  "host": "Ittipongs-Mac-mini.local",
+  "components": {
+    "launchagents": {
+      "count": 93,
+      "note": "Run 'launchctl list | grep com.02luka' for details"
+    },
+    "tools": {
+      "count": 192,
+      "path": "~/02luka/tools"
+    }
+  },
+  "status": "minimal_scan",
+  "note": "Full scan requires system_map_scan.zsh from System Truth Sync feature"
+}
