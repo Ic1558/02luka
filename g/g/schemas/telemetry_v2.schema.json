@@ -1,0 +1,380 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://02luka.dev/schemas/telemetry_v2.schema.json",
+  "title": "System Telemetry v2",
+  "description": "Unified telemetry schema for MCP health, delegation watchdog, and bridge self-checks",
+  "type": "object",
+  "required": [
+    "metadata",
+    "sources",
+    "timestamp"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "version",
+        "repository",
+        "component",
+        "phase"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^2\\.\\d+\\.\\d+$",
+          "description": "Schema version (2.x.x)"
+        },
+        "repository": {
+          "type": "string",
+          "enum": [
+            "02luka"
+          ],
+          "description": "Repository identifier"
+        },
+        "component": {
+          "type": "string",
+          "const": "system-telemetry-aggregator",
+          "description": "Component name"
+        },
+        "phase": {
+          "type": "string",
+          "const": "21.4",
+          "description": "Implementation phase"
+        },
+        "hostname": {
+          "type": "string",
+          "description": "Hostname where telemetry was collected"
+        },
+        "git_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "Git commit hash"
+        },
+        "uptime_seconds": {
+          "type": "number",
+          "minimum": 0,
+          "description": "System uptime in seconds"
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when telemetry was collected"
+    },
+    "sources": {
+      "type": "object",
+      "required": [
+        "mcp_health",
+        "delegation_watchdog",
+        "bridge_selfcheck"
+      ],
+      "properties": {
+        "mcp_health": {
+          "type": "object",
+          "required": [
+            "status",
+            "timestamp",
+            "services"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ],
+              "description": "Overall MCP health status"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "services": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "state"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Service name (e.g., com.02luka.mcp.fs)"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "running",
+                      "not running",
+                      "unknown"
+                    ],
+                    "description": "Service state"
+                  },
+                  "pid": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "description": "Process ID if running"
+                  },
+                  "last_exit_code": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "description": "Last exit code"
+                  },
+                  "error_logs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "maxItems": 5,
+                    "description": "Recent error log entries"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "delegation_watchdog": {
+          "type": "object",
+          "required": [
+            "status",
+            "timestamp",
+            "agents"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ]
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "agents": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "state"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "LaunchAgent name"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "running",
+                      "stopped",
+                      "failed",
+                      "unknown"
+                    ]
+                  },
+                  "pid": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 1
+                  },
+                  "last_exit_code": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "respawn_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of times respawned"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "bridge_selfcheck": {
+          "type": "object",
+          "required": [
+            "status",
+            "timestamp"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ok",
+                "degraded",
+                "error",
+                "unavailable"
+              ]
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "http_status": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 100,
+              "maximum": 599,
+              "description": "HTTP status code from health endpoint"
+            },
+            "response_time_ms": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Response time in milliseconds"
+            },
+            "service_health": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "containers": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "healthy": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "unhealthy": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "redis": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "connected",
+                        "disconnected",
+                        "unknown"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "error_message": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Error message if check failed"
+            }
+          }
+        }
+      }
+    },
+    "alerts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "severity",
+          "message",
+          "timestamp"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Alert rule name"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "description": "Alert severity level"
+          },
+          "message": {
+            "type": "string",
+            "description": "Alert message"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "mcp_health",
+              "delegation_watchdog",
+              "bridge_selfcheck"
+            ],
+            "description": "Source that triggered the alert"
+          },
+          "context": {
+            "type": "object",
+            "description": "Additional context for the alert"
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "overall_status": {
+          "type": "string",
+          "enum": [
+            "ok",
+            "degraded",
+            "error"
+          ],
+          "description": "Overall system health status"
+        },
+        "total_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "healthy_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "degraded_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "active_alerts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

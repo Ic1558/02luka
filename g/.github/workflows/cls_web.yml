@@ -1,0 +1,15 @@
+---
+name: CLS Web (deprecated wrapper)
+
+on:
+  workflow_call:
+    inputs:
+      ci_strict:
+        required: false
+        type: string
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "CLS Web is deprecated; use cls-ci.yml"

@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  probuild-postgres:
+    image: postgres:15-alpine
+    container_name: probuild-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: probuild
+      POSTGRES_USER: probuild
+      POSTGRES_PASSWORD: probuild_secure_password_change_me
+    ports:
+      - "5433:5432"  # Using 5433 to avoid conflicts
+    volumes:
+      - probuild_postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U probuild"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - probuild-network
+
+  # Redis Cache & Messaging (separate from existing Redis)
+  probuild-redis:
+    image: redis:7-alpine
+    container_name: probuild-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --port 6380
+    ports:
+      - "6380:6380"  # Using 6380 to avoid conflicts with existing Redis
+    volumes:
+      - probuild_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "6380", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - probuild-network
+
+  # Backend API
+  probuild-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: probuild-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DB_HOST: probuild-postgres
+      DB_PORT: 5432
+      DB_NAME: probuild
+      DB_USER: probuild
+      DB_PASSWORD: probuild_secure_password_change_me
+      REDIS_HOST: probuild-redis
+      REDIS_PORT: 6380
+      JWT_SECRET: change-this-to-a-secure-secret-key-in-production
+      JWT_EXPIRE: 7d
+      CORS_ORIGIN: http://localhost:3001
+    ports:
+      - "4001:4000"  # Exposed as 4001 to avoid conflicts
+    depends_on:
+      probuild-postgres:
+        condition: service_healthy
+      probuild-redis:
+        condition: service_healthy
+    volumes:
+      - probuild_api_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - probuild-network
+
+  # Frontend Web App
+  probuild-webapp:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:4001
+    container_name: probuild-webapp
+    restart: unless-stopped
+    ports:
+      - "3001:80"  # Exposed as 3001 to avoid conflicts
+    depends_on:
+      - probuild-api
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - probuild-network
+
+volumes:
+  probuild_postgres_data:
+    driver: local
+  probuild_redis_data:
+    driver: local
+  probuild_api_uploads:
+    driver: local
+
+networks:
+  probuild-network:
+    driver: bridge

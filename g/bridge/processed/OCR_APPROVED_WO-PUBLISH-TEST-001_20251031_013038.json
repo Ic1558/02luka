@@ -1,0 +1,13 @@
+{
+  "wo_id": "WO-PUBLISH-TEST-001",
+  "action": "publish",
+  "approved_by": "admin",
+  "approved_at": "2025-10-31T01:30:00+0700",
+  "files": [
+    {
+      "path": "/Users/icmini/02luka/tmp/test_guide.md",
+      "sha256": "3e2645930f79424468709c9b6351ad9d7c4d75d5d448b28575109de0bb5b28fd",
+      "title": "02luka System Overview"
+    }
+  ]
+}

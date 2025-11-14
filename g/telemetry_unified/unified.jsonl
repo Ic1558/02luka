@@ -4,3 +4,6 @@
 {"event":"rag.ctx.fallback","ts":"2025-11-14T07:32:40.3NZ","__source":"rag_query","__normalized":true,"reason:"missing_index""}
 {"event":"rag.ctx.answer","ts":"2025-11-14T07:32:40.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","hit_count:0","cache_used:0"}
 {"event":"rag.ctx.end","ts":"2025-11-14T07:32:40.3NZ","__source":"rag_query","__normalized":true,"latency_ms:171","cache_used:0"}
+{
+  "timestamp": "2025-11-06 05:13:28 +0700"
+}

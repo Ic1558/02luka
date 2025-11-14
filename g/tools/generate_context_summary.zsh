@@ -1,0 +1,246 @@
+#!/usr/bin/env zsh
+# Generate Context Summary for 02LUKA
+# Auto-generates comprehensive context summary every 6 hours
+# Phase 20 - Context Summary Automation
+
+set -eo pipefail
+
+# Parse arguments
+JSON_MODE=0
+for arg in "$@"; do
+  case "$arg" in
+    --json)
+      JSON_MODE=1
+      ;;
+    *)
+      ;;
+  esac
+done
+
+ROOT="${HOME}/02luka"
+REPORT_DIR="${ROOT}/g/reports/context"
+REPORT_FILE="${REPORT_DIR}/context_summary_$(date -u +%Y%m%d_%H%M%SZ).md"
+LATEST_FILE="${REPORT_DIR}/LATEST.md"
+SIGNALS_FILE="${REPORT_DIR}/signals.json"
+
+mkdir -p "$REPORT_DIR"
+
+# Only print banner in non-JSON mode
+if [ "$JSON_MODE" -eq 0 ]; then
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "📋 Generating Context Summary"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
+
+# Generate summary
+{
+  cat <<'HEADER'
+# Context Summary - 02LUKA System
+
+**Generated:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+**System:** 02LUKA Cognitive Architecture
+**Phase:** 20 - Hub Dashboard & CI/CD Automation
+
+---
+
+## Executive Summary
+
+This document provides a comprehensive context summary of the 02LUKA system, including:
+- CI/CD reliability improvements
+- PR automation status
+- Hub Dashboard monitoring
+- System health and status
+
+---
+
+## 1. CI/CD Status
+
+HEADER
+
+  echo "### Open Pull Requests"
+  echo ""
+  gh pr list --state open --limit 20 --json number,title,headRefName,state,labels,createdAt \
+    --jq '.[] | "- **PR #\(.number)**: \(.title)\n  - Branch: \(.headRefName)\n  - State: \(.state)\n  - Labels: \(.labels | map(.name) | join(", ") // "none")\n  - Created: \(.createdAt)"' || echo "  (Could not fetch PRs)"
+  
+  echo ""
+  echo "### Recent Workflow Runs"
+  echo ""
+  gh run list --limit 10 --json name,status,conclusion,createdAt,headBranch \
+    --jq '.[] | "- **\(.name)**: \(.status) - \(.conclusion // "running")\n  - Branch: \(.headBranch)\n  - Created: \(.createdAt)"' || echo "  (Could not fetch workflows)"
+
+  cat <<'SECTION'
+
+---
+
+## 2. Hub Dashboard Status
+
+SECTION
+
+  if [ -f "${ROOT}/g/metrics/hub.pid" ]; then
+    PID=$(cat "${ROOT}/g/metrics/hub.pid")
+    if ps -p "$PID" > /dev/null 2>&1; then
+      echo "- **Status**: ✅ Running (PID: $PID)"
+      echo "- **Dashboard**: http://127.0.0.1:8787"
+      echo "- **SSE Stream**: http://127.0.0.1:8787/hub/stream"
+    else
+      echo "- **Status**: ❌ Not running (stale PID)"
+    fi
+  else
+    echo "- **Status**: ⚠️  Not started"
+  fi
+
+  cat <<'SECTION'
+
+---
+
+## 3. System Health
+
+### Services
+SECTION
+
+  # Check LaunchAgents
+  echo ""
+  echo "#### LaunchAgents:"
+  for plist in ~/Library/LaunchAgents/com.02luka.*.plist; do
+    if [ -f "$plist" ]; then
+      LABEL=$(plutil -extract Label raw "$plist" 2>/dev/null || echo "unknown")
+      if launchctl list "$LABEL" >/dev/null 2>&1; then
+        echo "- ✅ $LABEL: Running"
+      else
+        echo "- ❌ $LABEL: Not running"
+      fi
+    fi
+  done
+
+  cat <<'SECTION'
+
+### Redis Connection
+SECTION
+
+  REDIS_URL="${LUKA_REDIS_URL:-redis://127.0.0.1:6379}"
+  REDIS_TIMEOUT="${REDIS_TIMEOUT:-5}"
+  REDIS_RETRIES="${REDIS_RETRIES:-3}"
+  REDIS_STATUS="failed"
+  
+  # Try to connect with timeout and retries
+  for i in $(seq 1 "$REDIS_RETRIES"); do
+    if timeout "$REDIS_TIMEOUT" redis-cli -u "$REDIS_URL" PING 2>/dev/null | grep -q PONG; then
+      REDIS_STATUS="ok"
+      break
+    else
+      if [ "$i" -lt "$REDIS_RETRIES" ]; then
+        echo "⚠️  Redis connection attempt $i/$REDIS_RETRIES failed, retrying..." >&2
+        sleep 1
+      fi
+    fi
+  done
+  
+  if [ "$REDIS_STATUS" = "ok" ]; then
+    echo "- **Status**: ✅ Connected"
+  else
+    echo "- **Status**: ⚠️  Connection failed (timeout: ${REDIS_TIMEOUT}s, retries: ${REDIS_RETRIES})"
+    echo "- **Note**: Continuing without Redis connection (graceful degradation)"
+  fi
+  
+  # Export Redis status for JSON output
+  export REDIS_STATUS
+
+  cat <<'SECTION'
+
+---
+
+## 4. Recent Changes
+
+SECTION
+
+  echo ""
+  echo "### Recent Commits (last 10):"
+  echo ""
+  git log --oneline -10 --format="- **%h**: %s (%ar)" || echo "  (Could not fetch commits)"
+
+  cat <<'SECTION'
+
+### Modified Files
+SECTION
+
+  echo ""
+  git status --short | head -20 | while read -r line; do
+    echo "- $line"
+  done || echo "  (No uncommitted changes)"
+
+  cat <<'FOOTER'
+
+---
+
+## 5. Quick Commands
+
+```bash
+# Hub Dashboard
+./tools/hub_start.sh          # Start
+./tools/hub_stop.sh           # Stop
+open http://127.0.0.1:8787    # Open
+
+# PR Management
+gh pr checks <PR#>            # Check CI status
+gh pr view <PR#>              # View PR details
+
+# System Health
+tail -f g/logs/hub.out.log    # Hub Dashboard logs
+ps aux | grep hub_server      # Check Hub process
+```
+
+---
+
+## 6. Next Actions
+
+- Monitor PRs #214-#218 for auto-merge
+- Verify Hub Dashboard is receiving events
+- Check CI status for open PRs
+- Review system health metrics
+
+---
+
+**Generated by:** tools/generate_context_summary.zsh
+**Schedule:** Every 6 hours (LaunchAgent)
+**Location:** g/reports/context/
+
+FOOTER
+
+} > "$REPORT_FILE"
+
+# Create/update LATEST.md symlink
+ln -sf "$(basename "$REPORT_FILE")" "$LATEST_FILE" 2>/dev/null || cp "$REPORT_FILE" "$LATEST_FILE"
+
+# Generate signals JSON (for workflow validation)
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+python3 - <<PY > "$SIGNALS_FILE"
+import json, sys, os
+
+signals = {
+    "redis": os.environ.get("REDIS_STATUS", "failed"),
+    "hub": "unknown",  # Could be enhanced to check hub status
+    "generated_at": "${NOW}",
+    "source": "tools/generate_context_summary.zsh"
+}
+
+json.dump(signals, sys.stdout, indent=2, ensure_ascii=False)
+PY
+
+if [ "$JSON_MODE" -eq 1 ]; then
+  # Output JSON to stdout
+  cat "$SIGNALS_FILE"
+else
+  # Output markdown summary
+  echo "✅ Context summary generated:"
+  echo "   Full: $REPORT_FILE"
+  echo "   Latest: $LATEST_FILE"
+  echo "   Signals: $SIGNALS_FILE"
+  echo ""
+  echo "📊 Summary:"
+  wc -l "$REPORT_FILE" | awk '{print "   Lines: " $1}'
+  du -h "$REPORT_FILE" | awk '{print "   Size: " $1}'
+  echo ""
+  echo "📡 Signals:"
+  cat "$SIGNALS_FILE" | jq '.' 2>/dev/null || cat "$SIGNALS_FILE"
+fi

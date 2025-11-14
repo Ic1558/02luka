@@ -2,7 +2,7 @@
 /**
  * WO Dashboard Server
  * API server for Work Order dashboard interactions
- * Fixed: Uses env vars for Redis password, includes /api/auth-token endpoint
+ * SECURITY FIXED: Path traversal prevention + auth-token endpoint removed
  */
 
 const http = require('http');
@@ -10,6 +10,7 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
+const { woStatePath, assertValidWoId } = require('./security/woId');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -47,23 +48,30 @@ function sendError(res, status, message) {
 
 async function readStateFile(woId) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    // SECURITY: Validate ID and ensure path stays within STATE_DIR
+    const filePath = woStatePath(STATE_DIR, woId);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (err) {
+    // Return null for file not found, but log validation errors
+    if (err.statusCode === 400) {
+      console.error('Invalid WO ID:', woId, err.message);
+    }
     return null;
   }
 }
 
 async function writeStateFile(woId, data) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    // SECURITY: Validate ID and ensure path stays within STATE_DIR
+    const filePath = woStatePath(STATE_DIR, woId);
     const tmpPath = `${filePath}.tmp`;
     await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
     console.error('Write state error:', err);
+    // Return false for validation errors too
     return false;
   }
 }
@@ -82,16 +90,20 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // GET /api/auth-token - FIXED: Added missing endpoint
-  if (req.method === 'GET' && pathname === '/api/auth-token') {
-    return sendJSON(res, 200, { token: AUTH_TOKEN });
+  // SECURITY FIX: /api/auth-token endpoint REMOVED
+  // Token should be configured via environment variables for trusted agents only
+  // Public exposure of auth token is a security vulnerability
+  
+  // Explicit check for removed endpoint (return 404 before auth check)
+  if (pathname === '/api/auth-token') {
+    return sendError(res, 404, 'Not found');
   }
 
-  // Auth check for other endpoints
+  // Auth check for all API endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
   
-  if (pathname.startsWith('/api/') && pathname !== '/api/auth-token') {
+  if (pathname.startsWith('/api/')) {
     if (token !== AUTH_TOKEN) {
       return sendError(res, 401, 'Unauthorized');
     }
@@ -122,18 +134,47 @@ const server = http.createServer(async (req, res) => {
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
     const woId = pathname.replace('/api/wo/', '');
-    const data = await readStateFile(woId);
     
-    if (!data) {
-      return sendError(res, 404, 'WO not found');
+    // SECURITY: Validate WO ID FIRST (before any file operations)
+    // This ensures path traversal attempts return 400, not 404
+    try {
+      assertValidWoId(woId);
+    } catch (err) {
+      if (err.statusCode === 400) {
+        return sendError(res, 400, 'Invalid work order id');
+      }
+      return sendError(res, 500, err.message);
     }
     
-    return sendJSON(res, 200, data);
+    // Now safe to read file (validation passed)
+    try {
+      const data = await readStateFile(woId);
+      
+      if (!data) {
+        return sendError(res, 404, 'WO not found');
+      }
+      
+      return sendJSON(res, 200, data);
+    } catch (err) {
+      // File read errors (shouldn't happen after validation, but handle gracefully)
+      console.error('Read state file error:', err);
+      return sendError(res, 500, err.message);
+    }
   }
 
   // POST /api/wo/:id/action - Perform action on WO
   if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
+    let woId;
+    try {
+      woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
+      // SECURITY: Validate WO ID before processing
+      assertValidWoId(woId);
+    } catch (err) {
+      if (err.statusCode === 400) {
+        return sendError(res, 400, 'Invalid work order id');
+      }
+      return sendError(res, 500, err.message);
+    }
     
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
@@ -206,11 +247,12 @@ async function start() {
   server.listen(PORT, () => {
     console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
     console.log(`📊 API endpoints:`);
-    console.log(`   GET  /api/auth-token`);
     console.log(`   GET  /api/wos`);
     console.log(`   GET  /api/wo/:id`);
     console.log(`   POST /api/wo/:id/action`);
     console.log(`   GET  /api/followup`);
+    console.log(`🔒 Security: Path traversal protection enabled`);
+    console.log(`🔒 Security: /api/auth-token endpoint removed (use env var)`);
   });
 }
 

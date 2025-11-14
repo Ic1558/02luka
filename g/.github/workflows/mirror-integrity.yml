@@ -1,0 +1,103 @@
+name: Mirror Integrity Monitor
+
+on:
+  schedule:
+    # 04:00 Asia/Bangkok (UTC+7) = 21:00 UTC
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to check (default: https://ops.theedges.work)'
+        required: false
+        default: 'https://ops.theedges.work'
+        type: string
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "mirror-integrity"
+  cancel-in-progress: true
+
+jobs:
+  check-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: ./.github/actions/node-setup
+        with:
+          install-dependencies: 'false'
+
+      - name: Create output directories
+        run: |
+          mkdir -p dist/ops
+          mkdir -p g/state
+          mkdir -p g/logs
+          mkdir -p g/state/alerts
+
+      - name: Run Mirror Integrity Check
+        run: |
+          echo "🔍 Running mirror integrity check..."
+          node run/verify_mirror_integrity.cjs
+        env:
+          MIRROR_BASE_URL: ${{ github.event.inputs.base_url || 'https://ops.theedges.work' }}
+
+      - name: Verify Integrity Output
+        run: |
+          echo "📊 Verifying integrity files..."
+          ls -la dist/ops/
+          echo ""
+          echo "📄 Integrity JSON content:"
+          head -20 dist/ops/integrity.json
+          echo ""
+          echo "📊 Integrity TSV content:"
+          head -10 dist/ops/integrity.tsv
+          echo ""
+          echo "🚨 Alert files:"
+          ls -la g/state/alerts/ || echo "No alerts generated"
+          echo ""
+          echo "📝 Alert log:"
+          tail -5 g/logs/ops_alerts.log || echo "No alert log"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/ops
+
+  deploy-integrity:
+    runs-on: ubuntu-latest
+    needs: check-integrity
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify Integrity Deployment
+        run: |
+          echo "🚀 Integrity Monitor deployed to: ${{ steps.deployment.outputs.page_url }}"
+          echo "📋 Available endpoints:"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/integrity.json"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/integrity.tsv"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/status.html"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/jobs.json"
+          echo ""
+          echo "🎯 Integrity Monitor Features:"
+          echo "  - Daily URL verification (10 URLs)"
+          echo "  - SHA256 hash validation"
+          echo "  - Latency monitoring"
+          echo "  - Critical failure alerts"
+          echo "  - Historical tracking"
+          echo "  - Phase 6 alert integration"
