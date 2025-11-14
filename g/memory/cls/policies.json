@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "defaults": { "autoApproveThreshold": 0.85, "askThreshold": 0.6 },
-  "rules": [
-    { "id": "low-risk-list", "when": { "command": "^ls|cat|echo$" }, "decision": "allow", "confidence": 0.95 },
-    { "id": "write-in-safe-zone", "when": { "path": "^/Users/.*/02luka/(g|memory|CLS)/" }, "decision": "allow", "confidence": 0.9 },
-    { "id": "deny-sensitive", "when": { "path": "^/(etc|System|Library)/" }, "decision": "deny", "confidence": 0.99 }
-  ]
-}

@@ -1,9 +1,0 @@
-{
-  "alert_id": "alert_1763013517932_https___ops_theedges_work_docs_",
-  "severity": "critical",
-  "type": "mirror_integrity_failure",
-  "url": "https://ops.theedges.work/docs/",
-  "error": "HTTP 502",
-  "timestamp": "2025-11-13T05:58:37.932Z",
-  "status_code": 502
-}

@@ -1,22 +1,5 @@
 {
-  "updated_at": "2025-11-14T19:03:12Z",
+  "updated_at": "2025-11-14T21:18:16Z",
   "owner": "Operations Command Center",
-  "items": [
-    {
-      "id": "WO-TEST",
-      "title": "WO-TEST",
-      "description": "Work Order: WO-TEST",
-      "goal": "",
-      "progress": 0,
-      "status": "Open",
-      "priority": "Medium",
-      "due_date": "",
-      "owner": "Work Order System",
-      "source": "work_order",
-      "tags": [
-        "Work Order"
-      ],
-      "notes": ""
-    }
-  ]
+  "items": []
 }
