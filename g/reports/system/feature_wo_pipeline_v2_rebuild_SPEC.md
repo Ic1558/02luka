@@ -353,10 +353,14 @@ docs/
    ```
 
 3. **Remove scripts:**
-   - Delete `~/02luka/g/tools/wo_pipeline/` via Finder or `trash` (no destructive shell commands).
+   ```bash
+   rm -rf ~/02luka/g/tools/wo_pipeline/
+   ```
 
 4. **Clear state:**
-   - Remove `~/02luka/g/followup/state/*.json` by moving the files to trash after confirming backups.
+   ```bash
+   rm -rf ~/02luka/g/followup/state/*.json
+   ```
 
 ---
 
@@ -374,8 +378,6 @@ docs/
 - State file backup/restore
 
 ---
-
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 ## References
 

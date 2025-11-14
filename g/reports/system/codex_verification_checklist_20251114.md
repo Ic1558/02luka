@@ -58,15 +58,15 @@ grep -r -i "password\|secret\|key\|token\|api_key" --include="*.zsh" --include="
 **Result:** [To be filled by automated analysis]
 
 ### Destructive Operations
-- [ ] No destructive mass-delete commands without safety checks
+- [ ] No `rm -rf` commands without safety checks
 - [ ] No `git reset --hard` without backup
 - [ ] No destructive file operations
 - [ ] No irreversible deletions
 
 **Verification Method:**
 ```bash
-# Use the sandbox checker to surface destructive patterns
-tools/codex_sandbox_check.zsh --list-only
+# Check for destructive patterns
+git log --all --grep="codex\|Codex\|CODEX" -p | grep -E "rm -rf|git reset --hard|rm -r|unlink"
 ```
 
 **Result:** [To be filled by automated analysis]
@@ -220,4 +220,3 @@ git log --all --grep="codex\|Codex\|CODEX" -p | grep -E "set -e|trap|error|fail"
 **Checklist Created:** 2025-11-14  
 **Status:** Ready for automated analysis
 
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

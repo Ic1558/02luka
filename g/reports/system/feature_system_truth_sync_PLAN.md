@@ -263,9 +263,7 @@ _Verified Against: launchctl, agents/, tools/, bridge/inbox/, g/followup/state/_
    grep -q "AUTO_RUNTIME_START" /tmp/02luka.md.new || exit 1
    
    # Atomic replace
-   TMP_FILE="/tmp/02luka.md.new"
-   TARGET_FILE="$HOME/02luka/02luka.md"
-   mv "$TMP_FILE" "$TARGET_FILE"
+   mv /tmp/02luka.md.new ~/02luka/02luka.md
    ```
 
 **Critical Safety:**
@@ -666,5 +664,3 @@ jq empty g/reports/sessions/session_$(date +%Y%m%d).ai.json # Valid JSON
 
 **Plan Status:** ✅ APPROVED - Ready for WO Creation  
 **Next Step:** Create WO for CLC to execute
-
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

@@ -384,8 +384,11 @@ ls -ld followup/state
 **If Recovery Fails:**
 
 1. **Use Full Backup:**
-   - Remove `~/02luka/g` via Finder or `trash` (no shell-based destructive wipes).
-   - Copy `~/02luka/g_backup_before_recovery` back into place with `cp -R` or Finder copy.
+   ```bash
+   # Restore entire repo from backup
+   rm -rf ~/02luka/g
+   cp -R ~/02luka/g_backup_before_recovery ~/02luka/g
+   ```
 
 2. **Use WO Pipeline Backup:**
    ```bash
@@ -414,8 +417,6 @@ ls -ld followup/state
 - Design safe sync system with guardrails
 
 ---
-
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 **Status:** ⚠️ **CRITICAL - Execute Immediately**
 

@@ -680,13 +680,10 @@ launchctl unload ~/Library/LaunchAgents/com.02luka.wo_executor.plist
 launchctl unload ~/Library/LaunchAgents/com.02luka.followup_tracker.plist
 
 # Remove processors
-# (move processor directories to trash; no destructive shell commands)
-# - ~/02luka/agents/apply_patch_processor
-# - ~/02luka/agents/json_wo_processor
-# - ~/02luka/agents/wo_executor
+rm -rf ~/02luka/agents/{apply_patch_processor,json_wo_processor,wo_executor}
 
 # Clear state
-# (delete followup/state JSON files via Finder after backup)
+rm -rf ~/02luka/g/followup/state/*.json
 ```
 
 ### If Phase 3 Guardrail Causes Issues:
@@ -714,5 +711,3 @@ rm ~/Library/LaunchAgents/com.02luka.wo_pipeline_guardrail.plist
 **Ready for Execution:** ✅  
 **Approval Required:** Boss  
 **Estimated Completion:** Nov 14, 09:30
-
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

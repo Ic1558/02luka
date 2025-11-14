@@ -270,12 +270,11 @@
 # Unload LaunchAgents
 launchctl unload ~/Library/LaunchAgents/com.02luka.*.plist
 
-# Remove new files (move directories to trash; no destructive shell commands)
-# - ~/02luka/agents/apply_patch_processor
-# - ~/02luka/agents/json_wo_processor
-# - ~/02luka/agents/wo_executor
+# Remove new files
+rm -rf ~/02luka/agents/{apply_patch_processor,json_wo_processor,wo_executor}
 
-# Clear state (trash the JSON files in followup/state)
+# Clear state
+rm -rf ~/02luka/g/followup/state/*.json
 ```
 
 ### If Guardrail Causes Issues:
@@ -310,8 +309,6 @@ launchctl unload ~/Library/LaunchAgents/com.02luka.wo_pipeline_guardrail.plist
 - Git workflow changes (Phase 7, future work)
 
 ---
-
-<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 ## 📝 Key Insight
 
