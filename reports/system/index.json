@@ -1,0 +1,34 @@
+{
+  "generated_at": "2025-11-12T09:28:13Z",
+  "latest": {
+    "daily_digest": null,
+    "weekly_recap": "g/reports/system/system_governance_WEEKLY_20251112.md",
+    "certificates": {
+      "phase5": "g/reports/phase5_governance/DEPLOYMENT_CERTIFICATE_phase5_6.1_20251112.md",
+      "phase6": "g/reports/phase6_paula/DEPLOYMENT_CERTIFICATE_phase6_simplified_20251112.md"
+    }
+  },
+  "recent": {
+    "daily_digests": [],
+    "weekly_recaps": [
+      {
+        "date": "20251112",
+        "path": "g/reports/system/system_governance_WEEKLY_20251112.md"
+      }
+    ]
+  },
+  "adaptive_insights": {
+    "summary": {
+      "trends_count": 0,
+      "anomalies_count": 0,
+      "recommendations_count": 0,
+      "last_updated": "2025-11-12T09:28:09Z"
+    },
+    "latest_file": "mls/adaptive/insights_20251112.json"
+  },
+  "metadata": {
+    "total_daily_digests": 0,
+    "total_weekly_recaps": 1,
+    "total_certificates": 2
+  }
+}
