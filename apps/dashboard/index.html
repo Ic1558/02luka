@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Operations Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+      }
+
+      header {
+        padding: 1.5rem 2rem;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        backdrop-filter: blur(8px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.875rem;
+      }
+
+      nav {
+        margin-top: 1rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      nav a {
+        color: #38bdf8;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      nav a:hover,
+      nav a:focus {
+        background: rgba(56, 189, 248, 0.12);
+        color: #f8fafc;
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        place-items: center;
+        padding: 4rem 1.5rem;
+      }
+
+      .hero {
+        max-width: 720px;
+        text-align: center;
+        background: rgba(15, 23, 42, 0.75);
+        padding: 3rem 2rem;
+        border-radius: 24px;
+        box-shadow: 0 18px 70px rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .hero p {
+        font-size: 1.125rem;
+        line-height: 1.7;
+        color: rgba(226, 232, 240, 0.8);
+      }
+
+      footer {
+        padding: 2rem;
+        text-align: center;
+        color: rgba(148, 163, 184, 0.8);
+        font-size: 0.875rem;
+      }
+
+      @media (max-width: 600px) {
+        header {
+          padding: 1.5rem 1.25rem;
+        }
+
+        main {
+          padding: 3rem 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Operations Dashboard</h1>
+      <nav>
+        <a href="index.html" aria-current="page">Overview</a>
+        <a href="followup.html">Follow-Up Tracker</a>
+      </nav>
+    </header>
+    <main>
+      <div class="hero">
+        <h2>Welcome</h2>
+        <p>
+          Use the navigation above to open the Follow-Up Tracker and review the
+          latest commitments that require human confirmation. Additional
+          dashboard modules will appear here as they graduate from prototype to
+          production.
+        </p>
+      </div>
+    </main>
+    <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
+  </body>
+</html>
