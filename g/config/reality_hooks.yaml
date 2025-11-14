@@ -1,0 +1,18 @@
+version: 1
+hooks:
+  - id: wo_dashboard_reality
+    name: "WO Dashboard + Services reality check"
+    script: "tools/reality_hooks/wo_dashboard_reality_check.zsh"
+    description: >
+      Verifies that the running dashboard exposes /api/wos, /api/services, and /api/mls
+      with the expected JSON shape.
+    tags:
+      - dashboard
+      - services
+      - mls
+      - e2e
+    requires:
+      - jq
+      - curl
+    environment:
+      DASHBOARD_URL: "http://localhost:8080"
