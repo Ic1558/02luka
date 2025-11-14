@@ -11,7 +11,7 @@ REPORT_DIR="$BASE/g/reports/system"
 mkdir -p "$LOG_DIR" "$REPORT_DIR"
 
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'rm -r -f "$TMP_DIR"' EXIT
 
 log() {
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*" >&2

@@ -353,9 +353,7 @@ Potential improvements for Phase 16+:
    ```
 
 2. **Clear cache** when index updates:
-   ```bash
-   rm -rf g/bridge/rag_cache/*
-   ```
+   - Remove files inside `g/bridge/rag_cache/` via Finder or `trash` (mass-deletion command removed for safety).
 
 3. **Monitor telemetry** for performance issues:
    ```bash
@@ -378,6 +376,8 @@ Potential improvements for Phase 16+:
 - Backward-compatible with Phase 14.4 ripgrep fallback
 
 ---
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 **Document Version:** 1.0.0
 **Last Updated:** 2025-11-06

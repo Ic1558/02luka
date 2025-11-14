@@ -877,11 +877,11 @@ git revert <pr-commit>
 launchctl unload ~/Library/LaunchAgents/com.02luka.*.plist
 rm ~/Library/LaunchAgents/com.02luka.*.plist
 
-# Remove scripts
-rm -rf ~/02luka/g/tools/wo_pipeline/
+# Remove scripts (move directory to trash, never run destructive shell commands)
+# - ~/02luka/g/tools/wo_pipeline/
 
-# Clear state
-rm -rf ~/02luka/g/followup/state/*.json
+# Clear state (trash the JSON files after backups)
+# - ~/02luka/g/followup/state/*.json
 ```
 
 ---
@@ -910,3 +910,5 @@ rm -rf ~/02luka/g/followup/state/*.json
 **PR Template:** Complete  
 **Skeleton Code:** Provided  
 **Timeline:** 2.5-3 hours
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

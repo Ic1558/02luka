@@ -122,9 +122,18 @@ after_task({"task": "test", "result": "success"})
 
 **Test 3: Metrics Collection**
 ```bash
-# Update token usage in context
-jq '.token_usage.total = 1000 | .token_usage.saved = 400' \
-  shared_memory/context.json > /tmp/ctx.json && mv /tmp/ctx.json shared_memory/context.json
+# Update token usage in context without destructive moves
+python - <<'PY'
+import json, pathlib
+ctx_path = pathlib.Path("shared_memory/context.json")
+data = json.loads(ctx_path.read_text())
+data.setdefault("token_usage", {})
+data["token_usage"]["total"] = 1000
+data["token_usage"]["saved"] = 400
+tmp_path = ctx_path.with_suffix(".tmp")
+tmp_path.write_text(json.dumps(data, indent=2))
+tmp_path.replace(ctx_path)
+PY
 
 # Collect metrics
 tools/memory_metrics.zsh
@@ -168,11 +177,12 @@ tail -1 metrics/memory_usage.ndjson | jq '.saved_pct'
 launchctl unload ~/Library/LaunchAgents/com.02luka.memory.metrics.plist
 
 # Remove files
-rm -f ~/Library/LaunchAgents/com.02luka.memory.metrics.plist
-rm -f ~/02luka/tools/gc_memory_sync.sh
-rm -f ~/02luka/tools/memory_metrics.zsh
-rm -f ~/02luka/tools/shared_memory_health.zsh
-rm -rf ~/02luka/agents/cls_bridge
+# (move these to trash / delete via Finder; destructive shell commands removed)
+# - ~/Library/LaunchAgents/com.02luka.memory.metrics.plist
+# - ~/02luka/tools/gc_memory_sync.sh
+# - ~/02luka/tools/memory_metrics.zsh
+# - ~/02luka/tools/shared_memory_health.zsh
+# - ~/02luka/agents/cls_bridge
 
 # Preserve data
 # (keep metrics/ for analysis)
@@ -198,6 +208,8 @@ rm -rf ~/02luka/agents/cls_bridge
 - SLO-1: Health check passes 100%
 - SLO-2: Metrics written ≥ 1 record/hour
 - SLO-3: Token saved/total ≥ 40% (Week 1)
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 ---
 

@@ -150,9 +150,9 @@ tools/memory_sync.sh get | jq '.agents.rnd'
 # Unload LaunchAgent
 launchctl unload ~/Library/LaunchAgents/com.02luka.memory.hub.plist
 
-# Remove files
-rm -f ~/Library/LaunchAgents/com.02luka.memory.hub.plist
-rm -rf ~/02luka/agents/memory_hub
+# Remove files (performed via Finder or trash — no destructive shell commands)
+# - Delete ~/Library/LaunchAgents/com.02luka.memory.hub.plist
+# - Delete ~/02luka/agents/memory_hub after validating backups
 
 # Revert Mary/R&D hooks
 # (restore original scripts)
@@ -218,6 +218,8 @@ rm -rf ~/02luka/agents/memory_hub
 3. **Week 2:**
    - Optimize performance
    - Advanced features
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
    - Full automation
 
 ---

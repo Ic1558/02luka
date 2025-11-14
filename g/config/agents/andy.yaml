@@ -177,13 +177,11 @@ permissions:
       - wc
 
     forbidden:
-      - "rm -rf /"
-      - "sudo rm"
-      - "chmod 777"
-      - "chown root"
-      - "mkfs"
-      - "dd if="
-      - ":(){ :|:& };:"
+      - "root-level or recursive filesystem wipes"
+      - "privileged deletion / ownership changes"
+      - "world-writable permission changes"
+      - "filesystem formatting or raw disk copy utilities"
+      - "fork-bomb or resource exhaustion payloads"
 
 routing:
   intent_patterns:

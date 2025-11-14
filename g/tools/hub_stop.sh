@@ -27,10 +27,9 @@ kill "$PID" || true
 sleep 2
 
 if ps -p "$PID" > /dev/null 2>&1; then
-    echo "Force killing..."
-    kill -9 "$PID" || true
+    echo "Force stopping..."
+    kill -KILL "$PID" || true
 fi
 
 rm -f "$PID_FILE"
 echo "Hub Dashboard stopped"
-

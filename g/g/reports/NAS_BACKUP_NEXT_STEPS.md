@@ -24,7 +24,7 @@
 **What it does:**
 - Asks for confirmation
 - Removes Synology NAS (7A316888...) from Time Machine destinations
-- Requires your password (sudo)
+- Prompts for your admin password (interactive, no inline elevation)
 - Takes ~5 seconds
 
 **After running it, you'll have:**
@@ -78,6 +78,8 @@ Just run:
 ```
 
 Then you're done! ✅
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->
 
 ---
 

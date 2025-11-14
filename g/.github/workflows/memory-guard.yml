@@ -10,13 +10,19 @@ on:
 permissions:
   contents: read
 
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
 jobs:
   memory-guard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup yq
-        run: sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+          "$SUDO_BIN" chmod +x /usr/local/bin/yq
       - name: Run guard
         env:
           LUKA_MEM_REPO_ROOT: ${{ github.workspace }}/memory

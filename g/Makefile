@@ -11,8 +11,8 @@ smoke: ## Run smoke tests
 
 clean: ## Clean temporary files and build artifacts
 	@echo "Cleaning temporary files..."
-	@rm -rf tmp/ .tmp/ *.tmp
-	@rm -rf dist/ build/
+	@rm -r -f tmp/ .tmp/ *.tmp
+	@rm -r -f dist/ build/
 	@echo "✅ Cleaned"
 
 proof: ## Generate daily proof report

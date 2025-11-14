@@ -1,0 +1,64 @@
+{
+  "patterns": [
+    {
+      "id": "rm_rf",
+      "description": "Recursive delete wiping arbitrary paths",
+      "regex": "r\\s*m\\s*-\\s*r\\s*f"
+    },
+    {
+      "id": "mv_root",
+      "description": "Moving or replacing root-level paths",
+      "regex": "m\\s*v\\s*/"
+    },
+    {
+      "id": "superuser_exec",
+      "description": "Inline privilege escalation",
+      "regex": "s\\s*u\\s*d\\s*o"
+    },
+    {
+      "id": "kill_9",
+      "description": "Force killing processes with signal 9",
+      "regex": "k\\s*i\\s*l\\s*l\\s*-\\s*9"
+    },
+    {
+      "id": "fork_bomb",
+      "description": "Classic bash fork bomb payload",
+      "regex": ":\\(\\)\\s*\\{\\s*:.*\\|\\s*:.*\\};:"
+    },
+    {
+      "id": "chmod_world",
+      "description": "Setting world-writable permissions",
+      "regex": "c\\s*h\\s*m\\s*o\\s*d\\s*7\\s*7\\s*7"
+    },
+    {
+      "id": "dd_dev",
+      "description": "Raw disk copy from /dev",
+      "regex": "d\\s*d\\s+if=\\/dev\\/[\\w\\/*]+"
+    },
+    {
+      "id": "mkfs",
+      "description": "Filesystem formatting utilities",
+      "regex": "m\\s*k\\s*f\\s*s"
+    },
+    {
+      "id": "shutdown_cmd",
+      "description": "System shutdown commands",
+      "regex": "(?m)^[[:space:]]*shutdown(?:\\s+|$)"
+    },
+    {
+      "id": "reboot_cmd",
+      "description": "System reboot commands",
+      "regex": "(?m)^[[:space:]]*reboot(?:\\s+|$)"
+    },
+    {
+      "id": "curl_pipe_sh",
+      "description": "Remote install pipelines using curl | sh",
+      "regex": "curl[^\\n]*\\|\\s*sh"
+    },
+    {
+      "id": "python_os_remove",
+      "description": "Inline python os.remove payloads",
+      "regex": "python\\s+-c\\s+\\\"import\\s+os;?\\s*os\\.remove"
+    }
+  ]
+}

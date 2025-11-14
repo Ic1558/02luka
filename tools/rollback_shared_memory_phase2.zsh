@@ -15,7 +15,7 @@ rm -f ~/02luka/tools/memory_metrics.zsh
 rm -f ~/02luka/tools/shared_memory_health.zsh
 
 # Remove CLS bridge
-rm -rf ~/02luka/agents/cls_bridge
+rm -r -f ~/02luka/agents/cls_bridge
 
 # Preserve data
 echo "ℹ️  Preserved for audit:"

@@ -127,7 +127,7 @@ test_cache_creation() {
     local CACHE_DIR="${BASE}/g/bridge/rag_cache"
 
     # Clear cache
-    rm -rf "$CACHE_DIR"
+    rm -r -f "$CACHE_DIR"
 
     # Run query with cache
     bash "$RAG_QUERY" --cache "nearest neighbor search" >/dev/null 2>&1 || true

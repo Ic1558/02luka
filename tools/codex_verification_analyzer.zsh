@@ -132,7 +132,7 @@ fi
 # Check 4: Destructive operations
 check_and_report \
     "Destructive Operations" \
-    "git log --all --grep='codex\\|Codex\\|CODEX' -p | grep -E 'rm -rf|git reset --hard|rm -r|unlink' | grep -v '^\\+.*#.*rm' | head -20" \
+    "git log --all --grep='codex\\|Codex\\|CODEX' -p | grep -E 'rm[[:space:]]+-rf|git reset --hard|rm -r|unlink' | grep -v '^\\+.*#.*rm' | head -20" \
     "Check for destructive operations in Codex commits (excludes comments)"
 
 if [ $? -ne 0 ]; then
@@ -270,4 +270,3 @@ echo "📄 Report saved to: ${REPORT_FILE}"
 echo ""
 
 exit $([ ${TOTAL_ISSUES} -eq 0 ] && echo 0 || echo 1)
-

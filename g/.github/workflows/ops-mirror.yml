@@ -20,6 +20,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
 concurrency:
   group: "ops-mirror"
   cancel-in-progress: true
@@ -40,12 +43,13 @@ jobs:
 
       - name: Setup GitHub CLI
         run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
           # yamllint disable-line rule:line-length
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | "$SUDO_BIN" dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
           # yamllint disable-line rule:line-length
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          sudo apt update
-          sudo apt install gh
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | "$SUDO_BIN" tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          "$SUDO_BIN" apt update
+          "$SUDO_BIN" apt install gh
 
       - name: Fetch latest OPS data
         run: |

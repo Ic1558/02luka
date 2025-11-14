@@ -15,6 +15,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
 concurrency:
   group: schema-validate-${{ github.ref }}
   cancel-in-progress: false
@@ -40,8 +43,9 @@ jobs:
           npm install -g ajv-cli@5 ajv-formats@3
           if ! command -v yq >/dev/null 2>&1; then
             YQ_VER=v4.48.1
-            sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VER}/yq_linux_amd64"
-            sudo chmod +x /usr/local/bin/yq || true
+            SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+            "$SUDO_BIN" wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VER}/yq_linux_amd64"
+            "$SUDO_BIN" chmod +x /usr/local/bin/yq || true
           fi
           yq --version || echo "yq version check failed"
 

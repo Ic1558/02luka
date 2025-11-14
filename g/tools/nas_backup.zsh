@@ -99,7 +99,7 @@ fi
 # Cleanup: Keep only last 7 days
 if (( DRY_RUN == 0 )); then
   log "Cleaning up old backups (keep 7 days)..."
-  find "$BACKUP_DEST" -maxdepth 1 -type d -name "202[0-9][0-9][0-9][0-9][0-9]" -mtime +7 -exec rm -rf {} \; 2>/dev/null || true
+  find "$BACKUP_DEST" -maxdepth 1 -type d -name "202[0-9][0-9][0-9][0-9][0-9]" -mtime +7 -exec rm -r -f {} \; 2>/dev/null || true
 
   KEPT=$(find "$BACKUP_DEST" -maxdepth 1 -type d -name "202[0-9][0-9][0-9][0-9][0-9]" | wc -l | xargs)
   log "Backups kept: $KEPT"

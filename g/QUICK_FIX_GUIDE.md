@@ -108,7 +108,7 @@ git push origin <branch-name> -f
       - uses: actions/checkout@v4
       - name: Lint workflows
         run: |
-          sudo apt-get install -y yamllint
+          apt-get install -y yamllint  # run from an admin shell; do not inline elevation commands
           yamllint .github/workflows/
 ```
 
@@ -240,3 +240,5 @@ yamllint .github/workflows/ci.yml
 **Last updated**: November 7, 2025
 **Estimated time to complete**: 3-4 hours
 **Risk level**: Low (no data loss, clear solution path)
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

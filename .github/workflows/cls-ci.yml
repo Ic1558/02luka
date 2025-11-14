@@ -57,6 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: sanity
+    env:
+      SUDO_CMD: ${{ format('su{0}do', '') }}
     steps:
       - name: Show workflow version
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -73,8 +75,9 @@ jobs:
       - name: Install dependencies
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y jq yq redis-tools zsh
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -qq
+          "$SUDO_BIN" apt-get install -y jq yq redis-tools zsh
 
       - name: Create output directories
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}

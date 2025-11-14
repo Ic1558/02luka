@@ -1,6 +1,11 @@
 #!/usr/bin/env zsh
 # Remove Synology NAS from Time Machine destinations
-# (Requires sudo password)
+# (Requires admin privileges — run from an elevated shell)
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "Please rerun from an administrator shell (root privileges required)."
+  exit 1
+fi
 
 echo "=== Remove Synology from Time Machine ==="
 echo ""
@@ -20,8 +25,8 @@ if [[ "$confirm" != "y" ]]; then
 fi
 
 echo ""
-echo "Removing Synology destination (requires password)..."
-sudo tmutil removedestination 7A316888-DD45-43F3-96B6-037FA2BD84FA
+echo "Removing Synology destination (interactive)..."
+tmutil removedestination 7A316888-DD45-43F3-96B6-037FA2BD84FA
 
 echo ""
 echo "✅ Done! Remaining destinations:"
