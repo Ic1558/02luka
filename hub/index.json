@@ -1,33 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-14T07:23:06.000Z",
+    "created_at": "2025-11-14T07:39:49.992Z",
     "source": "hub_autoindex.cjs",
     "total": 22,
     "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
   },
   "items": [
     {
-      "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
-      "bytes": 9575,
-      "kind": "md",
-      "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
-      "summary": "# Phase 20: Hub Dashboard Auto-Index & Memory Sync\n\n## Executive Summary\n\n**Status**: ✅ DEPLOYED & TESTED\n**PR**: #220 (https://github.com/Ic1558/02luka/pull/220)\n**Branch**: `claude/phase-20-hub-dashboard-autoindex`\n**Deployment Time**: ~15 minutes (including ES module fixes)\n\n**What Was Built**:\n- Auto-indexer scanning 02luka-memory repository\n- Health monitoring system for index staleness\n- Lau",
-      "meta": {
-        "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync - Complete",
-        "date": "2025-11-07",
-        "type": "deployment",
-        "category": "infrastructure",
-        "phase": "20",
-        "status": "deployed",
-        "tags": "[hub, indexer, automation, memory-repo, redis, health-monitoring]"
-      },
-      "sha256": "4347ed21c10c32fccf8f8c79db7eeea01248d3186fe322833d558af033a75fd5"
-    },
-    {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -44,7 +26,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -61,7 +43,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -78,7 +60,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -95,7 +77,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -112,7 +94,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -129,7 +111,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-14T07:23:03.511Z",
+      "mtime": "2025-11-14T07:39:44.420Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -139,7 +121,7 @@
     },
     {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
@@ -149,7 +131,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 229,
       "kind": "md",
       "title": "Integration Test Ping",
@@ -159,7 +141,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -169,7 +151,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -179,7 +161,7 @@
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -196,7 +178,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -212,7 +194,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -222,7 +204,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -237,7 +219,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -253,7 +235,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -270,7 +252,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -286,7 +268,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -296,7 +278,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -306,7 +288,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-14T07:23:03.510Z",
+      "mtime": "2025-11-14T07:39:44.419Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -321,6 +303,24 @@
         "tags": "[mcp, cursor, configuration, troubleshooting]"
       },
       "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
+    },
+    {
+      "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
+      "mtime": "2025-11-14T07:39:44.419Z",
+      "bytes": 9575,
+      "kind": "md",
+      "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
+      "summary": "# Phase 20: Hub Dashboard Auto-Index & Memory Sync\n\n## Executive Summary\n\n**Status**: ✅ DEPLOYED & TESTED\n**PR**: #220 (https://github.com/Ic1558/02luka/pull/220)\n**Branch**: `claude/phase-20-hub-dashboard-autoindex`\n**Deployment Time**: ~15 minutes (including ES module fixes)\n\n**What Was Built**:\n- Auto-indexer scanning 02luka-memory repository\n- Health monitoring system for index staleness\n- Lau",
+      "meta": {
+        "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync - Complete",
+        "date": "2025-11-07",
+        "type": "deployment",
+        "category": "infrastructure",
+        "phase": "20",
+        "status": "deployed",
+        "tags": "[hub, indexer, automation, memory-repo, redis, health-monitoring]"
+      },
+      "sha256": "4347ed21c10c32fccf8f8c79db7eeea01248d3186fe322833d558af033a75fd5"
     }
   ]
 }
