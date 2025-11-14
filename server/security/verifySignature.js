@@ -18,10 +18,29 @@ function normalizePayload(payload) {
   return typeof payload === 'string' ? payload : JSON.stringify(payload);
 }
 
-function verifySignature({ headers = {}, payload } = {}) {
+function normalizePath(pathname) {
+  if (typeof pathname !== 'string' || pathname.length === 0) {
+    return null;
+  }
+
+  // Strip any accidental query string fragments to ensure consistent signing
+  const queryIndex = pathname.indexOf('?');
+  return queryIndex === -1 ? pathname : pathname.slice(0, queryIndex);
+}
+
+function verifySignature({ headers = {}, payload, method, path } = {}) {
   const secret = process.env.LUKA_API_SECRET;
   if (!secret) {
     const err = new Error('Server misconfiguration: missing LUKA_API_SECRET');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const normalizedMethod = typeof method === 'string' ? method.toUpperCase() : '';
+  const normalizedPath = normalizePath(path);
+
+  if (!normalizedMethod || !normalizedPath) {
+    const err = new Error('Server misconfiguration: missing Luka signature context');
     err.statusCode = 500;
     throw err;
   }
@@ -49,7 +68,7 @@ function verifySignature({ headers = {}, payload } = {}) {
   }
 
   const payloadString = normalizePayload(payload);
-  const baseString = `${timestampHeader}.${payloadString}`;
+  const baseString = `${timestampHeader}.${normalizedMethod}.${normalizedPath}.${payloadString}`;
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(baseString)

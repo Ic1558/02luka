@@ -98,7 +98,12 @@ const server = http.createServer(async (req, res) => {
 
   const ensureSignedRequest = async (payload = '') => {
     try {
-      verifySignature({ headers: req.headers, payload });
+      verifySignature({
+        headers: req.headers,
+        payload,
+        method: req.method,
+        path: pathname
+      });
       return true;
     } catch (err) {
       const status = err.statusCode || 401;
