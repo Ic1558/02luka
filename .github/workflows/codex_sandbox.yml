@@ -48,4 +48,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tools/codex_sandbox_check.zsh
+          # Explicitly call zsh since the script has #!/usr/bin/env zsh shebang
+          # and zsh was just installed in the previous step
+          zsh tools/codex_sandbox_check.zsh
