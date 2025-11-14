@@ -10,6 +10,8 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
+const { validateWorkOrderId, resolveWoStatePath } = require('../../../server/security/validateWoId');
+const { canonicalJsonStringify } = require('../../../server/security/canonicalJson');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -47,7 +49,7 @@ function sendError(res, status, message) {
 
 async function readStateFile(woId) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    const filePath = resolveWoStatePath(STATE_DIR, woId);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (err) {
@@ -57,9 +59,10 @@ async function readStateFile(woId) {
 
 async function writeStateFile(woId, data) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    const filePath = resolveWoStatePath(STATE_DIR, woId);
     const tmpPath = `${filePath}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
+    const payload = `${canonicalJsonStringify(data)}\n`;
+    await fs.writeFile(tmpPath, payload, 'utf8');
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
@@ -82,9 +85,9 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // GET /api/auth-token - FIXED: Added missing endpoint
+  // GET /api/auth-token - Disabled for security
   if (req.method === 'GET' && pathname === '/api/auth-token') {
-    return sendJSON(res, 200, { token: AUTH_TOKEN });
+    return sendError(res, 403, 'Disabled');
   }
 
   // Auth check for other endpoints
@@ -121,27 +124,39 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    const woId = pathname.replace('/api/wo/', '');
-    const data = await readStateFile(woId);
-    
-    if (!data) {
-      return sendError(res, 404, 'WO not found');
+    try {
+      const woId = validateWorkOrderId(pathname.replace('/api/wo/', ''));
+      const data = await readStateFile(woId);
+
+      if (!data) {
+        return sendError(res, 404, 'WO not found');
+      }
+
+      return sendJSON(res, 200, data);
+    } catch (err) {
+      const statusCode = err.statusCode || 500;
+      return sendError(res, statusCode, err.message);
     }
-    
-    return sendJSON(res, 200, data);
   }
 
   // POST /api/wo/:id/action - Perform action on WO
-  if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-    
+  const actionMatch = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/);
+  if (req.method === 'POST' && actionMatch) {
+    let woId;
+    try {
+      woId = validateWorkOrderId(actionMatch[1]);
+    } catch (err) {
+      const statusCode = err.statusCode || 500;
+      return sendError(res, statusCode, err.message);
+    }
+
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', async () => {
       try {
         const { action } = JSON.parse(body);
         const currentData = await readStateFile(woId);
-        
+
         if (!currentData) {
           return sendError(res, 404, 'WO not found');
         }
@@ -158,28 +173,30 @@ const server = http.createServer(async (req, res) => {
         currentData.ts_update = new Date().toISOString();
         
         const success = await writeStateFile(woId, currentData);
-        
+
         if (success) {
           // Publish to Redis if available
           if (redisClient) {
             try {
-              await redisClient.publish('wo:update', JSON.stringify({
+              const eventPayload = canonicalJsonStringify({
                 wo_id: woId,
                 action: action,
                 status: currentData.status,
                 ts: currentData.ts_update
-              }));
+              }, 0);
+              await redisClient.publish('wo:update', eventPayload);
             } catch (err) {
               console.error('Redis publish error:', err);
             }
           }
-          
+
           return sendJSON(res, 200, { success: true, wo: currentData });
         } else {
           return sendError(res, 500, 'Failed to update WO');
         }
       } catch (err) {
-        return sendError(res, 400, err.message);
+        const statusCode = err.statusCode || 400;
+        return sendError(res, statusCode, err.message);
       }
     });
     return;
