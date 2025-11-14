@@ -34,4 +34,28 @@ jobs:
         run: |
           mkdir -p memory && echo "placeholder" > memory/.keep
           # Explicitly call zsh since the script has #!/usr/bin/env zsh shebang
-          zsh ./tools/check_memory_guard.zsh
+          
+          # Capture output for job summary
+          if zsh ./tools/check_memory_guard.zsh 2>&1 | tee /tmp/memory_guard_output.txt; then
+            {
+              echo "## ✅ Memory Guard Check Passed"
+              echo ""
+              echo "All memory files are within size limits and comply with guard rules."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            EXIT_CODE=$?
+            {
+              echo "## ❌ Memory Guard Check Failed"
+              echo ""
+              echo "Memory files exceed size limits or violate guard rules."
+              echo ""
+              echo "**Violations found:**"
+              cat /tmp/memory_guard_output.txt | grep -E "❌|FAIL|WARN" | sed 's/^/- /' || echo "- See logs for details"
+              echo ""
+              echo "**Next steps:**"
+              echo "1. Review the violations in the logs above"
+              echo "2. Reduce file sizes or remove denied patterns"
+              echo "3. See \`config/memory_guard.yaml\` for thresholds"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $EXIT_CODE
+          fi
