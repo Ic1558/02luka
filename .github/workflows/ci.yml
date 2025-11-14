@@ -63,12 +63,13 @@ jobs:
         run: |
           # Only check files that are added or modified (not deleted)
           # Use --diff-filter=AM to exclude deleted files
-          BAD=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/[^/]+\.md$' || true)
-          if [ -n "$BAD" ]; then
+          # Find any markdown files under g/reports that are NOT in the approved subdirs
+          OTHER=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/.*\.md$' | grep -Ev '^g/reports/(phase5_governance|phase6_paula|system)/' || true)
+          if [ -n "$OTHER" ]; then
             echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system}/ only"
             echo ""
             echo "Files in wrong location:"
-            echo "$BAD" | sed 's/^/  - /'
+            echo "$OTHER" | sed 's/^/  - /'
             echo ""
             echo "Please move to appropriate subdirectory:"
             echo "  - Phase 5 reports → g/reports/phase5_governance/"
@@ -82,7 +83,7 @@ jobs:
               echo "Reports must be in subdirectories, not directly in \`g/reports/\`"
               echo ""
               echo "### Files in wrong location:"
-              echo "$BAD" | sed 's/^/- /'
+              echo "$OTHER" | sed 's/^/- /'
               echo ""
               echo "### Required structure:"
               echo "- Phase 5 reports → \`g/reports/phase5_governance/\`"

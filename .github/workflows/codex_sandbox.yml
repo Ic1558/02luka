@@ -19,7 +19,25 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin main --depth=1
-          git diff --name-only origin/main...HEAD > changed.txt
+          
+          # Check if there's a merge base between origin/main and HEAD
+          # If not, the branches have no common ancestor (e.g., orphan branch)
+          MERGE_BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
+          
+          if [[ -z "$MERGE_BASE" ]]; then
+            # No merge base - compare against empty tree or use all files in HEAD
+            echo "⚠️  No merge base found between origin/main and HEAD"
+            echo "   This may be an orphan branch or unrelated history"
+            echo "   Checking all files in HEAD instead..."
+            git diff --name-only --diff-filter=AM 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD > changed.txt || {
+              # Fallback: list all tracked files
+              git ls-tree -r --name-only HEAD > changed.txt
+            }
+          else
+            # Normal case: compare against merge base
+            git diff --name-only origin/main...HEAD > changed.txt
+          fi
+          
           : > sandbox_files.txt
           grep -Ev '^(reports/|docs/|telemetry/|analytics/)' changed.txt >> sandbox_files.txt || true
           if [[ -s sandbox_files.txt ]]; then
