@@ -22,7 +22,7 @@ const AUTH_TOKEN = process.env.DASHBOARD_AUTH_TOKEN || 'dashboard-token-change-m
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || 'gggclukaic';
 const REDIS_URL = process.env.REDIS_URL || `redis://:${REDIS_PASSWORD}@127.0.0.1:6379`;
 
-const STATE_DIR = path.join(BASE, 'g/followup/state');
+const STATE_DIR = path.join(BASE, 'followup/state');
 const FOLLOWUP_DATA = path.join(BASE, 'g/apps/dashboard/data/followup.json');
 
 let redisClient = null;
