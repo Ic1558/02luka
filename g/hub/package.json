@@ -1,9 +1,0 @@
-{
-  "name": "hub-autoindex",
-  "version": "1.0.0",
-  "type": "module",
-  "private": true,
-  "dependencies": {
-    "redis": "^4.0.0"
-  }
-}

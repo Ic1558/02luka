@@ -48,4 +48,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tools/codex_sandbox_check.zsh
+          # Explicitly call zsh since the script has #!/usr/bin/env zsh shebang
+          # and zsh was just installed in the previous step
+          
+          # Capture output for job summary
+          if zsh tools/codex_sandbox_check.zsh 2>&1 | tee /tmp/sandbox_output.txt; then
+            {
+              echo "## ✅ Codex Sandbox Check Passed"
+              echo ""
+              echo "No banned command patterns found in changed files."
+              echo ""
+              echo "**Files checked:**"
+              cat sandbox_files.txt | sed 's/^/- `&`/'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            EXIT_CODE=$?
+            {
+              echo "## ❌ Codex Sandbox Check Failed"
+              echo ""
+              echo "Banned command patterns detected in changed files."
+              echo ""
+              echo "**Violations found:**"
+              cat /tmp/sandbox_output.txt | grep -E "❌|violation|banned" | sed 's/^/- /' || echo "- See logs for details"
+              echo ""
+              echo "**Files checked:**"
+              cat sandbox_files.txt | sed 's/^/- `&`/'
+              echo ""
+              echo "**Next steps:**"
+              echo "1. Review the violations in the logs above"
+              echo "2. Remove or replace banned command patterns"
+              echo "3. See \`docs/CODEX_SANDBOX_MODE.md\` for guidelines"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $EXIT_CODE
+          fi

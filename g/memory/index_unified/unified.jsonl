@@ -1,5 +1,0 @@
-{"__manifest":"unified","generated_at":"2025-11-06T18:30:00+0700","notes":"seed-minimal"}
-{"id":"seed:phase14.1","source":"PHASE_14_1_FEDERATION.md","ts":"2025-11-06T18:30:00+0700","tags":["phase14","federation"],"text":"Phase 14.1 federates local+cloud+legacy into SOT. Deliverables: rag_index_federation.zsh, rag_unification.yaml, manifest.json. Result: unified index created."}
-{"id":"seed:phase14.2","source":"PHASE_14_2_TELEMETRY.md","ts":"2025-11-06T18:30:00+0700","tags":["phase14","telemetry"],"text":"Phase 14.2 defines canonical telemetry schema and tools/telemetry_sync.zsh to normalize events (rag.ctx.*, rag.probe.*, bridge.sync.*)."}
-{"id":"seed:phase14.3","source":"PHASE_14_3_BRIDGE.md","ts":"2025-11-06T18:30:00+0700","tags":["phase14","bridge"],"text":"Phase 14.3 bridges unified knowledge to MCP Memory/Search with idempotent batching and LaunchAgent scheduling."}
-{"id":"seed:phase14.4","source":"PHASE_14_4_VERIFICATION.md","ts":"2025-11-06T18:30:00+0700","tags":["phase14","rag"],"text":"Phase 14.4 implements RAG-driven contextual responses with telemetry coverage and probe hit-rate/latency metrics."}

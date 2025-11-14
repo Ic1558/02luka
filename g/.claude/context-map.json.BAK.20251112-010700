@@ -1,9 +1,0 @@
-{
-  "project:root": "~/02luka",
-  "project:tools": "~/02luka/tools",
-  "project:reports": "~/02luka/g/reports",
-  "mls:ledger": "~/02luka/mls/ledger",
-  "mls:today": "~/02luka/mls/ledger/${TODAY}.jsonl",
-  "code:hooks": "~/02luka/tools/claude_hooks",
-  "code:templates": "~/02luka/.claude/templates"
-}

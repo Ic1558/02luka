@@ -1,1 +1,0 @@
-/Users/icmini/02luka/tools/mary_memory_hook.zsh

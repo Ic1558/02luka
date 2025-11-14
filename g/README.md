@@ -1,69 +1,96 @@
-<!-- badges:start -->
-[![Auto-Index OK](https://img.shields.io/badge/Auto--Index-OK-brightgreen)](./.github/workflows/auto-index.yml) [![Phase15 OK](https://img.shields.io/badge/Phase15-OK-brightgreen)](./.github/workflows/phase15-quick-health.yml)
-<!-- badges:end -->
+# 02luka - Autonomous Systems Repository
 
-# 02luka Automation Console
-
-![CLS CI](https://github.com/Ic1558/02luka/actions/workflows/cls-ci.yml/badge.svg)
-![LaunchAgent Self-Recovery Check](https://github.com/Ic1558/02luka/actions/workflows/launchd-selfcheck.yml/badge.svg?branch=main)
-
-## Dashboard Service
-- LaunchAgent: `~/Library/LaunchAgents/com.02luka.dashboard.plist`
-- Port: `4100` (ENV: HOST=127.0.0.1, PORT=4100)
-- Health: `GET http://127.0.0.1:4100/health` → `ok`
-- NLP intents: `deploy dashboard`, `andy status`, `แอนดี้ สถานะ`
-
-## Local OpenRouter-Style UI
-The repository now includes a console that mirrors OpenRouter’s model chooser and
-function runner. To launch it locally or expose it on your own domain, follow
-[`docs/LOCAL_CONSOLE.md`](docs/LOCAL_CONSOLE.md) for prerequisites, startup
-commands, and reverse-proxy guidance.
-
-Quick Ops:
+**Created:** 2025-11-05
+**Status:** 70% Complete (Roadmap Acceleration Phase)
+**Owner:** CLC (Claude Code)
 
 ---
 
-## ⚙️ CI at a Glance
+## 🎯 Overview
 
-| Feature | Command | Description |
-|----------|----------|-------------|
-| 🔁 Re-run checks | `./tools/dispatch_quick.zsh ci:rerun <PR#>` | Manually trigger CI |
-| 🧩 Event bus | `./tools/dispatch_quick.zsh ci:bus:rerun <PR#>` | Redis-based rerun |
-| 🕒 Watcher | `./tools/dispatch_quick.zsh ci:watch:on` | Auto-reruns every 5 min |
-| 🤖 Auto-merge | `./tools/dispatch_quick.zsh auto:merge <PR#>` | Merge when green |
+This repository contains the operational data, reports, tools, and telemetry for the 02luka autonomous systems project.
 
-> See full guide: `g/reports/ci/CI_AUTOMATION_RUNBOOK.md`
+**Current Progress:**
+- ✅ Phase 1: Local Truth Scanner (100%)
+- ✅ Phase 2: R&D Autopilot (100%)
+- 🟡 Phase 3: Local AI Integration (50%)
+- 🟡 Phase 4: Application Slices (25%)
+- ⏳ Phase 5: Agent Communication (0%)
 
-## 🤖 Phase15 Operations
+---
 
-**Autonomous Knowledge Router (AKR), Vector Search (FAISS/RAG), Health Monitoring**
+## 📁 Structure
 
-| Feature | Details |
-|---------|---------|
-| 🏥 Daily Health | Runs at 08:15 ICT via `phase15-quick-health.yml` |
-| 🛡️ Maintenance Mode | Set `MAINTENANCE_MODE=1` to pause daily health checks |
-| 📊 SLO Targets | Routing ≥95% accuracy, <100ms latency, ≥90% delegation success |
-| 📦 Artifacts | `g/reports/phase15/`, `hub/`, `g/telemetry_unified/` |
+```
+02luka/g/
+├── apps/           # Applications (Dashboard v2.0.2, etc.)
+├── inbox/          # Incoming work items
+├── knowledge/      # Knowledge base and documentation
+├── logs/           # System logs
+├── manuals/        # System manuals
+├── progress/       # Progress tracking
+├── reports/        # Generated reports (sessions, improvements, roadmaps)
+├── roadmaps/       # Project roadmaps
+├── state/          # System state files
+├── telemetry/      # Telemetry and metrics
+└── tools/          # Operational tools
+```
 
-> See full guide: [`docs/PHASE15_OPERATIONS.md`](docs/PHASE15_OPERATIONS.md)
+---
 
-<!-- metrics:start -->
+## 🚀 Quick Start
 
-### Claude Code Metrics 202511
+### Prerequisites
+- macOS (tested on Darwin 25.0.0)
+- Homebrew
+- Python 3
+- Node.js
+- Ollama (for Phase 3)
 
-# Claude Code Metrics 202511
-- Generated: 2025-11-11T17:42:16Z
-- plan_mode_usage: (stub)
-- hooks: pre_commit=OK quality_gate=OK verify_deployment=OK
-- subagents_used: (stub)
-- deployments_success_rate: (stub)
-- rollback_frequency: (stub)
-<!-- metrics:end -->
+### Key Tools
+- **Agent Status:** `~/02luka/tools/agent_status.zsh`
+- **Scanner Status:** `~/02luka/tools/scanner_status.zsh`
+- **Autopilot Status:** `~/02luka/tools/autopilot_status.zsh`
+- **Dashboard:** `http://127.0.0.1:8766`
 
-<!-- router:start -->
-## WO Router + Dispatch (Phase 2.5–2.6)
-- `/do` → ENTRY → Mary dispatcher → CLC (fallback shell)
-- `/clc` → CLC inbox (ready for SIP patches)
-- `/local` → shell inbox (Redis `shell` channel)
-- Logs: `logs/wo_drop_history/history.log`
-<!-- router:end -->
+---
+
+## 📊 Key Metrics (as of 2025-11-05)
+
+- **Agents:** 4 (scanner, autopilot, wo_executor, json_wo_processor)
+- **LaunchAgents:** 20+ monitored
+- **WOs Executed:** 4 (100% success rate)
+- **Applications:** 1 (Dashboard v2.0.2)
+- **Local AI Models:** 1 (qwen2.5:0.5b, 397 MB)
+
+---
+
+## 📝 Recent Achievements
+
+**2025-11-05: Roadmap Acceleration**
+- Advanced from 40% → 70% in single session
+- Completed Phase 2 (R&D Autopilot)
+- Deployed Ollama local AI (Phase 3: 50%)
+- Deployed Dashboard application (Phase 4: 25%)
+- Fixed agent thrashing (90x reduction in launches)
+
+---
+
+## 📚 Documentation
+
+- **Roadmaps:** `roadmaps/ROADMAP_*.md`
+- **Reports:** `reports/`
+- **Manuals:** `manuals/`
+- **Knowledge Base:** `knowledge/`
+
+---
+
+## 🔗 Related Repositories
+
+- **Main System:** Not in Git (lives at `~/02luka/`)
+- **This Repo:** Operational data only (`~/02luka/g/`)
+
+---
+
+**Last Updated:** 2025-11-05
+**Version:** 2.0.2
