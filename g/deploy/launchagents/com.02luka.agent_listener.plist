@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LUKA_HOME</key>
+		<string>/Users/icmini/LocalProjects/02luka_local_g/g</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>REDIS_PASSWORD</key>
+		<string></string>
+		<key>REDIS_URL</key>
+		<string>redis://127.0.0.1:6379</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.02luka.agent_listener</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/python3</string>
+		<string>/Users/icmini/LocalProjects/02luka_local_g/g/agent_listener.py</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/logs/agent/listener.err</string>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/logs/agent/listener.log</string>
+	<key>WorkingDirectory</key>
+	<string>/Users/icmini/LocalProjects/02luka_local_g/g</string>
+</dict>
+</plist>

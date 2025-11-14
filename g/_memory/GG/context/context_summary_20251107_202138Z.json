@@ -1,0 +1,525 @@
+{
+  "meta": {
+    "generated_at": "2025-11-07T20:21:38Z",
+    "revision": "f67de55",
+    "source_script": "tools/generate_context_summary.zsh",
+    "phase": 20
+  },
+  "ci": {
+    "open_prs": [
+      {
+        "createdAt": "2025-11-07T20:15:45Z",
+        "headRefName": "claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ",
+        "labels": [],
+        "number": 219,
+        "state": "OPEN",
+        "title": "Resolve conflicts across 10 pull requests"
+      },
+      {
+        "createdAt": "2025-11-07T00:18:20Z",
+        "headRefName": "claude/is-this-ma-011CUsXdrfcnR12jih7SvPeS",
+        "labels": [],
+        "number": 218,
+        "state": "OPEN",
+        "title": "Clarify Session Purpose and Requirements"
+      },
+      {
+        "createdAt": "2025-11-07T00:11:00Z",
+        "headRefName": "claude/fix-ocr-validation-telemetry-011CUsYubsSeeV6r8Dhzeaay",
+        "labels": [],
+        "number": 217,
+        "state": "OPEN",
+        "title": "OCR validation hardening with SHA256 and telemetry"
+      },
+      {
+        "createdAt": "2025-11-07T00:07:14Z",
+        "headRefName": "claude/filter-rescan-prs-011CUsY5Vzt7zroAz6CsuDMq",
+        "labels": [],
+        "number": 216,
+        "state": "OPEN",
+        "title": "Filter and rescan pull requests in repository"
+      },
+      {
+        "createdAt": "2025-11-07T00:06:24Z",
+        "headRefName": "claude/fix-ocr-consumer-bugs-011CUsYKxQm2zgTPeRpu6Cr2",
+        "labels": [],
+        "number": 215,
+        "state": "OPEN",
+        "title": "Claude/fix ocr consumer bugs 011 c us y kx qm2zg t pe rpu6 cr2"
+      },
+      {
+        "createdAt": "2025-11-07T00:00:26Z",
+        "headRefName": "claude/scan-heredoc-path-fix-011CUsXop67ohC47HDDt4rce",
+        "labels": [],
+        "number": 214,
+        "state": "OPEN",
+        "title": "Fix heredoc syntax and path issues"
+      },
+      {
+        "createdAt": "2025-11-06T23:50:23Z",
+        "headRefName": "claude/optimize-performance-011CUsXXgoNfPBtwbjcmB363",
+        "labels": [],
+        "number": 213,
+        "state": "OPEN",
+        "title": "Optimize code for better performance"
+      },
+      {
+        "createdAt": "2025-11-06T23:48:38Z",
+        "headRefName": "claude/fix-shell-loop-conflicts-011CUsXQHfdv6dRNjbKWYcTt",
+        "labels": [],
+        "number": 212,
+        "state": "OPEN",
+        "title": "Fix shell loop errors across CI environments"
+      },
+      {
+        "createdAt": "2025-11-06T23:14:43Z",
+        "headRefName": "claude/phase-20-cls-web-011CUsTQjSDJvdxVf88YbUGd",
+        "labels": [],
+        "number": 211,
+        "state": "OPEN",
+        "title": "Push Phase 20 CLS Web load test PR"
+      },
+      {
+        "createdAt": "2025-11-06T22:53:32Z",
+        "headRefName": "claude/night-batch-docs-hygiene-011CUsPUUUCjfDze2ziUYesc",
+        "labels": [],
+        "number": 209,
+        "state": "OPEN",
+        "title": "Add CI guide and clean up gitignore"
+      },
+      {
+        "createdAt": "2025-11-06T22:25:25Z",
+        "headRefName": "claude/phase-19.1-gc-hardening",
+        "labels": [
+          {
+            "id": "LA_kwDOP1hfhs8AAAACLJHUgg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACO_1wEw",
+            "name": "ci",
+            "description": "",
+            "color": "8F4334"
+          }
+        ],
+        "number": 208,
+        "state": "OPEN",
+        "title": "[quiet] chore(ci): Phase 19.1 — GC hardening (--no-prune-empty + docs)"
+      },
+      {
+        "createdAt": "2025-11-06T22:09:27Z",
+        "headRefName": "claude/phase-19-ci-hygiene-health",
+        "labels": [
+          {
+            "id": "LA_kwDOP1hfhs8AAAACLJHUgg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACO_1wEw",
+            "name": "ci",
+            "description": "",
+            "color": "8F4334"
+          }
+        ],
+        "number": 207,
+        "state": "OPEN",
+        "title": "[quiet] chore(ci): Phase 19 — CI hygiene (.gitignore) & health snapshot tool"
+      },
+      {
+        "createdAt": "2025-11-06T22:07:48Z",
+        "headRefName": "claude/phase-18-ops-sandbox-runner",
+        "labels": [
+          {
+            "id": "LA_kwDOP1hfhs8AAAACLJHUgg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACO_1wEw",
+            "name": "ci",
+            "description": "",
+            "color": "8F4334"
+          }
+        ],
+        "number": 206,
+        "state": "OPEN",
+        "title": "[quiet] feat(ops): Phase 18 — safe Ops Sandbox Runner (dry-run + allowlist)"
+      },
+      {
+        "createdAt": "2025-11-06T22:04:21Z",
+        "headRefName": "claude/phase-17-ci-observer",
+        "labels": [
+          {
+            "id": "LA_kwDOP1hfhs8AAAACLJHUgg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACO_1wEw",
+            "name": "ci",
+            "description": "",
+            "color": "8F4334"
+          }
+        ],
+        "number": 205,
+        "state": "OPEN",
+        "title": "[quiet] feat(ci): Phase 17 observer — real-time CI event listener"
+      },
+      {
+        "createdAt": "2025-11-06T21:00:09Z",
+        "headRefName": "claude/phase-16-bus",
+        "labels": [
+          {
+            "id": "LA_kwDOP1hfhs8AAAACLJHUgg",
+            "name": "enhancement",
+            "description": "New feature or request",
+            "color": "a2eeef"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACO_1wEw",
+            "name": "ci",
+            "description": "",
+            "color": "8F4334"
+          },
+          {
+            "id": "LA_kwDOP1hfhs8AAAACPCZ5oQ",
+            "name": "run-smoke",
+            "description": "Opt-in to run heavy smoke tests",
+            "color": "0E8A16"
+          }
+        ],
+        "number": 204,
+        "state": "OPEN",
+        "title": "[run-smoke] feat(ci): Phase 16 bus — Redis event bus + coordinator + watcher hook"
+      },
+      {
+        "createdAt": "2025-11-06T19:57:54Z",
+        "headRefName": "claude/setup-telemetry-phase-14-011CUsAiaPGawxBboRCFKCPx",
+        "labels": [],
+        "number": 203,
+        "state": "OPEN",
+        "title": "Set up coding session template structure"
+      },
+      {
+        "createdAt": "2025-11-06T19:32:56Z",
+        "headRefName": "claude/redis-no-auth-ops-gate-011CUrewGKwSjMBDp9fj1cAJ",
+        "labels": [],
+        "number": 202,
+        "state": "OPEN",
+        "title": "Fix Redis auth handling in ops gate for no-auth instances"
+      },
+      {
+        "createdAt": "2025-11-06T19:28:01Z",
+        "headRefName": "claude/ci-reliability-pack-011C",
+        "labels": [],
+        "number": 201,
+        "state": "OPEN",
+        "title": "Claude/ci reliability pack 011 c"
+      },
+      {
+        "createdAt": "2025-11-06T18:25:40Z",
+        "headRefName": "claude/phase15-router-core-akr-011CUrtXLeMoxBZqCMowpFz8",
+        "labels": [],
+        "number": 197,
+        "state": "OPEN",
+        "title": "Implement Phase 15 Router Core with telemetry"
+      },
+      {
+        "createdAt": "2025-11-06T14:34:06Z",
+        "headRefName": "claude/fix-dangling-symlink-chmod-011CUrnthGyres339RYKRCTj",
+        "labels": [],
+        "number": 193,
+        "state": "OPEN",
+        "title": "Fix chmod failing on dangling symlink in scripts"
+      }
+    ],
+    "recent_runs": [
+      {
+        "conclusion": "failure",
+        "createdAt": "2025-11-07T20:15:50Z",
+        "headBranch": "claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ",
+        "name": "ci",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T20:15:50Z",
+        "headBranch": "claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ",
+        "name": "Daily Proof (Option C)",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T20:15:50Z",
+        "headBranch": "claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ",
+        "name": "ci / ops-gate",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T20:14:24Z",
+        "headBranch": "main",
+        "name": "auto-tag",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T20:14:24Z",
+        "headBranch": "main",
+        "name": "Deploy to GitHub Pages",
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2025-11-07T20:14:24Z",
+        "headBranch": "main",
+        "name": "ci",
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2025-11-07T19:56:55Z",
+        "headBranch": "main",
+        "name": "Ops Mirror Pipeline",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T19:54:32Z",
+        "headBranch": "claude/is-this-ma-011CUsXdrfcnR12jih7SvPeS",
+        "name": "ci / ops-gate",
+        "status": "completed"
+      },
+      {
+        "conclusion": "failure",
+        "createdAt": "2025-11-07T19:54:32Z",
+        "headBranch": "claude/is-this-ma-011CUsXdrfcnR12jih7SvPeS",
+        "name": "ci",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "createdAt": "2025-11-07T19:54:24Z",
+        "headBranch": "claude/filter-rescan-prs-011CUsY5Vzt7zroAz6CsuDMq",
+        "name": "ci / ops-gate",
+        "status": "completed"
+      }
+    ]
+  },
+  "hub": {
+    "status": "running",
+    "pid": "34115",
+    "dashboard_url": "http://127.0.0.1:8787"
+  },
+  "system": {
+    "launch_agents": [
+      {
+        "label": "com.02luka.autoapprove.rd",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.autopilot.digest",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.autopilot",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.backup.gdrive",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.ci-coordinator",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.ci-watcher",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.context-summary",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.expense.autodeploy",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.expense.ocr",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.followup_tracker",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.gg.mcp-bridge",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.gg.nlp-bridge",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.health_monitor",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.json_wo_processor",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.localtruth",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.mcp.fs",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.mcp.health",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.mcp.memory",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.mcp.puppeteer",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.mcp.search",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.rag.api",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.rag.autosync",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.scanner",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.shell_subscriber",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.sync.gdrive.4h",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.telegram-bridge",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.watch.acct_docs",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.watch.expense_slips",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.watch.notes_rollup",
+        "status": "running"
+      },
+      {
+        "label": "com.02luka.watchdog",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.wo_executor.codex",
+        "status": "not_running"
+      },
+      {
+        "label": "com.02luka.wo_executor",
+        "status": "running"
+      }
+    ],
+    "redis": {
+      "status": "failed"
+    }
+  },
+  "changes": {
+    "recent_commits": [
+      {
+        "hash": "f67de55",
+        "subject": "fix(ci): verify auto-tag workflow HEREDOC syntax",
+        "relative": "7 minutes ago"
+      },
+      {
+        "hash": "108bbc0",
+        "subject": "fix(ci): resolve smoke test failures - remove -u flag and fix glob-for loop",
+        "relative": "30 minutes ago"
+      },
+      {
+        "hash": "abc1cac",
+        "subject": "fix(pages): replace heredocs with printf to fix YAML parsing",
+        "relative": "74 minutes ago"
+      },
+      {
+        "hash": "6f03320",
+        "subject": "docs(ci): CI automation runbook + repo hygiene (.gitignore) (#210)",
+        "relative": "21 hours ago"
+      },
+      {
+        "hash": "d12d5d7",
+        "subject": "feat(ci): make CI quiet & reliable by default (#200)",
+        "relative": "25 hours ago"
+      },
+      {
+        "hash": "dadfc13",
+        "subject": "Merge branch 'main' of github.com:Ic1558/02luka",
+        "relative": "25 hours ago"
+      },
+      {
+        "hash": "5d86bb3",
+        "subject": "Merge: fix workflow YAML lint errors and heredoc variable expansion",
+        "relative": "25 hours ago"
+      },
+      {
+        "hash": "2fcf0f3",
+        "subject": "fix(workflows): resolve YAML lint errors and heredoc variable expansion",
+        "relative": "25 hours ago"
+      },
+      {
+        "hash": "f0a1e74",
+        "subject": "fix(workflows): correct YAML syntax in tag message",
+        "relative": "26 hours ago"
+      },
+      {
+        "hash": "1bc9395",
+        "subject": "List all conflicts from each PR (#199)",
+        "relative": "26 hours ago"
+      }
+    ],
+    "uncommitted_files": [
+      " M .gitignore",
+      " M g/reports/INDEX.md",
+      " M package.json",
+      " M tools/generate_context_summary.zsh",
+      " M tools/hub_server.cjs",
+      "?? .env.local",
+      "?? g/reports/ci/pr_not_deployed_20251108_031422.md",
+      "?? g/reports/ci/pr_not_deployed_20251108_031427.md",
+      "?? g/reports/ci/pr_not_deployed_20251108_031434.md",
+      "?? g/reports/ci/pr_not_deployed_LATEST.md",
+      "?? g/reports/context/",
+      "?? g/reports/redis_chain/",
+      "?? tools/ops_atomic_rotate.zsh",
+      "?? tools/run_context_summary.zsh"
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+name: Hub UI Check
+on:
+  pull_request:
+    paths:
+      - 'hub/ui/**'
+      - '.github/workflows/hub-ui-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hub-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert files exist
+        run: |
+          test -f hub/ui/index.html
+          test -f hub/ui/app.js
+          test -f hub/ui/style.css
+      - name: JSON availability (if present)
+        run: |
+          for f in hub/index.json hub/mcp_registry.json hub/mcp_health.json; do
+            if [ -f "$f" ]; then jq -e . "$f" >/dev/null; fi
+          done

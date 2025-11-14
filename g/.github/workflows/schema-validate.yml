@@ -1,0 +1,146 @@
+name: schema-validate
+
+on:
+  pull_request:
+    paths:
+      - 'config/**'
+      - '.github/workflows/schema-validate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'config/**'
+      - '.github/workflows/schema-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-validate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  schema-validate:
+    name: Schema Validation [REQUIRED]
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
+        with:
+          install-dependencies: 'false'
+
+      - name: Install tools
+        run: |
+          npm install -g ajv-cli@5 ajv-formats@3
+          if ! command -v yq >/dev/null 2>&1; then
+            YQ_VER=v4.48.1
+            sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/${YQ_VER}/yq_linux_amd64"
+            sudo chmod +x /usr/local/bin/yq || true
+          fi
+          yq --version || echo "yq version check failed"
+
+      - name: Verify required files exist
+        run: |
+          test -f config/rag_pipeline.yaml || { echo "❌ ERROR: config/rag_pipeline.yaml missing"; exit 1; }
+          test -f config/schemas/rag_pipeline.schema.json || { echo "❌ ERROR: config/schemas/rag_pipeline.schema.json missing"; exit 1; }
+          if [ -f config/kim_proxy_gateway.yaml ]; then
+            test -f config/schemas/kim_proxy_gateway.schema.json || { echo "❌ ERROR: config/schemas/kim_proxy_gateway.schema.json missing"; exit 1; }
+          fi
+          echo "✅ All required files exist"
+
+      - name: Validate RAG pipeline schema
+        run: |
+          echo "🔍 Validating config/rag_pipeline.yaml against schema..."
+          # Convert YAML to JSON for ajv validation
+          # Use eval to parse YAML and output as JSON (yq handles comments automatically)
+          yq eval -o=json config/rag_pipeline.yaml > /tmp/rag_pipeline.json || {
+            echo "❌ Failed to convert YAML to JSON"
+            exit 1
+          }
+          # Verify JSON was created and has content
+          if [ ! -s /tmp/rag_pipeline.json ]; then
+            echo "❌ JSON file is empty"
+            exit 1
+          fi
+          ajv validate -c ajv-formats --strict=true \
+            -s config/schemas/rag_pipeline.schema.json -d /tmp/rag_pipeline.json || exit 1
+          echo "✅ RAG pipeline schema validation passed"
+
+      - name: Validate Kim proxy gateway schema
+        run: |
+          if [ -f config/schemas/kim_proxy_gateway.schema.json ] && [ -f config/kim_proxy_gateway.yaml ]; then
+            echo "🔍 Validating config/kim_proxy_gateway.yaml against schema..."
+            # Convert YAML to JSON for ajv validation
+            yq eval -o=json config/kim_proxy_gateway.yaml > /tmp/kim_proxy_gateway.json || {
+              echo "❌ Failed to convert YAML to JSON"
+              exit 1
+            }
+            # Verify JSON was created and has content
+            if [ ! -s /tmp/kim_proxy_gateway.json ]; then
+              echo "❌ JSON file is empty"
+              exit 1
+            fi
+            ajv validate -c ajv-formats --strict=true \
+              -s config/schemas/kim_proxy_gateway.schema.json -d /tmp/kim_proxy_gateway.json || exit 1
+            echo "✅ Kim proxy gateway schema validation passed"
+          else
+            echo "ℹ️  Kim proxy gateway files not found, skipping"
+          fi
+
+      - name: Negative test (temperature > 2 should fail)
+        run: |
+          if [ -f config/schemas/rag_pipeline.schema.json ] && [ -f config/rag_pipeline.yaml ]; then
+            echo "🧪 Testing schema enforcement (temperature > 2 should fail)..."
+            tmp=$(mktemp)
+            yq eval '.pipeline.generator.temperature = 3' config/rag_pipeline.yaml > "$tmp" || {
+              echo "⚠️  yq not available, skipping negative test"
+              rm -f "$tmp"
+              exit 0
+            }
+            # Convert YAML to JSON for ajv validation
+            yq eval -o=json "$tmp" > "${tmp}.json" || {
+              echo "⚠️  Failed to convert YAML to JSON, skipping negative test"
+              rm -f "$tmp" "${tmp}.json"
+              exit 0
+            }
+            if ajv validate -s config/schemas/rag_pipeline.schema.json -d "${tmp}.json" 2>/dev/null; then
+              echo "❌ ERROR: Schema should reject temperature > 2"
+              rm -f "$tmp" "${tmp}.json"
+              exit 1
+            else
+              echo "✅ Schema correctly rejects invalid temperature"
+              rm -f "$tmp" "${tmp}.json"
+            fi
+          fi
+
+      - name: Verify referenced files exist (soft check)
+        run: |
+          echo "🔍 Verifying referenced files exist..."
+          export LUKA_HOME="${LUKA_HOME:-$HOME/02luka}"
+          
+          if [ -f config/rag_pipeline.yaml ]; then
+            RAG_PROBE=$(yq eval '.probes.command' config/rag_pipeline.yaml 2>/dev/null || echo "")
+            RAG_INDEX=$(yq eval '.pipeline.retriever.index_path' config/rag_pipeline.yaml 2>/dev/null || echo "")
+            
+            RAG_PROBE=$(echo "$RAG_PROBE" | sed "s|\${LUKA_HOME:-\\\$HOME/02luka}|$LUKA_HOME|g" | sed "s|\$HOME|$HOME|g")
+            RAG_INDEX=$(echo "$RAG_INDEX" | sed "s|\${LUKA_HOME:-\\\$HOME/02luka}|$LUKA_HOME|g" | sed "s|\$HOME|$HOME|g")
+            
+            if [ -n "$RAG_PROBE" ] && [ ! -f "$RAG_PROBE" ]; then
+              echo "⚠️  WARNING: RAG probe script not found: $RAG_PROBE"
+            elif [ -n "$RAG_PROBE" ]; then
+              echo "✅ RAG probe script exists: $RAG_PROBE"
+            fi
+            
+            if [ -n "$RAG_INDEX" ] && [ ! -d "$RAG_INDEX" ]; then
+              echo "⚠️  WARNING: RAG index directory not found: $RAG_INDEX"
+            elif [ -n "$RAG_INDEX" ]; then
+              echo "✅ RAG index directory exists: $RAG_INDEX"
+            fi
+          fi
+          echo "✅ File existence checks completed"

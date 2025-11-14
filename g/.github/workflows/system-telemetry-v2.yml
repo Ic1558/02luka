@@ -1,0 +1,282 @@
+---
+# Phase 21.4 – System Telemetry Aggregator v2
+# Unified telemetry collection from MCP health, delegation watchdog, bridge self-check
+
+name: System Telemetry v2
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+
+  workflow_dispatch:
+    inputs:
+      export_loki:
+        description: 'Export to Grafana Loki'
+        required: false
+        default: false
+        type: boolean
+      export_telegram:
+        description: 'Send Telegram summary'
+        required: false
+        default: false
+        type: boolean
+
+  repository_dispatch:
+    types: [telemetry:aggregate]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  MAINTENANCE_MODE: ${{ vars.MAINTENANCE_MODE }}
+
+concurrency:
+  group: "system-telemetry-v2"
+  cancel-in-progress: false
+
+jobs:
+  aggregate-telemetry:
+    name: Aggregate System Telemetry
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq curl
+          echo "✅ System dependencies installed"
+
+      - name: Create required directories
+        run: |
+          mkdir -p hub
+          mkdir -p g/reports/mcp_health
+          mkdir -p g/schemas
+          mkdir -p logs
+          echo "✅ Directories created"
+
+      - name: Verify configuration files
+        run: |
+          echo "🔍 Checking configuration files..."
+          if [ -f config/telemetry_v2.yaml ]; then
+            echo "✅ config/telemetry_v2.yaml exists"
+            head -10 config/telemetry_v2.yaml
+          else
+            echo "❌ config/telemetry_v2.yaml not found"
+            exit 1
+          fi
+
+          if [ -f g/schemas/telemetry_v2.schema.json ]; then
+            echo "✅ g/schemas/telemetry_v2.schema.json exists"
+          else
+            echo "❌ g/schemas/telemetry_v2.schema.json not found"
+            exit 1
+          fi
+
+          if [ -f hub/system_telemetry_v2.mjs ]; then
+            echo "✅ hub/system_telemetry_v2.mjs exists"
+          else
+            echo "❌ hub/system_telemetry_v2.mjs not found"
+            exit 1
+          fi
+
+      - name: Create mock telemetry sources (CI environment)
+        run: |
+          echo "🔧 Creating mock telemetry sources for CI..."
+
+          # Mock MCP health report
+          cat > g/reports/mcp_health/latest.md << 'EOF'
+          ## MCP Health @ 2025-11-08 00:00:00 UTC
+
+          ### com.02luka.mcp.fs
+          state = running
+          pid = 12345
+          last exit code = 0
+
+          ### com.02luka.mcp.puppeteer
+          state = running
+          pid = 12346
+          last exit code = 0
+
+          ### Logs (tail -5)
+          - mcp_fs.stderr.log:
+            (no log)
+
+          - mcp_puppeteer.stderr.log:
+            (no log)
+          EOF
+
+          echo "✅ Mock telemetry sources created"
+
+      - name: Run telemetry aggregation
+        id: aggregate
+        run: |
+          echo "🚀 Starting telemetry aggregation..."
+
+          # Set export flags based on workflow inputs
+          export EXPORT_LOKI="${{ inputs.export_loki || 'false' }}"
+          export EXPORT_TELEGRAM="${{ inputs.export_telegram || 'false' }}"
+
+          # Run aggregator (continue on error to capture partial results)
+          node hub/system_telemetry_v2.mjs || true
+
+          echo "✅ Telemetry aggregation complete"
+        env:
+          REPO_ROOT: ${{ github.workspace }}
+          TELEMETRY_V2_CONFIG: ${{ github.workspace }}/config/telemetry_v2.yaml
+
+      - name: Verify telemetry output
+        run: |
+          echo "📊 Verifying telemetry output..."
+
+          if [ -f hub/system_telemetry_v2.json ]; then
+            echo "✅ Telemetry file created"
+            echo ""
+            echo "📈 Telemetry Summary:"
+            jq -r '.summary' hub/system_telemetry_v2.json || echo "⚠️ Unable to parse summary"
+            echo ""
+            echo "📋 Full telemetry output:"
+            cat hub/system_telemetry_v2.json | jq '.' || cat hub/system_telemetry_v2.json
+            echo ""
+            echo "📊 File size:"
+            du -h hub/system_telemetry_v2.json
+          else
+            echo "❌ Telemetry file not created"
+            exit 1
+          fi
+
+      - name: Validate telemetry against schema
+        run: |
+          echo "🔍 Validating telemetry output against schema..."
+          node hub/validate_telemetry.mjs
+        shell: bash
+
+      - name: Check for critical alerts
+        id: check_alerts
+        run: |
+          echo "⚠️ Checking for critical alerts..."
+
+          CRITICAL_COUNT=$(jq '[.alerts[] | select(.severity == "critical")] | length' hub/system_telemetry_v2.json)
+          OVERALL_STATUS=$(jq -r '.summary.overall_status' hub/system_telemetry_v2.json)
+
+          echo "critical_count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+          echo "overall_status=$OVERALL_STATUS" >> $GITHUB_OUTPUT
+
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "🔴 Found $CRITICAL_COUNT critical alerts"
+            echo "📋 Critical alerts:"
+            jq -r '.alerts[] | select(.severity == "critical") | "  - [\(.severity | ascii_upcase)] \(.message)"' hub/system_telemetry_v2.json
+          else
+            echo "✅ No critical alerts"
+          fi
+
+          echo "📊 Overall status: $OVERALL_STATUS"
+
+      - name: Upload telemetry artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-telemetry-v2-${{ github.run_number }}
+          path: |
+            hub/system_telemetry_v2.json
+            config/telemetry_v2.yaml
+            g/schemas/telemetry_v2.schema.json
+          retention-days: 7
+
+      - name: Commit telemetry output
+        if: github.event_name != 'pull_request'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Add telemetry output
+          git add hub/system_telemetry_v2.json || true
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "📝 No changes to commit"
+          else
+            git commit -m "chore(telemetry): update system telemetry v2 [skip ci]" || true
+            echo "✅ Committed telemetry update"
+          fi
+
+      - name: Export to Grafana Loki
+        if: ${{ inputs.export_loki == true || github.event.client_payload.export_loki == true }}
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          LOKI_VAL="${{ secrets.LOKI_ENDPOINT }}"
+          if [ -z "$LOKI_VAL" ]; then LOKI_VAL="http://127.0.0.1:3100/loki/api/v1/push"; fi
+          echo "LOKI_ENDPOINT=$LOKI_VAL" >> "$GITHUB_ENV"
+          echo "Using LOKI_ENDPOINT=$LOKI_VAL"
+          echo "📤 Exporting to Grafana Loki..."
+          echo "⚠️ Loki export not yet implemented (placeholder)"
+          # TODO: Implement Loki push using curl or promtail
+
+      - name: Send Telegram summary
+        if: ${{ inputs.export_telegram == true || github.event.client_payload.export_telegram == true }}
+        run: |
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ] || [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "⚠️ Telegram secrets not set, skipping notification."
+            exit 0
+          fi
+          echo "📤 Sending Telegram summary..."
+          echo "⚠️ Telegram export not yet implemented (placeholder)"
+          # TODO: Implement Telegram notification using bot API
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Summary
+        run: |
+          echo "# 📊 System Telemetry v2 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status:** ${{ steps.check_alerts.outputs.overall_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Critical Alerts:** ${{ steps.check_alerts.outputs.critical_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Sources" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ MCP Health" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Delegation Watchdog" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Bridge Self-Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Output" >> $GITHUB_STEP_SUMMARY
+          echo "- \`hub/system_telemetry_v2.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Exports" >> $GITHUB_STEP_SUMMARY
+          echo "- Grafana Loki: ${{ inputs.export_loki || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Telegram: ${{ inputs.export_telegram || 'false' }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Workflow result
+        run: |
+          OVERALL_STATUS="${{ steps.check_alerts.outputs.overall_status }}"
+
+          if [ "${MAINTENANCE_MODE:-0}" = "1" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "ℹ️ Maintenance/schedule context — not failing on telemetry errors."
+            echo "Overall status: $OVERALL_STATUS"
+            exit 0
+          fi
+
+          if [ "$OVERALL_STATUS" = "error" ]; then
+            echo "❌ Telemetry aggregation completed with errors"
+            exit 1
+          elif [ "$OVERALL_STATUS" = "degraded" ]; then
+            echo "⚠️ Telemetry aggregation completed with warnings"
+            exit 0
+          else
+            echo "✅ Telemetry aggregation completed successfully"
+            exit 0
+          fi

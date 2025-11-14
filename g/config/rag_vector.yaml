@@ -1,0 +1,35 @@
+# Phase 15 – RAG Vector Search Configuration (FAISS/HNSW)
+# Classification: Production RAG Pipeline
+# Owner: GG Core (02LUKA Automation)
+# Timestamp: 2025-11-06T00:00:00Z
+# WO-ID: WO-251106-PHASE15-VECTOR
+# Notes: Production-ready vector search with FAISS HNSW indexing
+
+# Vector index configuration
+index_path: artifacts/vector/faiss.index
+mapping_path: artifacts/vector/mapping.json
+
+# Embedding model configuration
+model: sentence-transformers/all-MiniLM-L6-v2
+dim: 384
+
+# Build configuration
+build:
+  source: memory/index_unified/unified.jsonl
+  text_field: content
+  id_field: id
+  hnsw:
+    M: 32                    # Number of bi-directional links per element
+    ef_construction: 200     # Size of dynamic candidate list during construction
+
+# Query configuration
+query:
+  top_k: 24                  # Number of results to return
+  ef_search: 50              # Size of dynamic candidate list during search
+  min_score: 0.15            # Minimum similarity score threshold
+
+# Cache configuration
+cache_dir: g/bridge/rag_cache
+
+# Telemetry configuration
+telemetry_sink: g/telemetry_unified/unified.jsonl

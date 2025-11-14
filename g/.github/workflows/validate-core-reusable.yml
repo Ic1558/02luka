@@ -1,0 +1,58 @@
+name: _reusable-validate-core
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        type: string
+        required: false
+        default: '20'
+
+jobs:
+  validate:
+    name: Phase 4/5/6 smoke (local) [REQUIRED]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      SKIP_BOSS_API: '1'
+      CI_QUIET: '1'
+    steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ inputs.node_version }}
+          continue-on-error: 'true'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq redis-tools
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+          jq --version
+          yq --version
+          redis-cli --version
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/ci/*.sh || true
+          chmod +x scripts/*.sh 2>/dev/null || true
+
+      - name: Run validation
+        run: bash tools/ci/validate.sh
+
+      - name: Show boss-api log (always)
+        if: always()
+        run: |
+          echo "---- boss-api log ----"
+          sed -n '1,200p' .tmp/boss-api.out.log || true

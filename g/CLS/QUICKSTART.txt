@@ -1,0 +1,75 @@
+╔═══════════════════════════════════════════════════════════════╗
+║           CLS INTEGRATION FOR CURSOR - QUICK START           ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ INSTALLATION COMPLETE
+
+Files Created:
+  • ~/.zshrc.d/02luka-cls-hooks.zsh (auto-capture hooks)
+  • ~/02luka/tools/cls_cursor_helper.zsh (helper commands)
+  • ~/02luka/CLS/CURSOR_INTEGRATION_GUIDE.md (full docs)
+
+═══════════════════════════════════════════════════════════════
+
+🚀 HOW TO USE IN CURSOR (3 steps)
+
+1️⃣  Open Cursor → New Terminal
+
+2️⃣  Enable CLS learning:
+    cls-on
+
+3️⃣  Work normally - commands are auto-logged!
+    git status
+    npm test
+    echo "hello"
+
+═══════════════════════════════════════════════════════════════
+
+📊 AVAILABLE COMMANDS
+
+Enable/Disable:
+  cls-on              Enable auto-logging
+  cls-off             Disable auto-logging
+  cls-status          Check status
+
+View Data:
+  cls stats           Show database stats
+  cls analyze         Run pattern detection
+  cls-stats           Quick stats (alias)
+  cls-analyze         Quick analysis (alias)
+
+Manual Logging:
+  cls learn-last      Log last command from history
+  cls learn-clip      Log command from clipboard
+
+═══════════════════════════════════════════════════════════════
+
+🎯 WHAT GETS LOGGED
+
+Every command you run captures:
+  ✓ Command text
+  ✓ Exit code (0 = success, 1+ = error)
+  ✓ Working directory
+  ✓ Timestamp
+  ✓ Session ID
+
+Stored in: ~/02luka/memory/cls/learning_db.jsonl
+
+═══════════════════════════════════════════════════════════════
+
+🔧 ACTIVATE NOW (first time only)
+
+In your current Cursor terminal, run:
+
+  exec zsh        # Reload shell to activate hooks
+  cls-on          # Enable CLS
+
+That's it! Commands will now be logged automatically.
+
+═══════════════════════════════════════════════════════════════
+
+📖 FULL DOCUMENTATION
+
+~/02luka/CLS/CURSOR_INTEGRATION_GUIDE.md
+
+═══════════════════════════════════════════════════════════════

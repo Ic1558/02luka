@@ -1,0 +1,99 @@
+name: _reusable-router-selftest
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: Node.js version for router AKR self-test
+        required: false
+        type: string
+        default: '20'
+
+jobs:
+  sanity:
+    name: Sanity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine OS flag
+        shell: bash
+        run: |
+          # Running on ubuntu-latest, so IS_MAC=0
+          echo "IS_MAC=0" >> "$GITHUB_ENV"
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+      - run: |
+          echo "CI_STRICT=$CI_STRICT  IS_MAC=$IS_MAC"
+          echo "::notice ::Soft-green gate. Set repo variable CI_STRICT=1 to enable heavy jobs."
+          if [ "${CI_STRICT}" != "1" ]; then
+            echo "Soft-green: skipping heavy jobs (set CI_STRICT=1 to enable)"
+            exit 0
+          fi
+
+  router-selftest:
+    name: 🧭 Phase 15 Router Core AKR [OPTIONAL]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+      - name: Check CI_STRICT
+        if: env.CI_STRICT != '1'
+        run: |
+          echo "Soft-green: skipping router-selftest (set CI_STRICT=1 to enable)"
+          exit 0
+      - name: Determine OS flag
+        shell: bash
+        run: |
+          # Running on ubuntu-latest, so IS_MAC=0
+          echo "IS_MAC=0" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ inputs.node_version }}
+          install-dependencies: 'false'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/*.zsh
+          chmod +x tools/*.py
+
+      - name: Run router self-test
+        run: |
+          export LUKA_HOME=$PWD
+          bash tools/router_akr_selftest.zsh
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: router-selftest-report
+          path: g/reports/phase15/router_akr_selftest.md
+          if-no-files-found: warn

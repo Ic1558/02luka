@@ -1,0 +1,57 @@
+---
+name: Daily Proof (Option C)
+
+on:  # yamllint disable-line rule:truthy
+  schedule: [{ cron: "12 1 * * *" }]  # 08:12 ICT daily
+  workflow_dispatch:
+    inputs:
+      run_validation:
+        description: 'Run full validation'
+        required: false
+        default: 'true'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.github/workflows/daily-proof.yml'
+      - 'g/reports/**'
+
+permissions:
+  contents: read
+
+jobs:
+  daily-proof:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: daily-proof-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare environment
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y make
+
+      - name: Validate structure (Option C)
+        run: |
+          set -euo pipefail
+          if make -q validate-zones 2>/dev/null; then
+            make validate-zones
+          else
+            echo "validate-zones target not found, skipping"
+          fi
+
+          if make -q proof 2>/dev/null; then
+            make proof
+          else
+            echo "proof target not found, skipping"
+          fi
+
+      - name: Upload latest proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-proof
+          path: g/reports/proof/*_proof.md
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,14 @@
+{
+  "wo_id": "WO-20251030-QQID8XXXXX",
+  "created_at": "2025-10-30T05:11:17+07:00",
+  "checksums": {
+    "wo_yaml": "4bf5cf87d9c7503b6f3f96f99cbe52129d092456e679e784db27ae4baa47db55",
+    "body": "bc87243b7f0f1d607b57ca04fa3dbe89b85beb62733dc942213c89a081d263cb"
+  },
+  "sizes": {
+    "wo_yaml": 227,
+    "body": 105
+  },
+  "agent": "CLS",
+  "priority": "P3"
+}

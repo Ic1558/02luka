@@ -1,0 +1,149 @@
+name: _reusable-rag-vector-selftest
+
+on:
+  workflow_call:
+
+jobs:
+  sanity:
+    name: Sanity Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine OS flag
+        shell: bash
+        run: |
+          # Running on ubuntu-latest, so IS_MAC=0
+          echo "IS_MAC=0" >> "$GITHUB_ENV"
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+      - run: |
+          echo "CI_STRICT=$CI_STRICT  IS_MAC=$IS_MAC"
+          echo "::notice ::Soft-green gate. Set repo variable CI_STRICT=1 to enable heavy jobs."
+          if [ "${CI_STRICT}" != "1" ]; then
+            echo "Soft-green: skipping heavy jobs (set CI_STRICT=1 to enable)"
+            exit 0
+          fi
+
+  rag-vector-selftest:
+    name: Phase 15 RAG Vector Search [OPTIONAL]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
+      - name: Load CI_STRICT
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          VAL="${{ vars.CI_STRICT }}"
+          if [ -z "$VAL" ]; then VAL=0; fi
+          echo "CI_STRICT=$VAL" >> "$GITHUB_ENV"
+      - name: Check CI_STRICT
+        if: env.CI_STRICT != '1'
+        run: |
+          echo "Soft-green: skipping rag-vector-selftest (set CI_STRICT=1 to enable)"
+          exit 0
+      - name: Determine OS flag
+        shell: bash
+        run: |
+          # Running on ubuntu-latest, so IS_MAC=0
+          echo "IS_MAC=0" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U faiss-cpu sentence-transformers requests tqdm numpy
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq jq
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/*.zsh
+          chmod +x tools/*.py
+
+      - name: "Debug: Verify script versions"
+        shell: bash
+        run: |
+          echo "=== Checking script versions ==="
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Current branch: $(git rev-parse --abbrev-ref HEAD)"
+          echo ""
+          echo "=== First 25 lines of vector_build.zsh ==="
+          if [ -f tools/vector_build.zsh ]; then
+            head -25 tools/vector_build.zsh
+            echo ""
+            echo "=== Checking for mapfile command (excluding comments) ==="
+            if grep -E "^[^#]*mapfile" tools/vector_build.zsh >/dev/null 2>&1; then
+              echo "❌ ERROR: mapfile command still found in script!"
+              grep -n "^[^#]*mapfile" tools/vector_build.zsh
+              exit 1
+            else
+              echo "✅ No mapfile command found - using while loop"
+            fi
+          else
+            echo "❌ ERROR: vector_build.zsh not found!"
+            exit 1
+          fi
+          echo ""
+          echo "=== First 25 lines of rag_vector_selftest.zsh ==="
+          if [ -f tools/rag_vector_selftest.zsh ]; then
+            head -25 tools/rag_vector_selftest.zsh
+            echo ""
+            echo "=== Checking for mapfile command (excluding comments) ==="
+            if grep -E "^[^#]*mapfile" tools/rag_vector_selftest.zsh >/dev/null 2>&1; then
+              echo "❌ ERROR: mapfile command still found in script!"
+              grep -n "^[^#]*mapfile" tools/rag_vector_selftest.zsh
+              exit 1
+            else
+              echo "✅ No mapfile command found - using while loop"
+            fi
+          else
+            echo "❌ ERROR: rag_vector_selftest.zsh not found!"
+            exit 1
+          fi
+          echo ""
+          echo "=== Checking required Python script ==="
+          if [ -f tools/vector_index.py ]; then
+            echo "✅ vector_index.py exists"
+          else
+            echo "⚠️  WARNING: vector_index.py not found (may be created during build)"
+          fi
+
+      - name: Build vector index
+        run: |
+          export LUKA_HOME=$PWD
+          bash tools/vector_build.zsh build
+
+      - name: Run self-test
+        run: |
+          export LUKA_HOME=$PWD
+          bash tools/rag_vector_selftest.zsh
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-vector-selftest-report
+          path: g/reports/phase15/rag_vector_selftest.md
+          if-no-files-found: warn
