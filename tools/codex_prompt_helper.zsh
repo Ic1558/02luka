@@ -122,7 +122,7 @@ case "$subcommand" in
       usage >&2
       exit 1
     fi
-    show_template "${ARGS[1]}" "$FORMAT"
+    show_template "${ARGS[0]}" "$FORMAT"
     ;;
   *)
     echo "Unknown subcommand: $subcommand" >&2
