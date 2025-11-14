@@ -93,7 +93,7 @@ shift
 
 # Parse --format flag
 FORMAT="text"
-ARGS=()
+TEMPLATE_NAME=""
 while (( $# > 0 )); do
   case "$1" in
     --format)
@@ -106,7 +106,7 @@ while (( $# > 0 )); do
       shift 2
       ;;
     *)
-      ARGS+=("$1")
+      TEMPLATE_NAME="$1"
       shift
       ;;
   esac
@@ -117,12 +117,12 @@ case "$subcommand" in
     list_templates "$FORMAT"
     ;;
   show)
-    if (( ${#ARGS[@]} != 1 )); then
+    if [[ -z "$TEMPLATE_NAME" ]]; then
       echo "show requires exactly one template name" >&2
       usage >&2
       exit 1
     fi
-    show_template "${ARGS[0]}" "$FORMAT"
+    show_template "$TEMPLATE_NAME" "$FORMAT"
     ;;
   *)
     echo "Unknown subcommand: $subcommand" >&2
