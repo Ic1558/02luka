@@ -2,7 +2,7 @@
 /**
  * WO Dashboard Server
  * API server for Work Order dashboard interactions
- * SECURITY FIXED: Path traversal prevention + auth-token endpoint removed + replay attack protection
+ * SECURITY FIXED: Path traversal prevention + signed requests + auth-token removal
  */
 
 const http = require('http');
@@ -12,7 +12,7 @@ const path = require('path');
 const url = require('url');
 const { verifySignature } = require('../../server/security/verifySignature');
 const { canonicalJsonStringify } = require('../../server/security/canonicalJson');
-const { woStatePath, assertValidWoId, sanitizeWoId } = require('../../g/apps/dashboard/security/woId');
+const { woStatePath, sanitizeWoId } = require('../../g/apps/dashboard/security/woId');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -50,39 +50,26 @@ function sendError(res, status, message) {
 
 async function readStateFile(woId) {
   try {
-    // SECURITY: Validate ID and ensure path stays within STATE_DIR
     const filePath = woStatePath(STATE_DIR, woId);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (err) {
-    // Handle different error types explicitly
     if (err.statusCode === 400) {
-      // Validation error - re-throw to be caught at handler level
       throw err;
     }
     if (err.code === 'ENOENT') {
-      // File not found - this is expected for non-existent WOs
       return null;
     }
-    // Other errors - log and return null
     console.error('Error reading state file:', err);
     return null;
   }
 }
 
-/**
- * Canonicalize work order state data
- * - Normalizes timestamps to ISO format
- * - Ensures consistent field ordering
- * - Validates required fields
- * @param {object} data - Work order state data
- * @returns {object} Canonicalized work order state data
- */
 function canonicalizeWoState(data) {
   if (!data || typeof data !== 'object') {
     throw new Error('Invalid work order state: must be an object');
   }
-  
+
   const canonical = {
     id: data.id || '',
     title: data.title || '',
@@ -95,42 +82,33 @@ function canonicalizeWoState(data) {
     tags: Array.isArray(data.tags) ? data.tags : [],
     notes: data.notes || '',
     goal: data.goal || '',
-    due_date: data.due_date || '',
+    due_date: data.due_date || ''
   };
-  
-  // Normalize timestamps to ISO format
+
   const now = new Date().toISOString();
   canonical.ts_update = data.ts_update ? new Date(data.ts_update).toISOString() : now;
   canonical.ts_create = data.ts_create ? new Date(data.ts_create).toISOString() : now;
-  
-  // Ensure status is valid
+
   const validStatuses = ['Open', 'InProgress', 'Complete', 'Cancelled', 'OnHold'];
   if (!validStatuses.includes(canonical.status)) {
     canonical.status = 'Open';
   }
-  
-  // Ensure priority is valid
+
   const validPriorities = ['Low', 'Medium', 'High', 'Critical'];
   if (!validPriorities.includes(canonical.priority)) {
     canonical.priority = 'Medium';
   }
-  
+
   return canonical;
 }
 
 async function writeStateFile(woId, data) {
   try {
-    // SECURITY: Validate ID and ensure path stays within STATE_DIR
     const filePath = woStatePath(STATE_DIR, woId);
-    
-    // Canonicalize state data before writing
     const canonicalData = canonicalizeWoState(data);
-    
-    // Ensure ID matches the sanitized woId
     canonicalData.id = woId;
-    
+
     const tmpPath = `${filePath}.tmp`;
-    // Use canonical JSON for deterministic state writes (required for signature verification)
     await fs.writeFile(tmpPath, canonicalJsonStringify(canonicalData) + '\n');
     await fs.rename(tmpPath, filePath);
     return true;
@@ -141,7 +119,6 @@ async function writeStateFile(woId, data) {
 }
 
 const server = http.createServer(async (req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader(
@@ -157,16 +134,10 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // SECURITY FIX: /api/auth-token endpoint REMOVED
-  // Token should be configured via environment variables for trusted agents only
-  // Public exposure of auth token is a security vulnerability
-  
-  // Explicit check for removed endpoint (return 404 before auth check)
   if (pathname === '/api/auth-token') {
     return sendError(res, 404, 'Not found');
   }
 
-  // Auth check for all API endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
 
@@ -176,7 +147,6 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Replay attack protection: verify signature for WO operations
   const ensureSignedRequest = async (payload = '') => {
     try {
       verifySignature({
@@ -193,12 +163,18 @@ const server = http.createServer(async (req, res) => {
     }
   };
 
-  // GET /api/wos - List all WOs
+  if (pathname.startsWith('/api/wo/state/')) {
+    const ok = await ensureSignedRequest('');
+    if (!ok) {
+      return;
+    }
+  }
+
   if (req.method === 'GET' && pathname === '/api/wos') {
     try {
       const files = await fs.readdir(STATE_DIR);
       const wos = [];
-      
+
       for (const file of files) {
         if (file.endsWith('.json')) {
           const woId = file.replace('.json', '');
@@ -208,74 +184,58 @@ const server = http.createServer(async (req, res) => {
           }
         }
       }
-      
+
       return sendJSON(res, 200, wos);
     } catch (err) {
       return sendError(res, 500, err.message);
     }
   }
 
-  // GET /api/wo/:id - Get single WO
-  if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    // Replay attack protection: verify signature
+  const woDetailMatch = pathname.match(/^\/api\/wo\/([^/]+)$/);
+  if (req.method === 'GET' && woDetailMatch) {
     const ok = await ensureSignedRequest('');
     if (!ok) {
       return;
     }
 
-    const rawWoId = pathname.replace('/api/wo/', '');
-    
-    // SECURITY: Sanitize and validate WO ID FIRST (before any file operations)
-    // This ensures path traversal attempts return 400, not 404
     let woId;
     try {
-      woId = sanitizeWoId(rawWoId); // Sanitize and normalize
+      woId = sanitizeWoId(woDetailMatch[1]);
     } catch (err) {
-      if (err.statusCode === 400) {
-        return sendError(res, 400, 'Invalid work order id');
-      }
-      return sendError(res, 500, err.message);
+      const status = err.statusCode || 400;
+      return sendError(res, status, err.message);
     }
-    
-    // Now safe to read file (validation passed)
+
     try {
       const data = await readStateFile(woId);
-      
+
       if (!data) {
         return sendError(res, 404, 'WO not found');
       }
-      
+
       return sendJSON(res, 200, data);
     } catch (err) {
-      // File read errors (shouldn't happen after validation, but handle gracefully)
-      if (err.statusCode === 400) {
-        return sendError(res, 400, err.message);
-      }
-      console.error('Read state file error:', err);
-      return sendError(res, 500, err.message);
+      const statusCode = err.statusCode || 500;
+      return sendError(res, statusCode, err.message);
     }
   }
 
-  // POST /api/wo/:id/action - Perform action on WO
-  if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
-    const rawWoId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-    
-    // SECURITY: Sanitize and validate WO ID before processing
+  const actionMatch = pathname.match(/^\/api\/wo\/([^/]+)\/action$/);
+  if (req.method === 'POST' && actionMatch) {
     let woId;
     try {
-      woId = sanitizeWoId(rawWoId); // Sanitize and normalize
+      woId = sanitizeWoId(actionMatch[1]);
     } catch (err) {
-      if (err.statusCode === 400) {
-        return sendError(res, 400, 'Invalid work order id');
-      }
-      return sendError(res, 500, err.message);
+      const status = err.statusCode || 400;
+      return sendError(res, status, err.message);
     }
-    
+
     let body = '';
-    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
     req.on('end', async () => {
       try {
-        // Replay attack protection: verify signature with body payload
         const ok = await ensureSignedRequest(body);
         if (!ok) {
           return;
@@ -288,7 +248,6 @@ const server = http.createServer(async (req, res) => {
           return sendError(res, 404, 'WO not found');
         }
 
-        // Update status based on action
         if (action === 'activate' || action === 'start') {
           currentData.status = 'InProgress';
         } else if (action === 'pause') {
@@ -298,14 +257,12 @@ const server = http.createServer(async (req, res) => {
         }
 
         currentData.ts_update = new Date().toISOString();
-        
+
         const success = await writeStateFile(woId, currentData);
 
         if (success) {
-          // Publish to Redis if available
           if (redisClient) {
             try {
-              // Use canonical JSON for deterministic Redis payloads (required for signature verification)
               await redisClient.publish('wo:update', canonicalJsonStringify({
                 wo_id: woId,
                 action: action,
@@ -332,7 +289,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/followup - Get followup.json data
   if (req.method === 'GET' && pathname === '/api/followup') {
     try {
       const content = await fs.readFile(FOLLOWUP_DATA, 'utf8');
@@ -343,23 +299,22 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // 404
   sendError(res, 404, 'Not found');
 });
 
 async function start() {
   await initRedis();
-  
+
   server.listen(PORT, () => {
     console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
-    console.log(`📊 API endpoints:`);
-    console.log(`   GET  /api/wos`);
-    console.log(`   GET  /api/wo/:id`);
-    console.log(`   POST /api/wo/:id/action`);
-    console.log(`   GET  /api/followup`);
-    console.log(`🔒 Security: Path traversal protection enabled`);
-    console.log(`🔒 Security: /api/auth-token endpoint removed (use env var)`);
-    console.log(`🔒 Security: Replay attack protection enabled (signed requests)`);
+    console.log('📊 API endpoints:');
+    console.log('   GET  /api/wos');
+    console.log('   GET  /api/wo/:id');
+    console.log('   POST /api/wo/:id/action');
+    console.log('   GET  /api/followup');
+    console.log('🔒 Security: Path traversal protection enabled');
+    console.log('🔒 Security: /api/auth-token endpoint removed');
+    console.log('🔒 Security: Replay attack protection enabled (signed requests)');
   });
 }
 

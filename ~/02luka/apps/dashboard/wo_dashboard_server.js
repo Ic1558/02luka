@@ -10,9 +10,13 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
+<<<<<<< HEAD:~/02luka/apps/dashboard/wo_dashboard_server.js
 const { verifySignature } = require('../../server/security/verifySignature');
 const { canonicalJsonStringify } = require('../../server/security/canonicalJson');
 const { woStatePath, assertValidWoId, sanitizeWoId } = require('../../g/apps/dashboard/security/woId');
+=======
+const { woStatePath, assertValidWoId, sanitizeWoId } = require('./security/woId');
+>>>>>>> origin/main:g/apps/dashboard/wo_dashboard_server.js
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -130,8 +134,13 @@ async function writeStateFile(woId, data) {
     canonicalData.id = woId;
     
     const tmpPath = `${filePath}.tmp`;
+<<<<<<< HEAD:~/02luka/apps/dashboard/wo_dashboard_server.js
     // Use canonical JSON for deterministic state writes (required for signature verification)
     await fs.writeFile(tmpPath, canonicalJsonStringify(canonicalData) + '\n');
+=======
+    // Write with consistent formatting (2-space indent, sorted keys via canonicalize)
+    await fs.writeFile(tmpPath, JSON.stringify(canonicalData, null, 2) + '\n');
+>>>>>>> origin/main:g/apps/dashboard/wo_dashboard_server.js
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
@@ -217,12 +226,15 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
+<<<<<<< HEAD:~/02luka/apps/dashboard/wo_dashboard_server.js
     // Replay attack protection: verify signature
     const ok = await ensureSignedRequest('');
     if (!ok) {
       return;
     }
 
+=======
+>>>>>>> origin/main:g/apps/dashboard/wo_dashboard_server.js
     const rawWoId = pathname.replace('/api/wo/', '');
     
     // SECURITY: Sanitize and validate WO ID FIRST (before any file operations)
@@ -263,6 +275,11 @@ const server = http.createServer(async (req, res) => {
     // SECURITY: Sanitize and validate WO ID before processing
     let woId;
     try {
+<<<<<<< HEAD:~/02luka/apps/dashboard/wo_dashboard_server.js
+=======
+      const rawWoId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
+      // SECURITY: Sanitize and validate WO ID before processing
+>>>>>>> origin/main:g/apps/dashboard/wo_dashboard_server.js
       woId = sanitizeWoId(rawWoId); // Sanitize and normalize
     } catch (err) {
       if (err.statusCode === 400) {
