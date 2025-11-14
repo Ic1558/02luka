@@ -10,7 +10,7 @@ const { createClient } = require('redis');
 const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
-const { woStatePath, assertValidWoId } = require('./security/woId');
+const { woStatePath, assertValidWoId, sanitizeWoId } = require('./security/woId');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -61,12 +61,68 @@ async function readStateFile(woId) {
   }
 }
 
+/**
+ * Canonicalize work order state data
+ * - Normalizes timestamps to ISO format
+ * - Ensures consistent field ordering
+ * - Validates required fields
+ * @param {object} data - Work order state data
+ * @returns {object} Canonicalized work order state data
+ */
+function canonicalizeWoState(data) {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid work order state: must be an object');
+  }
+  
+  const canonical = {
+    id: data.id || '',
+    title: data.title || '',
+    description: data.description || '',
+    status: data.status || 'Open',
+    priority: data.priority || 'Medium',
+    progress: typeof data.progress === 'number' ? Math.max(0, Math.min(100, data.progress)) : 0,
+    owner: data.owner || '',
+    source: data.source || 'work_order',
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    notes: data.notes || '',
+    goal: data.goal || '',
+    due_date: data.due_date || '',
+  };
+  
+  // Normalize timestamps to ISO format
+  const now = new Date().toISOString();
+  canonical.ts_update = data.ts_update ? new Date(data.ts_update).toISOString() : now;
+  canonical.ts_create = data.ts_create ? new Date(data.ts_create).toISOString() : now;
+  
+  // Ensure status is valid
+  const validStatuses = ['Open', 'InProgress', 'Complete', 'Cancelled', 'OnHold'];
+  if (!validStatuses.includes(canonical.status)) {
+    canonical.status = 'Open';
+  }
+  
+  // Ensure priority is valid
+  const validPriorities = ['Low', 'Medium', 'High', 'Critical'];
+  if (!validPriorities.includes(canonical.priority)) {
+    canonical.priority = 'Medium';
+  }
+  
+  return canonical;
+}
+
 async function writeStateFile(woId, data) {
   try {
     // SECURITY: Validate ID and ensure path stays within STATE_DIR
     const filePath = woStatePath(STATE_DIR, woId);
+    
+    // Canonicalize state data before writing
+    const canonicalData = canonicalizeWoState(data);
+    
+    // Ensure ID matches the sanitized woId
+    canonicalData.id = woId;
+    
     const tmpPath = `${filePath}.tmp`;
-    await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
+    // Write with consistent formatting (2-space indent, sorted keys via canonicalize)
+    await fs.writeFile(tmpPath, JSON.stringify(canonicalData, null, 2) + '\n');
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
@@ -133,12 +189,13 @@ const server = http.createServer(async (req, res) => {
 
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
-    const woId = pathname.replace('/api/wo/', '');
+    const rawWoId = pathname.replace('/api/wo/', '');
     
-    // SECURITY: Validate WO ID FIRST (before any file operations)
+    // SECURITY: Sanitize and validate WO ID FIRST (before any file operations)
     // This ensures path traversal attempts return 400, not 404
+    let woId;
     try {
-      assertValidWoId(woId);
+      woId = sanitizeWoId(rawWoId); // Sanitize and normalize
     } catch (err) {
       if (err.statusCode === 400) {
         return sendError(res, 400, 'Invalid work order id');
@@ -166,9 +223,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
     let woId;
     try {
-      woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-      // SECURITY: Validate WO ID before processing
-      assertValidWoId(woId);
+      const rawWoId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
+      // SECURITY: Sanitize and validate WO ID before processing
+      woId = sanitizeWoId(rawWoId); // Sanitize and normalize
     } catch (err) {
       if (err.statusCode === 400) {
         return sendError(res, 400, 'Invalid work order id');
