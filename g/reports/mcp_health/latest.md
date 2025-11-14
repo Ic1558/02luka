@@ -1,18 +1,20 @@
-## MCP Health @ 2025-11-15 00:43:28 +07
+## MCP Health @ 2025-11-15 02:03:31 +07
 
 ### com.02luka.mcp.fs
-	state = spawn scheduled
+	state = running
+	pid = 85989
 	last exit code = 0
 		state = active
 		state = active
-	job state = exited
+	job state = running
 
 ### com.02luka.mcp.puppeteer
-	state = spawn scheduled
+	state = running
+	pid = 85990
 	last exit code = 0
 		state = active
 		state = active
-	job state = exited
+	job state = running
 
 ### Logs (tail -5)
 - mcp_fs.stderr.log:
