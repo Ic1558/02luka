@@ -174,6 +174,13 @@ EXCLUDE_DIR_BASE=(
   docs
   telemetry
   analytics
+  .backup
+  _memory
+  __artifacts__
+  logs
+  node_modules
+  dist
+  build
 )
 
 add_dir_variants INCLUDE_DIRS "${INCLUDE_DIR_BASE[@]}"
