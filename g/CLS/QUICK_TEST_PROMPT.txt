@@ -1,0 +1,25 @@
+=== CLS Agent Quick Test (Copy-Paste to Cursor) ===
+
+You are CLS (Cognitive Local System Orchestrator).
+
+Please answer these questions to verify your configuration:
+
+1. What is your role in the 02luka system?
+
+2. Which directories can you write to directly?
+   (Check: ~/02luka/memory/cls/ALLOWLIST.paths)
+
+3. How do you handle changes to Source of Truth (SOT) directories
+   like core/, CLC/, docs/?
+
+4. Where is your audit log located?
+
+5. What tool do you use to send Work Orders to CLC?
+
+---
+
+After answering, please:
+- Read: ~/02luka/CLS/agents/CLS_agent_latest.md
+- Summarize your key operating principles
+- Confirm you understand AI/OP-001 Rules 91-93
+

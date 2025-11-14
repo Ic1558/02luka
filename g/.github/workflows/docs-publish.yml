@@ -1,0 +1,99 @@
+---
+name: Docs Publisher
+
+on:  # yamllint disable-line rule:truthy
+  schedule:
+    # 03:20 Asia/Bangkok (UTC+7) = 20:20 UTC
+    - cron: '20 20 * * *'
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: 'Force refresh documentation'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "docs-publish"
+  cancel-in-progress: true
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: ./.github/actions/node-setup
+        with:
+          install-dependencies: 'false'
+
+      - name: Create output directory
+        run: mkdir -p dist/docs
+
+      - name: Publish Documentation
+        run: |
+          echo "🚀 Publishing documentation..."
+          node run/publish_docs.cjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Docs Output
+        run: |
+          echo "📚 Verifying documentation files..."
+          ls -la dist/docs/
+          echo ""
+          echo "📁 Assets directory:"
+          ls -la dist/docs/assets/
+          echo ""
+          echo "📋 Index content:"
+          head -20 dist/docs/index.html
+          echo ""
+          echo "📊 File sizes:"
+          du -h dist/docs/*
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/docs
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: publish-docs
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify Docs Deployment
+        run: |
+          echo "🚀 Documentation deployed to: ${{ steps.deployment.outputs.page_url }}"
+          echo "📋 Available endpoints:"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/docs/index.html"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/docs/PHASE9_LIVE_OPS_DASHBOARD.html"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/docs/assets/docs.css"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/docs/assets/docs.js"
+          echo ""
+          echo "🎯 Documentation Features:"
+          echo "  - Searchable index with all manuals"
+          echo "  - Dark mode toggle"
+          echo "  - Responsive mobile design"
+          echo "  - Auto-generated navigation"
+          echo "  - Copy link functionality"

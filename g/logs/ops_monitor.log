@@ -107,3 +107,55 @@
 [2025-10-27T19:43:35.669Z] [INFO] Report generated: heartbeat_2025-10-27_19-43-35.md
 [2025-10-27T19:43:35.669Z] [INFO] Discord webhook not configured, skipping notification
 [2025-10-27T19:43:35.669Z] [INFO] === Monitor Complete: ❌ CRITICAL ===
+[2025-11-13T06:11:35.519Z] [INFO] === OPS-Atomic Monitor Starting ===
+[2025-11-13T06:11:35.520Z] [INFO] Checking Redis connectivity...
+[2025-11-13T06:11:35.531Z] [ERROR] ❌ Redis: FAILED
+[2025-11-13T06:11:35.532Z] [INFO] Checking database responsiveness...
+[2025-11-13T06:11:35.535Z] [ERROR] ❌ Database: FAILED
+[2025-11-13T06:11:35.535Z] [INFO] Checking API endpoints...
+[2025-11-13T06:11:35.558Z] [WARN] ⚠️  API Health: WARN (may be down)
+[2025-11-13T06:11:35.558Z] [INFO] Checking critical LaunchAgents...
+[2025-11-13T06:11:35.568Z] [ERROR] ❌ com.02luka.optimizer: NOT LOADED
+[2025-11-13T06:11:35.577Z] [ERROR] ❌ com.02luka.digest: NOT LOADED
+[2025-11-13T06:11:35.578Z] [INFO] Report generated: heartbeat_2025-11-13_06-11-35.md
+[2025-11-13T06:11:35.578Z] [INFO] Discord webhook not configured, skipping notification
+[2025-11-13T06:11:35.578Z] [INFO] === Monitor Complete: ❌ CRITICAL ===
+[2025-11-13T06:11:47.333Z] [INFO] === OPS-Atomic Monitor Starting ===
+[2025-11-13T06:11:47.335Z] [INFO] Checking Redis connectivity...
+[2025-11-13T06:11:47.346Z] [ERROR] ❌ Redis: FAILED
+[2025-11-13T06:11:47.347Z] [INFO] Checking database responsiveness...
+[2025-11-13T06:11:47.351Z] [ERROR] ❌ Database: FAILED
+[2025-11-13T06:11:47.351Z] [INFO] Checking API endpoints...
+[2025-11-13T06:11:47.366Z] [WARN] ⚠️  API Health: WARN (may be down)
+[2025-11-13T06:11:47.367Z] [INFO] Checking critical LaunchAgents...
+[2025-11-13T06:11:47.378Z] [ERROR] ❌ com.02luka.optimizer: NOT LOADED
+[2025-11-13T06:11:47.395Z] [ERROR] ❌ com.02luka.digest: NOT LOADED
+[2025-11-13T06:11:47.395Z] [INFO] Report generated: heartbeat_2025-11-13_06-11-47.md
+[2025-11-13T06:11:47.395Z] [INFO] Discord webhook not configured, skipping notification
+[2025-11-13T06:11:47.396Z] [INFO] === Monitor Complete: ❌ CRITICAL ===
+[2025-11-13T06:11:59.043Z] [INFO] === OPS-Atomic Monitor Starting ===
+[2025-11-13T06:11:59.044Z] [INFO] Checking Redis connectivity...
+[2025-11-13T06:11:59.053Z] [ERROR] ❌ Redis: FAILED
+[2025-11-13T06:11:59.053Z] [INFO] Checking database responsiveness...
+[2025-11-13T06:11:59.057Z] [ERROR] ❌ Database: FAILED
+[2025-11-13T06:11:59.057Z] [INFO] Checking API endpoints...
+[2025-11-13T06:11:59.081Z] [WARN] ⚠️  API Health: WARN (may be down)
+[2025-11-13T06:11:59.082Z] [INFO] Checking critical LaunchAgents...
+[2025-11-13T06:11:59.094Z] [ERROR] ❌ com.02luka.optimizer: NOT LOADED
+[2025-11-13T06:11:59.106Z] [ERROR] ❌ com.02luka.digest: NOT LOADED
+[2025-11-13T06:11:59.107Z] [INFO] Report generated: heartbeat_2025-11-13_06-11-59.md
+[2025-11-13T06:11:59.107Z] [INFO] Discord webhook not configured, skipping notification
+[2025-11-13T06:11:59.107Z] [INFO] === Monitor Complete: ❌ CRITICAL ===
+[2025-11-13T06:12:04.235Z] [INFO] === OPS-Atomic Monitor Starting ===
+[2025-11-13T06:12:04.236Z] [INFO] Checking Redis connectivity...
+[2025-11-13T06:12:04.245Z] [ERROR] ❌ Redis: FAILED
+[2025-11-13T06:12:04.245Z] [INFO] Checking database responsiveness...
+[2025-11-13T06:12:04.249Z] [ERROR] ❌ Database: FAILED
+[2025-11-13T06:12:04.249Z] [INFO] Checking API endpoints...
+[2025-11-13T06:12:04.260Z] [WARN] ⚠️  API Health: WARN (may be down)
+[2025-11-13T06:12:04.260Z] [INFO] Checking critical LaunchAgents...
+[2025-11-13T06:12:04.268Z] [ERROR] ❌ com.02luka.optimizer: NOT LOADED
+[2025-11-13T06:12:04.277Z] [ERROR] ❌ com.02luka.digest: NOT LOADED
+[2025-11-13T06:12:04.278Z] [INFO] Report generated: heartbeat_2025-11-13_06-12-04.md
+[2025-11-13T06:12:04.278Z] [INFO] Discord webhook not configured, skipping notification
+[2025-11-13T06:12:04.278Z] [INFO] === Monitor Complete: ❌ CRITICAL ===

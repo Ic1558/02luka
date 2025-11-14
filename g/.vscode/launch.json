@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Start Hybrid Memory Session",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/.codex/load_context.sh",
+            "console": "integratedTerminal",
+            "preLaunchTask": "Load Hybrid Memory Context"
+        }
+    ]
+}
+
+
+
+
+

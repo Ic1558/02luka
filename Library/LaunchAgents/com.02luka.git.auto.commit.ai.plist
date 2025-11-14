@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.git.auto.commit.ai</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>zsh</string>
+        <string>-c</string>
+        <string>cd ~/02luka/g && if git branch --show-current | grep -q "^ai/"; then ~/02luka/tools/git_auto_commit_ai.zsh; fi</string>
+    </array>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/git_auto_commit_ai.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/git_auto_commit_ai.stderr.log</string>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+</dict>
+</plist>

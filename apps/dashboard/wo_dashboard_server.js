@@ -11,7 +11,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const url = require('url');
 const { validateWorkOrderId, resolveWoStatePath } = require('../../server/security/validateWoId');
-const { canonicalJsonStringify } = require('../../server/security/canonicalJson');
 
 const BASE = process.env.LUKA_SOT || process.env.HOME + '/02luka';
 const PORT = process.env.DASHBOARD_PORT || 8765;
@@ -61,8 +60,7 @@ async function writeStateFile(woId, data) {
   try {
     const filePath = resolveWoStatePath(STATE_DIR, woId);
     const tmpPath = `${filePath}.tmp`;
-    const payload = `${canonicalJsonStringify(data)}\n`;
-    await fs.writeFile(tmpPath, payload, 'utf8');
+    await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
@@ -178,13 +176,12 @@ const server = http.createServer(async (req, res) => {
           // Publish to Redis if available
           if (redisClient) {
             try {
-              const eventPayload = canonicalJsonStringify({
+              await redisClient.publish('wo:update', JSON.stringify({
                 wo_id: woId,
                 action: action,
                 status: currentData.status,
                 ts: currentData.ts_update
-              }, 0);
-              await redisClient.publish('wo:update', eventPayload);
+              }));
             } catch (err) {
               console.error('Redis publish error:', err);
             }
