@@ -166,4 +166,3 @@ Current CLS monitoring lacks:
 
 **Status:** ✅ SPEC Complete  
 **Next:** Create PLAN.md
-
