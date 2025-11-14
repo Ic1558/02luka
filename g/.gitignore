@@ -1,96 +1,51 @@
-# Logs (but keep directory structure)
-logs/*.log
-logs/**/*.log
+# 02luka Git Ignore
+# Created: 2025-11-05
+
+# Logs
 *.log
+logs/*.log
+telemetry/*.log
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Editor (but keep our .vscode/settings.json)
-.vscode/*
-!.vscode/settings.json
+# Editor
+.vscode/
 .idea/
-
-# Temp
-tmp/
-*.tmp
 *.swp
-*.bak
+*.swo
+*~
 
-# Secrets
-.env
-*.pem
-*.key
-credentials.json
+# Runtime state
+run/*.out
+run/*.err
+run/*.pid
+state/*.json
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
+# Large data files
+*.mp4
+*.mov
+*.avi
 
-# Build
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+node_modules/
 dist/
 build/
-node_modules/
-__pycache__/
-*.pyc
-*.pyo
 
-# Safety snapshots (too large)
-_safety_snapshots/
-_plists_quarantine_*/
-_import_stage/
-_log_archives/
-
-# Devcontainer disabled
-.devcontainer.disabled/
-
-# Runtime files
-g/.devcontainer.disabled/
-*.pid
-run/*.lock
-
-# Telemetry (large files)
-telemetry/*.log
-g/telemetry/*.log
-
-# Memory audit generated reports
-hub/memory_audit.json
-g/telemetry/memory_audit.jsonl
-g/reports/memory_audit.log
-
-# Conflict backups
-*.backup.*
-sync_conflicts_*/
-
-# local logs
-logs/*.log
-logs/**/*.log
-
-# ---- CI / local automation noise ----
-logs/
-*.out
-*.err
-.tmp/
-coverage/
-tools/puppeteer/.logs/
-
-.venv/
-g/rag/.venv/
-__pycache__/
-run/*.err
-g/reports/sync_conflicts_*/
-*.cache/
-_trash/
-hub/node_modules/
-
-# Kim NLP session state
-core/nlp/kim_session_profiles.json
-
-mls/paula/intel/*.json
-mls/memory/adaptive/*.json
-# Generated governance index
-g/reports/system/index.json
-g/reports/system/trends_snapshot_*.html
+# Sensitive
+*.key
+*.pem
+credentials.json
+.env
+secrets/
