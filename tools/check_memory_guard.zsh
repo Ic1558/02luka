@@ -9,13 +9,13 @@ DENY=("${(@f)$(yq -r '.deny_globs[]' "$CFG")}")
 ALLOW=("${(@f)$(yq -r '.allow_globs[]' "$CFG")}")
 
 echo "Scanning: $ROOT"
-status=0
+exit_status=0
 # Size enforcement
 find "$ROOT" -type f -print0 | while IFS= read -r -d '' f; do
   sz=$(du -m "$f" | awk '{print $1}')
   if [ "$sz" -ge "$FAIL_MB" ]; then
     echo "❌ FAIL size ${sz}MB: ${f}"
-    status=1
+    exit_status=1
   elif [ "$sz" -ge "$WARN_MB" ]; then
     echo "⚠️  WARN size ${sz}MB: ${f}"
   fi
@@ -27,8 +27,8 @@ for pat in "${DENY[@]}"; do
   for m in "${matches[@]}"; do
     [ -n "$m" ] || continue
     echo "❌ DENY pattern: $ROOT/$m"
-    status=1
+    exit_status=1
   done
 done
 
-exit $status
+exit $exit_status

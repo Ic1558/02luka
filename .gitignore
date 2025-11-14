@@ -94,3 +94,23 @@ mls/memory/adaptive/*.json
 # Generated governance index
 g/reports/system/index.json
 g/reports/system/trends_snapshot_*.html
+
+# ========================================
+# Personal workspace folders (local only)
+# ========================================
+# These folders may be added to Cursor workspace for convenience
+# but should NEVER be tracked in git or synced to GitHub
+Desktop/
+Documents/
+Downloads/
+external_files/
+Volumes/
+
+# Privacy & convenience: keep local work separate from project code
+# Note: Volumes/ covers external drives like lukadata
+lukadata/
+**/lukadata/
+/Volumes/lukadata/
+# 
+# For additional local-only volume/backup patterns, see:
+# .git/info/exclude (local-only, never committed)

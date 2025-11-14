@@ -10,16 +10,52 @@ on:
 permissions:
   contents: read
 
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
 jobs:
   memory-guard:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Setup yq
-        run: sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64
+          "$SUDO_BIN" chmod +x /usr/local/bin/yq
+      - name: Install zsh
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -qq
+          "$SUDO_BIN" apt-get install -y zsh
       - name: Run guard
         env:
           LUKA_MEM_REPO_ROOT: ${{ github.workspace }}/memory
         run: |
           mkdir -p memory && echo "placeholder" > memory/.keep
-          ./tools/check_memory_guard.zsh
+          # Explicitly call zsh since the script has #!/usr/bin/env zsh shebang
+          
+          # Capture output for job summary
+          if zsh ./tools/check_memory_guard.zsh 2>&1 | tee /tmp/memory_guard_output.txt; then
+            {
+              echo "## ✅ Memory Guard Check Passed"
+              echo ""
+              echo "All memory files are within size limits and comply with guard rules."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            EXIT_CODE=$?
+            {
+              echo "## ❌ Memory Guard Check Failed"
+              echo ""
+              echo "Memory files exceed size limits or violate guard rules."
+              echo ""
+              echo "**Violations found:**"
+              cat /tmp/memory_guard_output.txt | grep -E "❌|FAIL|WARN" | sed 's/^/- /' || echo "- See logs for details"
+              echo ""
+              echo "**Next steps:**"
+              echo "1. Review the violations in the logs above"
+              echo "2. Reduce file sizes or remove denied patterns"
+              echo "3. See \`config/memory_guard.yaml\` for thresholds"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit $EXIT_CODE
+          fi

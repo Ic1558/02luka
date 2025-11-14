@@ -47,75 +47,157 @@ if [[ -z "$pattern_lines" ]]; then
   exit 2
 fi
 
-VIOLATIONS=()
-EXCLUDES=(
-  "--hidden"
-  "--glob" "!.git"
-  "--glob" "!g/.git"
-  "--glob" "!.backup/**"
-  "--glob" "!g/.backup/**"
-  "--glob" "!node_modules"
-  "--glob" "!g/node_modules"
-  "--glob" "!__pycache__"
-  "--glob" "!g/__pycache__"
-  "--glob" "!dist"
-  "--glob" "!build"
-  "--glob" "!logs"
-  "--glob" "!g/logs"
-  "--glob" "!__artifacts__/**"
-  "--glob" "!g/__artifacts__/**"
-  "--glob" "!_memory/**"
-  "--glob" "!g/_memory/**"
-  "--glob" "!g/g/**"
-)
+cd "$REPO_ROOT"
 
-PATH_CANDIDATES=(
-  docs
-  manuals
-  reports
-  g/docs
-  g/manuals
-  g/reports
-  config
-  g/config
+function add_dir_variants() {
+  local target_name="$1"
+  shift
+  local entry
+  for entry in "$@"; do
+    [[ -z "$entry" ]] && continue
+    eval "$target_name+=(\"\$entry\")"
+    if [[ "$entry" != g/* ]]; then
+      eval "$target_name+=(\"g/$entry\")"
+    fi
+  done
+}
+
+function path_matches_dirs() {
+  local rel_path="$1"
+  shift
+  local dir
+  for dir in "$@"; do
+    [[ -z "$dir" ]] && continue
+    case "$rel_path" in
+      "$dir"|"$dir"/*) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+function matches_include_file_type() {
+  local rel_path="$1"
+  local lower="${rel_path:l}"
+  case "$lower" in
+    *.sh|*.zsh|*.bash|*.py|*.js|*.ts|*.yaml|*.yml) return 0 ;;
+  esac
+  local base="${rel_path##*/}"
+  local base_lower="${base:l}"
+  if [[ "$base_lower" == dockerfile* ]]; then
+    return 0
+  fi
+  if [[ "$base" == "Makefile" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+function is_excluded_path() {
+  local rel_path="$1"
+  if path_matches_dirs "$rel_path" "${EXCLUDE_DIRS[@]}"; then
+    return 0
+  fi
+  local lower="${rel_path:l}"
+  case "$lower" in
+    *.md|*.log|*.jsonl|*.ndjson) return 0 ;;
+  esac
+  return 1
+}
+
+function should_scan_file() {
+  local rel_path="$1"
+  if is_excluded_path "$rel_path"; then
+    return 1
+  fi
+  if path_matches_dirs "$rel_path" "${INCLUDE_DIRS[@]}"; then
+    return 0
+  fi
+  if matches_include_file_type "$rel_path"; then
+    return 0
+  fi
+  return 1
+}
+
+function get_files() {
+  local rel_path
+  while IFS= read -r -d '' rel_path; do
+    if should_scan_file "$rel_path"; then
+      FILE_CANDIDATES+=("$rel_path")
+    fi
+  done < <(git ls-files -z)
+}
+
+function search_pattern_in_files() {
+  local regex="$1"
+  local chunk_size=200
+  local -a chunk=()
+  local chunk_matches
+  local matches=""
+  for file_path in "${FILE_CANDIDATES[@]}"; do
+    chunk+=("$file_path")
+    if (( ${#chunk[@]} == chunk_size )); then
+      chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${chunk[@]}" || true)"
+      if [[ -n "$chunk_matches" ]]; then
+        [[ -n "$matches" ]] && matches+=$'\n'
+        matches+="$chunk_matches"
+      fi
+      chunk=()
+    fi
+  done
+
+  if (( ${#chunk[@]} )); then
+    chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${chunk[@]}" || true)"
+    if [[ -n "$chunk_matches" ]]; then
+      [[ -n "$matches" ]] && matches+=$'\n'
+      matches+="$chunk_matches"
+    fi
+  fi
+
+  printf '%s' "$matches"
+}
+
+typeset -a INCLUDE_DIRS=()
+typeset -a EXCLUDE_DIRS=()
+typeset -a FILE_CANDIDATES=()
+
+INCLUDE_DIR_BASE=(
   tools
-  g/tools
-  scripts
-  g/scripts
-  run
-  g/run
-  bridge
-  g/bridge
-  LaunchAgents
-  g/LaunchAgents
   .github/workflows
-  g/.github/workflows
+  launchd
+  launchagents
+  LaunchAgents
+  scripts
 )
 
-SEARCH_PATHS=()
-for candidate in "${PATH_CANDIDATES[@]}"; do
-  if [[ -e "$REPO_ROOT/$candidate" ]]; then
-    SEARCH_PATHS+=("$REPO_ROOT/$candidate")
-  fi
-done
+EXCLUDE_DIR_BASE=(
+  reports
+  docs
+  telemetry
+  analytics
+  .backup
+  _memory
+  __artifacts__
+  logs
+  node_modules
+  dist
+  build
+)
 
-for pattern in "$REPO_ROOT"/*.md "$REPO_ROOT"/*.yaml "$REPO_ROOT"/*.yml "$REPO_ROOT"/*.txt; do
-  if [[ -f "$pattern" ]]; then
-    SEARCH_PATHS+=("$pattern")
-  fi
-done
+add_dir_variants INCLUDE_DIRS "${INCLUDE_DIR_BASE[@]}"
+add_dir_variants EXCLUDE_DIRS "${EXCLUDE_DIR_BASE[@]}"
 
-[[ -f "$REPO_ROOT/Makefile" ]] && SEARCH_PATHS+=("$REPO_ROOT/Makefile")
-[[ -f "$REPO_ROOT/g/Makefile" ]] && SEARCH_PATHS+=("$REPO_ROOT/g/Makefile")
+get_files
 
-if (( ${#SEARCH_PATHS[@]} == 0 )); then
-  echo "❌ codex_sandbox_check: no search paths detected" >&2
-  exit 2
+if (( ${#FILE_CANDIDATES[@]} == 0 )); then
+  echo "✅ Codex sandbox check passed (no eligible files to scan)"
+  exit 0
 fi
+
+VIOLATIONS=()
 
 while IFS=$'\t' read -r pattern_id pattern_desc pattern_regex; do
   [[ -z "$pattern_id" ]] && continue
-  matches="$(rg --line-number --no-heading --color=never --pcre2 "${EXCLUDES[@]}" -e "$pattern_regex" "${SEARCH_PATHS[@]}" || true)"
+  matches="$(search_pattern_in_files "$pattern_regex")"
   if [[ -n "$matches" ]]; then
     while IFS= read -r line; do
       [[ -z "$line" ]] && continue

@@ -1,4 +1,0 @@
-{"kind":"ocr_execution","wo_id":"WO-TEST-1761848451","status":"ok","action":"publish","when":"2025-10-31T01:24:00+0700"}
-{"kind":"ocr_execution","wo_id":"WO-PUBLISH-TEST-001","status":"ok","action":"publish","when":"2025-10-31T01:30:38+0700"}
-{"kind":"ocr_execution","wo_id":"WO-DOC-API-001","status":"failed","action":"publish","reason":"action_rc","when":"2025-10-31T01:32:41+0700"}
-{"kind":"ocr_execution","wo_id":"WO-DOC-API-001","status":"ok","action":"publish","when":"2025-10-31T01:36:43+0700"}

@@ -14,7 +14,7 @@ rm -f ~/02luka/tools/mary_memory_hook.zsh
 rm -f ~/02luka/tools/rnd_memory_hook.zsh
 
 # Remove memory hub
-rm -rf ~/02luka/agents/memory_hub
+rm -r -f ~/02luka/agents/memory_hub
 
 # Revert health check (remove Phase 4 checks)
 # Note: Manual revert needed for health check

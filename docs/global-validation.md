@@ -533,9 +533,8 @@ exec ./tools/global_validate.sh --ci "$@"
 ### Cache Issues
 
 1. Clear cache:
-   ```bash
-   rm -rf /tmp/validation-cache
-   ```
+   - Delete `/tmp/validation-cache` manually (Finder, `trash`, or `rm` scoped to that directory only).
+   - Legacy destructive delete commands were removed for sandbox safety—never run recursive wipes here.
 
 2. Disable caching:
    ```bash
@@ -678,3 +677,5 @@ For issues:
 - Library docs: `tools/lib/README.md`
 - Hook docs: `.github/validation-hooks/README.md`
 - CI integration: `.github/workflows/_reusable/validate-core.yml`
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

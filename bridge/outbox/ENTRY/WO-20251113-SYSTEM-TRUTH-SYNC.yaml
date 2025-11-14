@@ -1,0 +1,57 @@
+---
+wo_id: WO-20251113-SYSTEM-TRUTH-SYNC
+title: "System Truth Sync - Auto-update 02luka.md from Runtime Reality"
+created_at: 2025-11-13T16:00:00+0700
+priority: P1
+type: feature
+status: pending
+assignee: CLC
+estimated_hours: 3.5
+
+description: |
+  Implement automated system to ensure 02luka.md always reflects actual runtime state.
+  
+  Problem: 02luka.md becomes outdated when LaunchAgents/agents/pipelines change.
+  Boss can't trust it for planning/decisions.
+  
+  Solution: Auto-scan runtime reality → generate system_map.v1.json → update 
+  02luka.md auto-sections. Also add simple AI session summaries.
+  
+  Goal: "02luka.md must not lie - it shows what's actually running"
+
+plan_reference: g/reports/feature_system_truth_sync_PLAN.md
+
+deliverables:
+  - tools/system_map_scan.zsh
+  - tools/system_map_render.zsh  
+  - tools/session_save.zsh (updated)
+  - tools/system_truth_sync_acceptance.zsh
+  - LaunchAgents/com.02luka.system_map_scan.plist
+  - 02luka.md (with AUTO_RUNTIME markers)
+
+acceptance_tests:
+  - Map freshness <48h
+  - 02luka.md has AUTO_RUNTIME markers
+  - LaunchAgents match reality 100%
+  - AI summary generated on save
+  - No regression in Phase 6 tests
+  - Manual content preserved
+
+safety_requirements:
+  - CRITICAL: Only modify AUTO_RUNTIME block in 02luka.md
+  - CRITICAL: Backup 02luka.md before modification
+  - CRITICAL: Atomic file replacement only
+  - Idempotent operations
+
+boss_approved_adjustments:
+  1. Add version + host to system_map.v1.json
+  2. Safe render (AUTO_RUNTIME block only)
+  3. Daily AI summary (session_YYYYMMDD.ai.json)
+  4. Health checks map age (1-2 day thresholds)
+
+tags:
+  - system-truth
+  - automation
+  - documentation
+  - phase6
+  - governance

@@ -220,7 +220,7 @@ Create `/etc/newsyslog.d/02luka.conf`:
 /Users/icmini/02luka/logs/agent/*.log           644  7    10240 *    GJ
 ```
 
-Then: `sudo newsyslog -v`
+Then run `newsyslog -v` with administrator privileges (interactive prompt only—do not embed the elevation command in scripts).
 
 ### Monitoring
 
@@ -323,3 +323,5 @@ cat $LUKA_HOME/reports/phase_5_5_deployment_report.md
 **Manual Version:** 1.0
 **Phase:** 5.5 Complete
 **Status:** Production Ready ✅
+
+<!-- Sanitized for Codex Sandbox Mode (2025-11) -->

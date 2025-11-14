@@ -1,6 +1,0 @@
-{"event":"router.request.received","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"query":"write a function to parse JSON"}
-{"event":"router.intent.classify_start","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"query":"write a function to parse JSON"}
-{"event":"router.intent.classified","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"intent":"unknown","agent":"kim","confidence":"0.3"}
-{"event":"router.query.ambiguous","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"confidence":"0.3","threshold":"0.75"}
-{"event":"router.agent.selected","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"agent":"kim","intent":"unknown","confidence":"0.3"}
-{"event":"router.request.completed","ts":"2025-11-08T19:12:05.3NZ","__source":"router_akr","__normalized":true,"agent":"kim"}
