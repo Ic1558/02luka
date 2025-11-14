@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: '02luka'
+    folder: '02luka'
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /Users/icmini/LocalProjects/02luka_local_g/g/config/grafana/dashboards
+      foldersFromFilesStructure: true

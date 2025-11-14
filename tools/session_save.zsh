@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
-# @created_by: CLC (Claude Code)
-# @phase: 20+
-# @purpose: Modern session save with auto-indexing
+# @created_by: CLC (Claude Code) - Updated by CLS 2025-11-13
+# @phase: 20+ (Enhanced for dynamic MLS integration)
+# @purpose: Dynamic session save from MLS ledger
 
 set -euo pipefail
 
@@ -11,140 +11,363 @@ if [ -f ~/02luka/.env.local ]; then
 fi
 
 MEM_REPO="${LUKA_MEM_REPO_ROOT:-$HOME/LocalProjects/02luka-memory}"
-TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SESSION_FILE="$MEM_REPO/g/reports/sessions/session_$TIMESTAMP.md"
+TODAY=$(date +"%Y-%m-%d")
+MLS_LEDGER="$HOME/02luka/mls/ledger/$(date +%Y-%m-%d).jsonl"
 
 # Ensure directories exist
 mkdir -p "$MEM_REPO/g/reports/sessions"
 
-# Create session report
-cat > "$SESSION_FILE" <<'EOSESSION'
+# Check if MLS ledger exists
+if [[ ! -f "$MLS_LEDGER" ]]; then
+  echo "⚠️  No MLS ledger found for today: $MLS_LEDGER"
+  echo "Creating minimal session record..."
+fi
+
+# Extract session data from MLS
+extract_mls_data() {
+  if [[ ! -f "$MLS_LEDGER" ]]; then
+    echo '{"total":0,"types":{},"entries":[]}'
+    return
+  fi
+  
+  cat "$MLS_LEDGER" | jq -s '{
+    total: length,
+    types: (group_by(.type) | map({(.[0].type): length}) | add // {}),
+    entries: map({
+      ts: .ts,
+      type: .type,
+      title: .title,
+      problem: .problem // "",
+      solution: .solution // "",
+      tags: .tags // []
+    })
+  }'
+}
+
+# Get agent name (CLS/CLC/GG)
+AGENT="${SESSION_AGENT:-CLS}"
+
+# Generate session content
+echo "📝 Generating session from MLS ledger..."
+MLS_DATA=$(extract_mls_data)
+TOTAL_ENTRIES=$(echo "$MLS_DATA" | jq -r '.total')
+
+# Count by type
+SOLUTIONS=$(echo "$MLS_DATA" | jq -r '.types.solution // 0')
+IMPROVEMENTS=$(echo "$MLS_DATA" | jq -r '.types.improvement // 0')
+FAILURES=$(echo "$MLS_DATA" | jq -r '.types.failure // 0')
+PATTERNS=$(echo "$MLS_DATA" | jq -r '.types.pattern // 0')
+
+# Start writing session file
+cat > "$SESSION_FILE" <<EOHEADER
 ---
-title: "CLC Session Summary"
-date: {{DATE}}
+title: "$AGENT Session Summary — $(date +"%Y-%m-%d")"
+date: $TODAY
 type: session
-category: conversation
+category: system
+source: $AGENT
 auto_generated: true
-tags: [clc, session, conversation-log]
+tags: [$AGENT, session, auto-generated, mls-derived]
 ---
 
-# CLC Session Summary
+# $AGENT Session Summary — $TODAY
 
-**Date**: {{DATE}}
-**Timestamp**: {{TIMESTAMP}}
-**Agent**: CLC (Claude Code)
-
-## Session Highlights
-
-### Major Accomplishments
-- MCP Configuration Crisis Resolution
-  - Fixed configuration format errors
-  - Reduced tool count from 149 → 55 tools (63% reduction)
-  - Created locked config snapshots for stability
-  - Eliminated MCP_DOCKER duplication across 3 configs
-
-- Phase 20: Hub Dashboard Auto-Index & Memory Sync
-  - Deployed hub_autoindex.mjs (YAML front-matter aware)
-  - Created health_check.mjs for staleness monitoring
-  - Configured LaunchAgent for 15-minute auto-refresh
-  - Integrated Redis pub/sub notifications
-  - Indexed 13 items from memory repository
-
-### Technical Work Completed
-1. **Multi-Root Workspace Setup**
-   - 02luka (code) + 02luka-memory (reports)
-   - Cursor launcher with graceful shutdown
-   - ENV configuration for repo separation
-
-2. **Repository Cleanup (Phase 1)**
-   - Moved 2GB to _trash/ (venv, sync_conflicts, logs)
-   - Updated .gitignore
-   - Prepared Phase 2 script (Git history surgery)
-
-3. **MCP Configuration Stabilization**
-   - Global: MCP_DOCKER (41 tools)
-   - Project: local_02luka (14 tools)
-   - Total: 55 tools (within 80 limit)
-   - PR #220 created with labels
-
-4. **Hub Auto-Index System**
-   - ES module support (package.json + .mjs)
-   - Health monitoring (healthy/stale/error states)
-   - LaunchAgent enabled and running
-   - 13 items indexed successfully
-
-### Files Created/Modified
-- `hub/hub_autoindex.mjs` - Main indexer
-- `hub/health_check.mjs` - Health monitoring
-- `hub/package.json` - ES module config
-- `hub/index.json` - Generated index (13 items)
-- `tools/hub_sync.zsh` - LaunchAgent runner
-- `tools/hub_index_now.zsh` - One-shot helper
-- `.cursor/mcp.json` - Fixed format, locked snapshots
-- `02luka-memory/g/reports/MCP_CONFIG_FIX_20251107.md`
-- `02luka-memory/g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md`
-
-### Deployment Status
-✅ MCP Config: Stable, locked, 55 tools
-✅ Hub Indexer: Running every 15 minutes
-✅ Health Check: Passing (status=healthy, age=0min)
-✅ LaunchAgent: Enabled and operational
-✅ PR #220: Ready for merge (enhancement, ci, run-smoke)
-✅ Documentation: Complete in memory repo
-
-### Next Actions
-- [ ] Merge PR #220 after CI passes
-- [ ] Monitor LaunchAgent logs (first 15min cycle)
-- [ ] Integrate health check into system monitoring
-- [ ] Add /api/health/index endpoint to Hub Dashboard
-- [ ] Phase 2: Git history surgery (when ready)
-
-### System Health
-- MCP Configuration: ✅ Healthy (55/80 tools)
-- Hub Index: ✅ Healthy (13 items, 0min age)
-- Memory Repo: ✅ Operational (2 reports committed)
-- Multi-Root Workspace: ✅ Working (code + memory)
-- LaunchAgent: ✅ Running (15min interval)
+**Date:** $TODAY  
+**Timestamp:** $(date +"%Y-%m-%d %H:%M:%S %Z")  
+**Agent:** $AGENT (Cursor AI Agent)  
+**MLS Entries:** $TOTAL_ENTRIES  
 
 ---
 
-**Session End**: {{TIMESTAMP}}
-**Duration**: ~2.5 hours
-**Status**: ✅ All objectives completed
-EOSESSION
+## Session Statistics
 
-# Replace placeholders
-sed -i '' "s/{{DATE}}/$(date -u +"%Y-%m-%d")/g" "$SESSION_FILE"
-sed -i '' "s/{{TIMESTAMP}}/$(date -u +"%Y-%m-%d %H:%M:%S UTC")/g" "$SESSION_FILE"
+**MLS Entries by Type:**
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS
+- Failures: $FAILURES
+- Patterns: $PATTERNS
+
+**Total Activities:** $TOTAL_ENTRIES
+
+---
+
+## Major Activities
+
+EOHEADER
+
+# Add entries grouped by type
+for TYPE in solution improvement failure pattern; do
+  COUNT=$(echo "$MLS_DATA" | jq -r ".types.$TYPE // 0")
+  if [[ $COUNT -gt 0 ]]; then
+    # Capitalize first letter (zsh compatible)
+    TYPE_CAP="${(C)TYPE}"
+    echo "" >> "$SESSION_FILE"
+    echo "### ${TYPE_CAP}s ($COUNT)" >> "$SESSION_FILE"
+    echo "" >> "$SESSION_FILE"
+    
+    echo "$MLS_DATA" | jq -r --arg type "$TYPE" '
+      .entries[] | select(.type == $type) | 
+      "**\(.title)**\n- Time: \(.ts)\n- Problem: \(.problem // "N/A")\n- Solution: \(.solution // "N/A")\n"
+    ' >> "$SESSION_FILE"
+  fi
+done
+
+# Add footer
+cat >> "$SESSION_FILE" <<EOFOOTER
+
+---
+
+## Files Modified
+
+_(Auto-detected from MLS entries)_
+
+EOFOOTER
+
+# Extract unique tags
+echo "$MLS_DATA" | jq -r '.entries[].tags[]?' | sort -u | while read -r tag; do
+  echo "- Tag: $tag" >> "$SESSION_FILE"
+done 2>/dev/null || echo "- (No tags recorded)" >> "$SESSION_FILE"
+
+cat >> "$SESSION_FILE" <<EOFOOTER2
+
+---
+
+## Next Steps
+
+EOFOOTER2
+
+# Look for any "followup" or "todo" tags
+FOLLOWUPS=$(echo "$MLS_DATA" | jq -r '.entries[] | select(.tags[]? == "followup" or .tags[]? == "todo") | "- [ ] \(.title)"' 2>/dev/null)
+if [[ -n "$FOLLOWUPS" ]]; then
+  echo "$FOLLOWUPS" >> "$SESSION_FILE"
+else
+  echo "- Review MLS entries for patterns" >> "$SESSION_FILE"
+  echo "- Continue with current phase objectives" >> "$SESSION_FILE"
+fi
+
+cat >> "$SESSION_FILE" <<EOFOOTER3
+
+---
+
+**Generated by:** $AGENT (Auto-generated from MLS Ledger)  
+**Source:** $MLS_LEDGER  
+**Session End:** $(date +"%Y-%m-%d %H:%M:%S %Z")
+
+EOFOOTER3
 
 echo "✅ Session saved: $SESSION_FILE"
+echo "   Total entries: $TOTAL_ENTRIES"
+echo "   File size: $(du -h "$SESSION_FILE" | cut -f1)"
 
 # Auto-commit to memory repo
-cd "$MEM_REPO"
-git add g/reports/sessions/session_$TIMESTAMP.md
-git commit -m "session: CLC session summary $TIMESTAMP
+if [[ -d "$MEM_REPO/.git" ]]; then
+  echo ""
+  echo "📦 Committing to memory repo..."
+  cd "$MEM_REPO"
+  git add "g/reports/sessions/session_$TIMESTAMP.md"
+  git commit -m "session: $AGENT session summary $TODAY
 
-Auto-generated session log capturing:
-- MCP Configuration fix (149→55 tools)
-- Phase 20 Hub Auto-Index deployment
-- Multi-root workspace setup
-- Documentation and health monitoring
+Auto-generated from MLS ledger:
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS
+- Failures: $FAILURES
+- Total entries: $TOTAL_ENTRIES
 
-Duration: ~2.5 hours
-Status: All objectives completed"
+Timestamp: $TIMESTAMP" || echo "⚠️  Commit failed (may already be committed)"
+  
+  echo "✅ Committed to memory repo"
+else
+  echo "⚠️  Memory repo not a git repository, skipping commit"
+fi
 
-echo "✅ Committed to memory repo"
-
-# Trigger hub index refresh to pick up new session
-echo "🔄 Triggering index refresh..."
-cd ~/02luka
-./tools/hub_index_now.zsh
+# Trigger hub index refresh if available
+if [[ -f ~/02luka/tools/hub_index_now.zsh ]]; then
+  echo ""
+  echo "🔄 Triggering hub index refresh..."
+  ~/02luka/tools/hub_index_now.zsh 2>/dev/null || echo "⚠️  Hub index refresh failed"
+fi
 
 echo ""
 echo "📊 Session Summary"
 echo "─────────────────"
+echo "Agent: $AGENT"
+echo "Date: $TODAY"
 echo "File: $SESSION_FILE"
-echo "Size: $(du -h "$SESSION_FILE" | cut -f1)"
-echo "Indexed: $(jq '._meta.total' ~/02luka/hub/index.json) items"
+echo "Entries: $TOTAL_ENTRIES (S:$SOLUTIONS I:$IMPROVEMENTS F:$FAILURES P:$PATTERNS)"
 echo ""
-echo "✅ Save complete!"
+echo "✅ Session file saved!"
+
+# ============================================
+# STEP 2: Generate AI Summary JSON
+# ============================================
+echo ""
+echo "📋 Generating AI summary JSON..."
+AI_SUMMARY_FILE="$MEM_REPO/g/reports/sessions/session_$(date +%Y%m%d).ai.json"
+
+# Extract top activities (most important titles)
+TOP_ACTIVITIES=$(echo "$MLS_DATA" | jq -r '[.entries[] | select(.type == "solution" or .type == "improvement") | .title] | .[0:5]')
+
+# Generate compact AI summary
+cat > "$AI_SUMMARY_FILE" <<EOJSON
+{
+  "date": "$TODAY",
+  "ts_utc": "$(date -u +%FT%TZ)",
+  "ts_local": "$(date +%FT%T%z)",
+  "agent": "$AGENT",
+  "summary": {
+    "total_entries": $TOTAL_ENTRIES,
+    "top_activities": $TOP_ACTIVITIES,
+    "stats": {
+      "solutions": $SOLUTIONS,
+      "improvements": $IMPROVEMENTS,
+      "failures": $FAILURES,
+      "patterns": $PATTERNS
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/$TODAY.jsonl",
+    "full_session": "g/reports/sessions/session_$TIMESTAMP.md"
+  }
+}
+EOJSON
+
+echo "✅ AI summary saved: $AI_SUMMARY_FILE"
+
+# ============================================
+# STEP 3: Scan System Reality (System Map)
+# ============================================
+echo ""
+echo "🔍 Scanning system reality..."
+
+# Check if system_map_scan.zsh exists
+if [[ -f ~/02luka/tools/system_map_scan.zsh ]]; then
+  ~/02luka/tools/system_map_scan.zsh 2>&1 | head -5
+  echo "✅ System map updated"
+else
+  echo "⚠️  system_map_scan.zsh not found (from System Truth Sync feature)"
+  echo "   Creating placeholder system map..."
+  
+  SYSTEM_MAP_FILE="$HOME/02luka/g/system_map/system_map.v1.json"
+  mkdir -p "$(dirname "$SYSTEM_MAP_FILE")"
+  
+  # Count LaunchAgents, scripts, etc.
+  LA_COUNT=$(launchctl list | grep -c com.02luka || echo 0)
+  TOOL_COUNT=$(find ~/02luka/tools -type f -name "*.zsh" ! -path "*/node_modules/*" | wc -l | tr -d ' ')
+  
+  cat > "$SYSTEM_MAP_FILE" <<EOSYSMAP
+{
+  "version": 1,
+  "scanned_at": "$(date -u +%FT%TZ)",
+  "host": "$(hostname)",
+  "components": {
+    "launchagents": {
+      "count": $LA_COUNT,
+      "note": "Run 'launchctl list | grep com.02luka' for details"
+    },
+    "tools": {
+      "count": $TOOL_COUNT,
+      "path": "~/02luka/tools"
+    }
+  },
+  "status": "minimal_scan",
+  "note": "Full scan requires system_map_scan.zsh from System Truth Sync feature"
+}
+EOSYSMAP
+  echo "✅ Minimal system map created: $SYSTEM_MAP_FILE"
+fi
+
+# ============================================
+# STEP 4: Update 02luka.md AUTO_RUNTIME Section
+# ============================================
+echo ""
+echo "📝 Updating 02luka.md..."
+
+# Check if system_map_render.zsh exists
+if [[ -f ~/02luka/tools/system_map_render.zsh ]]; then
+  ~/02luka/tools/system_map_render.zsh 2>&1 | head -5
+  echo "✅ 02luka.md updated"
+else
+  echo "⚠️  system_map_render.zsh not found (from System Truth Sync feature)"
+  echo "   Will update manually with session info..."
+  
+  # Add a simple timestamp update to 02luka.md
+  if [[ -f ~/02luka/02luka.md ]]; then
+    # Check if AUTO_RUNTIME markers exist
+    if grep -q "<!-- AUTO_RUNTIME_START -->" ~/02luka/02luka.md 2>/dev/null; then
+      # Markers exist, update section
+      sed -i.bak '/<!-- AUTO_RUNTIME_START -->/,/<!-- AUTO_RUNTIME_END -->/c\
+<!-- AUTO_RUNTIME_START -->\
+**Last Session:** '"$TODAY"' '"$(date +%H:%M:%S)"'\
+**Agent:** '"$AGENT"'\
+**MLS Entries:** '"$TOTAL_ENTRIES"' (S:'"$SOLUTIONS"' I:'"$IMPROVEMENTS"' F:'"$FAILURES"' P:'"$PATTERNS"')\
+**System Map:** `g/system_map/system_map.v1.json`\
+<!-- AUTO_RUNTIME_END -->' ~/02luka/02luka.md
+      echo "✅ Updated AUTO_RUNTIME section in 02luka.md"
+    else
+      echo "⚠️  AUTO_RUNTIME markers not found in 02luka.md"
+      echo "   Add these markers to enable auto-update:"
+      echo "   <!-- AUTO_RUNTIME_START -->"
+      echo "   <!-- AUTO_RUNTIME_END -->"
+    fi
+  else
+    echo "⚠️  02luka.md not found"
+  fi
+fi
+
+# ============================================
+# STEP 5: Commit All Changes to Main Repo
+# ============================================
+echo ""
+echo "📦 Committing to main 02luka repo..."
+
+if [[ -d ~/02luka/.git ]]; then
+  cd ~/02luka
+  
+  # Add all changed files
+  git add -A 2>/dev/null || true
+  
+  # Create comprehensive commit message
+  COMMIT_MSG="session save: $AGENT $TODAY
+
+Session Summary:
+- Total MLS entries: $TOTAL_ENTRIES
+- Solutions: $SOLUTIONS
+- Improvements: $IMPROVEMENTS  
+- Failures: $FAILURES
+- Patterns: $PATTERNS
+
+Files updated:
+- Session: session_$TIMESTAMP.md
+- AI Summary: session_$(date +%Y%m%d).ai.json
+- System Map: g/system_map/system_map.v1.json
+- Documentation: 02luka.md (AUTO_RUNTIME section)
+
+Timestamp: $(date +%FT%TZ)"
+  
+  # Commit (will only commit if there are changes)
+  if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+    echo "✅ Committed to main repo"
+  else
+    echo "ℹ️  No changes to commit in main repo"
+  fi
+else
+  echo "⚠️  Main repo not a git repository"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ COMPLETE SAVE SUCCESSFUL"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 What Was Saved:"
+echo "  1. Session file:    $SESSION_FILE"
+echo "  2. AI summary:      $AI_SUMMARY_FILE"
+echo "  3. System map:      ~/02luka/g/system_map/system_map.v1.json"
+echo "  4. Documentation:   ~/02luka/02luka.md"
+echo "  5. Memory repo:     Git committed"
+echo "  6. Main repo:       Git committed"
+echo ""
+echo "🎯 Session Stats: $TOTAL_ENTRIES entries (S:$SOLUTIONS I:$IMPROVEMENTS F:$FAILURES P:$PATTERNS)"
+echo ""

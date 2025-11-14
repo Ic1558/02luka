@@ -1,0 +1,252 @@
+# 02luka Docker Services
+# Production configuration for Redis-based infrastructure
+# Last updated: 2025-10-31
+# Repository: github.com/Ic1558/02luka
+
+services:
+  # ========================================
+  # Redis Server - Pub/Sub Infrastructure
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    networks:
+      02luka-net:
+        aliases:
+          - 02luka-redis  # Services use this hostname
+          - redis         # Fallback alias
+    ports:
+      - "127.0.0.1:6379:6379"  # Localhost only - not exposed to network
+    volumes:
+      - luka-ops_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ========================================
+  # HTTP to Redis Bridge
+  # Exposes Redis pub/sub via HTTP API
+  # ========================================
+  http_redis_bridge:
+    image: 02luka-node-services:latest
+    container_name: http_redis_bridge
+    hostname: http_redis_bridge
+    networks:
+      - 02luka-net
+    ports:
+      - "127.0.0.1:8788:8788"  # Localhost only - requires auth
+    environment:
+      - REDIS_URL=redis://02luka-redis:6379
+      - BRIDGE_PORT=8788
+      - NODE_ENV=production
+      - BRIDGE_TOKEN=${BRIDGE_TOKEN}
+    volumes:
+      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g:ro  # Read-only
+    working_dir: /app/g/tools/services
+    command: node http_redis_bridge.cjs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "http_redis_bridge"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ========================================
+  # CLC Export Mode Listener
+  # Listens to CLC export mode Redis channel
+  # ========================================
+  clc_listener:
+    image: 02luka-node-services:latest
+    container_name: clc_listener
+    hostname: clc_listener
+    networks:
+      - 02luka-net
+    environment:
+      - REDIS_URL=redis://02luka-redis:6379
+      - CLC_EXPORT_MODE_CHANNEL=gg:clc:export_mode
+      - NODE_ENV=production
+    volumes:
+      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g
+    working_dir: /app/g/tools/services
+    command: node redis_export_mode_listener.cjs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "redis_export_mode_listener"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ========================================
+  # Ops Health Watcher
+  # Monitors ops.theedges.work endpoints
+  # ========================================
+  ops_health_watcher:
+    image: 02luka-node-services:latest
+    container_name: ops_health_watcher
+    hostname: ops_health_watcher
+    networks:
+      - 02luka-net
+    environment:
+      - OPS_HEALTH_URL=https://ops.theedges.work
+      - CHECK_INTERVAL=300000  # 5 minutes in milliseconds
+      - NODE_ENV=production
+    volumes:
+      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g
+    working_dir: /app/g/tools/services
+    command: node ops_health_watcher.cjs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "ops_health_watcher"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+# ========================================
+# Network Configuration
+# ========================================
+networks:
+  02luka-net:
+    external: true
+    name: 02luka-net
+
+# ========================================
+# Volume Configuration
+# ========================================
+volumes:
+  luka-ops_redis_data:
+    external: true
+    name: luka-ops_redis_data
+
+# ========================================
+# Usage Instructions
+# ========================================
+# Start all services:
+#   docker-compose up -d
+#
+# Stop all services:
+#   docker-compose down
+#
+# View logs:
+#   docker-compose logs -f [service_name]
+#
+# Restart service:
+#   docker-compose restart [service_name]
+#
+# Check status:
+#   docker-compose ps
+#
+# Scale service (example):
+#   docker-compose up -d --scale clc_listener=2
+#
+# ========================================
+# Prerequisites
+# ========================================
+# 1. Docker image must exist:
+#    docker images | grep 02luka-node-services
+#
+# 2. Volume must exist:
+#    docker volume create luka-ops_redis_data
+#
+# 3. Application directory must exist:
+#    ls -la /Users/icmini/LocalProjects/02luka_local_g/g
+#
+# 4. For production deployment, review:
+#    - Resource limits
+#    - Network configuration
+#    - Volume mounts
+#    - Environment variables
+#
+# ========================================
+# Security Notes
+# ========================================
+# - Redis: Bound to 127.0.0.1 only
+# - HTTP Bridge: Bound to 127.0.0.1, requires authentication
+# - Network: Isolated to 02luka-net
+# - Volumes: Host path mounts for code (consider security implications)
+# - Secrets: Load from ~/.config/02luka/secrets/ (not in compose)
+#
+# ========================================
+# Monitoring
+# ========================================
+# Health checks configured for all services:
+# - Redis: redis-cli ping
+# - HTTP Bridge: wget health endpoint
+# - CLC Listener: process check
+# - Ops Health Watcher: process check
+#
+# View health status:
+#   docker inspect --format='{{.State.Health.Status}}' [container_name]
+#
+# ========================================
+# Troubleshooting
+# ========================================
+# DNS issues (ENOTFOUND 02luka-redis):
+#   docker network inspect 02luka-net
+#   docker exec http_redis_bridge getent hosts 02luka-redis
+#
+# Port conflicts:
+#   lsof -i :6379
+#   lsof -i :8788
+#
+# Volume issues:
+#   docker volume inspect luka-ops_redis_data
+#
+# Container logs:
+#   docker-compose logs --tail=50 [service_name]

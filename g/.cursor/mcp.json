@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "servers": {
+    "filesystem": {
+      "command": "/Users/icmini/.local/bin/mcp_fs",
+      "args": [],
+      "env": {}
+    },
+    "puppeteer": {
+      "command": "/opt/homebrew/bin/npx",
+      "args": ["-y", "@hisma/server-puppeteer"],
+      "env": {
+        "PUPPETEER_CACHE_DIR": "/Users/icmini/Library/Caches/Puppeteer"
+      }
+    }
+  }
+}

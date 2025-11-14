@@ -1,0 +1,45 @@
+---
+wo_id: "WO-20251113-MLS-PROMPT-CAPTURE"
+agent: "CLS"
+priority: "P1"
+title: "MLS Auto-Capture for Training Prompts & Conversations"
+tags: "mls,critical,training,prompts,conversations"
+created_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+schema: "AI-OP-001/WO/v1"
+
+problem: |
+  CRITICAL FAILURE: MLS system is not capturing training prompts/conversations automatically.
+  
+  User tried to train AI with prompts, but MLS didn't trigger. This means:
+  - Training efforts are lost
+  - No record of what was taught
+  - Cannot learn from past conversations
+  - MLS core purpose (memory/brain) is failing
+  
+  Current state:
+  - mls_auto_record.zsh exists but requires MANUAL invocation
+  - No automatic hook for Cursor conversations
+  - No automatic hook for prompts/training sessions
+  - System relies on manual recording = work gets lost
+
+requirements: |
+  1. Create automatic prompt/conversation capture system
+  2. Hook into Cursor chat history (if accessible)
+  3. Create session summary auto-recorder
+  4. Record all prompts/conversations to MLS Ledger automatically
+  5. Ensure no training/prompts are lost
+  
+  Options to explore:
+  a) Cursor workspace storage (state.vscdb) - SQLite with chat history
+  b) Cursor API/webhook integration
+  c) File watcher on conversation files
+  d) Post-conversation hook/script
+  e) Cursor extension/command integration
+
+success_criteria: |
+  - All prompts/conversations automatically recorded to MLS Ledger
+  - Training sessions captured without manual intervention
+  - No work/training lost
+  - MLS becomes true "core brain" that remembers everything
+
+evidence_dir: "evidence/"

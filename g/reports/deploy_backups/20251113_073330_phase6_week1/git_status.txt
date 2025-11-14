@@ -1,0 +1,6 @@
+## main...origin/main [ahead 21, behind 22]
+ M g/apps/dashboard/data/followup.json
+ M logs/n8n.launchd.err
+ M memory/cls/mls_cursor_watcher_state.json
+ M mls/ledger/2025-11-13.jsonl
+?? g/reports/deploy_backups/20251113_073330_phase6_week1/

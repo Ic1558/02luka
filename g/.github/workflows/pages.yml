@@ -1,0 +1,85 @@
+---
+name: Deploy to GitHub Pages
+
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Concurrency: Let deployments complete even if new commits arrive
+# Latest deployment will still be served by GitHub Pages
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build static site
+        run: |
+          # Create clean dist directory
+          mkdir -p dist/ops
+
+          # Copy only static content (not dynamic files)
+          cp 02luka.md dist/ 2>/dev/null || echo "No 02luka.md"
+          cp -r docs dist/ 2>/dev/null || echo "No docs directory"
+
+          # Generate health page
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<meta charset="utf-8">' \
+            '<title>02luka Health</title>' \
+            '<h1>02luka System Health</h1>' \
+            '<p>Status: <strong style="color:green">OK</strong></p>' \
+            "<p>Last updated: $(date -u +"%Y-%m-%d %H:%M UTC")</p>" \
+            > dist/_health.html
+
+          # Generate manifest
+          printf '%s\n' \
+            '{' \
+            '  "status": "ok",' \
+            "  \"timestamp\": \"$(date -u +%FT%TZ)\"," \
+            "  \"version\": \"$(git rev-parse --short HEAD)\"," \
+            '  "branch": "main"' \
+            '}' \
+            > dist/manifest.json
+
+          # Generate ops status page
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<meta charset="utf-8">' \
+            '<title>02luka Ops Status</title>' \
+            '<h1>02luka Operations</h1>' \
+            '<p>System operational</p>' \
+            > dist/ops/status.html
+
+          echo "✅ Static site built successfully"
+          ls -la dist/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

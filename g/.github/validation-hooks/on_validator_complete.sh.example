@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+# Example On-Validator-Complete Hook
+# Runs after each validator completes
+#
+# Arguments:
+#   $1 = Validator name
+#   $2 = Status (PASS|FAIL|WARN|SKIP)
+#   $3 = Duration (milliseconds)
+#
+# To use: cp on_validator_complete.sh.example on_validator_complete.sh && chmod +x on_validator_complete.sh
+
+set -euo pipefail
+
+VALIDATOR="$1"
+STATUS="$2"
+DURATION="${3:-0}"
+
+# Log to audit file
+AUDIT_LOG="/tmp/validation-audit.log"
+echo "[$(date -Iseconds)] $VALIDATOR: $STATUS (${DURATION}ms)" >> "$AUDIT_LOG"
+
+# Example: Alert on slow validators
+if (( DURATION > 5000 )); then
+  echo "⚠️  Slow validator: $VALIDATOR took ${DURATION}ms"
+fi
+
+# Example: Track failures
+if [[ "$STATUS" == "FAIL" ]]; then
+  echo "$VALIDATOR" >> "/tmp/failed-validators.txt"
+fi
+
+exit 0

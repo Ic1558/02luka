@@ -1,0 +1,287 @@
+---
+# CI Rebase Automation Configuration
+# This file controls behavior of the global CI rebase automation system
+#
+# Location: .github/ci-rebase.config.yml
+# Documentation: docs/ci-rebase-automation.md
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Core Settings
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Default base branch for rebases
+default_base: origin/main
+
+# Alternative base branches (for different workflows)
+base_branches:
+  develop: origin/develop
+  staging: origin/staging
+
+# Maximum number of PRs to process in one run
+max_prs_per_run: 50
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CI Workflow Patterns
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# File patterns that trigger CI rebase consideration
+ci_workflow_patterns:
+  - .github/workflows/ci.yml
+  - .github/workflows/_reusable/*.yml
+  - .github/workflows/_reusable/**/*.yml
+
+# Additional patterns (can be extended for future needs)
+extended_patterns:
+  - .github/actions/**/*.yml
+  # Add more as needed
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Safety Guards
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Protected branches that should NEVER be rebased
+protected_branches:
+  - main
+  - master
+  - develop
+  - production
+  - staging
+  - release/*
+
+# Allow rebasing PRs from forks (UNSAFE - use with caution)
+allow_forks: false
+
+# Require confirmation before rebase (disable for full automation)
+require_confirmation: true
+
+# Create backup branches before rebasing
+create_backups: true
+
+# Backup branch naming pattern
+backup_pattern: "backup/pre-rebase-{branch}-{timestamp}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Smart Conflict Detection
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Enable pre-flight conflict detection (smart analysis before rebase)
+enable_conflict_detection: true
+
+# Skip PRs with predicted conflicts
+skip_conflicting_prs: true
+
+# Confidence threshold for conflict prediction (0.0-1.0)
+conflict_threshold: 0.7
+
+# Analyze file overlap between PRs
+detect_file_overlap: true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PR Dependency Detection
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Enable smart dependency detection
+enable_dependency_detection: true
+
+# Detection methods
+dependency_methods:
+  - base_branch          # PRs targeting same base
+  - file_overlap         # PRs modifying same files
+  - commit_references    # Commits mentioning other PRs
+  - label_based          # Using labels like "depends-on-#123"
+
+# Rebase in dependency order (dependencies first)
+respect_dependencies: true
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Smart Ordering
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Order PRs intelligently before processing
+enable_smart_ordering: true
+
+# Ordering criteria (in priority order)
+ordering_criteria:
+  - dependencies    # Process dependencies first
+  - age            # Older PRs first
+  - conflicts      # Low-conflict PRs first
+  - size           # Smaller PRs first
+  - ci_status      # Passing PRs first
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Rate Limiting
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Minimum API calls to reserve (fail if less)
+min_rate_limit: 100
+
+# Warning threshold for rate limit
+rate_limit_warning: 500
+
+# Delay between API calls (milliseconds)
+api_delay_ms: 100
+
+# Delay between rebase operations (seconds)
+rebase_delay_sec: 2
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# State Management
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# State file location
+state_file: /tmp/global-ci-rebase-state.json
+
+# Keep state history (for recovery)
+keep_state_history: true
+
+# Maximum state history files to keep
+max_state_history: 10
+
+# Auto-resume from previous failed run
+auto_resume: false
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Hooks and Plugins
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Enable hook system for custom extensions
+enable_hooks: true
+
+# Hook scripts directory
+hooks_dir: .github/ci-rebase-hooks
+
+# Available hooks (all optional):
+# - pre_discovery   : Before PR discovery
+# - post_discovery  : After PR discovery, before filtering
+# - pre_rebase      : Before each PR rebase
+# - post_rebase     : After each PR rebase (success or fail)
+# - pre_push        : Before pushing rebased branch
+# - post_push       : After push (success or fail)
+# - on_conflict     : When conflict detected
+# - on_complete     : After all operations complete
+
+hooks:
+  pre_discovery: []
+  post_discovery: []
+  pre_rebase: []
+  post_rebase:
+    - notify_slack.sh    # Example: notify team
+  on_conflict:
+    - log_conflict.sh    # Example: detailed logging
+  on_complete:
+    - generate_report.sh # Example: create summary
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Telemetry and Metrics
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Enable metrics collection
+enable_metrics: true
+
+# Metrics output file
+metrics_file: /tmp/ci-rebase-metrics.json
+
+# Track success patterns for learning
+track_success_patterns: true
+
+# Metrics to track:
+# - rebase_duration
+# - conflict_rate
+# - success_rate
+# - pr_characteristics (size, age, files changed)
+# - api_usage
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Filtering and Selection
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Default filters (can be overridden by CLI)
+default_filters:
+  # Skip draft PRs
+  skip_drafts: true
+
+  # Skip PRs with specific labels
+  skip_labels:
+    - do-not-rebase
+    - wip
+    - hold
+
+  # Only process PRs with specific labels (empty = all)
+  require_labels: []
+
+  # Minimum PR age (hours) before considering for rebase
+  min_age_hours: 0
+
+  # Maximum PR age (days) - skip very old PRs
+  max_age_days: 90
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Notifications
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Post comment on PR after rebase
+post_pr_comment: true
+
+# Comment template (supports variables)
+comment_template: |
+  🤖 **CI Rebase Automation**
+
+  This PR was automatically rebased onto `{base_branch}`.
+
+  ✅ **Status**: {status}
+  📊 **Conflicts**: {conflicts}
+  ⏱️  **Duration**: {duration}
+
+  If you have any issues, please check the [workflow run]({workflow_url}).
+
+# Notify on conflicts
+notify_on_conflict: true
+
+# Notification channels (extensible)
+notification_channels:
+  - pr_comment
+  # - slack
+  # - email
+  # - webhook
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Advanced Settings
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Parallel processing (number of PRs to process concurrently)
+# Set to 1 for sequential processing (safer)
+parallel_workers: 1
+
+# Dry run mode (simulate without making changes)
+# Can be overridden by CLI --dry-run flag
+default_dry_run: false
+
+# Verbose logging
+verbose: false
+
+# Debug mode (extra logging and state preservation)
+debug: false
+
+# Experimental features (may change in future versions)
+experimental:
+  # Use git worktrees for parallel rebases
+  use_worktrees: false
+
+  # Machine learning conflict prediction
+  ml_conflict_detection: false
+
+  # Auto-merge after successful rebase (DANGEROUS)
+  auto_merge: false
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Version and Compatibility
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Configuration schema version
+schema_version: "1.0"
+
+# Minimum tool versions required
+required_versions:
+  gh: "2.0.0"
+  git: "2.30.0"
+  jq: "1.6"

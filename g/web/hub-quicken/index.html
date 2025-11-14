@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes"/>
+  <meta name="description" content="02LUKA Hub Quicken – Real-time hub monitoring dashboard"/>
+  <meta name="theme-color" content="#0b0f19"/>
+  <title>02LUKA – Hub Quicken v2</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>"/>
+</head>
+<body>
+<div id="pull-refresh" class="pull-refresh">
+  <div class="pull-refresh-icon">↓</div>
+</div>
+
+<header class="bar" role="banner">
+  <h1>Hub Quicken v2</h1>
+  <div class="controls">
+    <button id="toggle-theme" title="Toggle dark/light (Alt+T)" aria-label="Toggle theme">🌓</button>
+    <label class="control-group">
+      <input id="autorefresh" type="checkbox" checked aria-label="Auto refresh"/>
+      <span>auto</span>
+      <select id="refresh-interval" aria-label="Refresh interval">
+        <option value="5000">5s</option>
+        <option value="10000" selected>10s</option>
+        <option value="30000">30s</option>
+        <option value="60000">1m</option>
+      </select>
+    </label>
+    <div class="search-wrapper">
+      <input id="search" type="search" placeholder="search… (Ctrl+K)" aria-label="Search"/>
+      <button id="regex-toggle" title="Toggle regex search (Alt+R)" aria-label="Toggle regex" class="mini-btn">.*</button>
+    </div>
+    <button id="export" title="Export all data (Ctrl+E)" aria-label="Export data">💾 export</button>
+    <button id="history" title="View history (Ctrl+H)" aria-label="View history">📜</button>
+    <button id="ai-settings" title="AI Settings" aria-label="AI settings">🤖 AI</button>
+  </div>
+</header>
+
+<main class="grid" role="main">
+  <section class="card" id="card-index">
+    <div class="card-head">
+      <h2>Hub Index</h2>
+      <div class="card-actions">
+        <span id="idx-badge" class="badge">—</span>
+        <button class="mini-btn" data-copy="index-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-index" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading" id="loading-index">
+        <div class="spinner"></div>
+      </div>
+      <pre id="index-view" aria-live="polite">loading…</pre>
+    </div>
+  </section>
+
+  <section class="card" id="card-registry">
+    <div class="card-head">
+      <h2>MCP Registry</h2>
+      <div class="card-actions">
+        <span id="reg-badge" class="badge">—</span>
+        <button class="mini-btn" data-copy="registry-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-registry" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading" id="loading-registry">
+        <div class="spinner"></div>
+      </div>
+      <pre id="registry-view" aria-live="polite">loading…</pre>
+    </div>
+  </section>
+
+  <section class="card" id="card-health">
+    <div class="card-head">
+      <h2>MCP Health</h2>
+      <div class="card-actions">
+        <span id="hlt-badge" class="badge">—</span>
+        <button class="mini-btn" data-copy="health-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-health" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading" id="loading-health">
+        <div class="spinner"></div>
+      </div>
+      <pre id="health-view" aria-live="polite">loading…</pre>
+    </div>
+  </section>
+
+  <section class="card" id="card-diff">
+    <div class="card-head">
+      <h2>Diff (since last)</h2>
+      <div class="card-actions">
+        <span id="diff-badge" class="badge">—</span>
+        <button class="mini-btn" data-copy="diff-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-diff" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <pre id="diff-view" aria-live="polite">no previous snapshot</pre>
+    </div>
+  </section>
+
+  <section class="card card-wide" id="card-ai">
+    <div class="card-head">
+      <h2>🤖 AI Analysis</h2>
+      <div class="card-actions">
+        <span id="ai-badge" class="badge">—</span>
+        <button id="ai-analyze" class="mini-btn ai-btn" title="Run AI Analysis">🔍 Analyze</button>
+        <button class="mini-btn" data-copy="ai-view" title="Copy" aria-label="Copy">📋</button>
+        <button class="mini-btn" data-collapse="card-ai" title="Collapse" aria-label="Collapse">−</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading" id="loading-ai" style="display: none;">
+        <div class="spinner"></div>
+        <span>Analyzing with AI...</span>
+      </div>
+      <div id="ai-view" class="ai-content">
+        <p class="ai-placeholder">Click "Analyze" to generate AI-powered insights about your hub health, performance trends, and anomalies.</p>
+        <div class="ai-quick-stats" id="ai-quick-stats" style="display: none;"></div>
+        <pre id="ai-analysis-text" style="display: none;"></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="bar" role="contentinfo">
+  <div>
+    <a href="../../hub/index.json" target="_blank" rel="noopener">/hub/index.json</a> ·
+    <a href="../../hub/mcp_registry.json" target="_blank" rel="noopener">/hub/mcp_registry.json</a> ·
+    <a href="../../hub/mcp_health.json" target="_blank" rel="noopener">/hub/mcp_health.json</a>
+  </div>
+  <div class="footer-meta">
+    <span id="last-update">—</span>
+    <kbd title="Keyboard shortcuts">?</kbd>
+  </div>
+</footer>
+
+<!-- Toast container -->
+<div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- History modal -->
+<dialog id="history-modal" aria-labelledby="history-title">
+  <div class="modal-header">
+    <h2 id="history-title">Snapshot History</h2>
+    <button class="close-modal" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body" id="history-list">
+    <p>No snapshots yet</p>
+  </div>
+</dialog>
+
+<!-- Keyboard shortcuts help -->
+<dialog id="shortcuts-modal" aria-labelledby="shortcuts-title">
+  <div class="modal-header">
+    <h2 id="shortcuts-title">Keyboard Shortcuts</h2>
+    <button class="close-modal" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body">
+    <table>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Focus search</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>E</kbd></td><td>Export data</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>H</kbd></td><td>View history</td></tr>
+      <tr><td><kbd>Alt</kbd>+<kbd>T</kbd></td><td>Toggle theme</td></tr>
+      <tr><td><kbd>Alt</kbd>+<kbd>R</kbd></td><td>Toggle regex search</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close modals</td></tr>
+    </table>
+  </div>
+</dialog>
+
+<!-- AI Settings -->
+<dialog id="ai-settings-modal" aria-labelledby="ai-settings-title">
+  <div class="modal-header">
+    <h2 id="ai-settings-title">🤖 AI Settings</h2>
+    <button class="close-modal" aria-label="Close">×</button>
+  </div>
+  <div class="modal-body">
+    <div class="settings-section">
+      <h3>Local AI Endpoint</h3>
+      <p class="help-text">Connect to local AI (Ollama, LM Studio, etc.)</p>
+
+      <label>
+        <strong>API Endpoint:</strong>
+        <input type="text" id="ai-endpoint" placeholder="http://localhost:11434/api/generate" class="setting-input"/>
+      </label>
+
+      <label>
+        <strong>Model Name:</strong>
+        <input type="text" id="ai-model" placeholder="llama3.2:latest" class="setting-input"/>
+      </label>
+
+      <label>
+        <strong>API Key (optional):</strong>
+        <input type="password" id="ai-api-key" placeholder="Leave empty for local AI" class="setting-input"/>
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-auto-analyze"/>
+        <span>Auto-analyze on data refresh</span>
+      </label>
+    </div>
+
+    <div class="settings-section">
+      <h3>Quick Presets</h3>
+      <div class="preset-buttons">
+        <button class="preset-btn" data-preset="ollama">Ollama (default)</button>
+        <button class="preset-btn" data-preset="lmstudio">LM Studio</button>
+        <button class="preset-btn" data-preset="openai">OpenAI API</button>
+        <button class="preset-btn" data-preset="custom">Custom</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Analysis Options</h3>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-detect-anomalies" checked/>
+        <span>Detect anomalies</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-trend-analysis" checked/>
+        <span>Trend analysis</span>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" id="ai-recommendations" checked/>
+        <span>Generate recommendations</span>
+      </label>
+    </div>
+
+    <div class="modal-footer">
+      <button id="ai-test-connection" class="btn-primary">Test Connection</button>
+      <button id="ai-save-settings" class="btn-success">Save Settings</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

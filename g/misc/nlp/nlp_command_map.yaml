@@ -1,0 +1,24 @@
+"แอนดี้ สถานะ": check_health
+"andy status": check_health
+"แอนดี้ รีสตาร์ท health": restart_health_server
+"andy restart health": restart_health_server
+"deploy dashboard": deploy_dashboard
+"update docker yaml": update_docker_yaml
+"สถานะแอนดี้": check_health
+"andy health": check_health
+"รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
+"restart andy health": restart_health_server
+"สถานะแอนดี้": check_health
+"andy health": check_health
+"รีสตาร์ท แอนดี้ เฮลธ์": restart_health_server
+"restart andy health": restart_health_server
+"deploy boss api": deploy_dashboard
+"start boss api": deploy_dashboard
+"รีสตาร์ท boss api": deploy_dashboard
+"deploy dashboard": deploy_dashboard
+"รีสตาร์ทแดชบอร์ด": deploy_dashboard
+"andy status": check_health
+"andy metrics": check_health
+"andy metrics prom": check_health
+"boss api status": check_health
+"แอนดี้ เมตริกส์ โปรม": check_health

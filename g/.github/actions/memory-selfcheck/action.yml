@@ -1,0 +1,32 @@
+name: memory-selfcheck
+description: Validate presence/shape of 02luka-memory as subtree at _memory/
+
+inputs:
+  working-directory:
+    description: 'Working directory (default: root)'
+    required: false
+    default: ''
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate subtree directory exists
+      shell: bash
+      run: |
+        cd "${{ inputs.working-directory || '.' }}"
+        test -d _memory || { echo "ERR: _memory/ not found"; exit 1; }
+        ls -la _memory | head -50
+
+    - name: Validate GG context latest files
+      shell: bash
+      run: |
+        cd "${{ inputs.working-directory || '.' }}"
+        set -e
+        test -f _memory/GG/context/LATEST.json
+        test -f _memory/GG/context/LATEST.meta.json
+        jq -e '.date and .digest' _memory/GG/context/LATEST.meta.json >/dev/null
+
+    - name: Echo short summary
+      shell: bash
+      run: |
+        echo "OK: _memory subtree present and GG/context latest files valid"
