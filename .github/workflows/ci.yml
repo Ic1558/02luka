@@ -61,7 +61,9 @@ jobs:
       
       - name: Check report paths
         run: |
-          BAD=$(git diff --name-only origin/main...HEAD | grep -E '^g/reports/[^/]+\.md$' || true)
+          # Only check files that are added or modified (not deleted)
+          # Use --diff-filter=AM to exclude deleted files
+          BAD=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/[^/]+\.md$' || true)
           if [ -n "$BAD" ]; then
             echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system}/ only"
             echo ""
@@ -72,9 +74,32 @@ jobs:
             echo "  - Phase 5 reports → g/reports/phase5_governance/"
             echo "  - Phase 6 reports → g/reports/phase6_paula/"
             echo "  - System reports → g/reports/system/"
+            
+            # Add job summary for better visibility
+            {
+              echo "## ❌ Path Guard Check Failed"
+              echo ""
+              echo "Reports must be in subdirectories, not directly in \`g/reports/\`"
+              echo ""
+              echo "### Files in wrong location:"
+              echo "$BAD" | sed 's/^/- /'
+              echo ""
+              echo "### Required structure:"
+              echo "- Phase 5 reports → \`g/reports/phase5_governance/\`"
+              echo "- Phase 6 reports → \`g/reports/phase6_paula/\`"
+              echo "- System reports → \`g/reports/system/\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            
             exit 1
           fi
           echo "✅ All reports in correct subdirectories"
+          
+          # Add success summary
+          {
+            echo "## ✅ Path Guard Check Passed"
+            echo ""
+            echo "All report files are in the correct subdirectories."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ============================================================
   # SUMMARY JOB: Always runs to show overall status
