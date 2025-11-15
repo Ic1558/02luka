@@ -67,7 +67,7 @@ async function loadServices() {
     if (statusFilter) params.set('status', statusFilter);
     const query = params.toString();
 
-    const data = await fetchJSON(`/api/services${query ? `?${query}` : ''}`);
+    const data = await fetchJSON(`http://127.0.0.1:8767/api/services${query ? `?${query}` : ''}`);
     let services = Array.isArray(data?.services) ? data.services : [];
 
     if (typeFilter) {
@@ -166,7 +166,7 @@ async function loadMLS() {
     if (typeFilter) params.set('type', typeFilter);
     const query = params.toString();
 
-    const data = await fetchJSON(`/api/mls${query ? `?${query}` : ''}`);
+    const data = await fetchJSON(`http://127.0.0.1:8767/api/mls${query ? `?${query}` : ''}`);
     let entries = Array.isArray(data?.entries) ? data.entries : [];
 
     if (verifiedOnly) {
