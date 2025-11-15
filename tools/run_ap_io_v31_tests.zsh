@@ -84,7 +84,7 @@ for test_file in "${TEST_FILES[@]}"; do
   
   # Run test
   echo "--- Running: $test_file ---"
-  if "$test_path" >/dev/null 2>&1; then
+  if "$test_path" 2>&1; then
     log_test "PASS" "$test_file"
   else
     log_test "FAIL" "$test_file"

@@ -135,6 +135,13 @@ tests/ap_io_v31/test_correlation.zsh
 tests/ap_io_v31/test_backward_compat.zsh
 ```
 
+### Test Execution Results
+
+**Date:** 2025-11-16  
+**Status:** Tests executed
+
+See individual test outputs below for detailed results.
+
 ### Expected Results
 
 - All tests should pass
