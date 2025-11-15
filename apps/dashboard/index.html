@@ -101,6 +101,34 @@
         border: 1px solid rgba(148, 163, 184, 0.2);
         font-weight: 500;
         margin-bottom: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+      }
+
+      .summary-bar span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      .summary-dot {
+        width: 0.65rem;
+        height: 0.65rem;
+        border-radius: 999px;
+        display: inline-block;
+      }
+
+      .summary-dot.running {
+        background: #4ade80;
+      }
+
+      .summary-dot.stopped {
+        background: #94a3b8;
+      }
+
+      .summary-dot.failed {
+        background: #f87171;
       }
 
       .filters {
@@ -118,8 +146,7 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
-      .filters select,
-      .filters input[type="checkbox"] {
+      .filters select {
         margin-top: 0.25rem;
       }
 
@@ -157,27 +184,162 @@
         background: rgba(30, 41, 59, 0.5);
       }
 
+      .status-chip {
+        padding: 0.25rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: capitalize;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .status-chip::before {
+        content: "\25CF";
+        font-size: 0.75rem;
+      }
+
       .status-running {
         color: #4ade80;
-        font-weight: 600;
       }
 
       .status-stopped {
         color: #94a3b8;
-        font-weight: 600;
       }
 
       .status-failed {
         color: #f87171;
-        font-weight: 600;
       }
 
-      .detail-panel {
-        margin-top: 1rem;
-        padding: 1rem;
-        border-radius: 16px;
-        background: rgba(30, 41, 59, 0.55);
-        border: 1px solid rgba(148, 163, 184, 0.2);
+      .error-banner {
+        padding: 0.65rem 1rem;
+        border-radius: 12px;
+        background: rgba(248, 113, 113, 0.15);
+        border: 1px solid rgba(248, 113, 113, 0.4);
+        color: #fecaca;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .error-banner.hidden {
+        display: none;
+      }
+
+      .error-banner button {
+        background: rgba(248, 250, 252, 0.15);
+        border: 1px solid rgba(248, 250, 252, 0.35);
+        border-radius: 999px;
+        color: #f8fafc;
+        padding: 0.35rem 0.9rem;
+        cursor: pointer;
+      }
+
+      .pill-bar {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+
+      .pill-button {
+        background: rgba(148, 163, 184, 0.15);
+        border: 1px solid transparent;
+        border-radius: 999px;
+        color: rgba(248, 250, 252, 0.85);
+        padding: 0.4rem 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .pill-button.active {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: rgba(56, 189, 248, 0.4);
+        color: #f8fafc;
+      }
+
+      .mls-list {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .mls-card {
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 18px;
+        padding: 1.25rem;
+        background: rgba(15, 23, 42, 0.65);
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+      }
+
+      .mls-card header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+        margin-bottom: 0.25rem;
+      }
+
+      .mls-card h3 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .badge {
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .badge-solution {
+        background: rgba(34, 197, 94, 0.15);
+        color: #86efac;
+        border: 1px solid rgba(34, 197, 94, 0.5);
+      }
+
+      .badge-failure {
+        background: rgba(248, 113, 113, 0.15);
+        color: #fecaca;
+        border: 1px solid rgba(248, 113, 113, 0.5);
+      }
+
+      .badge-pattern {
+        background: rgba(248, 250, 252, 0.08);
+        color: #f8fafc;
+        border: 1px solid rgba(248, 250, 252, 0.25);
+      }
+
+      .badge-improvement {
+        background: rgba(14, 165, 233, 0.15);
+        color: #bae6fd;
+        border: 1px solid rgba(14, 165, 233, 0.45);
+      }
+
+      .mls-meta {
+        font-size: 0.9rem;
+        color: rgba(226, 232, 240, 0.75);
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .tag-chip {
+        background: rgba(148, 163, 184, 0.2);
+        border-radius: 999px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.8rem;
+      }
+
+      .mls-footer {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        font-size: 0.85rem;
+        color: rgba(226, 232, 240, 0.8);
       }
 
       footer {
@@ -227,7 +389,15 @@
       <section id="services-panel" class="panel hidden">
         <h2>Services</h2>
         <div id="services-summary" class="summary-bar">
-          Total: – | Running: – | Stopped: – | Failed: –
+          <span><strong>Total:</strong> –</span>
+          <span><span class="summary-dot running"></span>Running: –</span>
+          <span><span class="summary-dot stopped"></span>Stopped: –</span>
+          <span><span class="summary-dot failed"></span>Failed: –</span>
+        </div>
+
+        <div id="services-error" class="error-banner hidden">
+          <span>Failed to load services.</span>
+          <button type="button" id="services-error-retry">Retry</button>
         </div>
 
         <div class="filters">
@@ -258,10 +428,10 @@
           <thead>
             <tr>
               <th>Label</th>
-              <th>Type</th>
               <th>Status</th>
               <th>PID</th>
               <th>Exit</th>
+              <th>Type</th>
             </tr>
           </thead>
           <tbody id="services-tbody">
@@ -275,54 +445,32 @@
       <section id="mls-panel" class="panel hidden">
         <h2>MLS Lessons</h2>
 
-        <div class="filters">
-          <label>Type:
-            <select id="mls-type-filter">
-              <option value="">All</option>
-              <option value="solution">Solution</option>
-              <option value="failure">Failure</option>
-              <option value="pattern">Pattern</option>
-              <option value="improvement">Improvement</option>
-            </select>
-          </label>
+        <div id="mls-summary" class="summary-bar">
+          <span><strong>Total:</strong> –</span>
+          <span>Solutions: –</span>
+          <span>Failures: –</span>
+          <span>Patterns: –</span>
+          <span>Improvements: –</span>
+        </div>
 
-          <label>
-            <input type="checkbox" id="mls-verified-only" />
-            Verified only
-          </label>
+        <div id="mls-error" class="error-banner hidden">
+          <span>Failed to load MLS lessons.</span>
+          <button type="button" id="mls-error-retry">Retry</button>
+        </div>
+
+        <div class="filters">
+          <div class="pill-bar" id="mls-type-pills">
+            <button class="pill-button active" data-type="">All</button>
+            <button class="pill-button" data-type="solution">Solutions</button>
+            <button class="pill-button" data-type="failure">Failures</button>
+            <button class="pill-button" data-type="pattern">Patterns</button>
+            <button class="pill-button" data-type="improvement">Improvements</button>
+          </div>
 
           <button id="mls-refresh-btn" type="button">Refresh</button>
         </div>
 
-        <div id="mls-summary" class="summary-bar">
-          Total: – | Solutions: – | Failures: – | Patterns: – | Improvements: –
-        </div>
-
-        <table class="table" id="mls-table">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>Title</th>
-              <th>Score</th>
-              <th>Tags</th>
-              <th>Verified</th>
-            </tr>
-          </thead>
-          <tbody id="mls-tbody">
-            <tr>
-              <td colspan="6">Loading…</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div id="mls-detail" class="detail-panel hidden">
-          <h3 id="mls-detail-title"></h3>
-          <p id="mls-detail-details"></p>
-          <p><strong>Context:</strong> <span id="mls-detail-context"></span></p>
-          <p><strong>Related WO:</strong> <span id="mls-detail-wo"></span></p>
-          <p><strong>Related Session:</strong> <span id="mls-detail-session"></span></p>
-        </div>
+        <div id="mls-list" class="mls-list">Loading…</div>
       </section>
     </main>
     <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
