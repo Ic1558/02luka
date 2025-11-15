@@ -19,8 +19,10 @@ const AUTH_TOKEN = process.env.DASHBOARD_AUTH_TOKEN || 'dashboard-token-change-m
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || 'gggclukaic';
 const REDIS_URL = process.env.REDIS_URL || `redis://:${REDIS_PASSWORD}@127.0.0.1:6379`;
 
-const STATE_DIR = path.join(BASE, 'g/followup/state');
-const FOLLOWUP_DATA = path.join(BASE, 'g/apps/dashboard/data/followup.json');
+const STATE_DIR = path.join(BASE, 'followup/state');
+const FOLLOWUP_DATA = path.join(BASE, 'apps/dashboard/data/followup.json');
+const WO_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+const INVALID_WO_ID_ERROR = 'Invalid work order ID';
 
 let redisClient = null;
 
@@ -45,28 +47,49 @@ function sendError(res, status, message) {
   sendJSON(res, status, { error: message });
 }
 
+function getStateFilePath(woId) {
+  if (!WO_ID_PATTERN.test(woId)) {
+    throw new Error(INVALID_WO_ID_ERROR);
+  }
+
+  return path.join(STATE_DIR, `${woId}.json`);
+}
+
 async function readStateFile(woId) {
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
+    const filePath = getStateFilePath(woId);
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (err) {
-    return null;
+    if (err.code === 'ENOENT') {
+      return null;
+    }
+    throw err;
   }
 }
 
 async function writeStateFile(woId, data) {
+  const filePath = getStateFilePath(woId);
   try {
-    const filePath = path.join(STATE_DIR, `${woId}.json`);
     const tmpPath = `${filePath}.tmp`;
     await fs.writeFile(tmpPath, JSON.stringify(data, null, 2));
     await fs.rename(tmpPath, filePath);
     return true;
   } catch (err) {
     console.error('Write state error:', err);
-    return false;
+    throw err;
   }
 }
+
+async function ensureStateDir() {
+  try {
+    await fs.mkdir(STATE_DIR, { recursive: true });
+  } catch (err) {
+    console.error('Failed to ensure state directory:', err);
+  }
+}
+
+ensureStateDir();
 
 const server = http.createServer(async (req, res) => {
   // CORS headers
@@ -82,16 +105,11 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
-  // GET /api/auth-token - FIXED: Added missing endpoint
-  if (req.method === 'GET' && pathname === '/api/auth-token') {
-    return sendJSON(res, 200, { token: AUTH_TOKEN });
-  }
-
   // Auth check for other endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
-  
-  if (pathname.startsWith('/api/') && pathname !== '/api/auth-token') {
+
+  if (pathname.startsWith('/api/')) {
     if (token !== AUTH_TOKEN) {
       return sendError(res, 401, 'Unauthorized');
     }
@@ -106,13 +124,20 @@ const server = http.createServer(async (req, res) => {
       for (const file of files) {
         if (file.endsWith('.json')) {
           const woId = file.replace('.json', '');
-          const data = await readStateFile(woId);
-          if (data) {
-            wos.push(data);
+          try {
+            const data = await readStateFile(woId);
+            if (data) {
+              wos.push(data);
+            }
+          } catch (err) {
+            if (err.message === INVALID_WO_ID_ERROR) {
+              continue;
+            }
+            throw err;
           }
         }
       }
-      
+
       return sendJSON(res, 200, wos);
     } catch (err) {
       return sendError(res, 500, err.message);
@@ -122,26 +147,33 @@ const server = http.createServer(async (req, res) => {
   // GET /api/wo/:id - Get single WO
   if (req.method === 'GET' && pathname.startsWith('/api/wo/')) {
     const woId = pathname.replace('/api/wo/', '');
-    const data = await readStateFile(woId);
-    
-    if (!data) {
-      return sendError(res, 404, 'WO not found');
+    try {
+      const data = await readStateFile(woId);
+
+      if (!data) {
+        return sendError(res, 404, 'WO not found');
+      }
+
+      return sendJSON(res, 200, data);
+    } catch (err) {
+      if (err.message === INVALID_WO_ID_ERROR) {
+        return sendError(res, 400, err.message);
+      }
+      return sendError(res, 500, err.message);
     }
-    
-    return sendJSON(res, 200, data);
   }
 
   // POST /api/wo/:id/action - Perform action on WO
   if (req.method === 'POST' && pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)) {
     const woId = pathname.match(/^\/api\/wo\/([^\/]+)\/action$/)[1];
-    
+
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', async () => {
       try {
         const { action } = JSON.parse(body);
         const currentData = await readStateFile(woId);
-        
+
         if (!currentData) {
           return sendError(res, 404, 'WO not found');
         }
@@ -157,29 +189,31 @@ const server = http.createServer(async (req, res) => {
 
         currentData.ts_update = new Date().toISOString();
         
-        const success = await writeStateFile(woId, currentData);
-        
-        if (success) {
-          // Publish to Redis if available
-          if (redisClient) {
-            try {
-              await redisClient.publish('wo:update', JSON.stringify({
-                wo_id: woId,
-                action: action,
-                status: currentData.status,
-                ts: currentData.ts_update
-              }));
-            } catch (err) {
-              console.error('Redis publish error:', err);
-            }
+        await writeStateFile(woId, currentData);
+
+        // Publish to Redis if available
+        if (redisClient) {
+          try {
+            await redisClient.publish('wo:update', JSON.stringify({
+              wo_id: woId,
+              action: action,
+              status: currentData.status,
+              ts: currentData.ts_update
+            }));
+          } catch (err) {
+            console.error('Redis publish error:', err);
           }
-          
-          return sendJSON(res, 200, { success: true, wo: currentData });
-        } else {
-          return sendError(res, 500, 'Failed to update WO');
         }
+
+        return sendJSON(res, 200, { success: true, wo: currentData });
       } catch (err) {
-        return sendError(res, 400, err.message);
+        if (err.message === INVALID_WO_ID_ERROR) {
+          return sendError(res, 400, err.message);
+        }
+        if (err instanceof SyntaxError) {
+          return sendError(res, 400, 'Invalid JSON payload');
+        }
+        return sendError(res, 500, err.message);
       }
     });
     return;
@@ -203,15 +237,14 @@ const server = http.createServer(async (req, res) => {
 async function start() {
   await initRedis();
   
-  server.listen(PORT, () => {
-    console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
-    console.log(`📊 API endpoints:`);
-    console.log(`   GET  /api/auth-token`);
-    console.log(`   GET  /api/wos`);
-    console.log(`   GET  /api/wo/:id`);
-    console.log(`   POST /api/wo/:id/action`);
-    console.log(`   GET  /api/followup`);
-  });
+    server.listen(PORT, () => {
+      console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
+      console.log(`📊 API endpoints:`);
+      console.log(`   GET  /api/wos`);
+      console.log(`   GET  /api/wo/:id`);
+      console.log(`   POST /api/wo/:id/action`);
+      console.log(`   GET  /api/followup`);
+    });
 }
 
 start().catch(console.error);
