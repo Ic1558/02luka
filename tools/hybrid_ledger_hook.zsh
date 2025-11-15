@@ -1,13 +1,14 @@
 #!/usr/bin/env zsh
 # Hybrid Ledger Hook - Integration with Hybrid/Luka CLI execution
-# Usage: hybrid_ledger_hook.zsh <event_type> <task_id> <summary> [data_json]
+# Usage: hybrid_ledger_hook.zsh <event_type> <task_id> <summary> [data_json] [parent_id] [execution_duration_ms]
 # This is called by Hybrid/Luka CLI tools to write ledger entries
+# Now uses AP/IO v3.1 writer for consistency
 
 set -euo pipefail
 
 REPO_ROOT="${LUKA_SOT:-$HOME/02luka}"
-LEDGER_TOOL="$REPO_ROOT/tools/ledger_write.zsh"
-STATUS_TOOL="$REPO_ROOT/tools/status_update.zsh"
+WRITER="$REPO_ROOT/tools/ap_io_v31/writer.zsh"
+INTEGRATION="$REPO_ROOT/agents/hybrid/ap_io_v31_integration.zsh"
 
 # Default values
 AGENT="hybrid"
@@ -15,6 +16,8 @@ SOURCE="luka_cli"
 TASK_ID="${2:-unknown}"
 SUMMARY="${3:-}"
 DATA_JSON="${4:-{}}"
+PARENT_ID="${5:-}"
+EXECUTION_DURATION_MS="${6:-}"
 
 case "${1:-}" in
   task_start)
@@ -81,37 +84,47 @@ PY
   DATA_JSON="$SANITIZED_DATA"
 fi
 
-# Write ledger entry
-if [[ -x "$LEDGER_TOOL" ]]; then
-  "$LEDGER_TOOL" "$AGENT" "$EVENT_TYPE" "$TASK_ID" "$SOURCE" "$SUMMARY" "$DATA_JSON" || {
-    echo "Warning: Ledger write failed (non-fatal)" >&2
-  }
+# Write ledger entry using AP/IO v3.1 writer
+if [[ -x "$WRITER" ]]; then
+  set +e  # Don't fail if ledger write fails
+  if [[ -n "$PARENT_ID" ]] && [[ -n "$EXECUTION_DURATION_MS" ]]; then
+    "$WRITER" "$AGENT" "$EVENT_TYPE" "$TASK_ID" "$SOURCE" "$SUMMARY" "$DATA_JSON" "$PARENT_ID" "$EXECUTION_DURATION_MS" || {
+      echo "⚠️  Hybrid ledger write failed (non-fatal)" >&2
+    }
+  elif [[ -n "$PARENT_ID" ]]; then
+    "$WRITER" "$AGENT" "$EVENT_TYPE" "$TASK_ID" "$SOURCE" "$SUMMARY" "$DATA_JSON" "$PARENT_ID" || {
+      echo "⚠️  Hybrid ledger write failed (non-fatal)" >&2
+    }
+  else
+    "$WRITER" "$AGENT" "$EVENT_TYPE" "$TASK_ID" "$SOURCE" "$SUMMARY" "$DATA_JSON" || {
+      echo "⚠️  Hybrid ledger write failed (non-fatal)" >&2
+    }
+  fi
+  set -e
 else
-  echo "Warning: Ledger tool not found: $LEDGER_TOOL" >&2
+  echo "⚠️  AP/IO v3.1 writer not found: $WRITER" >&2
 fi
 
-# Update status
-if [[ -x "$STATUS_TOOL" ]]; then
-  TIMESTAMP=$(date -Iseconds)
-  DATE=$(date '+%Y-%m-%d')
-  SESSION_ID_FILE="$REPO_ROOT/memory/$AGENT/sessions/.last_session_id"
-  SESSION_COUNTER=1
-  if [[ -f "$SESSION_ID_FILE" ]]; then
-    LAST_DATE=$(head -1 "$SESSION_ID_FILE" 2>/dev/null || echo "")
-    if [[ "$LAST_DATE" == "$DATE" ]]; then
-      SESSION_COUNTER=$(tail -1 "$SESSION_ID_FILE" 2>/dev/null | awk '{print $2+1}' || echo "1")
-    fi
-  fi
-  SESSION_ID="${DATE}_${AGENT}_$(printf "%03d" "$SESSION_COUNTER")"
+# Update status via integration script
+if [[ -x "$INTEGRATION" ]]; then
+  # Build event JSON for integration script
+  EVENT_JSON=$(cat <<EOF
+{
+  "protocol": "AP/IO",
+  "version": "3.1",
+  "agent": "$AGENT",
+  "event": {
+    "type": "$EVENT_TYPE",
+    "task_id": "$TASK_ID",
+    "source": "$SOURCE",
+    "summary": "$SUMMARY"
+  },
+  "data": $DATA_JSON
+}
+EOF
+  )
   
-  if [[ "$EVENT_TYPE" == "error" ]]; then
-    ERROR_MSG=$(echo "$DATA_JSON" | python3 -c "import json, sys; d=json.load(sys.stdin); print(d.get('error', 'Unknown error'))" 2>/dev/null || echo "Unknown error")
-    "$STATUS_TOOL" "$AGENT" "$STATE" "$TIMESTAMP" "$TASK_ID" "$SESSION_ID" "$ERROR_MSG" || true
-  else
-    "$STATUS_TOOL" "$AGENT" "$STATE" "$TIMESTAMP" "$TASK_ID" "$SESSION_ID" || true
-  fi
-else
-  echo "Warning: Status tool not found: $STATUS_TOOL" >&2
+  echo "$EVENT_JSON" | "$INTEGRATION" normal >/dev/null 2>&1 || true
 fi
 
 echo "✅ Hybrid ledger hook executed: $EVENT_TYPE"

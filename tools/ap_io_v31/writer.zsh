@@ -5,7 +5,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# tools/ap_io_v31 -> tools -> repo root
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SCHEMA_DIR="$REPO_ROOT/schemas"
 VALIDATOR="$SCRIPT_DIR/validator.zsh"
 CORRELATION_ID="$SCRIPT_DIR/correlation_id.zsh"
@@ -79,91 +80,139 @@ SESSION_ID="$(date +%Y-%m-%d)_${AGENT}_001"
 # Generate ledger_id (format: ledger-YYYYMMDD-HHMMSS-<agent>-<seq>)
 LEDGER_DATE=$(date +%Y%m%d)
 LEDGER_TIME=$(date +%H%M%S)
+LEDGER_DATE_FMT=$(date +%Y-%m-%d)  # For file path (YYYY-MM-DD format)
+
 # Get sequence number from existing ledger file (if exists)
-LEDGER_DIR="$REPO_ROOT/g/ledger/$AGENT"
-LEDGER_FILE="$LEDGER_DIR/$(date +%Y-%m-%d).jsonl"
+# Support test isolation via LEDGER_BASE_DIR environment variable
+LEDGER_BASE_DIR="${LEDGER_BASE_DIR:-$REPO_ROOT/g/ledger}"
+LEDGER_DIR="$LEDGER_BASE_DIR/$AGENT"
+LEDGER_FILE="$LEDGER_DIR/$LEDGER_DATE_FMT.jsonl"
 SEQ=1
 if [[ -f "$LEDGER_FILE" ]]; then
   # Count existing entries for today with same timestamp prefix
   PREFIX="ledger-${LEDGER_DATE}-${LEDGER_TIME}-${AGENT}-"
-  SEQ=$(grep -c "\"ledger_id\":\"${PREFIX}" "$LEDGER_FILE" 2>/dev/null || echo "0")
-  SEQ=$((SEQ + 1))
+  COUNT=$(grep -c "\"ledger_id\":\"${PREFIX}" "$LEDGER_FILE" 2>/dev/null || echo "0")
+  # Ensure COUNT is numeric
+  if [[ "$COUNT" =~ ^[0-9]+$ ]]; then
+    SEQ=$((COUNT + 1))
+  else
+    SEQ=1
+  fi
 fi
 LEDGER_ID="ledger-${LEDGER_DATE}-${LEDGER_TIME}-${AGENT}-${SEQ}"
 
 # Add execution_duration_ms to data_json if provided
 if [[ -n "$EXECUTION_DURATION_MS" ]]; then
   # Parse existing data_json and add execution_duration_ms
-  if [[ "$DATA_JSON" == "{}" ]]; then
+  if [[ "$DATA_JSON" == "{}" ]] || [[ -z "$DATA_JSON" ]]; then
     DATA_JSON="{\"execution_duration_ms\":${EXECUTION_DURATION_MS}}"
   else
-    # Use jq to add the field if available, otherwise use sed
+    # Use jq to add the field if available
     if command -v jq >/dev/null 2>&1; then
-      DATA_JSON=$(echo "$DATA_JSON" | jq -c ". + {\"execution_duration_ms\":${EXECUTION_DURATION_MS}}")
+      # Validate JSON first
+      if echo "$DATA_JSON" | jq empty >/dev/null 2>&1; then
+        DATA_JSON=$(echo "$DATA_JSON" | jq -c ". + {\"execution_duration_ms\":${EXECUTION_DURATION_MS}}")
+      else
+        echo "⚠️  Warning: Invalid data_json, creating new object" >&2
+        DATA_JSON="{\"execution_duration_ms\":${EXECUTION_DURATION_MS}}"
+      fi
     else
-      # Fallback: append to JSON (simple approach)
-      DATA_JSON="${DATA_JSON%,*},\"execution_duration_ms\":${EXECUTION_DURATION_MS}}"
+      echo "⚠️  Warning: jq not available, using simple data_json" >&2
+      DATA_JSON="{\"execution_duration_ms\":${EXECUTION_DURATION_MS}}"
     fi
   fi
 fi
 
-# Build ledger entry with optional fields
+# Build ledger entry JSON (compact, single line for JSONL format)
 if [[ -n "$PARENT_ID" ]]; then
-  LEDGER_ENTRY=$(cat <<EOF
-{
-  "protocol": "AP/IO",
-  "version": "3.1",
-  "ledger_id": "$LEDGER_ID",
-  "parent_id": "$PARENT_ID",
-  "ts": "$TS",
-  "agent": "$AGENT",
-  "correlation_id": "$CORR_ID",
-  "session_id": "$SESSION_ID",
-  "event": {
-    "type": "$EVENT_TYPE",
-    "task_id": "$TASK_ID",
-    "source": "$SOURCE",
-    "summary": "$SUMMARY"
-  },
-  "data": $DATA_JSON,
-  "routing": {
-    "targets": ["$AGENT"],
-    "broadcast": false,
-    "priority": "normal",
-    "delivered_to": []
-  }
-}
-EOF
-)
+  LEDGER_ENTRY_JSON=$(jq -n -c \
+    --arg protocol "AP/IO" \
+    --arg version "3.1" \
+    --arg ledger_id "$LEDGER_ID" \
+    --arg parent_id "$PARENT_ID" \
+    --arg ts "$TS" \
+    --arg agent "$AGENT" \
+    --arg correlation_id "$CORR_ID" \
+    --arg session_id "$SESSION_ID" \
+    --arg event_type "$EVENT_TYPE" \
+    --arg task_id "$TASK_ID" \
+    --arg source "$SOURCE" \
+    --arg summary "$SUMMARY" \
+    --argjson data "$DATA_JSON" \
+    '{
+      protocol: $protocol,
+      version: $version,
+      ledger_id: $ledger_id,
+      parent_id: $parent_id,
+      ts: $ts,
+      agent: $agent,
+      correlation_id: $correlation_id,
+      session_id: $session_id,
+      event: {
+        type: $event_type,
+        task_id: $task_id,
+        source: $source,
+        summary: $summary
+      },
+      data: $data,
+      routing: {
+        targets: [$agent],
+        broadcast: false,
+        priority: "normal",
+        delivered_to: []
+      }
+    }' 2>/dev/null)
 else
-  LEDGER_ENTRY=$(cat <<EOF
-{
-  "protocol": "AP/IO",
-  "version": "3.1",
-  "ledger_id": "$LEDGER_ID",
-  "ts": "$TS",
-  "agent": "$AGENT",
-  "correlation_id": "$CORR_ID",
-  "session_id": "$SESSION_ID",
-  "event": {
-    "type": "$EVENT_TYPE",
-    "task_id": "$TASK_ID",
-    "source": "$SOURCE",
-    "summary": "$SUMMARY"
-  },
-  "data": $DATA_JSON,
-  "routing": {
-    "targets": ["$AGENT"],
-    "broadcast": false,
-    "priority": "normal",
-    "delivered_to": []
-  }
-}
-EOF
-)
+  LEDGER_ENTRY_JSON=$(jq -n -c \
+    --arg protocol "AP/IO" \
+    --arg version "3.1" \
+    --arg ledger_id "$LEDGER_ID" \
+    --arg ts "$TS" \
+    --arg agent "$AGENT" \
+    --arg correlation_id "$CORR_ID" \
+    --arg session_id "$SESSION_ID" \
+    --arg event_type "$EVENT_TYPE" \
+    --arg task_id "$TASK_ID" \
+    --arg source "$SOURCE" \
+    --arg summary "$SUMMARY" \
+    --argjson data "$DATA_JSON" \
+    '{
+      protocol: $protocol,
+      version: $version,
+      ledger_id: $ledger_id,
+      ts: $ts,
+      agent: $agent,
+      correlation_id: $correlation_id,
+      session_id: $session_id,
+      event: {
+        type: $event_type,
+        task_id: $task_id,
+        source: $source,
+        summary: $summary
+      },
+      data: $data,
+      routing: {
+        targets: [$agent],
+        broadcast: false,
+        priority: "normal",
+        delivered_to: []
+      }
+    }' 2>/dev/null)
 fi
 
-# Validate entry
+# Fallback if jq fails
+if [[ -z "$LEDGER_ENTRY_JSON" ]] || ! echo "$LEDGER_ENTRY_JSON" | jq empty >/dev/null 2>&1; then
+  # Build compact JSON manually
+  if [[ -n "$PARENT_ID" ]]; then
+    LEDGER_ENTRY_JSON="{\"protocol\":\"AP/IO\",\"version\":\"3.1\",\"ledger_id\":\"$LEDGER_ID\",\"parent_id\":\"$PARENT_ID\",\"ts\":\"$TS\",\"agent\":\"$AGENT\",\"correlation_id\":\"$CORR_ID\",\"session_id\":\"$SESSION_ID\",\"event\":{\"type\":\"$EVENT_TYPE\",\"task_id\":\"$TASK_ID\",\"source\":\"$SOURCE\",\"summary\":\"$SUMMARY\"},\"data\":$DATA_JSON,\"routing\":{\"targets\":[\"$AGENT\"],\"broadcast\":false,\"priority\":\"normal\",\"delivered_to\":[]}}"
+  else
+    LEDGER_ENTRY_JSON="{\"protocol\":\"AP/IO\",\"version\":\"3.1\",\"ledger_id\":\"$LEDGER_ID\",\"ts\":\"$TS\",\"agent\":\"$AGENT\",\"correlation_id\":\"$CORR_ID\",\"session_id\":\"$SESSION_ID\",\"event\":{\"type\":\"$EVENT_TYPE\",\"task_id\":\"$TASK_ID\",\"source\":\"$SOURCE\",\"summary\":\"$SUMMARY\"},\"data\":$DATA_JSON,\"routing\":{\"targets\":[\"$AGENT\"],\"broadcast\":false,\"priority\":\"normal\",\"delivered_to\":[]}}"
+  fi
+fi
+
+LEDGER_ENTRY="$LEDGER_ENTRY_JSON"
+
+# Validate entry (compact JSON for validation)
 if [ -f "$VALIDATOR" ]; then
   if ! echo "$LEDGER_ENTRY" | "$VALIDATOR" - 2>/dev/null; then
     echo "❌ Validation failed" >&2
@@ -171,8 +220,7 @@ if [ -f "$VALIDATOR" ]; then
   fi
 fi
 
-# Determine ledger file (already set above for sequence calculation)
-LEDGER_DATE=$(date +%Y-%m-%d)
+# Ledger file path already determined above (using LEDGER_DATE_FMT)
 
 # Create directory if missing
 mkdir -p "$LEDGER_DIR"

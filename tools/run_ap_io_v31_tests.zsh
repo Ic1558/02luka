@@ -19,7 +19,25 @@ echo "║     AP/IO v3.1 Test Suite Runner                             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Ensure ledger directory exists
+# Check for required tools
+MISSING_TOOLS=()
+for tool in validator.zsh correlation_id.zsh router.zsh; do
+  if [ ! -f "tools/ap_io_v31/$tool" ]; then
+    MISSING_TOOLS+=("$tool")
+  fi
+done
+
+if [ ${#MISSING_TOOLS[@]} -gt 0 ]; then
+  echo "⚠️  Warning: Missing optional tools:"
+  for tool in "${MISSING_TOOLS[@]}"; do
+    echo "    - tools/ap_io_v31/$tool"
+  done
+  echo ""
+  echo "Some tests may fail if they depend on these tools."
+  echo ""
+fi
+
+# Ensure ledger directory exists (for tests that don't use isolation)
 mkdir -p g/ledger/cls
 mkdir -p g/ledger/andy
 mkdir -p g/ledger/hybrid
@@ -58,7 +76,7 @@ echo "╔═══════════════════════�
 echo "║     Test Summary                                              ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Total Tests: $TOTAL_TESTS"
+echo "Total Test Suites: $TOTAL_TESTS"
 echo "Passed: $PASSED_TESTS"
 echo "Failed: $FAILED_TESTS"
 echo ""

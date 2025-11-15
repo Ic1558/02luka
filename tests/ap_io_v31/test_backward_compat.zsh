@@ -5,7 +5,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# tests/ap_io_v31 -> tests -> repo root
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 READER="$REPO_ROOT/tools/ap_io_v31/reader.zsh"
 
 PASS=0

@@ -5,14 +5,35 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# tests/ap_io_v31 -> tests -> repo root
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VALIDATOR="$REPO_ROOT/tools/ap_io_v31/validator.zsh"
 
 PASS=0
 FAIL=0
 
 test_valid_message() {
+  # Test with "ts" (schema format)
   local msg='{
+    "protocol": "AP/IO",
+    "version": "3.1",
+    "agent": "cls",
+    "ts": "2025-11-16T10:00:00+07:00",
+    "event": {"type": "task_start", "task_id": "wo-test", "source": "gg_orchestrator", "summary": "Test"}
+  }'
+  
+  local result=0
+  echo "$msg" | "$VALIDATOR" - >/dev/null 2>&1 || result=$?
+  if [ "$result" -eq 0 ]; then
+    echo "✅ PASS: Valid message accepted (ts format)"
+    PASS=$((PASS + 1))
+  else
+    echo "❌ FAIL: Valid message rejected (ts format)"
+    FAIL=$((FAIL + 1))
+  fi
+  
+  # Test with "timestamp" (alternative format)
+  local msg2='{
     "protocol": "AP/IO",
     "version": "3.1",
     "agent": "cls",
@@ -20,12 +41,14 @@ test_valid_message() {
     "event": {"type": "task_start", "task_id": "wo-test", "source": "gg_orchestrator", "summary": "Test"}
   }'
   
-  if echo "$msg" | "$VALIDATOR" - >/dev/null 2>&1; then
-    echo "✅ PASS: Valid message accepted"
-    ((PASS++))
+  result=0
+  echo "$msg2" | "$VALIDATOR" - >/dev/null 2>&1 || result=$?
+  if [ "$result" -eq 0 ]; then
+    echo "✅ PASS: Valid message accepted (timestamp format)"
+    PASS=$((PASS + 1))
   else
-    echo "❌ FAIL: Valid message rejected"
-    ((FAIL++))
+    echo "❌ FAIL: Valid message rejected (timestamp format)"
+    FAIL=$((FAIL + 1))
   fi
 }
 

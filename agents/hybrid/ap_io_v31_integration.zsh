@@ -5,10 +5,25 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+# agents/hybrid -> agents -> repo root
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TOOLS_DIR="$REPO_ROOT/tools/ap_io_v31"
 WRITER="$TOOLS_DIR/writer.zsh"
 STATUS_FILE="$REPO_ROOT/agents/hybrid/status.json"
+
+# Initialize status file if missing
+if [[ ! -f "$STATUS_FILE" ]]; then
+  mkdir -p "$(dirname "$STATUS_FILE")"
+  cat > "$STATUS_FILE" <<EOF
+{
+  "state": "idle",
+  "last_task_id": null,
+  "last_heartbeat": null,
+  "protocol": "AP/IO",
+  "protocol_version": "3.1"
+}
+EOF
+fi
 
 usage() {
   cat >&2 <<EOF
