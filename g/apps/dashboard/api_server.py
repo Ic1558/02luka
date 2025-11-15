@@ -7,7 +7,8 @@ Runs alongside the static HTTP server on port 8767
 import json
 import os
 import re
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
@@ -271,6 +272,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_list_services(query)
         elif path == '/api/mls':
             self.handle_list_mls(query)
+        elif path == '/api/wo-metrics':
+            self.handle_wo_metrics(query)
         elif path == '/api/health/logs':
             self.handle_get_logs(query)
         else:
@@ -498,6 +501,24 @@ class APIHandler(BaseHTTPRequestHandler):
             print(f"Error reading MLS lessons: {e}")
             self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
 
+    def handle_wo_metrics(self, query):
+        """Handle GET /api/wo-metrics - aggregate WO analytics"""
+        # Refresh WO data
+        self.collector.collect_all()
+        wos = self.collector.wos or []
+
+        summary = self._build_wo_summary(wos)
+        timeline = self._build_wo_timeline(wos)
+        recent_failures = self._build_recent_failures(wos)
+
+        response = {
+            'summary': summary,
+            'timeline': timeline,
+            'recent_failures': recent_failures
+        }
+
+        self.send_json_response(response)
+
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""
         lines = int(query.get('lines', ['200'])[0])
@@ -520,6 +541,150 @@ class APIHandler(BaseHTTPRequestHandler):
         else:
             self.send_json_response({'lines': ['No logs available']})
 
+    def _build_wo_summary(self, wos):
+        """Build WO summary counts"""
+        counter = Counter()
+        for wo in wos:
+            status = (wo.get('status') or 'unknown').lower()
+            counter[status] += 1
+
+        return {
+            'total': len(wos),
+            'by_status': dict(counter)
+        }
+
+    def _build_wo_timeline(self, wos, limit=50):
+        """Build timeline entries for recent WOs"""
+        def sort_key(wo):
+            ts = self._get_primary_timestamp(wo)
+            if not ts:
+                return float('-inf')
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            return ts.timestamp()
+
+        recent = sorted(wos, key=sort_key, reverse=True)[:limit]
+        timeline = []
+
+        for wo in recent:
+            started = self._format_timestamp(wo.get('started_at'))
+            finished = self._format_timestamp(wo.get('completed_at') or wo.get('finished_at'))
+            created = self._format_timestamp(wo.get('created_at') or wo.get('started_at') or wo.get('completed_at'))
+            duration = self._calculate_duration_seconds(wo.get('started_at'), wo.get('completed_at') or wo.get('finished_at'))
+
+            timeline.append({
+                'id': wo.get('id'),
+                'status': wo.get('status', 'unknown'),
+                'created_at': created,
+                'started_at': started,
+                'finished_at': finished,
+                'duration_sec': duration
+            })
+
+        return timeline
+
+    def _build_recent_failures(self, wos, limit=10):
+        """Build list of recent failed WOs"""
+        failure_statuses = {'failed', 'error', 'blocked'}
+
+        def failure_sort_key(wo):
+            ts = self._parse_datetime(wo.get('completed_at') or wo.get('finished_at') or wo.get('started_at'))
+            if not ts:
+                return float('-inf')
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            return ts.timestamp()
+
+        failed = [
+            wo for wo in wos
+            if (wo.get('status') or '').lower() in failure_statuses or wo.get('error')
+        ]
+
+        failed_sorted = sorted(failed, key=failure_sort_key, reverse=True)[:limit]
+        recent = []
+
+        for wo in failed_sorted:
+            finished = wo.get('completed_at') or wo.get('finished_at')
+            error = wo.get('error')
+            error_message = ''
+            if isinstance(error, dict):
+                error_message = error.get('message') or error.get('detail') or json.dumps(error)
+            elif error:
+                error_message = str(error)
+
+            recent.append({
+                'id': wo.get('id'),
+                'status': wo.get('status', 'failed'),
+                'error': error_message,
+                'finished_at': self._format_timestamp(finished)
+            })
+
+        return recent
+
+    def _get_primary_timestamp(self, wo):
+        """Get best available timestamp for sorting"""
+        for key in ('started_at', 'created_at', 'completed_at', 'finished_at'):
+            dt = self._parse_datetime(wo.get(key))
+            if dt:
+                return dt
+        return None
+
+    def _parse_datetime(self, value):
+        """Parse various datetime formats to datetime objects"""
+        if not value:
+            return None
+
+        if isinstance(value, datetime):
+            return value
+
+        if isinstance(value, (int, float)):
+            try:
+                return datetime.fromtimestamp(value, tz=timezone.utc)
+            except Exception:
+                return None
+
+        text = str(value)
+        formats = [
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S'
+        ]
+
+        for fmt in formats:
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                continue
+
+        try:
+            if text.endswith('Z'):
+                text = text.replace('Z', '+00:00')
+            return datetime.fromisoformat(text)
+        except ValueError:
+            return None
+
+    def _format_timestamp(self, value):
+        """Format timestamp to ISO string"""
+        dt = self._parse_datetime(value)
+        if not dt:
+            return value
+
+        if dt.tzinfo is None:
+            return dt.isoformat() + 'Z'
+
+        return dt.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+
+    def _calculate_duration_seconds(self, start, end):
+        start_dt = self._parse_datetime(start)
+        end_dt = self._parse_datetime(end)
+        if start_dt and end_dt:
+            try:
+                return int((end_dt - start_dt).total_seconds())
+            except Exception:
+                return None
+        return None
+
     def send_json_response(self, data):
         """Send JSON response"""
         self.send_response(200)
@@ -541,6 +706,7 @@ def run_server(port=8767):
     print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
     print(f"   - GET /api/services?status=stopped - Filter services by status")
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
+    print(f"   - GET /api/wo-metrics - Work-order metrics overview")
     print(f"   - GET /api/mls?type=solution - Filter MLS by type")
     print(f"   - GET /api/health/logs?lines=200 - Get system logs")
     server.serve_forever()
