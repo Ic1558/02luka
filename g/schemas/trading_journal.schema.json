@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TradingJournalEntry",
+  "type": "object",
+  "required": ["id", "timestamp", "symbol", "side", "size", "price", "market"],
+  "properties": {
+    "id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "market": { "type": "string" },
+    "account": { "type": "string" },
+    "symbol": { "type": "string" },
+    "instrument_type": { "type": "string" },
+    "side": { "type": "string", "enum": ["buy", "sell"] },
+    "position_effect": {
+      "type": "string",
+      "enum": ["open", "close", "reduce", "unknown"]
+    },
+    "size": { "type": "number" },
+    "price": { "type": "number" },
+    "fee": { "type": "number" },
+    "tax": { "type": "number" },
+    "net_pnl": { "type": "number" },
+    "order_id": { "type": "string" },
+    "strategy_tag": { "type": "string" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}
