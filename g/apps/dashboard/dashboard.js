@@ -146,12 +146,16 @@ const state = {
   logRefreshInterval: null
 };
 
+let woMetricsPanelReady = false;
+let woMetricsRefreshEnabled = false;
+
 // --- TELEMETRY & METRICS ---
 const metrics = {
   wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   logs: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   roadmap: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
+  services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
+  woMetrics: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
 };
 
 // Timed fetch wrapper with metrics tracking
@@ -1747,6 +1751,102 @@ function renderServices() {
   }
 }
 
+async function initWoMetricsPanel() {
+  const panel = document.getElementById('wo-metrics-panel');
+  if (!panel) {
+    console.warn('WO metrics panel not found in DOM');
+    return;
+  }
+
+  if (panel.classList.contains('hidden')) {
+    panel.classList.remove('hidden');
+  }
+
+  woMetricsPanelReady = true;
+  await loadWoMetrics();
+  woMetricsRefreshEnabled = true;
+}
+
+async function loadWoMetrics() {
+  if (!woMetricsPanelReady) return;
+
+  try {
+    await timed('woMetrics', async () => {
+      const res = await fetch('/api/wo-metrics', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const data = await res.json();
+      renderWoMetricsSummary(data.summary);
+      renderWoMetricsTimeline(data.timeline || []);
+      renderWoMetricsFailures(data.recent_failures || []);
+    });
+  } catch (err) {
+    console.error('Failed to load WO metrics', err);
+  }
+}
+
+function renderWoMetricsSummary(summary) {
+  if (!summary) return;
+  const total = document.getElementById('wo-metrics-total');
+  const pending = document.getElementById('wo-metrics-pending');
+  const running = document.getElementById('wo-metrics-running');
+  const success = document.getElementById('wo-metrics-success');
+  const failed = document.getElementById('wo-metrics-failed');
+
+  const byStatus = summary.by_status || {};
+  const statusCounts = {};
+  Object.keys(byStatus).forEach((key) => {
+    const normalizedKey = typeof key === 'string' ? key.toLowerCase() : key;
+    statusCounts[normalizedKey] = byStatus[key];
+  });
+
+  if (total) total.textContent = summary.total ?? 0;
+  if (pending) pending.textContent = statusCounts.pending ?? statusCounts.queued ?? 0;
+  if (running) running.textContent = statusCounts.running ?? statusCounts.active ?? 0;
+  if (success) success.textContent = statusCounts.success ?? statusCounts.completed ?? 0;
+  if (failed) failed.textContent = statusCounts.failed ?? statusCounts.error ?? statusCounts.blocked ?? 0;
+
+  const bar = document.getElementById('wo-metrics-summary');
+  if (bar) {
+    bar.textContent = `Total: ${summary.total ?? 0} | Pending: ${statusCounts.pending ?? statusCounts.queued ?? 0} | Running: ${statusCounts.running ?? statusCounts.active ?? 0} | Success: ${statusCounts.success ?? statusCounts.completed ?? 0} | Failed: ${statusCounts.failed ?? statusCounts.error ?? statusCounts.blocked ?? 0}`;
+  }
+}
+
+function renderWoMetricsTimeline(items) {
+  const tbody = document.querySelector('#wo-metrics-timeline tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.id || ''}</td>
+      <td>${item.status || ''}</td>
+      <td>${item.started_at || item.created_at || ''}</td>
+      <td>${item.finished_at || ''}</td>
+      <td>${item.duration_sec ?? ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderWoMetricsFailures(items) {
+  const tbody = document.querySelector('#wo-metrics-failures tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.id || ''}</td>
+      <td>${item.finished_at || ''}</td>
+      <td>${item.error || ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 // Refresh all dashboard data
 async function refreshAllData() {
   const timestamp = new Date().toLocaleTimeString();
@@ -1756,11 +1856,17 @@ async function refreshAllData() {
   }
 
   // Load all sections in parallel
-  await Promise.all([
+  const tasks = [
     loadRoadmap(),
     loadServices(),
     loadWOs()
-  ]);
+  ];
+
+  if (woMetricsRefreshEnabled) {
+    tasks.push(loadWoMetrics());
+  }
+
+  await Promise.all(tasks);
 
   // Update health indicator
   updateHealthPill();
@@ -1976,6 +2082,9 @@ async function initDashboard() {
   // Initialize service drawer (v2.2.0)
   initServiceDrawer();
 
+  // Initialize WO metrics panel
+  await initWoMetricsPanel();
+
   // Initial load
   await refreshAllData();
 
@@ -2001,6 +2110,7 @@ window.metrics = metrics;
 window.loadWOs = loadWOs;
 window.triggerLoadWOs = triggerLoadWOs;
 window.loadLogs = loadLogs;
+window.loadWoMetrics = loadWoMetrics;
 window.refreshAllData = refreshAllData;
 window.openWODrawer = openWODrawer;
 window.closeWODrawer = closeWODrawer;
