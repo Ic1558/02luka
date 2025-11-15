@@ -28,6 +28,45 @@ Flags:
 USAGE
 }
 
+slugify() {
+  local value="$1"
+  value="${value//[[:space:]]/-}"
+  value="${value//[^[:alnum:]_.-]/-}"
+  while [[ "$value" == *--* ]]; do
+    value="${value//--/-}"
+  done
+  while [[ "$value" == [-._]* ]]; do
+    value="${value#[-._]}"
+  done
+  while [[ "$value" == *[-._] ]]; do
+    value="${value%[-._]}"
+  done
+  if [[ -z "$value" ]]; then
+    value="value"
+  fi
+  printf '%s' "$value"
+}
+
+build_filter_suffix() {
+  local suffix=""
+  if [[ -n "$MARKET_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$MARKET_FILTER")"
+    suffix+="_market-${slug}"
+  fi
+  if [[ -n "$ACCOUNT_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$ACCOUNT_FILTER")"
+    suffix+="_account-${slug}"
+  fi
+  if [[ -n "$SYMBOL_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$SYMBOL_FILTER")"
+    suffix+="_symbol-${slug}"
+  fi
+  printf '%s' "$suffix"
+}
+
 DAY=""
 FROM_DATE=""
 TO_DATE=""
@@ -118,11 +157,14 @@ mkdir -p "$REPORT_DIR"
 
 if [[ "$FROM_DATE" == "$TO_DATE" ]]; then
   RANGE_LABEL="$FROM_DATE"
-  REPORT_NAME="trading_snapshot_${FROM_DATE}"
+  RANGE_SLUG="$FROM_DATE"
 else
   RANGE_LABEL="${FROM_DATE} to ${TO_DATE}"
-  REPORT_NAME="trading_snapshot_${FROM_DATE}_${TO_DATE}"
+  RANGE_SLUG="${FROM_DATE}_${TO_DATE}"
 fi
+
+FILTER_SUFFIX="$(build_filter_suffix)"
+REPORT_NAME="trading_snapshot_${RANGE_SLUG}${FILTER_SUFFIX}"
 
 SUMMARY_JSON_FILE="$(mktemp)"
 
