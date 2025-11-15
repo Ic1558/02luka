@@ -105,6 +105,12 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
 
+  // The deprecated /api/auth-token endpoint must always return 404
+  // so unauthenticated callers cannot infer its previous existence.
+  if (pathname === '/api/auth-token') {
+    return sendError(res, 404, 'Not found');
+  }
+
   // Auth check for other endpoints
   const authHeader = req.headers.authorization || req.headers['x-auth-token'] || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').replace(/^Token\s+/i, '');
