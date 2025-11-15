@@ -58,6 +58,47 @@ function initTabs() {
     const defaultPanel = tabLinks[0].dataset.panel;
     showPanel(defaultPanel);
   }
+
+  const tabOverview = document.getElementById('tab-overview');
+  const tabWos = document.getElementById('tab-wos');
+  const tabWoHistory = document.getElementById('tab-wo-history');
+
+  const viewOverview = document.getElementById('view-overview');
+  const viewWos = document.getElementById('view-wos');
+  const viewWoHistory = document.getElementById('view-wo-history');
+
+  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
+    const buttons = [tabOverview, tabWos, tabWoHistory];
+    const views = [viewOverview, viewWos, viewWoHistory];
+
+    function setActiveButton(target) {
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
+    }
+
+    function show(view) {
+      views.forEach((v) => v.classList.add('hidden'));
+      view.classList.remove('hidden');
+    }
+
+    tabOverview.addEventListener('click', () => {
+      setActiveButton(tabOverview);
+      show(viewOverview);
+    });
+
+    tabWos.addEventListener('click', () => {
+      setActiveButton(tabWos);
+      show(viewWos);
+    });
+
+    tabWoHistory.addEventListener('click', () => {
+      setActiveButton(tabWoHistory);
+      show(viewWoHistory);
+      loadWoHistory();
+    });
+
+    setActiveButton(tabOverview);
+    show(viewOverview);
+  }
 }
 
 function showErrorBanner(id, message) {
@@ -365,6 +406,109 @@ function createMLSCard(entry) {
   return card;
 }
 
+// --- WO History ---
+
+async function loadWoHistory() {
+  const statusFilter = document.getElementById('wo-history-status-filter');
+  const limitSelect = document.getElementById('wo-history-limit');
+
+  const status = statusFilter ? statusFilter.value : '';
+  const limit = limitSelect ? parseInt(limitSelect.value, 10) : 100;
+
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+
+  const query = params.toString();
+  const url = `/api/wos${query ? `?${query}` : ''}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch WO history', res.status, await res.text());
+      return;
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    renderWoHistory(wos, limit);
+  } catch (error) {
+    console.error('Error loading WO history', error);
+  }
+}
+
+function renderWoHistory(wos, limit) {
+  const tbody = document.getElementById('wo-history-body');
+  if (!tbody) return;
+
+  const maxRows = Number.isFinite(limit) ? limit : 100;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="6">No work orders found.</td></tr>';
+    return;
+  }
+
+  const sorted = [...wos].sort((a, b) => {
+    const aKey = a?.started_at || a?.id || 0;
+    const bKey = b?.started_at || b?.id || 0;
+    if (aKey > bKey) return -1;
+    if (aKey < bKey) return 1;
+    return 0;
+  });
+
+  const slice = sorted.slice(0, maxRows);
+  tbody.innerHTML = '';
+
+  slice.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const started = wo?.started_at || '';
+    const status = wo?.status || '';
+    const agent = wo?.agent || wo?.worker || '';
+    const type = wo?.type || '';
+    const summary = wo?.summary || wo?.description || '';
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(started)}</td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(agent)}</td>
+      <td>${escapeHtml(type)}</td>
+      <td>${escapeHtml(summary)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) {
+    return '';
+  }
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function initWoHistoryFilters() {
+  const statusFilter = document.getElementById('wo-history-status-filter');
+  const limitSelect = document.getElementById('wo-history-limit');
+
+  statusFilter?.addEventListener('change', () => loadWoHistory());
+  limitSelect?.addEventListener('change', () => loadWoHistory());
+}
+
 function formatRelativeTime(isoString) {
   if (!isoString) return '';
   const date = new Date(isoString);
@@ -420,6 +564,11 @@ function initMLSPanel() {
   mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
+function initDashboard() {
+  initTabs();
+  initWoHistoryFilters();
+}
+
 function cleanupIntervals() {
   if (servicesIntervalId) {
     clearInterval(servicesIntervalId);
@@ -433,7 +582,7 @@ function cleanupIntervals() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
+  initDashboard();
 });
 
 window.addEventListener('beforeunload', () => {
