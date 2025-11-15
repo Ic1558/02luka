@@ -53,13 +53,42 @@ process_state() {
   action="$(compute_action "$category" "$priority")"
   local note="${title:-$wo_id} routed via ${action//_/ } for ${owner:-auto}"
 
+  # AP/IO v3.1 ledger logging (if enabled)
+  local LEDGER_HOOK="$REPO_ROOT/tools/hybrid_ledger_hook.zsh"
+  local WO_START_TS=$(python3 -c "import time; print(int(time.time() * 1000))" 2>/dev/null || date +%s%3N)
+  
+  if [[ -z "${HYBRID_LEDGER_DISABLE:-}" ]] && [[ -x "$LEDGER_HOOK" ]]; then
+    # Log task_start
+    set +e
+    "$LEDGER_HOOK" task_start "$wo_id" "WO processing started: $wo_id" \
+      "{\"category\":\"$category\",\"priority\":\"$priority\",\"action\":\"$action\"}" \
+      "parent-wo-$wo_id" "" 2>/dev/null || true
+    set -e
+  fi
+
+  # Process WO (update state)
   update_state_field "$state_file" "notes" "$note"
   update_state_field "$state_file" "progress" "100" int
   update_state_field "$state_file" "meta.last_execution_action" "$action"
   update_state_field "$state_file" "meta.last_executor" "wo_executor"
   update_state_field "$state_file" "meta.last_execution" "$(iso_now)"
   update_state_field "$state_file" "last_error" ""
-  return 0
+  
+  local exec_result=0
+  
+  # Log task_result
+  if [[ -z "${HYBRID_LEDGER_DISABLE:-}" ]] && [[ -x "$LEDGER_HOOK" ]]; then
+    local WO_END_TS=$(python3 -c "import time; print(int(time.time() * 1000))" 2>/dev/null || date +%s%3N)
+    local EXECUTION_DURATION_MS=$((WO_END_TS - WO_START_TS))
+    
+    set +e
+    "$LEDGER_HOOK" task_result "$wo_id" "WO processing completed: $wo_id" \
+      "{\"status\":\"success\",\"action\":\"$action\",\"category\":\"$category\"}" \
+      "parent-wo-$wo_id" "$EXECUTION_DURATION_MS" 2>/dev/null || true
+    set -e
+  fi
+  
+  return $exec_result
 }
 
 main() {

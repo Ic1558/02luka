@@ -1,0 +1,31 @@
+# Protected Files - Critical System Components
+# These files should NEVER be deleted without explicit approval
+# Format: path pattern (supports glob)
+
+# AP/IO v3.1 Ledger System (Critical Infrastructure)
+tools/ap_io_v31/**
+schemas/ap_io_v31*.json
+docs/AP_IO_V31*.md
+agents/*/ap_io_v31_integration.zsh
+tests/ap_io_v31/**
+
+# Core Protocol Documentation
+docs/GG_ORCHESTRATOR_CONTRACT.md
+docs/AP_IO_V31_PROTOCOL.md
+docs/AP_IO_V31_INTEGRATION_GUIDE.md
+docs/AP_IO_V31_ROUTING_GUIDE.md
+
+# Agent Ledger System
+g/reports/feature_agent_ledger_*.md
+g/reports/feature_ap_io_v31_*.md
+g/reports/feature_liam_*.md
+
+# System Schemas
+schemas/*.schema.json
+
+# Agent Integration Scripts
+agents/*/ap_io_v31_integration.zsh
+
+# Test Infrastructure
+tests/ap_io_v31/*.zsh
+tools/run_ap_io_v31_tests.zsh
