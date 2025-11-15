@@ -217,6 +217,21 @@ if [[ "$SKIP_VERIFY" != "true" ]]; then
     echo "✅ Verification passed"
 fi
 
+# Layer 5: MLS Logging (opt-in hook, after Layer 4)
+if [[ "${LUKA_MLS_AUTO_RECORD:-0}" == "1" ]]; then
+    if [[ -f "$BASE_DIR/tools/mls_auto_record.zsh" ]]; then
+        CONTEXT_PAYLOAD="Summary: $SESSION_SUMMARY | Actions: $SESSION_ACTIONS | Status: $SESSION_STATUS | Verification: $VERIFY_STATUS | Session: $SESSION_FILE"
+        "$BASE_DIR/tools/mls_auto_record.zsh" \
+            "save_sh_full_cycle" \
+            "Session saved: $TIMESTAMP" \
+            "$CONTEXT_PAYLOAD" \
+            "save,session,auto-captured" \
+            "" 2>/dev/null || {
+            echo "⚠️  MLS logging failed (non-blocking)" >&2
+        }
+    fi
+fi
+
 echo ""
 echo "🎉 3-Layer save complete!"
 echo "   Session: $SESSION_FILE"
