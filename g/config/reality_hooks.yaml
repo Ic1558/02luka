@@ -12,6 +12,7 @@ hooks:
       - mls
       - e2e
     requires:
+      - zsh
       - jq
       - curl
     environment:
