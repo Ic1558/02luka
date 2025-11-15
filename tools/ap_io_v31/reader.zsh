@@ -17,11 +17,13 @@ Options:
   --agent <agent>         Filter by agent
   --event <type>          Filter by event type
   --correlation <id>      Filter by correlation ID
+  --parent <id>           Filter by parent_id
 
 Example:
   $0 g/ledger/cls/2025-11-16.jsonl
   $0 g/ledger/cls/2025-11-16.jsonl --format pretty
   $0 g/ledger/cls/2025-11-16.jsonl --agent cls --event task_result
+  $0 g/ledger/cls/2025-11-16.jsonl --parent parent-wo-wo-251116-test
 EOF
   exit 1
 }
@@ -36,6 +38,7 @@ FORMAT="json"
 FILTER_AGENT=""
 FILTER_EVENT=""
 FILTER_CORR=""
+FILTER_PARENT=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -53,6 +56,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --correlation)
       FILTER_CORR="$2"
+      shift 2
+      ;;
+    --parent)
+      FILTER_PARENT="$2"
       shift 2
       ;;
     *)
@@ -127,6 +134,12 @@ while IFS= read -r line; do
     fi
   fi
   
+  if [ -n "$FILTER_PARENT" ]; then
+    if ! echo "$ENTRY" | jq -e ".parent_id == \"$FILTER_PARENT\"" >/dev/null 2>&1; then
+      continue
+    fi
+  fi
+  
   # Output
   if [ "$FORMAT" = "pretty" ]; then
     echo "$ENTRY" | jq '.'
@@ -137,4 +150,3 @@ while IFS= read -r line; do
 done < "$LEDGER_FILE"
 
 exit 0
-

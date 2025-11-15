@@ -11,4 +11,3 @@ CORR_ID="corr-${DATE}-${SEQ}"
 
 echo "$CORR_ID"
 exit 0
-

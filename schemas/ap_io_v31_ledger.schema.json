@@ -15,6 +15,16 @@
       "pattern": "^3\\.1$",
       "description": "Protocol version"
     },
+    "ledger_id": {
+      "type": "string",
+      "pattern": "^ledger-[0-9]{8}-[0-9]{6}-[a-z]+-[0-9]+$",
+      "description": "Unique ledger entry ID (format: ledger-YYYYMMDD-HHMMSS-<agent>-<seq>)"
+    },
+    "parent_id": {
+      "type": "string",
+      "pattern": "^parent-(wo|event|session)-.+$",
+      "description": "Parent WO/event/session ID (format: parent-<type>-<id>)"
+    },
     "ts": {
       "type": "string",
       "format": "date-time",
@@ -65,6 +75,11 @@
         "duration_sec": {
           "type": "number",
           "minimum": 0
+        },
+        "execution_duration_ms": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Execution duration in milliseconds (more precise than duration_sec)"
         },
         "files_touched": {
           "type": "array",
@@ -118,4 +133,3 @@
     }
   }
 }
-

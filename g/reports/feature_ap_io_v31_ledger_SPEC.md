@@ -338,4 +338,3 @@ agents/
 **Spec Owner:** Liam  
 **Implementer:** Andy (primary) + CLS (validation)  
 **Verifier:** CLS
-

@@ -106,4 +106,3 @@ echo "$UPDATED_EVENT"
 echo "✅ Routed to: ${DELIVERED[*]}" >&2
 
 exit 0
-

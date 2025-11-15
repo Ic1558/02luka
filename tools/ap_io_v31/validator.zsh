@@ -95,4 +95,3 @@ fi
 # Basic validation passed
 echo "✅ Message is valid AP/IO v3.1"
 exit 0
-

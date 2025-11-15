@@ -26,4 +26,3 @@ echo "⚠️  Manual patch required - see implementation guide"
 echo ""
 echo "See: g/reports/feature_trading_snapshot_filename_filters_PLAN.md"
 echo "     for detailed implementation instructions"
-
