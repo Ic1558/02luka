@@ -82,14 +82,14 @@
 
 ### Primary Goal
 Ensure save.sh works correctly in both CLS and CLC environments with:
-1. **Auto-commit integration** -** Session files and context updates are committed to git
+1. **Manual commit verification** -** Session files and context updates are committed to git
 2. **Verification command execution** - Verification runs and reports correctly
 3. **MLS logging** - Save events are logged to MLS ledger
 
 ### Success Criteria
 - ✅ save.sh runs successfully in CLS lane
 - ✅ save.sh runs successfully in CLC lane
-- ✅ Auto-commit works (if integrated) or verified separately
+- ✅ Manual commit works cleanly after save.sh
 - ✅ Verification command executes and reports correctly
 - ✅ MLS entry created for each save
 - ✅ All 4 layers (session, context, memory, verification) complete
@@ -102,7 +102,7 @@ Ensure save.sh works correctly in both CLS and CLC environments with:
 ### In Scope
 - Testing save.sh in CLS environment
 - Testing save.sh in CLC environment
-- Verifying auto-commit behavior
+- Verifying manual commit behavior
 - Verifying verification command execution
 - Verifying MLS logging
 - Documenting differences between lanes (if any)
@@ -111,7 +111,7 @@ Ensure save.sh works correctly in both CLS and CLC environments with:
 - Modifying save.sh implementation (already done)
 - Creating new verification commands
 - Modifying MLS logging mechanism
-- Git workflow changes (unless auto-commit integration needed)
+- Git workflow changes (manual commit only, no auto-commit)
 
 ---
 
