@@ -39,9 +39,9 @@ This directory serves as a documentation hub and index for all agents in the 02l
 - **Capabilities:** Task classification, routing, prompt/contract creation, governance checking
 - **Documentation:** [GG README](gg_orch/README.md)
 
-### Andy (Coding Assistant)
-- **Role:** Coding assistant for implementation, code review, debugging, testing
-- **Capabilities:** Code generation, review, refactoring, testing, deployment
+### Andy (Dev Agent / Codex Worker)
+- **Role:** Dev Agent (Codex worker) for code implementation, fixes, and PR changes
+- **Capabilities:** Code generation, review, refactoring, testing, deployment, PR implementation
 - **Documentation:** [Andy README](andy/README.md)
 
 ### CLC (Claude Code Agent)

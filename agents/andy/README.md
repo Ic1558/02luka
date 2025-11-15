@@ -1,4 +1,4 @@
-# Andy - Coding Assistant
+# Andy - Dev Agent (Codex Worker)
 
 **Last Updated:** 2025-11-15  
 **Configuration:** `config/agents/andy.yaml`  
@@ -8,9 +8,9 @@
 
 ## Role
 
-**Andy** = Coding Assistant for 02LUKA System
+**Andy** = Dev Agent (Codex Worker) for 02LUKA System
 
-Andy is a coding assistant specialized in implementation, code review, debugging, and testing.
+Andy is the development agent (Codex worker) responsible for code implementation, fixes, and changes in the 02luka system. Andy operates as the primary code executor following PR prompts and contracts from GG Orchestrator.
 
 **Primary Functions:**
 - Code generation and implementation
@@ -21,6 +21,7 @@ Andy is a coding assistant specialized in implementation, code review, debugging
 - Documentation generation
 - Deployment assistance
 - Git operations
+- PR implementation (via PR Prompt Contracts from GG)
 
 ---
 
@@ -227,14 +228,92 @@ Andy can handle these intent patterns:
 
 ---
 
+## Relationship to Other Agents
+
+**GG → Andy:**
+- GG routes `local_fix` (low complexity) tasks directly to Andy
+- GG routes `pr_change` tasks via PR Prompt Contracts to Andy
+- GG creates PR prompts with scope, required changes, tests, and safety constraints
+- Andy implements changes following PR contract specifications
+
+**Andy → CLS:**
+- For `local_fix` (medium complexity), CLS reviews Andy's work
+- For `pr_change` (high complexity), CLS provides code review and validation
+- CLS enforces governance and safety protocols
+
+**Andy → CLC:**
+- Andy does NOT modify SOT zones directly
+- If changes require SOT modification, Andy must note this in PR description
+- CLC handles privileged operations via Work Orders
+
+---
+
+## Routing from GG Orchestrator
+
+According to `docs/GG_ORCHESTRATOR_CONTRACT.md`, Andy (Codex) is routed for:
+
+| Task Type | Complexity | Route |
+|-----------|-----------|-------|
+| `local_fix` | low | GG → Codex (Andy) |
+| `local_fix` | medium | GG → Codex (Andy) + CLS review |
+| `pr_change` | low/medium | GG → PR Prompt → Codex (Andy) |
+| `pr_change` | high | GG → PR Prompt → Codex (Andy) + CLS |
+
+**Allowed Zones:**
+- `apps/**`, `server/**`, `schemas/**`, `scripts/**`
+- `docs/**` (except governance core)
+- `tools/**`, `roadmaps/**`, `tests/**`
+- `agents/**` (documentation layer)
+
+**Prohibited Zones:**
+- `/CLC/**`, `/core/governance/**`
+- `02luka Master System Protocol` files
+- `memory_center/**`, `launchd/**`
+- `production bridges/**`, `wo pipeline core/**`
+
+---
+
+## PR Prompt Contract Format
+
+When GG routes `pr_change` tasks, Andy receives PR Prompt Contracts with:
+
+```
+# PR Title
+<feat/fix/...: summary>
+
+## Background
+- Problem description
+- Desired behavior
+
+## Scope
+- Allowed files/paths
+- Prohibited zones
+
+## Required Changes
+- [ ] Task 1
+- [ ] Task 2
+
+## Tests
+- [ ] Test commands
+- [ ] Success criteria
+
+## Safety & Governance
+- No modifications to prohibited zones
+- Respect Codex Sandbox Mode
+```
+
+---
+
 ## Links
 
 - **Configuration:** `config/agents/andy.yaml`
 - **Agent System Index:** `/agents/README.md`
+- **GG Orchestrator Contract:** `docs/GG_ORCHESTRATOR_CONTRACT.md`
+- **CLS Documentation:** `/agents/cls/README.md`
 
 ---
 
 **Version:** 1.0.0  
 **Created:** 2025-11-06  
-**Last Modified:** 2025-11-06  
+**Last Modified:** 2025-11-15  
 **Phase:** 15
