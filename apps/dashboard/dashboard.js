@@ -1,9 +1,14 @@
 const SERVICES_REFRESH_MS = 30000;
 const MLS_REFRESH_MS = 30000;
+const WO_REFRESH_MS = 30000;
+const WO_TAIL_LINES = 200;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
+let woIntervalId;
 let servicesIntervalId;
 let mlsIntervalId;
+let cachedWos = [];
+let selectedWoId = null;
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -50,6 +55,317 @@ function initTabs() {
   if (tabLinks.length) {
     const defaultPanel = tabLinks[0].dataset.panel;
     showPanel(defaultPanel);
+  }
+}
+
+function formatTimestamp(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+}
+
+function formatDurationMs(ms) {
+  if (typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0) {
+    return '';
+  }
+
+  const totalSeconds = Math.floor(ms / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+
+  const parts = [];
+  if (hours) parts.push(`${hours}h`);
+  if (minutes || (hours && !minutes)) parts.push(`${minutes}m`);
+  if (!parts.length || seconds) parts.push(`${seconds}s`);
+  return parts.join(' ');
+}
+
+function getWoDurationMs(wo) {
+  if (typeof wo?.duration_ms === 'number') {
+    return wo.duration_ms;
+  }
+
+  const startTs = wo?.started_at;
+  const finishTs = wo?.finished_at || wo?.completed_at;
+  if (!startTs || !finishTs) {
+    return undefined;
+  }
+
+  const startDate = new Date(startTs);
+  const finishDate = new Date(finishTs);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(finishDate.getTime())) {
+    return undefined;
+  }
+
+  return Math.max(0, finishDate.getTime() - startDate.getTime());
+}
+
+function describeWoTiming(wo) {
+  const parts = [];
+  if (wo.started_at) {
+    parts.push(`Started ${formatTimestamp(wo.started_at)}`);
+  }
+
+  const finishedAt = wo.finished_at || wo.completed_at;
+  if (finishedAt) {
+    parts.push(`Finished ${formatTimestamp(finishedAt)}`);
+  }
+
+  const durationLabel = formatDurationMs(getWoDurationMs(wo));
+  if (durationLabel) {
+    parts.push(`Duration ${durationLabel}`);
+  }
+
+  return parts.join(' • ');
+}
+
+// --- Work Orders ---
+
+async function loadWOs() {
+  const tbody = document.getElementById('wo-tbody');
+  if (!tbody) return;
+
+  try {
+    const data = await fetchJSON('http://127.0.0.1:8767/api/wos');
+    cachedWos = Array.isArray(data) ? data : [];
+    renderWOSummary(cachedWos);
+    renderWOTable();
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    cachedWos = [];
+    renderWOSummary(cachedWos);
+    tbody.innerHTML = '<tr><td colspan="5">Failed to load work orders.</td></tr>';
+  }
+}
+
+function renderWOSummary(wos) {
+  const el = document.getElementById('wo-summary');
+  if (!el) return;
+
+  if (!wos.length) {
+    el.textContent = 'No work orders found.';
+    return;
+  }
+
+  const counts = wos.reduce((acc, wo) => {
+    const status = (wo.status || 'unknown').toLowerCase();
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const running = (counts.running || 0) + (counts.queued || 0) + (counts.processing || 0);
+  const success = (counts.success || 0) + (counts.completed || 0);
+  const pending = (counts.pending || 0) + (counts.awaiting_approval || 0);
+  const failed = (counts.failed || 0) + (counts.error || 0);
+
+  el.textContent = `Total: ${wos.length} | Running/Queued: ${running} | Success: ${success} | Failed: ${failed} | Pending: ${pending}`;
+}
+
+function renderWOTable() {
+  const tbody = document.getElementById('wo-tbody');
+  if (!tbody) return;
+
+  if (!cachedWos.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No work orders available.</td></tr>';
+    return;
+  }
+
+  const statusFilter = document.getElementById('wo-status-filter')?.value || '';
+  let filtered = cachedWos;
+  if (statusFilter) {
+    filtered = cachedWos.filter((wo) => (wo.status || '').toLowerCase() === statusFilter);
+  }
+
+  filtered = filtered.slice().sort((a, b) => {
+    const aKey = a.started_at || a.id || '';
+    const bKey = b.started_at || b.id || '';
+    return aKey < bKey ? 1 : aKey > bKey ? -1 : 0;
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No work orders match the selected filter.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  filtered.forEach((wo) => {
+    const tr = document.createElement('tr');
+    tr.dataset.woId = wo.id || '';
+    tr.classList.add('wo-row');
+    if (wo.id === selectedWoId) {
+      tr.classList.add('selected');
+    }
+
+    const started = formatTimestamp(wo.started_at);
+    const finished = formatTimestamp(wo.finished_at || wo.completed_at);
+
+    const cells = [
+      wo.id ?? '',
+      (wo.status || 'unknown').toLowerCase(),
+      started,
+      finished,
+      wo.goal ?? wo.title ?? ''
+    ];
+
+    cells.forEach((value) => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+
+    tr.addEventListener('click', () => selectWorkOrder(wo.id));
+    tbody.appendChild(tr);
+  });
+}
+
+function selectWorkOrder(woId) {
+  if (!woId) return;
+  selectedWoId = woId;
+  updateWoSelectionHighlight();
+  loadWoDetail(woId);
+}
+
+function updateWoSelectionHighlight() {
+  const rows = document.querySelectorAll('#wo-tbody tr');
+  rows.forEach((row) => {
+    row.classList.toggle('selected', row.dataset.woId === selectedWoId);
+  });
+}
+
+async function loadWoDetail(woId) {
+  showWoDetailPlaceholder('Loading work order details…');
+  try {
+    const wo = await fetchJSON(`http://127.0.0.1:8767/api/wos/${encodeURIComponent(woId)}?tail=${WO_TAIL_LINES}&timeline=1`);
+    renderWoDetail(wo);
+  } catch (error) {
+    console.error('Failed to load work order detail', error);
+    showWoDetailPlaceholder('Failed to load work order details.');
+  }
+}
+
+function renderWoDetail(wo) {
+  const detailPanel = document.getElementById('wo-detail');
+  const placeholder = document.getElementById('wo-detail-placeholder');
+  if (!detailPanel || !placeholder) return;
+
+  placeholder.classList.add('hidden');
+  detailPanel.classList.remove('hidden');
+
+  document.getElementById('wo-detail-title').textContent = wo.id || wo.title || 'Work Order';
+  document.getElementById('wo-detail-status').textContent = wo.status || 'unknown';
+  document.getElementById('wo-detail-goal').textContent = wo.goal || wo.title || '';
+  document.getElementById('wo-detail-meta').textContent = describeWoTiming(wo) || 'No timing data available.';
+
+  renderWoTimeline(Array.isArray(wo.timeline) ? wo.timeline : []);
+  renderWoLog(Array.isArray(wo.log_tail) ? wo.log_tail : []);
+}
+
+function showWoDetailPlaceholder(message) {
+  const detailPanel = document.getElementById('wo-detail');
+  const placeholder = document.getElementById('wo-detail-placeholder');
+  if (!detailPanel || !placeholder) return;
+
+  placeholder.textContent = message;
+  placeholder.classList.remove('hidden');
+  detailPanel.classList.add('hidden');
+  const timelineList = document.getElementById('wo-timeline-list');
+  if (timelineList) {
+    timelineList.innerHTML = '';
+  }
+  const logEl = document.getElementById('wo-log-tail');
+  if (logEl) {
+    logEl.textContent = '';
+    logEl.classList.add('empty');
+  }
+}
+
+function renderWoTimeline(events) {
+  const list = document.getElementById('wo-timeline-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (!events.length) {
+    const li = document.createElement('li');
+    li.className = 'timeline-item empty';
+    const content = document.createElement('div');
+    content.className = 'timeline-content';
+    content.textContent = 'No timeline data available.';
+    li.appendChild(content);
+    list.appendChild(li);
+    return;
+  }
+
+  events.forEach((event) => {
+    const li = document.createElement('li');
+    const typeClass = event.type ? ` timeline-${event.type}` : '';
+    li.className = `timeline-item${typeClass}`;
+
+    const dot = document.createElement('div');
+    dot.className = 'timeline-dot';
+    const content = document.createElement('div');
+    content.className = 'timeline-content';
+
+    const header = document.createElement('div');
+    header.className = 'timeline-header';
+    const typeSpan = document.createElement('span');
+    typeSpan.className = 'timeline-type';
+    typeSpan.textContent = (event.type || '').toUpperCase();
+    header.appendChild(typeSpan);
+
+    if (event.ts) {
+      const tsSpan = document.createElement('span');
+      tsSpan.className = 'timeline-ts';
+      tsSpan.textContent = formatTimestamp(event.ts);
+      header.appendChild(tsSpan);
+    }
+
+    const label = document.createElement('p');
+    label.className = 'timeline-label';
+    label.textContent = event.label || event.type || 'event';
+
+    content.appendChild(header);
+    content.appendChild(label);
+
+    li.appendChild(dot);
+    li.appendChild(content);
+    list.appendChild(li);
+  });
+}
+
+function renderWoLog(logTail) {
+  const el = document.getElementById('wo-log-tail');
+  if (!el) return;
+
+  if (!logTail.length) {
+    el.textContent = 'No log entries available for this work order.';
+    el.classList.add('empty');
+    return;
+  }
+
+  el.textContent = logTail.join('\n');
+  el.classList.remove('empty');
+}
+
+function initWOPanel() {
+  const panel = document.getElementById('wos-panel');
+  if (!panel) return;
+
+  const statusSelect = document.getElementById('wo-status-filter');
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+
+  statusSelect?.addEventListener('change', renderWOTable);
+  refreshBtn?.addEventListener('click', loadWOs);
+
+  loadWOs();
+
+  if (!woIntervalId) {
+    woIntervalId = setInterval(loadWOs, WO_REFRESH_MS);
   }
 }
 
@@ -261,6 +577,11 @@ function initMLSPanel() {
 }
 
 function cleanupIntervals() {
+  if (woIntervalId) {
+    clearInterval(woIntervalId);
+    woIntervalId = null;
+  }
+
   if (servicesIntervalId) {
     clearInterval(servicesIntervalId);
     servicesIntervalId = null;
@@ -274,6 +595,7 @@ function cleanupIntervals() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
+  initWOPanel();
   initServicesPanel();
   initMLSPanel();
 });
