@@ -347,3 +347,54 @@ fi
 **Priority:** P1 (Critical - Data Loss Risk)  
 **Dependencies:** Branch access and code examination
 
+---
+
+## TODO List (For Implementation Tracking)
+
+### Phase 1: Discovery & Analysis
+- [ ] **Task 1.1**: Checkout branch `codex/implement-02luka-trading-cli-v2-spec`
+- [ ] **Task 1.1**: Read `tools/trading_cli.zsh` snapshot function (lines ~417-420)
+- [ ] **Task 1.1**: Identify filter variables (`$market`, `$account`, `$scenario`, `$tag`)
+- [ ] **Task 1.1**: Locate `snapshot_range_slug()` function
+- [ ] **Task 1.2**: Find all references to snapshot filenames
+- [ ] **Task 1.2**: Check for scripts/tools reading snapshot files
+- [ ] **Task 1.2**: Identify markdown file generation logic
+
+### Phase 2: Implementation
+- [ ] **Task 2.1**: Add `normalize_filter_value()` helper function
+- [ ] **Task 2.1**: Implement lowercase conversion
+- [ ] **Task 2.1**: Implement space-to-underscore replacement
+- [ ] **Task 2.1**: Implement special character removal
+- [ ] **Task 2.1**: Implement length truncation (max 20 chars)
+- [ ] **Task 2.2**: Update lines 417-420 with filter suffix logic
+- [ ] **Task 2.2**: Build filter_parts array from non-empty filters
+- [ ] **Task 2.2**: Combine filter suffix with range slug
+- [ ] **Task 2.3**: Add file existence check before write
+- [ ] **Task 2.3**: Append timestamp on collision
+- [ ] **Task 2.3**: Add warning message to stderr
+- [ ] **Task 2.4**: Check markdown file naming (if exists)
+- [ ] **Task 2.4**: Apply same filter logic to markdown files
+
+### Phase 3: Testing
+- [ ] **Task 3.1**: Document TC1 - No filters (backward compatibility)
+- [ ] **Task 3.1**: Document TC2 - Single filter (market)
+- [ ] **Task 3.1**: Document TC3 - Single filter (account)
+- [ ] **Task 3.1**: Document TC4 - Multiple filters
+- [ ] **Task 3.1**: Document TC5 - Special characters
+- [ ] **Task 3.1**: Document TC6 - Collision handling
+- [ ] **Task 3.1**: Document TC7 - Long filter values
+- [ ] **Task 3.2**: Execute TC1 - Verify original format
+- [ ] **Task 3.2**: Execute TC2 - Verify `_mkt_TFEX` in filename
+- [ ] **Task 3.2**: Execute TC3 - Verify `_acc_BIZ-01` in filename
+- [ ] **Task 3.2**: Execute TC4 - Verify all filters in filename
+- [ ] **Task 3.2**: Execute TC5 - Verify normalization works
+- [ ] **Task 3.2**: Execute TC6 - Verify timestamp appended on collision
+- [ ] **Task 3.2**: Execute TC7 - Verify truncation works
+
+### Phase 4: Documentation
+- [ ] **Task 4.1**: Update `--help` text for snapshot command
+- [ ] **Task 4.1**: Add filename format examples
+- [ ] **Task 4.1**: Document filter impact on filenames
+- [ ] **Task 4.2**: Document breaking changes
+- [ ] **Task 4.2**: Create old vs new filename examples
+- [ ] **Task 4.2**: Suggest migration path for existing snapshots
