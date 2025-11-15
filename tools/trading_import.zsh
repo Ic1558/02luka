@@ -136,7 +136,12 @@ json_out = os.environ['JSON_OUTPUT']
 meta_out = os.environ['META_OUTPUT']
 default_market = os.environ.get('DEFAULT_MARKET', '').strip()
 default_account = os.environ.get('DEFAULT_ACCOUNT', '').strip()
-repo_root = os.environ.get('REPO_ROOT', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+repo_root = os.environ.get('REPO_ROOT', '')
+if not repo_root:
+    # Fallback: try to infer from script location (less reliable in heredoc)
+    # This should rarely be needed since REPO_ROOT is set by the shell script
+    print('Warning: REPO_ROOT not set, attempting fallback', file=sys.stderr)
+    repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 HEADER_ALIASES = {
     'date': 'date',
@@ -202,6 +207,9 @@ ISO_FORMATS = [
     "%Y-%m-%dT%H:%M",
     "%Y-%m-%dT%H:%M%z"
 ]
+
+# ISO-8601 timestamp pattern for strict validation (YYYY-MM-DDTHH:MM:SS)
+ISO_TIMESTAMP_PATTERN = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}'
 
 SIDE_MAP = {
     'b': 'buy',
@@ -275,11 +283,8 @@ def parse_timestamp(date_str: str, time_str: str, ts_str: str):
         # Try fromisoformat for standard ISO-8601 (but validate it's actually ISO)
         try:
             parsed = dt.datetime.fromisoformat(value)
-            # Verify it's a valid ISO format by checking if it matches expected patterns
-            # This prevents accepting non-standard formats that fromisoformat might accept
-            iso_str = parsed.isoformat()
-            # Only accept if it matches expected ISO patterns
-            if 'T' in value or value.startswith(parsed.strftime('%Y-%m-%d')):
+            # Strict validation: must match ISO-8601 pattern (YYYY-MM-DDTHH:MM:SS...)
+            if re.match(ISO_TIMESTAMP_PATTERN, value):
                 return parsed
         except (ValueError, AttributeError):
             pass
@@ -416,11 +421,19 @@ with open(csv_path, 'r', encoding='utf-8-sig', newline='') as csv_file:
         # Validate timestamp format against schema (ISO-8601 date-time)
         # The schema requires format: "date-time" which is RFC3339 / ISO-8601
         try:
+            # Handle 'Z' timezone suffix (convert to +00:00 for fromisoformat)
+            timestamp_to_validate = timestamp
+            if timestamp.endswith('Z'):
+                timestamp_to_validate = timestamp[:-1] + '+00:00'
             # Verify it's a valid ISO-8601 datetime string
-            dt.datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            # Additional check: ensure it matches expected pattern
+            dt.datetime.fromisoformat(timestamp_to_validate)
+            # Additional check: ensure it matches expected ISO-8601 pattern
+            # Must have exactly one 'T' separator and minimum length
             if not (timestamp.count('T') == 1 and len(timestamp) >= 19):
-                raise ValueError("Invalid ISO-8601 format")
+                raise ValueError("Invalid ISO-8601 format: missing T separator or too short")
+            # Verify pattern: YYYY-MM-DDTHH:MM:SS
+            if not re.match(ISO_TIMESTAMP_PATTERN, timestamp):
+                raise ValueError("Invalid ISO-8601 format: pattern mismatch")
         except (ValueError, AttributeError) as e:
             print(
                 'Skipping row due to timestamp validation failure',
@@ -473,7 +486,7 @@ with open(csv_path, 'r', encoding='utf-8-sig', newline='') as csv_file:
             entry['notes'] = notes
 
         # Validate entry against schema before persisting
-        if HAS_JSONSCHEMA:
+        if HAS_JSONSCHEMA and repo_root:
             schema_path = os.path.join(repo_root, 'g', 'schemas', 'trading_journal.schema.json')
             if os.path.exists(schema_path):
                 try:
