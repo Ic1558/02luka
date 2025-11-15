@@ -12,6 +12,7 @@ SAFE_TS="${START_TS//[:]/-}"
 LOG_FILE="${LOG_DIR}/save_${SAFE_TS}.log"
 LOG_REL="${LOG_FILE#${REPO_ROOT}/}"
 MLS_STATUS="skipped"
+MLS_REQUIRED=0
 
 finish() {
   local exit_code=$?
@@ -80,6 +81,7 @@ echo "git diff --stat"
 printf '%s\n' "$DIFFSTAT_OUTPUT"
 
 if [[ "${LUKA_MLS_AUTO_RECORD:-0}" == "1" ]]; then
+  MLS_REQUIRED=1
   MLS_SCRIPT="$REPO_ROOT/tools/mls_auto_record.zsh"
   MLS_HOME_OVERRIDE="${LUKA_MLS_HOME_OVERRIDE:-$(cd "${REPO_ROOT}/.." && pwd)}"
   if [[ -x "$MLS_SCRIPT" ]]; then
@@ -97,6 +99,11 @@ if [[ "${LUKA_MLS_AUTO_RECORD:-0}" == "1" ]]; then
   fi
 else
   echo "::save.sh:mls status=disabled lane=${LANE}::"
+fi
+
+if [[ $MLS_REQUIRED -eq 1 && "$MLS_STATUS" != "recorded" ]]; then
+  echo "save.sh: MLS auto-record requested but status=${MLS_STATUS}" >&2
+  exit 7
 fi
 
 exit 0
