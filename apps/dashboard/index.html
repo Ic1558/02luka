@@ -40,6 +40,10 @@
         margin: 0.25rem 0 0.75rem;
       }
 
+      .hidden {
+        display: none !important;
+      }
+
       .tabs {
         margin: 0;
         padding: 0;
@@ -49,7 +53,8 @@
         flex-wrap: wrap;
       }
 
-      .tabs a {
+      .tabs a,
+      .tabs button {
         color: #38bdf8;
         text-decoration: none;
         padding: 0.5rem 1rem;
@@ -59,11 +64,17 @@
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
       }
 
       .tabs a.active,
+      .tabs button.active,
       .tabs a:hover,
-      .tabs a:focus {
+      .tabs button:hover,
+      .tabs a:focus,
+      .tabs button:focus {
         background: rgba(56, 189, 248, 0.12);
         color: #f8fafc;
       }
@@ -342,6 +353,32 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
+      .wo-history-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .wo-history-header h2 {
+        margin: 0;
+      }
+
+      .wo-history-filters {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .wo-history-filters label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.875rem;
+        color: rgba(226, 232, 240, 0.8);
+      }
+
       footer {
         padding: 2rem;
         text-align: center;
@@ -373,6 +410,7 @@
         <li><a href="#overview-panel" class="tab active" data-panel="overview-panel">Overview</a></li>
         <li><a href="#services-panel" class="tab" data-panel="services-panel">Services</a></li>
         <li><a href="#mls-panel" class="tab" data-panel="mls-panel">MLS Lessons</a></li>
+        <li><a href="#work-orders-panel" class="tab" data-panel="work-orders-panel">Work Orders</a></li>
         <li><a href="followup.html">Follow-Up Tracker</a></li>
       </ul>
     </header>
@@ -471,6 +509,80 @@
         </div>
 
         <div id="mls-list" class="mls-list">Loading…</div>
+      </section>
+
+      <section id="work-orders-panel" class="panel hidden">
+        <h2>Work Orders</h2>
+        <p>
+          Switch between high-level work order summaries, single-WO insights, and the new
+          global WO history view without leaving the dashboard.
+        </p>
+
+        <!-- Tabs navigation -->
+        <nav class="tabs">
+          <button id="tab-overview" type="button">Overview</button>
+          <button id="tab-wos" type="button">Work Orders</button>
+          <button id="tab-wo-history" type="button">WO History</button>
+        </nav>
+
+        <!-- Existing sections -->
+        <section id="view-overview">
+          <p>
+            Use this view to see aggregate WO metrics and high-level signals. Additional
+            visualizations will land here as the WO command center evolves.
+          </p>
+        </section>
+
+        <section id="view-wos" class="hidden">
+          <p>
+            Per-work-order drilldowns are being migrated into this panel. For now, use the
+            history tab to review recent activity.
+          </p>
+        </section>
+
+        <!-- NEW: Global WO History view -->
+        <section id="view-wo-history" class="hidden">
+          <header class="wo-history-header">
+            <h2>Work Order History</h2>
+            <div class="wo-history-filters">
+              <label>
+                Status:
+                <select id="wo-history-status-filter">
+                  <option value="">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="running">Running</option>
+                  <option value="completed">Completed</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </label>
+              <label>
+                Max rows:
+                <select id="wo-history-limit">
+                  <option value="50">50</option>
+                  <option value="100" selected>100</option>
+                  <option value="200">200</option>
+                </select>
+              </label>
+            </div>
+          </header>
+
+          <table class="wo-history-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Started</th>
+                <th>Status</th>
+                <th>Agent</th>
+                <th>Type</th>
+                <th>Summary</th>
+              </tr>
+            </thead>
+            <tbody id="wo-history-body">
+              <!-- filled by JS -->
+            </tbody>
+          </table>
+        </section>
       </section>
     </main>
     <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
