@@ -116,12 +116,51 @@ fi
 
 mkdir -p "$REPORT_DIR"
 
+slugify_value() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    echo ""
+    return
+  fi
+  local slug
+  slug="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9._-' '-')"
+  slug="${slug#-}"
+  slug="${slug%-}"
+  echo "$slug"
+}
+
+build_filter_suffix() {
+  local suffix=""
+  local value slug
+
+  for entry in "$@"; do
+    local key="${entry%%=*}"
+    value="${entry#*=}"
+    slug="$(slugify_value "$value")"
+    if [[ -n "$slug" ]]; then
+      suffix+="_${key}-${slug}"
+    fi
+  done
+
+  echo "$suffix"
+}
+
 if [[ "$FROM_DATE" == "$TO_DATE" ]]; then
   RANGE_LABEL="$FROM_DATE"
   REPORT_NAME="trading_snapshot_${FROM_DATE}"
 else
   RANGE_LABEL="${FROM_DATE} to ${TO_DATE}"
   REPORT_NAME="trading_snapshot_${FROM_DATE}_${TO_DATE}"
+fi
+
+FILTER_SUFFIX="$(build_filter_suffix \
+  "market=$MARKET_FILTER" \
+  "account=$ACCOUNT_FILTER" \
+  "symbol=$SYMBOL_FILTER"
+)"
+
+if [[ -n "$FILTER_SUFFIX" ]]; then
+  REPORT_NAME+="$FILTER_SUFFIX"
 fi
 
 SUMMARY_JSON_FILE="$(mktemp)"
