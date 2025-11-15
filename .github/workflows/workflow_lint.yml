@@ -26,4 +26,6 @@ jobs:
 
       - name: Lint GitHub workflows
         run: |
-          ./bin/actionlint -color
+          # Disable shellcheck integration for now because many legacy scripts
+          # intentionally rely on unquoted expansions.
+          ./bin/actionlint -color -shellcheck ''
