@@ -44,6 +44,8 @@ function initTabs() {
       initServicesPanel();
     } else if (targetId === 'mls-panel') {
       initMLSPanel();
+    } else if (targetId === 'view-reality') {
+      loadRealitySnapshot();
     }
   }
 
@@ -187,6 +189,124 @@ function createStatusChip(status) {
   span.className = `status-chip status-${normalized}`;
   span.textContent = normalized;
   return span;
+}
+
+// --- Reality Snapshot ---
+
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = 'Loading Reality snapshot…';
+  }
+
+  try {
+    const response = await fetch('/api/reality/snapshot');
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('Failed to fetch Reality snapshot', response.status, text);
+      renderRealityError(`HTTP ${response.status}`);
+      return;
+    }
+    const payload = await response.json();
+    renderRealitySnapshot(payload);
+  } catch (error) {
+    console.error('Error loading Reality snapshot', error);
+    renderRealityError(String(error));
+  }
+}
+
+function renderRealityError(message) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (meta) meta.textContent = `Reality snapshot error: ${message}`;
+  if (deployEl) deployEl.textContent = '';
+  if (saveBody) saveBody.innerHTML = '';
+  if (orchEl) orchEl.textContent = '';
+}
+
+function renderRealitySnapshot(payload) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (!meta || !deployEl || !saveBody || !orchEl) {
+    return;
+  }
+
+  if (!payload || payload.status === 'no_snapshot') {
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
+    deployEl.textContent = '';
+    saveBody.innerHTML = '';
+    orchEl.textContent = '';
+    return;
+  }
+
+  if (payload.status === 'error') {
+    renderRealityError(payload.error || 'invalid snapshot');
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || '';
+  const deployment = data.deployment_report || null;
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
+
+  if (deployment && (deployment.path || deployment.summary)) {
+    const summaryParts = [];
+    if (deployment.path) summaryParts.push(`Report: ${deployment.path}`);
+    if (deployment.summary) summaryParts.push(String(deployment.summary));
+    deployEl.textContent = summaryParts.join('\n');
+  } else {
+    deployEl.textContent = 'No deployment report in snapshot.';
+  }
+
+  saveBody.innerHTML = '';
+  if (!saveRuns.length) {
+    const row = document.createElement('tr');
+    row.innerHTML = '<td colspan="7">No save.sh runs captured.</td>';
+    saveBody.appendChild(row);
+  } else {
+    saveRuns.forEach((run) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${escapeHtml(run.test_id || '')}</code></td>
+        <td>${escapeHtml(run.lane || '')}</td>
+        <td>${escapeHtml(run.layer1 || '')}</td>
+        <td>${escapeHtml(run.layer2 || '')}</td>
+        <td>${escapeHtml(run.layer3 || '')}</td>
+        <td>${escapeHtml(run.layer4 || '')}</td>
+        <td>${escapeHtml(run.git || '')}</td>
+      `;
+      saveBody.appendChild(tr);
+    });
+  }
+
+  if (orchestrator) {
+    try {
+      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+    } catch (err) {
+      console.warn('Failed to stringify orchestrator summary', err);
+      orchEl.textContent = String(orchestrator);
+    }
+  } else {
+    orchEl.textContent = 'No orchestrator summary in snapshot.';
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function initServicesPanel() {

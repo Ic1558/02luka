@@ -7,6 +7,7 @@ Runs alongside the static HTTP server on port 8767
 import json
 import os
 import re
+import glob
 from datetime import datetime
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -18,6 +19,7 @@ ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+SYSTEM_REPORTS = ROOT / "g" / "reports" / "system"
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -271,6 +273,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_list_services(query)
         elif path == '/api/mls':
             self.handle_list_mls(query)
+        elif path == '/api/reality/snapshot':
+            self.handle_reality_snapshot(query)
         elif path == '/api/health/logs':
             self.handle_get_logs(query)
         else:
@@ -541,6 +545,46 @@ class APIHandler(BaseHTTPRequestHandler):
             print(f"Error reading MLS lessons: {e}")
             self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
 
+    def handle_reality_snapshot(self, query):
+        """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
+        try:
+            reports_dir = SYSTEM_REPORTS if SYSTEM_REPORTS.exists() else LOGS.parent
+            pattern = str(reports_dir / "reality_hooks_snapshot_*.json")
+            snapshot_files = glob.glob(pattern)
+
+            if not snapshot_files:
+                response = {
+                    "status": "no_snapshot",
+                    "snapshot_path": None,
+                    "data": None
+                }
+                self.send_json_response(response)
+                return
+
+            latest_file = max(snapshot_files)
+            with open(latest_file, 'r') as f:
+                try:
+                    data = json.load(f)
+                except json.JSONDecodeError:
+                    response = {
+                        "status": "error",
+                        "snapshot_path": latest_file,
+                        "error": "invalid_json"
+                    }
+                    self.send_json_response(response)
+                    return
+
+            response = {
+                "status": "ok",
+                "snapshot_path": latest_file,
+                "data": data
+            }
+            self.send_json_response(response)
+
+        except Exception as e:
+            print(f"Error reading Reality Hooks snapshot: {e}")
+            self.send_error(500, f"Failed to read Reality Hooks snapshot: {str(e)}")
+
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""
         lines = int(query.get('lines', ['200'])[0])
@@ -585,6 +629,7 @@ def run_server(port=8767):
     print(f"   - GET /api/services?status=stopped - Filter services by status")
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
     print(f"   - GET /api/mls?type=solution - Filter MLS by type")
+    print(f"   - GET /api/reality/snapshot - Get latest Reality Hooks snapshot")
     print(f"   - GET /api/health/logs?lines=200 - Get system logs")
     server.serve_forever()
 

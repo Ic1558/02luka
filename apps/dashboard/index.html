@@ -160,6 +160,63 @@
         cursor: pointer;
       }
 
+      .reality-header {
+        margin-bottom: 1.5rem;
+      }
+
+      .reality-subtitle {
+        margin-top: 0.25rem;
+        color: rgba(226, 232, 240, 0.7);
+        max-width: 60ch;
+      }
+
+      .reality-meta {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        margin-bottom: 1.5rem;
+      }
+
+      .reality-panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .reality-panel {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 18px;
+        padding: 1.25rem;
+      }
+
+      .reality-panel h3 {
+        margin-top: 0;
+      }
+
+      .reality-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(15, 23, 42, 0.65);
+        border-radius: 12px;
+        padding: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        min-height: 120px;
+      }
+
+      .reality-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .reality-table th,
+      .reality-table td {
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        font-size: 0.85rem;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -373,6 +430,7 @@
         <li><a href="#overview-panel" class="tab active" data-panel="overview-panel">Overview</a></li>
         <li><a href="#services-panel" class="tab" data-panel="services-panel">Services</a></li>
         <li><a href="#mls-panel" class="tab" data-panel="mls-panel">MLS Lessons</a></li>
+        <li><a href="#view-reality" id="tab-reality" class="tab" data-panel="view-reality">Reality</a></li>
         <li><a href="followup.html">Follow-Up Tracker</a></li>
       </ul>
     </header>
@@ -471,6 +529,48 @@
         </div>
 
         <div id="mls-list" class="mls-list">Loading…</div>
+      </section>
+
+      <section id="view-reality" class="panel hidden" aria-labelledby="tab-reality">
+        <header class="reality-header">
+          <h2>Reality Snapshot</h2>
+          <p class="reality-subtitle">
+            Latest Reality Hooks snapshot aggregated from deployment reports,
+            save.sh full-cycle tests, and orchestrator summaries.
+          </p>
+        </header>
+
+        <div id="reality-meta" class="reality-meta">Loading Reality snapshot…</div>
+
+        <div class="reality-panels">
+          <section class="reality-panel">
+            <h3>Deployment</h3>
+            <pre id="reality-deployment" class="reality-pre"></pre>
+          </section>
+
+          <section class="reality-panel">
+            <h3>save.sh Full-Cycle Tests</h3>
+            <table class="reality-table">
+              <thead>
+                <tr>
+                  <th>Test ID</th>
+                  <th>Lane</th>
+                  <th>Layer1</th>
+                  <th>Layer2</th>
+                  <th>Layer3</th>
+                  <th>Layer4</th>
+                  <th>Git</th>
+                </tr>
+              </thead>
+              <tbody id="reality-save-body"></tbody>
+            </table>
+          </section>
+
+          <section class="reality-panel">
+            <h3>Orchestrator Summary</h3>
+            <pre id="reality-orchestrator" class="reality-pre"></pre>
+          </section>
+        </div>
       </section>
     </main>
     <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
