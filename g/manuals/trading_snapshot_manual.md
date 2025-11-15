@@ -28,13 +28,15 @@ tools/trading_snapshot.zsh --day 2025-11-15 --json
 - `--day <YYYY-MM-DD|today>`: Summarize a single day. Use `today` to auto-resolve.
 - `--from <YYYY-MM-DD>` and `--to <YYYY-MM-DD>`: Inclusive custom range.
 - `--market`, `--account`, `--symbol`: Optional filters.
-- `--json`: Prints the summary JSON to stdout and stores `trading_snapshot_<range>.json` next to the Markdown file.
+- `--json`: Prints the summary JSON to stdout and stores `trading_snapshot_<range>[filters].json` next to the Markdown file.
 
 ## Output
 Reports live under `g/reports/trading/` with these names:
-- `trading_snapshot_<YYYY-MM-DD>.md` for single days.
-- `trading_snapshot_<FROM>_<TO>.md` for custom ranges.
+- `trading_snapshot_<YYYY-MM-DD>[filters].md` for single days.
+- `trading_snapshot_<FROM>_<TO>[filters].md` for custom ranges.
 - Matching `.json` file when `--json` is used.
+
+When market/account/symbol filters are supplied, the report name gains slugified suffixes such as `_market-TFEX` or `_account-biz-01` so snapshots from different filter combinations never overwrite each other.
 
 Each Markdown file includes:
 1. **Summary**: trades, gross/net PnL, win rate, avg win/loss, max gain/loss.
