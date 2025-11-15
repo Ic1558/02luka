@@ -1,0 +1,51 @@
+name: Save Full-Cycle Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Execution lane"
+        required: true
+        default: "cls"
+        type: choice
+        options:
+          - cls
+          - clc
+          - both
+
+jobs:
+  save_full_cycle_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make test script executable
+        run: |
+          chmod +x tools/tests/save_full_cycle_test.zsh
+
+      - name: Run save.sh full-cycle test (CLS)
+        if: ${{ github.event.inputs.lane == 'cls' || github.event.inputs.lane == 'both' }}
+        env:
+          SAVE_LANE: cls
+        run: |
+          ./tools/tests/save_full_cycle_test.zsh
+
+      - name: Run save.sh full-cycle test (CLC)
+        if: ${{ github.event.inputs.lane == 'clc' || github.event.inputs.lane == 'both' }}
+        env:
+          SAVE_LANE: clc
+        run: |
+          ./tools/tests/save_full_cycle_test.zsh
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: save_sh_full_cycle_reports
+          path: |
+            g/reports/system/save_sh_full_cycle_test_*.md
+            g/reports/system/save_sh_full_cycle_test_*.log
+          if-no-files-found: ignore
