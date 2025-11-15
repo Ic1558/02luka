@@ -99,7 +99,7 @@ command -v jq >/dev/null 2>&1 || die "jq is required"
 mkdir -p "$REPORT_DIR"
 
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'test -d "$TMP_DIR" && (cd "$TMP_DIR" && find . -delete && cd .. && rmdir "$TMP_DIR")' EXIT
 
 log "Fetching metadata for PR #$PR_NUMBER"
 if ! PR_DATA=$(gh pr view "$PR_NUMBER" --json number,title,body,author,headRefName,baseRefName,isDraft,mergeable,url,files --repo . 2>/dev/null); then
