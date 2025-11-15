@@ -324,9 +324,61 @@ class APIHandler(BaseHTTPRequestHandler):
                 if wo.get('log_path'):
                     wo['log_tail'] = self.collector._get_log_tail(wo['log_path'], lines)
 
+            timeline_flag = query.get('timeline', ['0'])[0]
+            if timeline_flag == '1':
+                wo['timeline'] = self._build_wo_timeline(wo)
+
             self.send_json_response(wo)
         else:
             self.send_error(404, f"WO {wo_id} not found")
+
+    def _build_wo_timeline(self, wo):
+        """Build a derived timeline for a work order"""
+        events = []
+
+        def add_event(ts, event_type, label, **extra):
+            if not label:
+                return
+            event = {
+                'ts': ts,
+                'type': event_type,
+                'label': label
+            }
+            event.update({k: v for k, v in extra.items() if v is not None})
+            events.append(event)
+
+        created_at = wo.get('created_at') or wo.get('id')
+        if created_at:
+            add_event(created_at, 'created', 'WO created')
+
+        if wo.get('started_at'):
+            add_event(wo['started_at'], 'started', 'Execution started')
+
+        finished_at = wo.get('finished_at') or wo.get('completed_at')
+        if finished_at:
+            add_event(
+                finished_at,
+                'finished',
+                'Execution finished',
+                status=wo.get('status')
+            )
+
+        log_tail = wo.get('log_tail')
+        if isinstance(log_tail, list):
+            for line in log_tail:
+                if not isinstance(line, str):
+                    continue
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                preview = stripped[:200]
+                if 'ERROR' in stripped:
+                    add_event(None, 'error', preview)
+                elif 'STATE:' in stripped:
+                    add_event(None, 'state', preview)
+
+        events.sort(key=lambda e: (e.get('ts') is None, e.get('ts') or ''))
+        return events
 
     def handle_list_services(self, query):
         """Handle GET /api/services - list all 02luka LaunchAgent services"""
