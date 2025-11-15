@@ -31,7 +31,7 @@ run_check() {
   else
     log "❌ ${name} FAILED"
     log "---- ${name} output ----"
-    sed -n '1,80p' "/tmp/reality_hook_${name}.log" || true
+    sed -n '1,80p' "/tmp/reality_hook_${name}.log" >&2 || true
     log "------------------------"
     echo "failed"
   fi
@@ -44,6 +44,12 @@ dashboard_hook() {
   # a cheap static check that proves the module can be loaded / config is sane.
   if [ ! -f "${ROOT}/apps/dashboard/wo_dashboard_server.js" ]; then
     log "Dashboard hook: server file not found, marking as skipped."
+    echo "skipped"
+    return 0
+  fi
+
+  if ! command -v node >/dev/null 2>&1; then
+    log "Dashboard hook: node command not available, marking as skipped."
     echo "skipped"
     return 0
   fi
@@ -64,7 +70,9 @@ orchestrator_hook() {
   rm -f "${summary}"
 
   # This should match the command you used in the post-deploy check.
-  if [ "$(run_check "orchestrator_smoke" "${ROOT}/tools/claude_subagents/orchestrator.zsh" --summary)" = "ok" ]; then
+  local orchestrator_cmd=(env LUKA_SOT="${ROOT}" "${ROOT}/tools/claude_subagents/orchestrator.zsh" review "true" 1)
+
+  if [ "$(run_check "orchestrator_smoke" "${orchestrator_cmd[@]}")" = "ok" ]; then
     if [ -f "${summary}" ]; then
       # Quick JSON sanity check using node if available, else best-effort.
       if command -v node >/dev/null 2>&1; then
@@ -92,10 +100,32 @@ orchestrator_hook() {
 
 # 3) Telemetry schema vs sample (light check)
 telemetry_hook() {
-  local schema="${ROOT}/g/schemas/telemetry_v2.schema.json"
-  local sample="${ROOT}/g/telemetry_unified/unified.jsonl"
+  local schema_candidates=(
+    "${ROOT}/g/schemas/telemetry_v2.schema.json"
+    "${ROOT}/schemas/telemetry_v2.schema.json"
+  )
+  local sample_candidates=(
+    "${ROOT}/g/telemetry_unified/unified.jsonl"
+    "${ROOT}/telemetry_unified/unified.jsonl"
+    "${ROOT}/telemetry/unified.jsonl"
+  )
 
-  if [ ! -f "${schema}" ] || [ ! -f "${sample}" ]; then
+  local schema=""
+  local sample=""
+
+  for candidate in "${schema_candidates[@]}"; do
+    if [ -z "${schema}" ] && [ -f "${candidate}" ]; then
+      schema="${candidate}"
+    fi
+  done
+
+  for candidate in "${sample_candidates[@]}"; do
+    if [ -z "${sample}" ] && [ -f "${candidate}" ]; then
+      sample="${candidate}"
+    fi
+  done
+
+  if [ -z "${schema}" ] || [ -z "${sample}" ]; then
     log "Telemetry hook: schema or sample missing, marking as skipped."
     echo "skipped"
     return 0
@@ -124,8 +154,12 @@ with sample_path.open() as f:
         line = line.strip()
         if not line:
             continue
-        first = json.loads(line)
-        break
+        try:
+            first = json.loads(line)
+            break
+        except json.JSONDecodeError:
+            # Skip malformed lines and keep searching for the first valid JSON record
+            continue
 
 if first is None:
     print("No telemetry records found.")
@@ -139,7 +173,10 @@ if missing:
 print("Telemetry sample matches required keys.")
 PY
 
-  run_check "telemetry_schema" python3 "${script}" "${schema}" "${sample}"
+  local hook_status
+  hook_status="$(run_check "telemetry_schema" python3 "${script}" "${schema}" "${sample}")"
+  rm -f "${script}" || true
+  echo "${hook_status}"
 }
 
 # Run hooks

@@ -12,13 +12,15 @@ The `tools/reality_hooks/pr_reality_check.zsh` script currently runs:
    - Best-effort only; marks `skipped` if the file is missing.
 
 2. **Orchestrator summary**
-   - Runs `tools/claude_subagents/orchestrator.zsh --summary`.
+   - Runs `tools/claude_subagents/orchestrator.zsh review "true" 1` with
+     `LUKA_SOT` pointed at the repo so it produces artifacts locally.
    - Checks that `g/reports/system/claude_orchestrator_summary.json` is created
      and contains valid JSON.
 
 3. **Telemetry schema vs sample**
-   - Loads `g/schemas/telemetry_v2.schema.json` and the first record from
-     `g/telemetry_unified/unified.jsonl`.
+   - Loads `g/schemas/telemetry_v2.schema.json` (or `schemas/telemetry_v2.schema.json`)
+     and the first record from `g/telemetry_unified/unified.jsonl`
+     (falling back to `telemetry_unified/unified.jsonl` or `telemetry/unified.jsonl`).
    - Fails only if required keys from the schema are missing in the sample.
 
 Each run writes a Markdown report under:
