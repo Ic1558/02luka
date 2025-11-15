@@ -108,7 +108,7 @@ fi
 
 mkdir -p "$REPORT_DIR" "$TMP_ROOT"
 TMP_DIR="$(mktemp -d "$TMP_ROOT/multi_agent_pr_review.XXXXXX")"
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'test -d "$TMP_DIR" && (cd "$TMP_DIR" && find . -delete && cd .. && rmdir "$TMP_DIR")' EXIT
 
 log "📥 Fetching PR #$PR_NUMBER metadata via gh"
 PR_JSON="$TMP_DIR/pr.json"
@@ -210,6 +210,8 @@ if [[ "$AGENT_CMD_TEMPLATE" != *"{TASK_FILE}"* ]]; then
 fi
 TASK_COMMAND=${AGENT_CMD_TEMPLATE//\{TASK_FILE\}/$TASK_FILE_ESCAPED}
 
+# Set LUKA_SOT to repo root so orchestrator writes summary to correct location
+export LUKA_SOT="$REPO_ROOT"
 log "🤖 Launching orchestrator ($ORCH_MODE) with $NUM_AGENTS agents"
 ORCH_STDOUT="$TMP_DIR/orchestrator.stdout"
 ORCH_STDERR="$TMP_DIR/orchestrator.stderr"
