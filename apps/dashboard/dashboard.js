@@ -4,6 +4,7 @@ const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitori
 
 let servicesIntervalId;
 let mlsIntervalId;
+let currentMlsType = '';
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -38,6 +39,12 @@ function initTabs() {
         link.removeAttribute('aria-current');
       }
     });
+
+    if (targetId === 'services-panel') {
+      initServicesPanel();
+    } else if (targetId === 'mls-panel') {
+      initMLSPanel();
+    }
   }
 
   tabLinks.forEach((link) => {
@@ -53,11 +60,41 @@ function initTabs() {
   }
 }
 
+function showErrorBanner(id, message) {
+  const banner = document.getElementById(id);
+  if (!banner) return;
+  const textSpan = banner.querySelector('span');
+  if (textSpan && message) {
+    textSpan.textContent = message;
+  }
+  banner.classList.remove('hidden');
+}
+
+function hideErrorBanner(id) {
+  const banner = document.getElementById(id);
+  banner?.classList.add('hidden');
+}
+
 // --- Services ---
+
+function setServicesLoading() {
+  const summary = document.getElementById('services-summary');
+  const tbody = document.getElementById('services-tbody');
+  if (summary) {
+    summary.innerHTML = '<span>Loading services…</span>';
+  }
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
+  }
+}
 
 async function loadServices() {
   const tbody = document.getElementById('services-tbody');
-  if (!tbody) return;
+  const summary = document.getElementById('services-summary');
+  if (!tbody || !summary) return;
+
+  setServicesLoading();
+  hideErrorBanner('services-error');
 
   const statusFilter = document.getElementById('services-status-filter')?.value || '';
   const typeFilter = document.getElementById('services-type-filter')?.value || '';
@@ -67,7 +104,7 @@ async function loadServices() {
     if (statusFilter) params.set('status', statusFilter);
     const query = params.toString();
 
-    const data = await fetchJSON(`http://127.0.0.1:8767/api/services${query ? `?${query}` : ''}`);
+    const data = await fetchJSON(`/api/services${query ? `?${query}` : ''}`);
     let services = Array.isArray(data?.services) ? data.services : [];
 
     if (typeFilter) {
@@ -84,16 +121,26 @@ async function loadServices() {
     renderServicesTable(services);
   } catch (error) {
     console.error('Failed to load services', error);
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="5">Failed to load services.</td></tr>';
-    }
+    showErrorBanner('services-error', 'Failed to load services.');
+    summary.innerHTML = '<span>Failed to load services.</span>';
+    tbody.innerHTML = '<tr><td colspan="5">Failed to load services.</td></tr>';
   }
 }
 
-function renderServicesSummary(summary) {
+function renderServicesSummary(summary = {}) {
   const el = document.getElementById('services-summary');
-  if (!el || !summary) return;
-  el.textContent = `Total: ${summary.total ?? '–'} | Running: ${summary.running ?? '–'} | Stopped: ${summary.stopped ?? '–'} | Failed: ${summary.failed ?? '–'}`;
+  if (!el) return;
+  const total = summary.total ?? '–';
+  const running = summary.running ?? '–';
+  const stopped = summary.stopped ?? '–';
+  const failed = summary.failed ?? '–';
+
+  el.innerHTML = `
+    <span><strong>Total:</strong> ${total}</span>
+    <span><span class="summary-dot running"></span>Running: ${running}</span>
+    <span><span class="summary-dot stopped"></span>Stopped: ${stopped}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${failed}</span>
+  `;
 }
 
 function renderServicesTable(services) {
@@ -112,152 +159,265 @@ function renderServicesTable(services) {
     const statusLabel = (svc.status || 'unknown').toLowerCase();
     const pid = svc.pid ?? '–';
     const exitCode = svc.exit_code ?? '–';
+    const type = svc.type ?? '—';
 
-    const statusClass = statusLabel === 'running'
-      ? 'status-running'
-      : statusLabel === 'failed'
-        ? 'status-failed'
-        : statusLabel === 'stopped'
-          ? 'status-stopped'
-          : '';
+    const labelCell = document.createElement('td');
+    labelCell.textContent = svc.label ?? '';
 
-    tr.innerHTML = `
-      <td>${svc.label ?? ''}</td>
-      <td>${svc.type ?? ''}</td>
-      <td class="${statusClass}">${statusLabel}</td>
-      <td>${pid}</td>
-      <td>${exitCode}</td>
-    `;
+    const statusCell = document.createElement('td');
+    statusCell.appendChild(createStatusChip(statusLabel));
 
+    const pidCell = document.createElement('td');
+    pidCell.textContent = pid;
+
+    const exitCell = document.createElement('td');
+    exitCell.textContent = exitCode;
+
+    const typeCell = document.createElement('td');
+    typeCell.textContent = type;
+
+    tr.append(labelCell, statusCell, pidCell, exitCell, typeCell);
     tbody.appendChild(tr);
   });
 }
 
+function createStatusChip(status) {
+  const normalized = status || 'unknown';
+  const span = document.createElement('span');
+  span.className = `status-chip status-${normalized}`;
+  span.textContent = normalized;
+  return span;
+}
+
 function initServicesPanel() {
-  const panel = document.getElementById('services-panel');
-  if (!panel) return;
+  if (servicesIntervalId) {
+    return;
+  }
 
   const statusSelect = document.getElementById('services-status-filter');
   const typeSelect = document.getElementById('services-type-filter');
   const refreshBtn = document.getElementById('services-refresh-btn');
+  document.getElementById('services-error-retry')?.addEventListener('click', loadServices);
 
   statusSelect?.addEventListener('change', loadServices);
   typeSelect?.addEventListener('change', loadServices);
   refreshBtn?.addEventListener('click', loadServices);
 
   loadServices();
-
-  if (!servicesIntervalId) {
-    servicesIntervalId = setInterval(loadServices, SERVICES_REFRESH_MS);
-  }
+  servicesIntervalId = setInterval(loadServices, SERVICES_REFRESH_MS);
 }
 
 // --- MLS ---
 
-async function loadMLS() {
-  const tbody = document.getElementById('mls-tbody');
-  if (!tbody) return;
+function setMLSLoading() {
+  const summary = document.getElementById('mls-summary');
+  const list = document.getElementById('mls-list');
+  if (summary) {
+    summary.innerHTML = '<span>Loading lessons…</span>';
+  }
+  if (list) {
+    list.textContent = 'Loading…';
+  }
+}
 
-  const typeFilter = document.getElementById('mls-type-filter')?.value || '';
-  const verifiedOnly = document.getElementById('mls-verified-only')?.checked || false;
+async function loadMLS(typeOverride) {
+  const summary = document.getElementById('mls-summary');
+  const list = document.getElementById('mls-list');
+  if (!summary || !list) return;
+
+  if (typeof typeOverride === 'string') {
+    currentMlsType = typeOverride;
+  }
+
+  setMLSLoading();
+  hideErrorBanner('mls-error');
 
   try {
     const params = new URLSearchParams();
-    if (typeFilter) params.set('type', typeFilter);
+    if (currentMlsType) params.set('type', currentMlsType);
     const query = params.toString();
 
-    const data = await fetchJSON(`http://127.0.0.1:8767/api/mls${query ? `?${query}` : ''}`);
-    let entries = Array.isArray(data?.entries) ? data.entries : [];
-
-    if (verifiedOnly) {
-      entries = entries.filter((entry) => Boolean(entry.verified));
-    }
+    const data = await fetchJSON(`/api/mls${query ? `?${query}` : ''}`);
+    const entries = Array.isArray(data?.entries) ? data.entries : [];
 
     renderMLSSummary(data?.summary);
-    renderMLSTable(entries);
+    renderMLSList(entries);
   } catch (error) {
-    console.error('Failed to load MLS', error);
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6">Failed to load MLS lessons.</td></tr>';
-    }
+    console.error('Failed to load MLS lessons', error);
+    showErrorBanner('mls-error', 'Failed to load MLS lessons.');
+    summary.innerHTML = '<span>Failed to load MLS lessons.</span>';
+    list.textContent = 'Failed to load MLS lessons.';
   }
 }
 
-function renderMLSSummary(summary) {
+function renderMLSSummary(summary = {}) {
   const el = document.getElementById('mls-summary');
-  if (!el || !summary) return;
+  if (!el) return;
 
-  el.textContent = `Total: ${summary.total ?? '–'} | Solutions: ${summary.solutions ?? '–'} | Failures: ${summary.failures ?? '–'} | Patterns: ${summary.patterns ?? '–'} | Improvements: ${summary.improvements ?? '–'}`;
+  el.innerHTML = `
+    <span><strong>Total:</strong> ${summary.total ?? '–'}</span>
+    <span>Solutions: ${summary.solutions ?? '–'}</span>
+    <span>Failures: ${summary.failures ?? '–'}</span>
+    <span>Patterns: ${summary.patterns ?? '–'}</span>
+    <span>Improvements: ${summary.improvements ?? '–'}</span>
+  `;
 }
 
-function renderMLSTable(entries) {
-  const tbody = document.getElementById('mls-tbody');
-  if (!tbody) return;
+function renderMLSList(entries) {
+  const list = document.getElementById('mls-list');
+  if (!list) return;
 
   if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No MLS entries found.</td></tr>';
-    hideMLSDetail();
+    list.textContent = 'No MLS lessons found.';
     return;
   }
 
-  tbody.innerHTML = '';
+  list.innerHTML = '';
 
   entries.forEach((entry) => {
-    const tr = document.createElement('tr');
-    const time = entry.time ? new Date(entry.time).toLocaleString() : '';
-    const score = typeof entry.score === 'number' ? entry.score.toFixed(2) : entry.score ?? '–';
-    const tags = Array.isArray(entry.tags) ? entry.tags.join(', ') : '';
-    const verifiedLabel = entry.verified ? '✅' : '❌';
-
-    tr.innerHTML = `
-      <td>${time}</td>
-      <td>${entry.type ?? ''}</td>
-      <td class="mls-title-cell">${entry.title ?? ''}</td>
-      <td>${score}</td>
-      <td>${tags}</td>
-      <td>${verifiedLabel}</td>
-    `;
-
-    tr.addEventListener('click', () => showMLSDetail(entry));
-    tbody.appendChild(tr);
+    list.appendChild(createMLSCard(entry));
   });
 }
 
-function showMLSDetail(entry) {
-  const panel = document.getElementById('mls-detail');
-  if (!panel) return;
+function createMLSCard(entry) {
+  const card = document.createElement('article');
+  card.className = 'mls-card';
 
-  document.getElementById('mls-detail-title').textContent = entry.title || '';
-  document.getElementById('mls-detail-details').textContent = entry.details || '';
-  document.getElementById('mls-detail-context').textContent = entry.context || '';
-  document.getElementById('mls-detail-wo').textContent = entry.related_wo || '';
-  document.getElementById('mls-detail-session').textContent = entry.related_session || '';
+  const header = document.createElement('header');
+  const badge = document.createElement('span');
+  const badgeType = entry.type ? `badge-${entry.type}` : 'badge-pattern';
+  badge.className = `badge ${badgeType}`;
+  badge.textContent = entry.type ?? 'entry';
+  const title = document.createElement('h3');
+  title.textContent = entry.title ?? 'Untitled lesson';
+  header.append(badge, title);
+  card.appendChild(header);
 
-  panel.classList.remove('hidden');
+  const score = typeof entry.score === 'number' ? entry.score.toFixed(2) : entry.score ?? '–';
+  const tags = Array.isArray(entry.tags) ? entry.tags : [];
+  const relativeTime = formatRelativeTime(entry.time);
+
+  const meta = document.createElement('div');
+  meta.className = 'mls-meta';
+  if (relativeTime) {
+    const timeSpan = document.createElement('span');
+    timeSpan.textContent = relativeTime;
+    meta.appendChild(timeSpan);
+  }
+  const scoreSpan = document.createElement('span');
+  scoreSpan.textContent = `score ${score}`;
+  meta.appendChild(scoreSpan);
+  if (tags.length) {
+    const tagsSpan = document.createElement('span');
+    tagsSpan.textContent = `tags: ${tags.join(', ')}`;
+    meta.appendChild(tagsSpan);
+  }
+  card.appendChild(meta);
+
+  const detailsText = (entry.details || entry.context || '').trim();
+  if (detailsText) {
+    const detailParagraph = document.createElement('p');
+    const truncated = detailsText.length > 280;
+    detailParagraph.textContent = truncated ? `${detailsText.slice(0, 280)}…` : detailsText;
+    card.appendChild(detailParagraph);
+
+    if (truncated) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.textContent = 'Show more';
+      toggleBtn.addEventListener('click', () => {
+        const isExpanded = toggleBtn.getAttribute('data-expanded') === 'true';
+        if (isExpanded) {
+          detailParagraph.textContent = `${detailsText.slice(0, 280)}…`;
+          toggleBtn.textContent = 'Show more';
+          toggleBtn.setAttribute('data-expanded', 'false');
+        } else {
+          detailParagraph.textContent = detailsText;
+          toggleBtn.textContent = 'Show less';
+          toggleBtn.setAttribute('data-expanded', 'true');
+        }
+      });
+      card.appendChild(toggleBtn);
+    }
+  }
+
+  const footer = document.createElement('div');
+  footer.className = 'mls-footer';
+  if (entry.related_wo) {
+    const woSpan = document.createElement('span');
+    woSpan.textContent = `WO: ${entry.related_wo}`;
+    footer.appendChild(woSpan);
+  }
+  if (entry.related_session) {
+    const sessionSpan = document.createElement('span');
+    sessionSpan.textContent = `Session: ${entry.related_session}`;
+    footer.appendChild(sessionSpan);
+  }
+  if (entry.verified) {
+    const verifiedSpan = document.createElement('span');
+    verifiedSpan.textContent = 'Verified';
+    footer.appendChild(verifiedSpan);
+  }
+  if (footer.childNodes.length) {
+    card.appendChild(footer);
+  }
+
+  return card;
 }
 
-function hideMLSDetail() {
-  const panel = document.getElementById('mls-detail');
-  panel?.classList.add('hidden');
+function formatRelativeTime(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const absDiffMs = Math.abs(diffMs);
+  const thresholds = [
+    { unit: 'day', value: 86400000 },
+    { unit: 'hour', value: 3600000 },
+    { unit: 'minute', value: 60000 }
+  ];
+
+  let unit = 'second';
+  let value = diffMs / 1000;
+
+  for (const threshold of thresholds) {
+    if (absDiffMs >= threshold.value) {
+      unit = threshold.unit;
+      value = diffMs / threshold.value;
+      break;
+    }
+  }
+
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  return `${rtf.format(Math.round(value), unit)} · ${date.toLocaleString()}`;
 }
 
 function initMLSPanel() {
-  const panel = document.getElementById('mls-panel');
-  if (!panel) return;
-
-  const typeSelect = document.getElementById('mls-type-filter');
-  const verifiedCheckbox = document.getElementById('mls-verified-only');
-  const refreshBtn = document.getElementById('mls-refresh-btn');
-
-  typeSelect?.addEventListener('change', loadMLS);
-  verifiedCheckbox?.addEventListener('change', loadMLS);
-  refreshBtn?.addEventListener('click', loadMLS);
-
-  loadMLS();
-
-  if (!mlsIntervalId) {
-    mlsIntervalId = setInterval(loadMLS, MLS_REFRESH_MS);
+  if (mlsIntervalId) {
+    return;
   }
+
+  const refreshBtn = document.getElementById('mls-refresh-btn');
+  const retryBtn = document.getElementById('mls-error-retry');
+  const pills = document.querySelectorAll('#mls-type-pills .pill-button');
+
+  pills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      pills.forEach((btn) => btn.classList.remove('active'));
+      pill.classList.add('active');
+      loadMLS(pill.dataset.type || '');
+    });
+  });
+
+  refreshBtn?.addEventListener('click', () => loadMLS());
+  retryBtn?.addEventListener('click', () => loadMLS());
+
+  loadMLS('');
+  mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
 function cleanupIntervals() {
@@ -274,8 +434,6 @@ function cleanupIntervals() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
-  initServicesPanel();
-  initMLSPanel();
 });
 
 window.addEventListener('beforeunload', () => {
