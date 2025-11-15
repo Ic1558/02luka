@@ -19,8 +19,9 @@ jobs:
 
       - name: Install actionlint
         run: |
+          mkdir -p ./bin
           curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-            | bash -s -- -b ./bin
+            | bash -s -- latest ./bin
           ls -l ./bin
 
       - name: Lint GitHub workflows

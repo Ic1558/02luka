@@ -13,6 +13,11 @@ inputs:
     required: false
     default: 'package-lock.json'
 
+  cache-dependency-path:
+    description: 'Optional newline-delimited dependency paths for caching'
+    required: false
+    default: ''
+
   install-dependencies:
     description: 'Whether to run npm ci (true/false)'
     required: false
@@ -31,7 +36,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: ${{ inputs.install-dependencies == 'true' && 'npm' || '' }}
-        cache-dependency-path: ${{ inputs.lockfile != '' && inputs.lockfile || '' }}
+        cache-dependency-path: ${{ inputs['cache-dependency-path'] != '' && inputs['cache-dependency-path'] || inputs.lockfile }}
       continue-on-error: ${{ inputs.continue-on-error == 'true' || inputs.install-dependencies == 'false' }}
 
     - name: Install dependencies
