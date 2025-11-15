@@ -1,0 +1,38 @@
+name: Reality Hooks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  reality_hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Zsh
+        run: |
+          if ! command -v zsh >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y zsh
+          fi
+
+      - name: Run PR reality hooks
+        run: |
+          chmod +x tools/reality_hooks/pr_reality_check.zsh
+          tools/reality_hooks/pr_reality_check.zsh
+        env:
+          ROOT: ${{ github.workspace }}
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: Upload reality hooks report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reality-hooks-report
+          path: g/reports/system/reality_hooks_pr_*.md
+          if-no-files-found: warn
