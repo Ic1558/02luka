@@ -82,6 +82,12 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+# Check for jsonschema (optional but recommended)
+if ! python3 -c "import jsonschema" 2>/dev/null; then
+  echo "Warning: jsonschema not found. Schema validation will be skipped." >&2
+  echo "Install with: pip install jsonschema" >&2
+fi
+
 if [[ -n "${BASH_SOURCE:-}" ]]; then
   script_source="${BASH_SOURCE[0]}"
 elif [[ -n "${ZSH_VERSION:-}" ]]; then
@@ -107,6 +113,7 @@ DEFAULT_MARKET="$default_market" \
 DEFAULT_ACCOUNT="$default_account" \
 JSON_OUTPUT="$json_tmp" \
 META_OUTPUT="$meta_tmp" \
+REPO_ROOT="$repo_root" \
 python3 <<'PY'
 import csv
 import datetime as dt
@@ -117,11 +124,19 @@ import pathlib
 import re
 import sys
 
+# Optional schema validation
+try:
+    import jsonschema
+    HAS_JSONSCHEMA = True
+except ImportError:
+    HAS_JSONSCHEMA = False
+
 csv_path = os.environ['CSV_PATH']
 json_out = os.environ['JSON_OUTPUT']
 meta_out = os.environ['META_OUTPUT']
 default_market = os.environ.get('DEFAULT_MARKET', '').strip()
 default_account = os.environ.get('DEFAULT_ACCOUNT', '').strip()
+repo_root = os.environ.get('REPO_ROOT', os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 HEADER_ALIASES = {
     'date': 'date',
@@ -164,8 +179,11 @@ HEADER_ALIASES = {
     'comment': 'notes'
 }
 
+# Supported date formats (strict list)
 DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]
+# Supported time formats (strict list)
 TIME_FORMATS = ["%H:%M:%S", "%H:%M", "%H%M%S"]
+# Supported datetime formats (strict list - must match exactly)
 DATETIME_FORMATS = [
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%d %H:%M",
@@ -174,6 +192,15 @@ DATETIME_FORMATS = [
     "%m/%d/%Y %H:%M:%S",
     "%m/%d/%Y %H:%M",
     "%Y%m%d %H%M%S"
+]
+# ISO-8601 formats (with timezone support)
+ISO_FORMATS = [
+    "%Y-%m-%dT%H:%M:%S",
+    "%Y-%m-%dT%H:%M:%S%z",
+    "%Y-%m-%dT%H:%M:%S.%f",
+    "%Y-%m-%dT%H:%M:%S.%f%z",
+    "%Y-%m-%dT%H:%M",
+    "%Y-%m-%dT%H:%M%z"
 ]
 
 SIDE_MAP = {
@@ -217,16 +244,55 @@ def parse_number(raw):
 
 
 def parse_timestamp(date_str: str, time_str: str, ts_str: str):
-    def try_parse_datetime(value: str):
+    """
+    Parse timestamp from date/time strings and return normalized ISO-8601 string.
+    
+    Returns:
+        str: Normalized ISO-8601 timestamp (YYYY-MM-DDTHH:MM:SS format)
+        None: If no valid timestamp can be parsed from the inputs
+    
+    Supported formats:
+        - ISO-8601: YYYY-MM-DDTHH:MM:SS (with optional timezone)
+        - Date formats: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, YYYYMMDD
+        - Time formats: HH:MM:SS, HH:MM, HHMMSS
+        - Combined: YYYY-MM-DD HH:MM:SS, DD/MM/YYYY HH:MM, etc.
+    
+    Unknown or invalid formats are rejected (returns None).
+    """
+    def try_parse_iso(value: str):
+        """Try parsing ISO-8601 formats first (strict)."""
         if not value:
             return None
         value = value.strip()
         if not value:
             return None
+        # Try ISO formats first (most strict)
+        for fmt in ISO_FORMATS:
+            try:
+                return dt.datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+        # Try fromisoformat for standard ISO-8601 (but validate it's actually ISO)
         try:
-            return dt.datetime.fromisoformat(value)
-        except ValueError:
+            parsed = dt.datetime.fromisoformat(value)
+            # Verify it's a valid ISO format by checking if it matches expected patterns
+            # This prevents accepting non-standard formats that fromisoformat might accept
+            iso_str = parsed.isoformat()
+            # Only accept if it matches expected ISO patterns
+            if 'T' in value or value.startswith(parsed.strftime('%Y-%m-%d')):
+                return parsed
+        except (ValueError, AttributeError):
             pass
+        return None
+
+    def try_parse_datetime(value: str):
+        """Try parsing combined datetime formats (strict list only)."""
+        if not value:
+            return None
+        value = value.strip()
+        if not value:
+            return None
+        # Only try formats from our strict list
         for fmt in DATETIME_FORMATS:
             try:
                 return dt.datetime.strptime(value, fmt)
@@ -235,6 +301,7 @@ def parse_timestamp(date_str: str, time_str: str, ts_str: str):
         return None
 
     def try_parse_date(value: str):
+        """Try parsing date formats (strict list only)."""
         if not value:
             return None
         value = value.strip()
@@ -248,6 +315,7 @@ def parse_timestamp(date_str: str, time_str: str, ts_str: str):
         return None
 
     def try_parse_time(value: str):
+        """Try parsing time formats (strict list only)."""
         if not value:
             return None
         value = value.strip()
@@ -260,25 +328,43 @@ def parse_timestamp(date_str: str, time_str: str, ts_str: str):
                 continue
         return None
 
-    ts_obj = try_parse_datetime(ts_str)
-    if ts_obj:
-        return ts_obj.isoformat()
+    # Priority 1: Try parsing timestamp string as ISO-8601 or combined datetime
+    if ts_str:
+        ts_obj = try_parse_iso(ts_str)
+        if ts_obj:
+            # Normalize to ISO-8601 without microseconds (standard format)
+            return ts_obj.replace(microsecond=0).isoformat()
+        ts_obj = try_parse_datetime(ts_str)
+        if ts_obj:
+            return ts_obj.replace(microsecond=0).isoformat()
+        # If ts_str exists but doesn't match any format, reject it
+        return None
 
+    # Priority 2: Try parsing date + time separately
     date_obj = try_parse_date(date_str)
     time_obj = try_parse_time(time_str)
 
     if date_obj and time_obj:
-        return dt.datetime.combine(date_obj, time_obj).isoformat()
+        combined = dt.datetime.combine(date_obj, time_obj)
+        return combined.replace(microsecond=0).isoformat()
     if date_obj and not time_obj:
-        return dt.datetime.combine(date_obj, dt.time()).isoformat()
+        # Date only - use midnight
+        combined = dt.datetime.combine(date_obj, dt.time())
+        return combined.replace(microsecond=0).isoformat()
 
+    # Priority 3: Try parsing combined date+time string
     if date_str or time_str:
         combined = ' '.join(part for part in [date_str, time_str] if part)
-        ts_obj = try_parse_datetime(combined)
-        if ts_obj:
-            return ts_obj.isoformat()
-        return None
+        if combined:
+            ts_obj = try_parse_datetime(combined)
+            if ts_obj:
+                return ts_obj.replace(microsecond=0).isoformat()
+            # Try ISO format on combined string
+            ts_obj = try_parse_iso(combined)
+            if ts_obj:
+                return ts_obj.replace(microsecond=0).isoformat()
 
+    # No valid timestamp found - return None (strict rejection)
     return None
 
 
@@ -326,6 +412,24 @@ with open(csv_path, 'r', encoding='utf-8-sig', newline='') as csv_file:
                 file=sys.stderr
             )
             continue
+        
+        # Validate timestamp format against schema (ISO-8601 date-time)
+        # The schema requires format: "date-time" which is RFC3339 / ISO-8601
+        try:
+            # Verify it's a valid ISO-8601 datetime string
+            dt.datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            # Additional check: ensure it matches expected pattern
+            if not (timestamp.count('T') == 1 and len(timestamp) >= 19):
+                raise ValueError("Invalid ISO-8601 format")
+        except (ValueError, AttributeError) as e:
+            print(
+                'Skipping row due to timestamp validation failure',
+                f"symbol={symbol}",
+                f"timestamp={timestamp}",
+                f"error={str(e)}",
+                file=sys.stderr
+            )
+            continue
 
         market = normalized.get('market') or default_market or 'UNKNOWN'
         account = normalized.get('account') or default_account
@@ -367,6 +471,34 @@ with open(csv_path, 'r', encoding='utf-8-sig', newline='') as csv_file:
             entry['strategy_tag'] = strategy_tag
         if notes:
             entry['notes'] = notes
+
+        # Validate entry against schema before persisting
+        if HAS_JSONSCHEMA:
+            schema_path = os.path.join(repo_root, 'g', 'schemas', 'trading_journal.schema.json')
+            if os.path.exists(schema_path):
+                try:
+                    with open(schema_path, 'r', encoding='utf-8') as schema_file:
+                        schema = json.load(schema_file)
+                    jsonschema.validate(instance=entry, schema=schema)
+                except jsonschema.ValidationError as e:
+                    error_msg = getattr(e, 'message', str(e))
+                    error_path = '/'.join(str(p) for p in e.path) if hasattr(e, 'path') else ''
+                    print(
+                        'Skipping row due to schema validation failure',
+                        f"symbol={symbol}",
+                        f"timestamp={timestamp}",
+                        f"error={error_msg}",
+                        f"path={error_path}",
+                        file=sys.stderr
+                    )
+                    continue
+                except (json.JSONDecodeError, FileNotFoundError) as e:
+                    # Schema file issue - log but don't block import
+                    print(
+                        'Warning: Could not load schema for validation',
+                        f"error={str(e)}",
+                        file=sys.stderr
+                    )
 
         entries.append(entry)
         first_ts = first_ts or timestamp

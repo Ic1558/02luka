@@ -40,8 +40,49 @@ tools/trading_import.zsh g/trading/import/statement_2025-11-15.csv \
 - Normalized journal: `g/trading/trading_journal.jsonl` (one JSON object per line).
 - Optional MLS entry: `g/knowledge/mls_lessons.jsonl`.
 
-## 4. Notes
+## 4. Timestamp Format Support
+
+The importer accepts the following timestamp formats:
+
+### Supported Date Formats
+- `YYYY-MM-DD` (e.g., `2025-11-15`)
+- `DD/MM/YYYY` (e.g., `15/11/2025`)
+- `MM/DD/YYYY` (e.g., `11/15/2025`)
+- `YYYYMMDD` (e.g., `20251115`)
+
+### Supported Time Formats
+- `HH:MM:SS` (e.g., `09:15:22`)
+- `HH:MM` (e.g., `09:15`)
+- `HHMMSS` (e.g., `091522`)
+
+### Supported Combined Formats
+- `YYYY-MM-DD HH:MM:SS` (e.g., `2025-11-15 09:15:22`)
+- `YYYY-MM-DD HH:MM` (e.g., `2025-11-15 09:15`)
+- `DD/MM/YYYY HH:MM:SS` (e.g., `15/11/2025 09:15:22`)
+- `DD/MM/YYYY HH:MM` (e.g., `15/11/2025 09:15`)
+- `MM/DD/YYYY HH:MM:SS` (e.g., `11/15/2025 09:15:22`)
+- `MM/DD/YYYY HH:MM` (e.g., `11/15/2025 09:15`)
+- `YYYYMMDD HHMMSS` (e.g., `20251115 091522`)
+
+### ISO-8601 Formats
+- `YYYY-MM-DDTHH:MM:SS` (e.g., `2025-11-15T09:15:22`)
+- `YYYY-MM-DDTHH:MM:SS±HH:MM` (with timezone, e.g., `2025-11-15T09:15:22+07:00`)
+- `YYYY-MM-DDTHH:MM` (e.g., `2025-11-15T09:15`)
+
+**Important:**
+- All timestamps are normalized to ISO-8601 format (`YYYY-MM-DDTHH:MM:SS`) before being persisted.
+- Unknown or invalid timestamp formats are rejected, and the row is skipped with an error message.
+- The importer validates timestamps against the `trading_journal.schema.json` schema to ensure compliance.
+
+## 5. Error Handling
+
+- **Invalid timestamps**: Rows with timestamps that cannot be parsed are skipped. A warning message is printed to stderr with details about the skipped row.
+- **Schema validation**: If `jsonschema` is installed, entries are validated against `g/schemas/trading_journal.schema.json` before being persisted. Invalid entries are skipped with an error message.
+- **Missing required fields**: Rows without a `symbol` or valid `side` are skipped.
+
+## 6. Notes
 
 - You can re-run imports as needed. Without `--append`, the JSONL is overwritten.
 - Works with multiple brokers as long as their columns map to the expected headers listed above.
 - Keep the CSV exports around (e.g., under `g/trading/import/raw/`) if you want a paper trail.
+- For schema validation, install `jsonschema`: `pip install jsonschema` (optional but recommended).
