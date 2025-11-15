@@ -115,6 +115,7 @@ import json
 import os
 import pathlib
 import re
+import sys
 
 csv_path = os.environ['CSV_PATH']
 json_out = os.environ['JSON_OUTPUT']
@@ -307,12 +308,23 @@ with open(csv_path, 'r', encoding='utf-8-sig', newline='') as csv_file:
         if not side:
             continue
 
+        date_input = normalized.get('date', '')
+        time_input = normalized.get('time', '')
+        ts_input = normalized.get('timestamp', '')
         timestamp = parse_timestamp(
-            normalized.get('date', ''),
-            normalized.get('time', ''),
-            normalized.get('timestamp', '')
+            date_input,
+            time_input,
+            ts_input
         )
         if not timestamp:
+            print(
+                'Skipping row due to invalid timestamp',
+                f"symbol={symbol}",
+                f"raw_timestamp={ts_input or '<empty>'}",
+                f"raw_date={date_input or '<empty>'}",
+                f"raw_time={time_input or '<empty>'}",
+                file=sys.stderr
+            )
             continue
 
         market = normalized.get('market') or default_market or 'UNKNOWN'
