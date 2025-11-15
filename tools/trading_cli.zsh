@@ -164,6 +164,39 @@ sanitize_slug() {
   echo "$input" | tr '[:lower:]' '[:upper:]' | tr -cs 'A-Z0-9' '-'
 }
 
+snapshot_filter_slug() {
+  local market="$1"
+  local account="$2"
+  local symbol="$3"
+  local scenario="$4"
+  shift 4 || true
+  local -a tags=("$@")
+  local -a parts=()
+  if [[ -n "$market" ]]; then
+    parts+=("MKT-$(sanitize_slug "$market")")
+  fi
+  if [[ -n "$account" ]]; then
+    parts+=("ACC-$(sanitize_slug "$account")")
+  fi
+  if [[ -n "$symbol" ]]; then
+    parts+=("SYM-$(sanitize_slug "$symbol")")
+  fi
+  if [[ -n "$scenario" ]]; then
+    parts+=("SCN-$(sanitize_slug "$scenario")")
+  fi
+  local tag
+  for tag in "${tags[@]}"; do
+    [[ -n "$tag" ]] || continue
+    parts+=("TAG-$(sanitize_slug "$tag")")
+  done
+  if [[ ${#parts[@]} -eq 0 ]]; then
+    echo ""
+  else
+    local IFS='__'
+    echo "${parts[*]}"
+  fi
+}
+
 format_money() {
   local value="$1"
   if [[ -z "$value" || "$value" == "null" ]]; then
@@ -416,7 +449,11 @@ HELP
   fi
   local normalized=$(printf '%s\n' "$snapshot_json" | jq -S '.')
   local slug=$(snapshot_range_slug "$range_from" "$range_to")
+  local filter_slug=$(snapshot_filter_slug "$market" "$account" "$symbol" "$scenario" "${tags[@]}")
   local base_name="trading_snapshot_${slug}"
+  if [[ -n "$filter_slug" ]]; then
+    base_name+="_${filter_slug}"
+  fi
   local json_path="$REPORT_DIR/${base_name}.json"
   write_atomic "$json_path" "$normalized"
   local markdown=$(generate_snapshot_markdown "$normalized")
