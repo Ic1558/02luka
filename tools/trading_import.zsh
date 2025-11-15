@@ -276,9 +276,9 @@ def parse_timestamp(date_str: str, time_str: str, ts_str: str):
         ts_obj = try_parse_datetime(combined)
         if ts_obj:
             return ts_obj.isoformat()
-        return combined.strip()
+        return None
 
-    return ts_str.strip()
+    return None
 
 
 entries = []
