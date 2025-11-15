@@ -109,6 +109,11 @@
                     "type": "string",
                     "enum": [
                       "running",
+                      "waiting",
+                      "stopped",
+                      "launching",
+                      "throttled",
+                      "suspended",
                       "not running",
                       "unknown"
                     ],

@@ -102,6 +102,28 @@ function getSystemUptime() {
   return result.success ? 0 : 0; // TODO: Implement proper uptime parsing
 }
 
+const KNOWN_LAUNCHCTL_STATES = new Set([
+  'running',
+  'waiting',
+  'stopped',
+  'launching',
+  'throttled',
+  'suspended',
+]);
+
+function normalizeLaunchctlState(rawState) {
+  if (!rawState) {
+    return 'unknown';
+  }
+
+  const normalized = rawState.toLowerCase();
+  if (KNOWN_LAUNCHCTL_STATES.has(normalized)) {
+    return normalized;
+  }
+
+  return 'unknown';
+}
+
 // Source 1: MCP Health
 async function collectMcpHealth() {
   const timestamp = new Date().toISOString();
@@ -131,7 +153,7 @@ async function collectMcpHealth() {
       const exitCodeMatch = result.output.match(/last exit code\s*=\s*(\d+)/i);
 
       if (stateMatch) {
-        service.state = stateMatch[1].toLowerCase();
+        service.state = normalizeLaunchctlState(stateMatch[1]);
       }
       if (pidMatch) {
         service.pid = parseInt(pidMatch[1], 10);
