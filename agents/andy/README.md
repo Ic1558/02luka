@@ -307,6 +307,8 @@ When GG routes `pr_change` tasks, Andy receives PR Prompt Contracts with:
 ## Links
 
 - **Configuration:** `config/agents/andy.yaml`
+- **Persona Prompt:** `agents/andy/PERSONA_PROMPT.md` (System Prompt / Preset)
+- **Cursor Command:** `/02luka/andy` (activate in Cursor chat)
 - **Agent System Index:** `/agents/README.md`
 - **GG Orchestrator Contract:** `docs/GG_ORCHESTRATOR_CONTRACT.md`
 - **CLS Documentation:** `/agents/cls/README.md`
