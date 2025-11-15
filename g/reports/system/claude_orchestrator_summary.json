@@ -1,14 +1,14 @@
 {
   "strategy": "review",
   "num_agents": 1,
-  "timestamp": "2025-11-15T07:14:15Z",
+  "timestamp": "2025-11-15T07:40:14Z",
   "winner": "agent1",
   "best_score": 90,
   "agents": [{"id":1,"exit_code":1,"score":90,"stdout":"","stderr":"Traceback (most recent call last):
-  File \"/var/folders/bm/8smk0tgn55q9zf1bh3l0n9zw0000gn/T/tmp.Kh7XwrF5bV/review_agent.py\", line 72, in <module>
+  File \"/var/folders/bm/8smk0tgn55q9zf1bh3l0n9zw0000gn/T/tmp.C0kwV9K8Du/review_agent.py\", line 72, in <module>
     raise SystemExit(main())
                      ~~~~^^
-  File \"/var/folders/bm/8smk0tgn55q9zf1bh3l0n9zw0000gn/T/tmp.Kh7XwrF5bV/review_agent.py\", line 32, in main
+  File \"/var/folders/bm/8smk0tgn55q9zf1bh3l0n9zw0000gn/T/tmp.C0kwV9K8Du/review_agent.py\", line 32, in main
     payload = json.load(handle)
   File \"/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/__init__.py\", line 293, in load
     return loads(fp.read(),

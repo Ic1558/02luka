@@ -2,7 +2,7 @@
   "pr_number": "999",
   "title": "feat: sandbox-only payload for multi-agent review",
   "mode": "review",
-  "timestamp": "20251115_071414",
+  "timestamp": "20251115_074014",
   "agents": 1,
   "payload": {
     "cli": "multi_agent_pr_review",
@@ -249,12 +249,12 @@ bot ควรแปลงเป็น:
 - `docs/CODEX_MASTER_READINESS.md` - Codex readiness guidelines",
     "cli_mode": "review",
     "num_agents": "1",
-    "generated_at": "20251115_071414"
+    "generated_at": "20251115_074014"
   },
   "orchestrator": {
     "error": "invalid_orchestrator_summary",
     "summary_path": "/Users/icmini/02luka/g/reports/system/claude_orchestrator_summary.json",
     "reason": "Invalid control character at: line 7 column 103 (char 228)"
   },
-  "report_path": "/Users/icmini/02luka/g/reports/system/code_review_pr999_20251115_071414.md"
+  "report_path": "/Users/icmini/02luka/g/reports/system/code_review_pr999_20251115_074014.md"
 }
