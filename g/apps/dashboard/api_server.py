@@ -310,6 +310,39 @@ class APIHandler(BaseHTTPRequestHandler):
 
         self.send_json_response(wos_sorted)
 
+    def _build_wo_timeline(self, wo):
+        """Build a derived timeline for a work order from timestamps and log tail."""
+        events = []
+
+        created = wo.get('created_at') or wo.get('id')
+        if created:
+            events.append({'ts': created, 'type': 'created', 'label': 'WO created'})
+
+        if wo.get('started_at'):
+            events.append({'ts': wo['started_at'], 'type': 'started', 'label': 'Execution started'})
+
+        if wo.get('finished_at'):
+            events.append({
+                'ts': wo['finished_at'],
+                'type': 'finished',
+                'label': 'Execution finished',
+                'status': wo.get('status')
+            })
+
+        log_tail = wo.get('log_tail')
+        if isinstance(log_tail, list):
+            for line in log_tail:
+                text = line.strip()
+                if not text:
+                    continue
+                if 'ERROR' in text:
+                    events.append({'ts': None, 'type': 'error', 'label': text[:200]})
+                elif 'STATE:' in text:
+                    events.append({'ts': None, 'type': 'state', 'label': text[:200]})
+
+        events.sort(key=lambda e: (e['ts'] is None, e['ts'] or ''))
+        return events
+
     def handle_get_wo(self, wo_id, query):
         """Handle GET /api/wos/:id - get WO details"""
         # Refresh WO list
@@ -320,9 +353,19 @@ class APIHandler(BaseHTTPRequestHandler):
         if wo:
             # Add log tail if requested
             if 'tail' in query:
-                lines = int(query['tail'][0])
+                try:
+                    lines = int(query['tail'][0])
+                except (ValueError, TypeError):
+                    lines = 200
                 if wo.get('log_path'):
                     wo['log_tail'] = self.collector._get_log_tail(wo['log_path'], lines)
+
+            timeline_flag = query.get('timeline', ['0'])[0]
+            if timeline_flag == '1':
+                try:
+                    wo['timeline'] = self._build_wo_timeline(wo)
+                except Exception as e:
+                    print(f"Warning: failed to build timeline for WO {wo_id}: {e}")
 
             self.send_json_response(wo)
         else:
