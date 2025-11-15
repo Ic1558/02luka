@@ -159,6 +159,8 @@ const state = {
   logRefreshInterval: null
 };
 
+const WO_LOG_TAIL_LINES = 200;
+
 // --- TELEMETRY & METRICS ---
 const metrics = {
   wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
@@ -834,7 +836,7 @@ async function openWODrawer(woId) {
 
   // Fetch and display WO details
   try {
-    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=100`);
+    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=${WO_LOG_TAIL_LINES}&timeline=1`);
 
     // Update header
     titleEl.textContent = wo.id || 'Work Order';
@@ -943,6 +945,8 @@ function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
       ` : ''}
     </div>
 
+    ${renderTimelineSection(wo.timeline)}
+
     ${(wo.script_path || wo.log_path) ? `
       <div class="wo-drawer-section">
         <h3>📁 File Paths</h3>
@@ -961,6 +965,72 @@ function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
       </div>
     ` : ''}
   `;
+}
+
+function renderTimelineSection(timelineEvents) {
+  const events = Array.isArray(timelineEvents) ? timelineEvents : [];
+
+  if (!events.length) {
+    return `
+      <div class="wo-drawer-section">
+        <h3>🧭 Timeline</h3>
+        <div class="wo-timeline-empty">No timeline data available.</div>
+      </div>
+    `;
+  }
+
+  const items = events.map((event) => {
+    const rawType = (event?.type || 'event').toString();
+    const typeLabel = rawType.charAt(0).toUpperCase() + rawType.slice(1);
+    const typeClass = rawType.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const timestamp = formatTimelineTimestamp(event?.ts);
+    const label = escapeHtml(event?.label || rawType);
+    const statusMeta = event?.status ? `<span class="wo-timeline-status">${escapeHtml(event.status)}</span>` : '';
+
+    return `
+      <li class="wo-timeline-item wo-timeline-${typeClass}">
+        <div class="wo-timeline-dot"></div>
+        <div class="wo-timeline-body">
+          <div class="wo-timeline-header">
+            <span class="wo-timeline-type">${escapeHtml(typeLabel)}</span>
+            ${timestamp ? `<span class="wo-timeline-ts">${escapeHtml(timestamp)}</span>` : ''}
+          </div>
+          <div class="wo-timeline-label">${label}</div>
+          ${statusMeta ? `<div class="wo-timeline-meta">${statusMeta}</div>` : ''}
+        </div>
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <div class="wo-drawer-section">
+      <h3>🧭 Timeline</h3>
+      <ol class="wo-timeline">
+        ${items}
+      </ol>
+    </div>
+  `;
+}
+
+function formatTimelineTimestamp(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const directDate = value instanceof Date ? value : new Date(value);
+  if (!Number.isNaN(directDate.getTime())) {
+    return directDate.toLocaleString();
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isNaN(numericValue)) {
+    const numericDate = new Date(numericValue);
+    if (!Number.isNaN(numericDate.getTime())) {
+      return numericDate.toLocaleString();
+    }
+  }
+
+  return String(value);
 }
 
 // I-O Tab
@@ -994,7 +1064,7 @@ function renderLogsTab(wo) {
     const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `
       <div class="wo-drawer-section">
-        <h3>📜 Log Tail (last 100 lines)</h3>
+        <h3>📜 Log Tail (last ${WO_LOG_TAIL_LINES} lines)</h3>
         <div class="wo-drawer-code">${logLines}</div>
       </div>
     `;
