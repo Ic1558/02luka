@@ -191,4 +191,14 @@ tools/bridge_cls_clc.zsh \
 
 ---
 
-**Note:** This is a summary. For complete documentation, see `/CLS/` directory.
+## Important Notes
+
+**⚠️ This file is a mirror/spec in `/agents/` only.**
+
+- **CLS implementation & governance จริงยังอยู่ใน `/CLS/` และแก้ไขได้โดย CLC เท่านั้น**
+- This README serves as a documentation hub and quick reference
+- For full CLS specification, see `/CLS/agents/CLS_agent_latest.md`
+- For CLS overview, see `/CLS/README.md`
+- For quick reference, see `/CLS.md`
+
+**CLS cannot modify this file directly** (governance Rule 91). Changes must go through CLC/Andy.

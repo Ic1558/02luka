@@ -15,14 +15,14 @@ This directory serves as a documentation hub and index for all agents in the 02l
 
 ## Agents
 
-| Agent | Role | Primary Location | Documentation |
-|-------|------|------------------|---------------|
-| **CLS** | Cognitive Local System Orchestrator | `/CLS/` | [CLS README](cls/README.md) |
-| **GG** | System Orchestrator / Overseer | `docs/GG_ORCHESTRATOR_CONTRACT.md` | [GG README](gg_orch/README.md) |
-| **Andy** | Coding Assistant | `config/agents/andy.yaml` | [Andy README](andy/README.md) |
-| **CLC** | Claude Code Agent | TBD | [CLC README](clc/README.md) |
-| **Hybrid** | Hybrid Agent | TBD | [Hybrid README](hybrid/README.md) |
-| **Subagents** | Subagent Orchestrator | `g/tools/claude_subagents/` | [Subagents README](subagents/README.md) |
+| Agent | Role | Main Implementation | Docs |
+|-------|------|---------------------|------|
+| **Andy** | Dev Agent (Codex worker) | `config/agents/andy.yaml` (config), code TBD | [Andy README](andy/README.md) |
+| **GG-Orchestrator** | System orchestrator contract | `docs/GG_ORCHESTRATOR_CONTRACT.md` | [GG README](gg_orch/README.md) |
+| **CLS** | Cognitive Local System | `/CLS/`, `/CLS/agents/CLS_agent_latest.md` | [CLS README](cls/README.md) |
+| **CLC** | Privileged patcher | `/CLC/**` (not to be modified) | [CLC README](clc/README.md) |
+| **Hybrid** | Luka/Hybrid CLI agent | (paths TBD, use what SPEC/scan found) | [Hybrid README](hybrid/README.md) |
+| **Subagents** | Claude subagents orchestrator | `g/tools/claude_subagents/orchestrator.zsh` | [Subagents README](subagents/README.md) |
 
 ---
 
@@ -49,9 +49,9 @@ This directory serves as a documentation hub and index for all agents in the 02l
 - **Capabilities:** SOT modifications, governance changes, privileged execution
 - **Documentation:** [CLC README](clc/README.md)
 
-### Hybrid (Hybrid Agent)
-- **Role:** Hybrid agent for mixed operations
-- **Capabilities:** TBD
+### Hybrid (Luka/Hybrid CLI Agent)
+- **Role:** CLI agent for executing system commands, Redis operations, Docker, LaunchAgents
+- **Capabilities:** Shell commands, Redis pub/sub, Docker management, service control
 - **Documentation:** [Hybrid README](hybrid/README.md)
 
 ### Subagents (Subagent Orchestrator)
@@ -63,21 +63,24 @@ This directory serves as a documentation hub and index for all agents in the 02l
 
 ## Agent Relationships
 
+**High-Level Flow:**
 ```
 Boss
   └── GG (Orchestrator)
        ├── CLS (System Orchestrator)
        │    └── CLC (Privileged Operations)
        ├── Andy (Coding Assistant)
-       ├── Hybrid (Hybrid Operations)
+       ├── Hybrid (CLI Operations)
        └── Subagents (Parallel Execution)
 ```
 
 **Interaction Patterns:**
-- **GG → CLS:** System orchestration tasks, governance enforcement
-- **GG → Andy:** Code implementation, review, debugging tasks
-- **CLS → CLC:** SOT modifications via Work Orders
-- **Subagents:** Parallel execution for code review, testing, etc.
+- **GG → CLS:** System orchestration tasks, governance enforcement, code review
+- **GG → Andy:** Code implementation, review, debugging, testing tasks
+- **CLS → CLC:** SOT modifications via Work Orders (bridge/inbox/CLC/)
+- **GG → Hybrid:** CLI operations, Redis, Docker, launchctl commands
+- **Subagents:** Parallel execution for code review, testing, validation
+- **GG → Codex:** Direct code changes in allowed zones (via PR prompts)
 
 ---
 
@@ -87,7 +90,7 @@ Boss
 - [GG Orchestrator](gg_orch/README.md) - Task routing and orchestration
 - [Andy Agent](andy/README.md) - Coding assistant
 - [CLC Agent](clc/README.md) - Privileged operations
-- [Hybrid Agent](hybrid/README.md) - Hybrid operations
+- [Hybrid Agent](hybrid/README.md) - CLI operations
 - [Subagents/Orchestrator](subagents/README.md) - Parallel execution
 
 ---
