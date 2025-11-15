@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.02luka.session.summary.automation</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/env</string>
+		<string>zsh</string>
+		<string>/Users/icmini/02luka/tools/automate_session_summaries.zsh</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/Users/icmini/02luka</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LUKA_SOT</key>
+		<string>/Users/icmini/02luka</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+	<key>StartCalendarInterval</key>
+	<dict>
+		<key>Hour</key>
+		<integer>0</integer>
+		<key>Minute</key>
+		<integer>5</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/logs/session_summary.stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/logs/session_summary.stderr.log</string>
+	<key>RunAtLoad</key>
+	<false/>
+	<key>KeepAlive</key>
+	<false/>
+	<key>ThrottleInterval</key>
+	<integer>30</integer>
+</dict>
+</plist>
