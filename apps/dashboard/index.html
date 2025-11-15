@@ -159,17 +159,102 @@
 
       .status-running {
         color: #4ade80;
-        font-weight: 600;
       }
 
       .status-stopped {
         color: #94a3b8;
-        font-weight: 600;
       }
 
       .status-failed {
         color: #f87171;
+      }
+
+      .status-unknown {
+        color: #facc15;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.1rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
         font-weight: 600;
+        background: rgba(15, 23, 42, 0.2);
+        text-transform: capitalize;
+      }
+
+      .type-pill,
+      .mls-type-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: capitalize;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.35);
+      }
+
+      .type-bridge {
+        color: #f472b6;
+        border-color: rgba(244, 114, 182, 0.4);
+      }
+
+      .type-worker {
+        color: #a78bfa;
+        border-color: rgba(167, 139, 250, 0.4);
+      }
+
+      .type-automation {
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.45);
+      }
+
+      .type-monitoring {
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.45);
+      }
+
+      .type-other,
+      .mls-type-other {
+        color: #94a3b8;
+        border-color: rgba(148, 163, 184, 0.35);
+      }
+
+      .mls-type-solution {
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.5);
+      }
+
+      .mls-type-failure {
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.5);
+      }
+
+      .mls-type-pattern {
+        color: #f472b6;
+        border-color: rgba(244, 114, 182, 0.45);
+      }
+
+      .mls-type-improvement {
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.45);
+      }
+
+      .filters input[type="search"] {
+        margin-top: 0.25rem;
+        padding: 0.45rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.3);
+        color: inherit;
+      }
+
+      .filters input[type="search"]::placeholder {
+        color: rgba(226, 232, 240, 0.5);
       }
 
       .detail-panel {
@@ -178,6 +263,16 @@
         border-radius: 16px;
         background: rgba(30, 41, 59, 0.55);
         border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .detail-panel button {
+        margin-top: 0.75rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
       }
 
       footer {
@@ -225,7 +320,7 @@
       </section>
 
       <section id="services-panel" class="panel hidden">
-        <h2>Services</h2>
+        <h2>Services (LaunchAgents)</h2>
         <div id="services-summary" class="summary-bar">
           Total: – | Running: – | Stopped: – | Failed: –
         </div>
@@ -291,6 +386,15 @@
             Verified only
           </label>
 
+          <label>Search:
+            <input
+              type="search"
+              id="mls-search"
+              placeholder="Title, details, tags"
+              autocomplete="off"
+            />
+          </label>
+
           <button id="mls-refresh-btn" type="button">Refresh</button>
         </div>
 
@@ -322,6 +426,8 @@
           <p><strong>Context:</strong> <span id="mls-detail-context"></span></p>
           <p><strong>Related WO:</strong> <span id="mls-detail-wo"></span></p>
           <p><strong>Related Session:</strong> <span id="mls-detail-session"></span></p>
+          <p><strong>Tags:</strong> <span id="mls-detail-tags"></span></p>
+          <button id="mls-detail-close" type="button">Close</button>
         </div>
       </section>
     </main>

@@ -1,6 +1,18 @@
-const SERVICES_REFRESH_MS = 30000;
-const MLS_REFRESH_MS = 30000;
+const SERVICES_REFRESH_MS = 20000;
+const MLS_REFRESH_MS = 60000;
+const API_BASE = 'http://127.0.0.1:8767';
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
+const SERVICE_STATUS_CLASS = {
+  running: 'status-running',
+  stopped: 'status-stopped',
+  failed: 'status-failed',
+};
+const MLS_TYPE_META = {
+  solution: { label: 'Solution', className: 'mls-type-solution' },
+  failure: { label: 'Failure', className: 'mls-type-failure' },
+  pattern: { label: 'Pattern', className: 'mls-type-pattern' },
+  improvement: { label: 'Improvement', className: 'mls-type-improvement' },
+};
 
 let servicesIntervalId;
 let mlsIntervalId;
@@ -67,7 +79,7 @@ async function loadServices() {
     if (statusFilter) params.set('status', statusFilter);
     const query = params.toString();
 
-    const data = await fetchJSON(`http://127.0.0.1:8767/api/services${query ? `?${query}` : ''}`);
+    const data = await fetchJSON(`${API_BASE}/api/services${query ? `?${query}` : ''}`);
     let services = Array.isArray(data?.services) ? data.services : [];
 
     if (typeFilter) {
@@ -87,12 +99,21 @@ async function loadServices() {
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="5">Failed to load services.</td></tr>';
     }
+    const summaryEl = document.getElementById('services-summary');
+    if (summaryEl) {
+      summaryEl.textContent = 'Failed to load services.';
+    }
   }
 }
 
 function renderServicesSummary(summary) {
   const el = document.getElementById('services-summary');
-  if (!el || !summary) return;
+  if (!el) return;
+  if (!summary) {
+    el.textContent = 'Summary unavailable.';
+    return;
+  }
+
   el.textContent = `Total: ${summary.total ?? '–'} | Running: ${summary.running ?? '–'} | Stopped: ${summary.stopped ?? '–'} | Failed: ${summary.failed ?? '–'}`;
 }
 
@@ -110,27 +131,37 @@ function renderServicesTable(services) {
   services.forEach((svc) => {
     const tr = document.createElement('tr');
     const statusLabel = (svc.status || 'unknown').toLowerCase();
-    const pid = svc.pid ?? '–';
-    const exitCode = svc.exit_code ?? '–';
-
-    const statusClass = statusLabel === 'running'
-      ? 'status-running'
-      : statusLabel === 'failed'
-        ? 'status-failed'
-        : statusLabel === 'stopped'
-          ? 'status-stopped'
-          : '';
+    const displayStatus = statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1);
+    const statusClass = SERVICE_STATUS_CLASS[statusLabel] || 'status-unknown';
+    const normalizedType = normalizeServiceType(svc.type);
+    const pid = statusLabel === 'running' && svc.pid ? svc.pid : '–';
+    const hasExitCode = svc.exit_code !== undefined && svc.exit_code !== null && `${svc.exit_code}` !== '';
+    const exitCode = statusLabel === 'failed' && hasExitCode ? svc.exit_code : '–';
 
     tr.innerHTML = `
       <td>${svc.label ?? ''}</td>
-      <td>${svc.type ?? ''}</td>
-      <td class="${statusClass}">${statusLabel}</td>
+      <td><span class="type-pill type-${normalizedType}">${formatServiceTypeLabel(svc.type)}</span></td>
+      <td><span class="status-badge ${statusClass}">${displayStatus}</span></td>
       <td>${pid}</td>
       <td>${exitCode}</td>
     `;
 
     tbody.appendChild(tr);
   });
+}
+
+function normalizeServiceType(type) {
+  const normalized = (type || '').toLowerCase();
+  if (!normalized) {
+    return 'other';
+  }
+
+  return KNOWN_SERVICE_TYPES.has(normalized) ? normalized : 'other';
+}
+
+function formatServiceTypeLabel(type) {
+  if (!type) return 'Other';
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function initServicesPanel() {
@@ -166,11 +197,24 @@ async function loadMLS() {
     if (typeFilter) params.set('type', typeFilter);
     const query = params.toString();
 
-    const data = await fetchJSON(`http://127.0.0.1:8767/api/mls${query ? `?${query}` : ''}`);
+    const data = await fetchJSON(`${API_BASE}/api/mls${query ? `?${query}` : ''}`);
     let entries = Array.isArray(data?.entries) ? data.entries : [];
 
     if (verifiedOnly) {
       entries = entries.filter((entry) => Boolean(entry.verified));
+    }
+
+    const searchTerm = (document.getElementById('mls-search')?.value || '').trim().toLowerCase();
+    if (searchTerm) {
+      entries = entries.filter((entry) => {
+        const haystack = [
+          entry.title || '',
+          entry.details || '',
+          entry.context || '',
+          Array.isArray(entry.tags) ? entry.tags.join(' ') : '',
+        ].join(' ').toLowerCase();
+        return haystack.includes(searchTerm);
+      });
     }
 
     renderMLSSummary(data?.summary);
@@ -180,12 +224,21 @@ async function loadMLS() {
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="6">Failed to load MLS lessons.</td></tr>';
     }
+    const summaryEl = document.getElementById('mls-summary');
+    if (summaryEl) {
+      summaryEl.textContent = 'Failed to load MLS lessons.';
+    }
   }
 }
 
 function renderMLSSummary(summary) {
   const el = document.getElementById('mls-summary');
-  if (!el || !summary) return;
+  if (!el) return;
+
+  if (!summary) {
+    el.textContent = 'Summary unavailable.';
+    return;
+  }
 
   el.textContent = `Total: ${summary.total ?? '–'} | Solutions: ${summary.solutions ?? '–'} | Failures: ${summary.failures ?? '–'} | Patterns: ${summary.patterns ?? '–'} | Improvements: ${summary.improvements ?? '–'}`;
 }
@@ -195,7 +248,7 @@ function renderMLSTable(entries) {
   if (!tbody) return;
 
   if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No MLS entries found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">No lessons recorded yet.</td></tr>';
     hideMLSDetail();
     return;
   }
@@ -208,10 +261,14 @@ function renderMLSTable(entries) {
     const score = typeof entry.score === 'number' ? entry.score.toFixed(2) : entry.score ?? '–';
     const tags = Array.isArray(entry.tags) ? entry.tags.join(', ') : '';
     const verifiedLabel = entry.verified ? '✅' : '❌';
+    const typeMeta = MLS_TYPE_META[(entry.type || '').toLowerCase()] || {
+      label: entry.type || 'Other',
+      className: 'mls-type-other',
+    };
 
     tr.innerHTML = `
       <td>${time}</td>
-      <td>${entry.type ?? ''}</td>
+      <td><span class="mls-type-pill ${typeMeta.className}">${typeMeta.label}</span></td>
       <td class="mls-title-cell">${entry.title ?? ''}</td>
       <td>${score}</td>
       <td>${tags}</td>
@@ -232,6 +289,11 @@ function showMLSDetail(entry) {
   document.getElementById('mls-detail-context').textContent = entry.context || '';
   document.getElementById('mls-detail-wo').textContent = entry.related_wo || '';
   document.getElementById('mls-detail-session').textContent = entry.related_session || '';
+  const tagsEl = document.getElementById('mls-detail-tags');
+  if (tagsEl) {
+    const tags = Array.isArray(entry.tags) ? entry.tags.join(', ') : '–';
+    tagsEl.textContent = tags || '–';
+  }
 
   panel.classList.remove('hidden');
 }
@@ -248,10 +310,17 @@ function initMLSPanel() {
   const typeSelect = document.getElementById('mls-type-filter');
   const verifiedCheckbox = document.getElementById('mls-verified-only');
   const refreshBtn = document.getElementById('mls-refresh-btn');
+  const searchInput = document.getElementById('mls-search');
+  const closeDetailBtn = document.getElementById('mls-detail-close');
 
   typeSelect?.addEventListener('change', loadMLS);
   verifiedCheckbox?.addEventListener('change', loadMLS);
   refreshBtn?.addEventListener('click', loadMLS);
+  searchInput?.addEventListener('input', () => {
+    // Trim filtering only once per event loop to keep keypress responsive.
+    window.requestAnimationFrame(() => loadMLS());
+  });
+  closeDetailBtn?.addEventListener('click', hideMLSDetail);
 
   loadMLS();
 
