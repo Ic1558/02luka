@@ -19,6 +19,7 @@ let allWos = [];
 let currentWoStatusFilter = '';
 let woTimelineAll = [];
 let woTimelineFilterStatus = '';
+let woTimelineSearchQuery = '';
 let woTimelineInitialized = false;
 
 function formatBadgeLabel(text) {
@@ -77,6 +78,8 @@ function normalizeWoTimelineEntry(rawWo = {}) {
   const startedAt = rawWo.started_at || '';
   const finishedAt = rawWo.finished_at || rawWo.completed_at || '';
   const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
+  const title = rawWo.title || rawWo.summary || rawWo.name || '';
+  const description = rawWo.description || rawWo.summary || rawWo.notes || '';
 
   return {
     id,
@@ -84,7 +87,9 @@ function normalizeWoTimelineEntry(rawWo = {}) {
     createdAt,
     startedAt,
     finishedAt,
-    updatedAt
+    updatedAt,
+    title,
+    description
   };
 }
 
@@ -110,6 +115,16 @@ async function fetchJSON(url) {
   }
 
   return response.json();
+}
+
+function debounce(fn, delay = 200) {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
 }
 
 function initTabs() {
@@ -1456,18 +1471,22 @@ function initWoTimelinePanel() {
     return;
   }
 
-  const filterButtons = panel.querySelectorAll('.wo-filter-btn[data-status-filter]');
-  filterButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const nextStatus = button.getAttribute('data-status-filter') || '';
-      woTimelineFilterStatus = nextStatus;
-
-      filterButtons.forEach((btn) => btn.classList.remove('wo-filter-btn-active'));
-      button.classList.add('wo-filter-btn-active');
-
+  const statusSelect = document.getElementById('wo-filter-status');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      woTimelineFilterStatus = statusSelect.value || '';
       renderWoTimelinePanel();
     });
-  });
+  }
+
+  const searchInput = document.getElementById('wo-filter-search');
+  if (searchInput) {
+    const handleSearch = debounce(() => {
+      woTimelineSearchQuery = searchInput.value || '';
+      renderWoTimelinePanel();
+    }, 200);
+    searchInput.addEventListener('input', handleSearch);
+  }
 
   const listEl = document.getElementById('wo-timeline-list');
   listEl?.addEventListener('click', (event) => {
@@ -1530,17 +1549,31 @@ function renderWoTimelinePanel() {
 
   let entries = woTimelineAll;
   if (woTimelineFilterStatus) {
-    entries = entries.filter((entry) => entry.status === woTimelineFilterStatus);
+    entries = entries.filter((entry) => {
+      if (woTimelineFilterStatus === 'failed') {
+        return entry.status === 'failed';
+      }
+      if (woTimelineFilterStatus === 'done') {
+        return entry.status === 'done';
+      }
+      if (woTimelineFilterStatus === 'active') {
+        return entry.status === 'pending' || entry.status === 'running';
+      }
+      return true;
+    });
+  }
+
+  const normalizedSearch = woTimelineSearchQuery.trim().toLowerCase();
+  if (normalizedSearch) {
+    entries = entries.filter((entry) => {
+      const haystack = [entry.id, entry.title, entry.description]
+        .map((value) => String(value || '').toLowerCase());
+      return haystack.some((field) => field && field.includes(normalizedSearch));
+    });
   }
 
   if (!entries.length) {
-    listEl.innerHTML = `
-      <div class="wo-timeline-item">
-        <div class="wo-timeline-row">
-          <span>No work orders found for this filter.</span>
-        </div>
-      </div>
-    `;
+    listEl.innerHTML = '<div class="wo-timeline-empty">No work orders match the current filters.</div>';
   } else {
     listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
   }
@@ -1558,9 +1591,20 @@ function renderWoTimelinePanel() {
   });
 
   const total = woTimelineAll.length;
-  summaryEl.textContent = `Total: ${total} · pending: ${counts.pending} · running: ${counts.running} · done: ${counts.done} · failed: ${counts.failed} · filter: ${
-    woTimelineFilterStatus || 'all'
-  }`;
+  const summaryParts = [
+    `Total: ${total}`,
+    `pending: ${counts.pending}`,
+    `running: ${counts.running}`,
+    `done: ${counts.done}`,
+    `failed: ${counts.failed}`,
+    `filter: ${woTimelineFilterStatus || 'all'}`
+  ];
+
+  if (normalizedSearch) {
+    summaryParts.push(`search: "${woTimelineSearchQuery.trim()}"`);
+  }
+
+  summaryEl.textContent = summaryParts.join(' · ');
 }
 
 function renderWoTimelineItem(entry) {

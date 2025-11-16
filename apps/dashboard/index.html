@@ -631,51 +631,39 @@
         margin: 0;
       }
 
+      /* WO filters */
+      #wo-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      #wo-filter-status,
+      #wo-filter-search {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+      }
+
+      #wo-filter-status {
+        min-width: 150px;
+      }
+
+      #wo-filter-search {
+        flex: 1;
+        min-width: 180px;
+      }
+
       /* WO Timeline panel */
       #wo-timeline-panel {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-      }
-
-      #wo-timeline-panel .panel-header {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-      }
-
-      .wo-timeline-filters {
-        display: inline-flex;
-        flex-wrap: wrap;
-        gap: 0.4rem;
-        align-items: center;
-        font-size: 0.85rem;
-      }
-
-      .wo-filter-btn {
-        border-radius: 999px;
-        border: 1px solid rgba(248, 250, 252, 0.1);
-        padding: 0.25rem 0.8rem;
-        background: rgba(15, 23, 42, 0.8);
-        color: rgba(248, 250, 252, 0.8);
-        cursor: pointer;
-        font-size: 0.85rem;
-        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-      }
-
-      .wo-filter-btn:hover,
-      .wo-filter-btn:focus {
-        background: rgba(56, 189, 248, 0.15);
-        border-color: rgba(56, 189, 248, 0.35);
-        color: #f8fafc;
-      }
-
-      .wo-filter-btn-active {
-        background: rgba(56, 189, 248, 0.2);
-        border-color: rgba(56, 189, 248, 0.65);
-        color: #f8fafc;
       }
 
       .wo-timeline-summary {
@@ -694,6 +682,14 @@
         display: flex;
         flex-direction: column;
         gap: 0.65rem;
+      }
+
+      .wo-timeline-empty {
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        border-radius: 12px;
+        padding: 0.9rem;
+        text-align: center;
+        color: rgba(226, 232, 240, 0.7);
       }
 
       .wo-timeline-item {
@@ -1359,17 +1355,22 @@
       </section>
 
       <section id="wo-timeline-panel" class="panel">
-        <header class="panel-header">
-          <h2>WO Timeline / History</h2>
-          <div class="wo-timeline-filters">
-            <span>Status:</span>
-            <button type="button" data-status-filter="" class="wo-filter-btn wo-filter-btn-active">All</button>
-            <button type="button" data-status-filter="pending" class="wo-filter-btn">Pending</button>
-            <button type="button" data-status-filter="running" class="wo-filter-btn">Running</button>
-            <button type="button" data-status-filter="done" class="wo-filter-btn">Done</button>
-            <button type="button" data-status-filter="failed" class="wo-filter-btn">Failed</button>
-          </div>
-        </header>
+        <h2>WO Timeline / History</h2>
+
+        <div id="wo-filters">
+          <select id="wo-filter-status">
+            <option value="">All statuses</option>
+            <option value="active">Active / running</option>
+            <option value="failed">Failed / error</option>
+            <option value="done">Done / completed</option>
+          </select>
+
+          <input
+            id="wo-filter-search"
+            type="search"
+            placeholder="Search WO by id or text…"
+          />
+        </div>
 
         <div id="wo-timeline-summary" class="wo-timeline-summary">
           Loading recent work orders…
