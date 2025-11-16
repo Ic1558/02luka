@@ -367,8 +367,12 @@ function createMLSCard(entry = {}) {
   card.setAttribute('data-mls-id', mlsId);
 
   if (entry.related_wo) {
+    const relatedWoId = String(entry.related_wo);
     card.classList.add('mls-item');
-    card.setAttribute('data-related-wo', entry.related_wo);
+    card.setAttribute('data-related-wo', relatedWoId);
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Open work order ${relatedWoId}`);
   }
 
   const header = document.createElement('header');
@@ -781,6 +785,13 @@ function openWoDetail(woId) {
   }
 }
 
+function isActivationKey(event) {
+  if (!event || typeof event.key !== 'string') {
+    return false;
+  }
+  return event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar';
+}
+
 function initWoHistoryFilters() {
   const statusFilter = document.getElementById('wo-history-status-filter');
   const limitSelect = document.getElementById('wo-history-limit');
@@ -989,6 +1000,23 @@ function initMLSPanel() {
 
       const relatedWo = item.getAttribute('data-related-wo');
       if (relatedWo) {
+        openWoDetail(relatedWo);
+      }
+    });
+
+    listEl.addEventListener('keydown', (event) => {
+      if (!isActivationKey(event) || event.target.closest('button')) {
+        return;
+      }
+
+      const item = event.target.closest('.mls-item');
+      if (!item) {
+        return;
+      }
+
+      const relatedWo = item.getAttribute('data-related-wo');
+      if (relatedWo) {
+        event.preventDefault();
         openWoDetail(relatedWo);
       }
     });
@@ -1201,6 +1229,22 @@ function initWoTimelinePanel() {
     }
   });
 
+  listEl?.addEventListener('keydown', (event) => {
+    if (!isActivationKey(event)) {
+      return;
+    }
+
+    if (event.target.closest('.wo-timeline-view')) {
+      return;
+    }
+
+    const item = event.target.closest('.wo-timeline-item');
+    if (item?.dataset.woId) {
+      event.preventDefault();
+      openWoDetail(item.dataset.woId);
+    }
+  });
+
   woTimelineInitialized = true;
   refreshWoTimeline();
   woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
@@ -1293,7 +1337,13 @@ function renderWoTimelineItem(entry) {
   const timelineMarkup = buildTimelineSegmentsMarkup(entry);
 
   return `
-    <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
+    <article
+      class="wo-timeline-item"
+      data-wo-id="${escapeHtml(entry.id)}"
+      tabindex="0"
+      role="button"
+      aria-label="Open work order ${escapeHtml(entry.id)}"
+    >
       <div class="wo-timeline-row">
         <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
         <span class="wo-timeline-status ${statusClass}">${statusLabel}</span>
