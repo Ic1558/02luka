@@ -14,6 +14,8 @@ from telegram.ext import (
     filters,
 )
 
+from agents.kim_bot.commands.wo_reality import handle_wo_reality
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
@@ -92,6 +94,19 @@ async def to_nlp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
     text = (update.message.text or "").strip()
     if not text:
+        return
+
+    stripped = text.strip()
+    if stripped == "/wo":
+        await update.message.reply_text(
+            "❗ Usage: /wo <WO-ID>  เช่น /wo WO-20251115-001"
+        )
+        return
+    if stripped.startswith("/wo "):
+        parts = stripped.split(maxsplit=1)
+        wo_id = parts[1].strip() if len(parts) > 1 else ""
+        reply = handle_wo_reality(wo_id)
+        await update.message.reply_text(reply)
         return
 
     payload = build_payload(update)
