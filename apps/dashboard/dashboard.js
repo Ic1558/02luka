@@ -359,9 +359,17 @@ function renderMLSList(entries) {
   });
 }
 
-function createMLSCard(entry) {
+function createMLSCard(entry = {}) {
   const card = document.createElement('article');
   card.className = 'mls-card';
+
+  const mlsId = entry.id ?? 'MLS-UNKNOWN';
+  card.setAttribute('data-mls-id', mlsId);
+
+  if (entry.related_wo) {
+    card.classList.add('mls-item');
+    card.setAttribute('data-related-wo', entry.related_wo);
+  }
 
   const header = document.createElement('header');
   const badge = document.createElement('span');
@@ -751,6 +759,28 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
+function openWoDetail(woId) {
+  if (!woId) return;
+
+  if (typeof window.selectWorkOrder === 'function') {
+    window.selectWorkOrder(woId);
+    return;
+  }
+
+  try {
+    const evt = new CustomEvent('wo:select', { detail: { id: woId } });
+    window.dispatchEvent(evt);
+  } catch (error) {
+    try {
+      const fallback = document.createEvent('CustomEvent');
+      fallback.initCustomEvent('wo:select', true, true, { id: woId });
+      window.dispatchEvent(fallback);
+    } catch (_) {
+      // Swallow to avoid surfacing errors if CustomEvent unsupported
+    }
+  }
+}
+
 function initWoHistoryFilters() {
   const statusFilter = document.getElementById('wo-history-status-filter');
   const limitSelect = document.getElementById('wo-history-limit');
@@ -944,6 +974,25 @@ function initMLSPanel() {
   const refreshBtn = document.getElementById('mls-refresh-btn');
   const retryBtn = document.getElementById('mls-error-retry');
   const pills = document.querySelectorAll('#mls-type-pills .pill-button');
+  const listEl = document.getElementById('mls-list');
+
+  if (listEl) {
+    listEl.addEventListener('click', (event) => {
+      if (event.target.closest('button')) {
+        return;
+      }
+
+      const item = event.target.closest('.mls-item');
+      if (!item) {
+        return;
+      }
+
+      const relatedWo = item.getAttribute('data-related-wo');
+      if (relatedWo) {
+        openWoDetail(relatedWo);
+      }
+    });
+  }
 
   pills.forEach((pill) => {
     pill.addEventListener('click', () => {
@@ -1143,6 +1192,12 @@ function initWoTimelinePanel() {
     const actionBtn = event.target.closest('.wo-timeline-view');
     if (actionBtn?.dataset.woId) {
       openWoTimeline(actionBtn.dataset.woId);
+      return;
+    }
+
+    const item = event.target.closest('.wo-timeline-item');
+    if (item?.dataset.woId) {
+      openWoDetail(item.dataset.woId);
     }
   });
 
