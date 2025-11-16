@@ -15,6 +15,7 @@ werkzeug>=3.0.0
 # Utilities
 python-dotenv>=1.0.0
 requests>=2.31.0  # For kim_proxy.py HTTP client with retry logic
+httpx>=0.27.0  # Async dashboard calls from Kim bot
 
 # Optional: GPU-accelerated FAISS (uncomment if GPU available)
 # faiss-gpu==1.7.4
