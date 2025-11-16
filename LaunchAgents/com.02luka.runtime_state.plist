@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.runtime_state</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/icmini/02luka/g/tools/validate_runtime_state.zsh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>60</integer>
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/runtime_state.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/runtime_state.err.log</string>
+</dict>
+</plist>

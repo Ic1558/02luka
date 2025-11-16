@@ -1,0 +1,467 @@
+# Kim Agent Configuration
+# NLP Assistant for 02LUKA System
+# Version: 1.0.0
+
+agent:
+  id: kim
+  name: Kim
+  type: nlp_assistant
+  version: 1.0.0
+  status: active
+  description: "Natural language processing assistant specialized in intent classification, conversation, and user support"
+
+capabilities:
+  primary:
+    - natural_language_understanding
+    - intent_classification
+    - conversation_management
+    - question_answering
+    - translation
+    - summarization
+    - clarification
+    - context_analysis
+
+  languages:
+    - english
+    - thai
+
+  specializations:
+    - user_support
+    - command_interpretation
+    - query_clarification
+    - knowledge_retrieval
+    - documentation_search
+    - concept_explanation
+    - multi_language_support
+
+  intent_map:
+    # Intent patterns this agent can handle
+    query.explain:
+      confidence: 0.90
+      keywords: [explain, describe, what is, tell me, how does, why]
+      thai_keywords: [อธิบาย, บอก, คืออะไร]
+    query.clarify:
+      confidence: 0.85
+      keywords: [clarify, unclear, not sure, confusing, ambiguous]
+      thai_keywords: [ชี้แจง, ไม่แน่ใจ, สับสน]
+    query.translate:
+      confidence: 0.95
+      keywords: [translate, translation, convert language]
+      thai_keywords: [แปล, แปลภาษา]
+    query.help:
+      confidence: 0.90
+      keywords: [help, assist, support, guide, how to]
+      thai_keywords: [ช่วย, ช่วยเหลือ, สอน]
+    query.documentation:
+      confidence: 0.85
+      keywords: [documentation, docs, manual, guide, readme]
+      thai_keywords: [เอกสาร, คู่มือ]
+    conversation.chat:
+      confidence: 0.80
+      keywords: [chat, talk, conversation, discuss, hello, hi]
+      thai_keywords: [สวัสดี, คุย, สนทนา]
+    intent.classify:
+      confidence: 0.85
+      keywords: [classify, categorize, identify intent, understand]
+      thai_keywords: [จำแนก, ระบุ]
+    user.support:
+      confidence: 0.85
+      keywords: [support, assistance, question, ask, inquiry]
+      thai_keywords: [สอบถาม, ถาม, คำถาม]
+    translation.request:
+      confidence: 0.95
+      keywords: [translate to, translate from, language conversion]
+      thai_keywords: [แปลเป็น, แปลจาก]
+
+  interaction_modes:
+    - chat
+    - telegram_bot
+    - cli_interface
+    - api_endpoints
+
+permissions:
+  file_access:
+    read:
+      - "docs/**"
+      - "reports/**"
+      - "*.md"
+      - "**/*.md"
+      - "README*"
+      - "config/nlp_command_map.yaml"
+      - "config/intent_map.yaml"
+      - "config/intent_map.json"
+      - "g/reports/**"
+      - "memory/index_unified/**"
+
+    write:
+      - "logs/kim/**"
+      - "g/telemetry_unified/**"
+      - "g/kim/**"
+
+    exclude:
+      - "src/**"
+      - "config/**"
+      - ".env"
+      - ".env.*"
+      - "secrets/**"
+      - "*.key"
+      - "*.pem"
+      - "**/.git/**"
+
+  api_access:
+    - rag_api
+    - mcp_search
+    - telegram_bot
+    - redis
+
+  commands:
+    allowed:
+      - curl
+      - jq
+      - yq
+      - grep
+      - cat
+      - head
+      - tail
+      - wc
+      - echo
+      - date
+
+    forbidden:
+      - git
+      - npm
+      - yarn
+      - docker
+      - rm
+      - mv
+      - cp
+      - chmod
+      - chown
+      - "privileged elevation commands (runbook-only)"
+      - kill
+
+routing:
+  intent_patterns:
+    - "what.*"
+    - "who.*"
+    - "when.*"
+    - "where.*"
+    - "how.*"
+    - "why.*"
+    - "explain.*"
+    - "tell me.*"
+    - "describe.*"
+    - "translate.*"
+    - "summarize.*"
+    - "clarify.*"
+    - "help.*"
+
+  keywords:
+    - help
+    - question
+    - explain
+    - what
+    - how
+    - why
+    - who
+    - when
+    - where
+    - translate
+    - แปล
+    - summary
+    - สรุป
+    - clarify
+    - ชี้แจง
+    - info
+    - information
+    - ข้อมูล
+    - documentation
+    - เอกสาร
+
+  default_agent: true
+
+telemetry:
+  events:
+    # Request lifecycle
+    - kim.request.received
+    - kim.request.validated
+    - kim.request.rejected
+
+    # Intent processing
+    - kim.intent.classified
+    - kim.intent.ambiguous
+    - kim.intent.clarified
+
+    # Response generation
+    - kim.response.generated
+    - kim.response.sent
+    - kim.response.failed
+
+    # Conversation management
+    - kim.conversation.started
+    - kim.conversation.continued
+    - kim.conversation.ended
+
+    # Knowledge retrieval
+    - kim.knowledge.query
+    - kim.knowledge.found
+    - kim.knowledge.not_found
+
+    # Translation
+    - kim.translation.requested
+    - kim.translation.completed
+
+    # Delegation
+    - kim.delegation.to_andy
+    - kim.delegation.from_andy
+    - kim.delegation.to_system
+    - kim.delegation.from_system
+
+    # User interaction
+    - kim.clarification.requested
+    - kim.clarification.received
+    - kim.help.provided
+
+  schema: config/telemetry_unified.yaml
+  sink: g/telemetry_unified/unified.jsonl
+
+  metadata:
+    phase: "15"
+    work_order: "WO-251107-PHASE-15-AKR"
+    agent_type: "nlp_assistant"
+
+delegation:
+  can_delegate_to:
+    - andy
+    - system
+
+  delegation_triggers:
+    to_andy:
+      - pattern: "code implementation required"
+        confidence: 0.85
+        reason: "Technical task requires code generation"
+        indicators:
+          - "write code"
+          - "implement"
+          - "create function"
+          - "add feature"
+          - "fix bug"
+
+      - pattern: "technical task detected"
+        confidence: 0.80
+        reason: "Query requires technical expertise beyond NLP"
+        indicators:
+          - "code"
+          - "function"
+          - "API"
+          - "database"
+          - "deploy"
+
+      - pattern: "file modification needed"
+        confidence: 0.90
+        reason: "Request requires modifying source code files"
+        indicators:
+          - "edit file"
+          - "update code"
+          - "change function"
+          - "refactor"
+
+      - pattern: "git operations required"
+        confidence: 0.95
+        reason: "Version control operations needed"
+        indicators:
+          - "commit"
+          - "push"
+          - "pull request"
+          - "merge"
+          - "branch"
+
+    to_system:
+      - pattern: "backup command"
+        confidence: 0.95
+        reason: "System backup operation"
+        indicators:
+          - "backup"
+          - "สำรองข้อมูล"
+
+      - pattern: "service restart"
+        confidence: 0.95
+        reason: "System service management"
+        indicators:
+          - "restart"
+          - "รีสตาร์ท"
+          - "service"
+
+      - pattern: "system status check"
+        confidence: 0.90
+        reason: "System health monitoring"
+        indicators:
+          - "status"
+          - "health"
+          - "check system"
+          - "สถานะ"
+
+      - pattern: "deployment command"
+        confidence: 0.90
+        reason: "Deployment operation"
+        indicators:
+          - "deploy"
+          - "รีลีส"
+
+  handoff_protocol:
+    include_context: true
+    include_history: true
+    max_context_tokens: 3000
+    timeout_ms: 5000
+
+  max_delegation_depth: 3
+  prevent_circular: true
+
+context:
+  rag_access: true
+  rag_endpoint: "http://127.0.0.1:8765/rag_query"
+
+  memory_access: false
+
+  session:
+    timeout_seconds: 1800
+    max_context_tokens: 4000
+    context_window_messages: 5
+
+  preferences:
+    response_style: "friendly"
+    explanation_depth: "medium"
+    language: "auto_detect"
+
+intent_classification:
+  enabled: true
+  model: "pattern_based"
+  confidence_threshold: 0.70
+  ambiguous_threshold: 0.50
+
+  features:
+    keyword_matching: true
+    pattern_matching: true
+    context_analysis: true
+    rag_lookup: true
+
+  fallback_strategy:
+    on_low_confidence: ask_for_clarification
+    on_ambiguous: provide_options
+    on_unknown: offer_help
+
+clarification:
+  enabled: true
+  max_attempts: 3
+
+  strategies:
+    - ask_direct_question
+    - provide_examples
+    - offer_alternatives
+    - request_more_context
+
+  templates:
+    ambiguous_intent: "I'm not sure what you need. Did you mean: {options}?"
+    low_confidence: "Could you clarify what you'd like me to help with?"
+    multiple_options: "I can help with: {list}. Which one would you like?"
+    need_details: "Could you provide more details about {topic}?"
+
+translation:
+  enabled: true
+  source_languages:
+    - english
+    - thai
+  target_languages:
+    - english
+    - thai
+  auto_detect: true
+
+knowledge_retrieval:
+  enabled: true
+  rag_query_on_unknown: true
+  search_documentation: true
+  max_results: 5
+
+  sources:
+    - unified_rag_index
+    - documentation
+    - reports
+    - phase_summaries
+
+performance:
+  max_response_time_ms: 10000
+  max_query_length: 1000
+
+  rate_limits:
+    requests_per_minute: 120
+    tokens_per_minute: 50000
+
+error_handling:
+  retry_on_failure: true
+  max_retries: 2
+  backoff_strategy: linear
+  backoff_base_ms: 500
+
+  fallback_strategy:
+    on_timeout: provide_cached_response
+    on_error: apologize_and_delegate
+    on_ambiguity: ask_for_clarification
+
+health_check:
+  endpoint: "/healthz"
+  interval_seconds: 30
+  timeout_ms: 3000
+
+  dependencies:
+    - rag_api
+    - redis
+
+conversation:
+  context_tracking: true
+  multi_turn: true
+  max_turns: 10
+
+  features:
+    remember_user_preferences: true
+    track_conversation_history: true
+    maintain_context: true
+
+  greetings:
+    - "Hello! How can I help you today?"
+    - "Hi! What would you like to know?"
+    - "สวัสดีครับ/ค่ะ มีอะไรให้ช่วยไหมครับ/คะ"
+
+  farewells:
+    - "Goodbye! Let me know if you need anything else."
+    - "See you later!"
+    - "สวัสดีครับ/ค่ะ"
+
+telegram:
+  enabled: true
+  config: config/kim.env
+
+  commands:
+    - /start
+    - /help
+    - /status
+    - /search
+    - /translate
+
+  features:
+    inline_keyboard: true
+    markdown_support: true
+    file_upload: false
+    voice_message: false
+
+redis:
+  enabled: true
+  host: 127.0.0.1
+  port: 6379
+  channel_in: "gg:nlp"
+  channel_out: "gg:response"
+
+version_info:
+  created: "2025-11-06"
+  last_modified: "2025-11-06"
+  schema_version: "1.0.0"
+  phase: "15"

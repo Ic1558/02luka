@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.gh-monitor</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/icmini/02luka/tools/gh_monitor_agent.zsh</string>
+        <string></string>
+        <string>30</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/icmini/02luka</string>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/icmini/02luka/logs/gh_monitor_agent.stdout.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/icmini/02luka/logs/gh_monitor_agent.stderr.log</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+        <key>HOME</key>
+        <string>/Users/icmini</string>
+    </dict>
+</dict>
+</plist>

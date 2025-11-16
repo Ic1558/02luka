@@ -1,0 +1,133 @@
+---
+name: ci
+
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [main, develop, 'ci/**']
+    paths:
+      - 'tools/ci/**'
+      - 'scripts/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/validate-core-reusable.yml'
+      - 'package.json'
+      - 'package-lock.json'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      ci_strict:
+        description: 'Strict mode (0/1)'
+        required: false
+        default: '0'
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+
+env:
+  NODE_VERSION: '20'
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# Concurrency: Critical workflow - don't cancel in-progress runs
+# This ensures CI validation completes even if new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ============================================================
+  # REQUIRED JOB: validate (phase 4/5/6 smoke)
+  # This is the only job required to pass for PRs to be green
+  # ============================================================
+  validate:
+    uses: Ic1558/02luka/.github/workflows/validate-core-reusable.yml@main
+    with:
+      node_version: '20'
+
+  # ============================================================
+  # PATH GUARD: Enforce function-first structure for reports
+  # ============================================================
+  path_guard:
+    name: Path Guard (Reports)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check report paths
+        run: |
+          # Only check files that are added or modified (not deleted)
+          # Use --diff-filter=AM to exclude deleted files
+          # Find any markdown files under g/reports that are NOT in the approved subdirs
+          OTHER=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/.*\.md$' | grep -Ev '^g/reports/(phase5_governance|phase6_paula|system)/' || true)
+          if [ -n "$OTHER" ]; then
+            echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system}/ only"
+            echo ""
+            echo "Files in wrong location:"
+            echo "$OTHER" | sed 's/^/  - /'
+            echo ""
+            echo "Please move to appropriate subdirectory:"
+            echo "  - Phase 5 reports → g/reports/phase5_governance/"
+            echo "  - Phase 6 reports → g/reports/phase6_paula/"
+            echo "  - System reports → g/reports/system/"
+            
+            # Add job summary for better visibility
+            {
+              echo "## ❌ Path Guard Check Failed"
+              echo ""
+              echo "Reports must be in subdirectories, not directly in \`g/reports/\`"
+              echo ""
+              echo "### Files in wrong location:"
+              echo "$OTHER" | sed 's/^/- /'
+              echo ""
+              echo "### Required structure:"
+              echo "- Phase 5 reports → \`g/reports/phase5_governance/\`"
+              echo "- Phase 6 reports → \`g/reports/phase6_paula/\`"
+              echo "- System reports → \`g/reports/system/\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            
+            exit 1
+          fi
+          echo "✅ All reports in correct subdirectories"
+          
+          # Add success summary
+          {
+            echo "## ✅ Path Guard Check Passed"
+            echo ""
+            echo "All report files are in the correct subdirectories."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ============================================================
+  # SUMMARY JOB: Always runs to show overall status
+  # ============================================================
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5  # Increased from 2 to prevent premature cancellation
+    if: always()
+    needs: [validate]
+    steps:
+      - name: Check required jobs
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "CI Summary"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Required jobs:"
+          echo "  validate: ${{ needs.validate.result }}"
+          echo ""
+
+          if [ "${{ needs.validate.result }}" != "success" ]; then
+            echo "❌ REQUIRED job 'validate' failed"
+            exit 1
+          fi
+
+          echo "✅ All required jobs passed"
+          echo ""
+          echo "Note: Optional smoke tests run in separate workflows."
+          echo "To run optional jobs, add the 'run-smoke' label to your PR."

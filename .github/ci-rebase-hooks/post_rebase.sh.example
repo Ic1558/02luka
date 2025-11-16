@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#
+# Example Post-Rebase Hook
+# This hook runs after each PR rebase (success or failure)
+#
+# Arguments:
+#   $1 = PR number
+#   $2 = Branch name
+#   $3 = Status (SUCCESS|CONFLICT|FAIL)
+#   $4 = Duration (seconds)
+#
+# To use: cp post_rebase.sh.example post_rebase.sh && chmod +x post_rebase.sh
+# Then add to .github/ci-rebase.config.yml:
+#   hooks:
+#     post_rebase:
+#       - post_rebase.sh
+
+set -euo pipefail
+
+PR_NUM="$1"
+BRANCH="$2"
+STATUS="$3"
+DURATION="${4:-0}"
+
+# Example: Log to a file
+LOG_FILE="/tmp/ci-rebase-audit.log"
+echo "[$(date -Iseconds)] PR #$PR_NUM ($BRANCH): $STATUS in ${DURATION}s" >> "$LOG_FILE"
+
+# Example: Send notification (customize as needed)
+if [[ "$STATUS" == "SUCCESS" ]]; then
+  echo "✅ Successfully rebased PR #$PR_NUM"
+  # Could send Slack notification here:
+  # curl -X POST "$SLACK_WEBHOOK" -d '{"text": "PR #'$PR_NUM' rebased successfully"}'
+elif [[ "$STATUS" == "CONFLICT" ]]; then
+  echo "⚠️  Conflict detected on PR #$PR_NUM"
+  # Could notify maintainers
+fi
+
+exit 0

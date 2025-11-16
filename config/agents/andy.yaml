@@ -1,0 +1,397 @@
+# Andy Agent Configuration
+# Coding Assistant for 02LUKA System
+# Version: 1.0.0
+
+agent:
+  id: andy
+  name: Andy
+  type: coding_assistant
+  version: 1.0.0
+  status: active
+  description: "Coding assistant specialized in implementation, code review, debugging, and testing"
+
+capabilities:
+  primary:
+    - code_generation
+    - code_review
+    - refactoring
+    - debugging
+    - testing
+    - documentation
+    - deployment
+    - git_operations
+
+  languages:
+    - javascript
+    - typescript
+    - python
+    - bash
+    - zsh
+    - yaml
+    - json
+    - markdown
+
+  frameworks:
+    - node.js
+    - express
+    - react
+    - vue
+    - flask
+    - fastapi
+
+  tools:
+    - git
+    - docker
+    - npm
+    - yarn
+    - pip
+    - pytest
+    - jest
+    - eslint
+    - prettier
+
+  specializations:
+    - api_development
+    - frontend_components
+    - backend_services
+    - database_operations
+    - ci_cd_pipelines
+    - infrastructure_as_code
+
+  intent_map:
+    # Intent patterns this agent can handle
+    code.implement:
+      confidence: 0.95
+      keywords: [implement, create, write, build, develop, code, function, class]
+    code.review:
+      confidence: 0.90
+      keywords: [review, check, inspect, validate, code review]
+    code.fix:
+      confidence: 0.95
+      keywords: [fix, bug, error, issue, problem, resolve, debug]
+    code.test:
+      confidence: 0.90
+      keywords: [test, unit test, integration test, e2e, testing]
+    code.refactor:
+      confidence: 0.85
+      keywords: [refactor, optimize, improve, clean up, restructure]
+    code.debug:
+      confidence: 0.90
+      keywords: [debug, troubleshoot, investigate, diagnose]
+    code.deploy:
+      confidence: 0.85
+      keywords: [deploy, release, publish, ship, production]
+    git.commit:
+      confidence: 0.95
+      keywords: [commit, git commit, stage, save changes]
+    git.push:
+      confidence: 0.95
+      keywords: [push, git push, remote, upstream]
+    git.pr:
+      confidence: 0.90
+      keywords: [pull request, PR, merge request, review]
+    file.write:
+      confidence: 0.85
+      keywords: [write file, create file, new file, save file]
+    file.modify:
+      confidence: 0.85
+      keywords: [edit file, modify file, update file, change file]
+    build.run:
+      confidence: 0.85
+      keywords: [build, compile, make, npm build, run build]
+    test.run:
+      confidence: 0.85
+      keywords: [run test, execute test, test suite, npm test]
+
+permissions:
+  file_access:
+    read:
+      - "**/*.js"
+      - "**/*.ts"
+      - "**/*.jsx"
+      - "**/*.tsx"
+      - "**/*.py"
+      - "**/*.md"
+      - "**/*.yaml"
+      - "**/*.yml"
+      - "**/*.json"
+      - "**/*.sh"
+      - "**/*.zsh"
+      - "**/*.bash"
+      - "**/Dockerfile"
+      - "**/package.json"
+      - "**/requirements.txt"
+      - "**/README*"
+
+    write:
+      - "src/**"
+      - "tests/**"
+      - "docs/**"
+      - "config/**"
+      - "tools/**"
+      - "scripts/**"
+      - "agents/**"
+
+    exclude:
+      - ".env"
+      - ".env.*"
+      - "secrets/**"
+      - "*.key"
+      - "*.pem"
+      - "*.p12"
+      - "credentials.json"
+      - "**/.git/**"
+
+  api_access:
+    - boss_api
+    - rag_api
+    - mcp_memory
+    - mcp_search
+    - prometheus
+    - grafana
+
+  commands:
+    allowed:
+      - git
+      - npm
+      - yarn
+      - node
+      - python
+      - python3
+      - pip
+      - bash
+      - zsh
+      - docker
+      - docker-compose
+      - curl
+      - jq
+      - yq
+      - grep
+      - sed
+      - awk
+      - find
+      - ls
+      - cat
+      - head
+      - tail
+      - wc
+
+    forbidden:
+      - "root-level or recursive filesystem wipes"
+      - "privileged deletion / ownership changes"
+      - "world-writable permission changes"
+      - "filesystem formatting or raw disk copy utilities"
+      - "fork-bomb or resource exhaustion payloads"
+
+routing:
+  intent_patterns:
+    - "write.*code"
+    - "implement.*feature"
+    - "create.*function"
+    - "add.*component"
+    - "fix.*bug"
+    - "resolve.*error"
+    - "debug.*issue"
+    - "refactor.*"
+    - "optimize.*"
+    - "add.*test"
+    - "write.*test"
+    - "review.*code"
+    - "check.*code"
+    - "deploy.*"
+    - "build.*"
+    - "commit.*"
+    - "push.*"
+
+  keywords:
+    - code
+    - function
+    - class
+    - component
+    - module
+    - API
+    - endpoint
+    - route
+    - controller
+    - service
+    - model
+    - schema
+    - database
+    - query
+    - test
+    - spec
+    - unit test
+    - integration test
+    - bug
+    - error
+    - exception
+    - deploy
+    - build
+    - compile
+    - lint
+    - format
+    - git
+    - commit
+    - push
+    - pull request
+    - merge
+    - branch
+    - docker
+    - container
+    - ci
+    - cd
+    - pipeline
+
+telemetry:
+  events:
+    # Request lifecycle
+    - andy.request.received
+    - andy.request.validated
+    - andy.request.rejected
+
+    # Task execution
+    - andy.task.started
+    - andy.task.in_progress
+    - andy.task.completed
+    - andy.task.failed
+
+    # Code operations
+    - andy.code.generated
+    - andy.code.reviewed
+    - andy.code.refactored
+    - andy.test.created
+    - andy.test.executed
+    - andy.bug.fixed
+
+    # File operations
+    - andy.file.read
+    - andy.file.written
+    - andy.file.modified
+    - andy.file.deleted
+
+    # Git operations
+    - andy.git.commit
+    - andy.git.push
+    - andy.git.pull_request_created
+
+    # Delegation
+    - andy.delegation.to_kim
+    - andy.delegation.from_kim
+    - andy.delegation.to_system
+    - andy.delegation.from_system
+
+  schema: config/telemetry_unified.yaml
+  sink: g/telemetry_unified/unified.jsonl
+
+  metadata:
+    phase: "15"
+    work_order: "WO-251107-PHASE-15-AKR"
+    agent_type: "coding_assistant"
+
+delegation:
+  can_delegate_to:
+    - kim
+    - system
+
+  delegation_triggers:
+    to_kim:
+      - pattern: "natural language understanding required"
+        confidence: 0.8
+        reason: "User intent unclear, need NLU assistance"
+
+      - pattern: "user intent unclear"
+        confidence: 0.7
+        reason: "Query is ambiguous, need clarification"
+
+      - pattern: "non-technical query"
+        confidence: 0.9
+        reason: "Query does not require coding expertise"
+
+      - pattern: "translation required"
+        confidence: 0.95
+        reason: "Language translation needed"
+
+      - pattern: "explanation requested"
+        confidence: 0.8
+        reason: "Conceptual explanation rather than implementation"
+
+    to_system:
+      - pattern: "file operation required"
+        confidence: 0.9
+        reason: "System-level file operation needed"
+
+      - pattern: "system command needed"
+        confidence: 0.9
+        reason: "Direct system command execution required"
+
+      - pattern: "database query required"
+        confidence: 0.85
+        reason: "Direct database access needed"
+
+      - pattern: "service restart needed"
+        confidence: 0.95
+        reason: "System service management required"
+
+  handoff_protocol:
+    include_context: true
+    include_history: true
+    max_context_tokens: 4000
+    timeout_ms: 5000
+
+  max_delegation_depth: 3
+  prevent_circular: true
+
+context:
+  rag_access: true
+  rag_endpoint: "http://127.0.0.1:8765/rag_query"
+
+  memory_access: true
+  mcp_memory_endpoint: "http://localhost:5330"
+  mcp_search_endpoint: "http://localhost:5340"
+
+  session:
+    timeout_seconds: 3600
+    max_context_tokens: 8000
+    context_window_messages: 10
+
+  preferences:
+    code_style: "clean_code"
+    comment_style: "minimal"
+    test_framework: "jest"
+    error_handling: "explicit"
+
+performance:
+  max_response_time_ms: 30000
+  max_file_size_mb: 10
+  max_files_per_operation: 50
+
+  rate_limits:
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+
+error_handling:
+  retry_on_failure: true
+  max_retries: 3
+  backoff_strategy: exponential
+  backoff_base_ms: 1000
+
+  fallback_strategy:
+    on_timeout: delegate_to_kim
+    on_error: report_and_delegate
+    on_ambiguity: delegate_to_kim
+
+health_check:
+  endpoint: "/healthz"
+  interval_seconds: 30
+  timeout_ms: 5000
+
+  dependencies:
+    - boss_api
+    - rag_api
+    - git
+
+version_info:
+  created: "2025-11-06"
+  last_modified: "2025-11-06"
+  schema_version: "1.0.0"
+  phase: "15"

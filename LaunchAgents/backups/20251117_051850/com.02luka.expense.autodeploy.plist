@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.expense.autodeploy</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>/Users/icmini/02luka/tools/deploy_expense_pages_watch.zsh</string>
+  </array>
+  <key>WatchPaths</key>
+  <array>
+    <string>/Users/icmini/02luka/g/apps/expense</string>
+  </array>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/telemetry/expense_autodeploy.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/telemetry/expense_autodeploy.err.log</string>
+</dict></plist>

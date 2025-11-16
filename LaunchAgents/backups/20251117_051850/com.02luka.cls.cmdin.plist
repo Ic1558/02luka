@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LUKA_HOME</key>
+		<string>$HOME/02luka/g</string>
+		<key>LUKA_SOT</key>
+		<string>$HOME/02luka</string>
+	</dict>
+	<key>Label</key>
+	<string>com.02luka.cls.cmdin</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/zsh</string>
+		<string>-lc</string>
+		<string>$HOME/02luka/tools/cls/cls_cmdin_worker.zsh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>$HOME/02luka/logs/cls_cmdin.err.log</string>
+	<key>StandardOutPath</key>
+	<string>$HOME/02luka/logs/cls_cmdin.out.log</string>
+	<key>StartInterval</key>
+	<integer>15</integer>
+</dict>
+</plist>

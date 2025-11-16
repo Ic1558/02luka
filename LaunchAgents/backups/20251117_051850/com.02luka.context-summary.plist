@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+	</dict>
+	<key>Label</key>
+	<string>com.02luka.context-summary</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/bin/env</string>
+		<string>zsh</string>
+		<string>-lc</string>
+		<string>/Users/icmini/02luka/tools/run_context_summary.zsh</string>
+		<string>$HOME/02luka/tools/run_context_summary.zsh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/icmini/02luka/g/logs/context_summary.launchd.err</string>
+	<key>StandardOutPath</key>
+	<string>/Users/icmini/02luka/g/logs/context_summary.launchd.out</string>
+	<key>StartInterval</key>
+	<integer>21600</integer>
+	<key>WorkingDirectory</key>
+	<string>/Users/icmini/02luka</string>
+</dict>
+</plist>

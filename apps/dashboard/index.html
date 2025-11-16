@@ -1,713 +1,437 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <title>02luka System Dashboard v2.2.0</title>
-  <script src="dashboard.js?v=2.2.0" defer></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    .header {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .header h1 {
-      color: #1a202c;
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .header .subtitle {
-      color: #718096;
-      font-size: 14px;
-    }
-
-    .status-bar {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-
-    .stat-card {
-      flex: 1;
-      min-width: 200px;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .stat-card .label {
-      color: #718096;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .stat-card .value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #1a202c;
-    }
-
-    .stat-card.success .value { color: #48bb78; }
-    .stat-card.warning .value { color: #ed8936; }
-    .stat-card.error .value { color: #f56565; }
-    .stat-card.info .value { color: #4299e1; }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-      gap: 24px;
-      margin-bottom: 24px;
-    }
-
-    .panel {
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .panel h2 {
-      color: #1a202c;
-      font-size: 20px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #e2e8f0;
-    }
-
-    .service-list {
-      max-height: 400px;
-      overflow-y: auto;
-    }
-
-    .service-item {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      margin-bottom: 8px;
-      background: #f7fafc;
-      border-radius: 8px;
-      transition: all 0.2s;
-    }
-
-    .service-item:hover {
-      background: #edf2f7;
-      transform: translateX(4px);
-    }
-
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-right: 12px;
-      flex-shrink: 0;
-    }
-
-    .status-dot.running { background: #48bb78; animation: pulse 2s infinite; }
-    .status-dot.stopped { background: #cbd5e0; }
-    .status-dot.error { background: #f56565; }
-    .status-dot.ondemand { background: #4299e1; }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .service-name {
-      flex: 1;
-      font-weight: 500;
-      color: #2d3748;
-      font-size: 14px;
-    }
-
-    .service-meta {
-      display: flex;
-      gap: 12px;
-      font-size: 12px;
-      color: #718096;
-    }
-
-    .badge {
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .badge.running { background: #c6f6d5; color: #22543d; }
-    .badge.stopped { background: #e2e8f0; color: #4a5568; }
-    .badge.ondemand { background: #bee3f8; color: #2c5282; }
-
-    .log-viewer {
-      background: #1a202c;
-      border-radius: 8px;
-      padding: 16px;
-      max-height: 300px;
-      overflow-y: auto;
-      font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-      font-size: 12px;
-      color: #48bb78;
-      line-height: 1.6;
-    }
-
-    .log-line {
-      margin-bottom: 4px;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
-    .log-line.error { color: #fc8181; }
-    .log-line.warn { color: #f6ad55; }
-    .log-line.info { color: #63b3ed; }
-
-    .refresh-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 12px;
-      padding: 16px 24px;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .refresh-info {
-      color: #718096;
-      font-size: 14px;
-    }
-
-    button {
-      background: #667eea;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
-
-    button:hover {
-      background: #764ba2;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .progress-bar {
-      background: #e2e8f0;
-      border-radius: 8px;
-      height: 8px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-
-    .progress-fill {
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-      height: 100%;
-      transition: width 0.3s ease;
-    }
-
-    .activity-feed {
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .activity-item {
-      padding: 8px 12px;
-      margin-bottom: 8px;
-      background: #f7fafc;
-      border-left: 3px solid #4299e1;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-
-    .activity-item .time {
-      color: #a0aec0;
-      font-size: 11px;
-      margin-right: 8px;
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e0;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #a0aec0;
-    }
-
-    /* Filter button active state */
-    .btn-group [data-wo-filter].is-active {
-      outline: 2px solid #667eea;
-      outline-offset: -2px;
-      font-weight: 600;
-      background: #667eea !important;
-      color: white;
-    }
-
-    /* FIX: Prevent overlays from blocking clicks */
-    .dashboard-overlay,
-    .drawer-backdrop,
-    .shim,
-    .modal-backdrop {
-      pointer-events: none !important;
-    }
-
-    /* Ensure clickable elements accept clicks */
-    button,
-    [role="button"],
-    .clickable,
-    input,
-    select,
-    textarea,
-    a {
-      pointer-events: auto !important;
-    }
-
-    /* Shimmer animation for skeleton */
-    @keyframes shimmer {
-      0% { background-position: -100px; }
-      100% { background-position: 100px; }
-    }
-
-    /* WO Detail Drawer */
-    .wo-drawer {
-      position: fixed;
-      top: 0;
-      right: -600px;
-      width: 600px;
-      height: 100vh;
-      background: white;
-      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
-      transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 1000;
-      overflow-y: auto;
-      pointer-events: auto !important;
-    }
-
-    .wo-drawer.open {
-      right: 0;
-    }
-
-    .wo-drawer-backdrop {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.5);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-      z-index: 999;
-      pointer-events: auto !important;
-    }
-
-    .wo-drawer-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    .wo-drawer-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 24px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .wo-drawer-header h2 {
-      font-size: 20px;
-      margin: 0 0 8px 0;
-      color: white;
-    }
-
-    .wo-drawer-header .subtitle {
-      font-size: 13px;
-      opacity: 0.9;
-    }
-
-    .wo-drawer-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(255, 255, 255, 0.2);
-      border: none;
-      color: white;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 20px;
-      transition: background 0.2s;
-    }
-
-    .wo-drawer-close:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: none;
-      box-shadow: none;
-    }
-
-    .wo-drawer-content {
-      padding: 24px;
-    }
-
-    .wo-drawer-section {
-      margin-bottom: 24px;
-    }
-
-    .wo-drawer-section h3 {
-      font-size: 14px;
-      color: #718096;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-      font-weight: 600;
-    }
-
-    .wo-drawer-field {
-      background: #f7fafc;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 8px;
-    }
-
-    .wo-drawer-field .label {
-      font-size: 11px;
-      color: #718096;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-
-    .wo-drawer-field .value {
-      font-size: 14px;
-      color: #1a202c;
-      font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-      word-break: break-all;
-    }
-
-    .wo-drawer-code {
-      background: #1a202c;
-      color: #48bb78;
-      border-radius: 8px;
-      padding: 16px;
-      font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      max-height: 300px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .wo-drawer-code.error {
-      color: #f56565;
-    }
-
-    .wo-drawer-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .wo-drawer-badge.success {
-      background: #c6f6d5;
-      color: #22543d;
-    }
-
-    .wo-drawer-badge.failed {
-      background: #fed7d7;
-      color: #742a2a;
-    }
-
-    .wo-drawer-badge.pending {
-      background: #bee3f8;
-      color: #2c5282;
-    }
-
-    .wo-item {
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .wo-item:hover {
-      transform: translateX(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    /* Phase 3: Drawer Tabs */
-    .wo-drawer-tabs {
-      display: flex;
-      gap: 8px;
-      padding: 16px;
-      border-bottom: 1px solid #e2e8f0;
-      background: #f7fafc;
-    }
-
-    .wo-tab {
-      padding: 10px 16px;
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #4a5568;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .wo-tab:hover {
-      background: #edf2f7;
-      border-color: #cbd5e0;
-    }
-
-    .wo-tab.active {
-      background: #667eea;
-      color: white;
-      border-color: #667eea;
-    }
-
-    .wo-tab-content {
-      display: none;
-    }
-
-    .wo-tab-content.active {
-      display: block;
-    }
-
-    /* Phase 3: Action Buttons */
-    .wo-action-btn:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .wo-action-btn:active {
-      transform: translateY(0);
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <h1>🚀 02luka System Dashboard</h1>
-      <div class="subtitle">Real-time monitoring of all local agents and services</div>
-    </div>
-
-    <!-- Refresh Bar -->
-    <div class="refresh-bar">
-      <div class="refresh-info">
-        <span id="last-update">Last updated: Loading...</span>
-        <span style="margin: 0 12px;">•</span>
-        <span id="auto-refresh">Auto-refresh: ON (30s)</span>
-        <span style="margin: 0 12px;">•</span>
-        <span id="health-pill" style="padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">Health: ...</span>
-      </div>
-      <button onclick="refreshAllData()">🔄 Refresh Now</button>
-    </div>
-
-    <!-- Status Cards -->
-    <div class="status-bar">
-      <div class="stat-card success">
-        <div class="label">Roadmap Progress</div>
-        <div class="value" id="roadmap-progress">-</div>
-      </div>
-      <div class="stat-card info">
-        <div class="label">Current Phase</div>
-        <div class="value" id="phase-progress">-</div>
-      </div>
-      <div class="stat-card success">
-        <div class="label">Running Services</div>
-        <div class="value" id="running-count">-</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="label">Completed WOs</div>
-        <div class="value" id="completed-wos">-</div>
-      </div>
-    </div>
-
-    <!-- Roadmap Progress -->
-    <div class="panel">
-      <h2>📋 Current Roadmap Progress</h2>
-      <div id="roadmap-details" style="margin-bottom: 20px;">
-        <div style="color: #718096; margin-bottom: 12px;">
-          <strong style="color: #1a202c;" id="roadmap-name">Loading...</strong>
+  <head>
+    <meta charset="utf-8" />
+    <title>Operations Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        background-color: #0f172a;
+        color: #e2e8f0;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+      }
+
+      header {
+        padding: 1.5rem 2rem;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        backdrop-filter: blur(8px);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.875rem;
+      }
+
+      .tagline {
+        color: rgba(226, 232, 240, 0.7);
+        margin: 0.25rem 0 0.75rem;
+      }
+
+      .tabs {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .tabs a {
+        color: #38bdf8;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        transition: background-color 0.2s ease, color 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .tabs a.active,
+      .tabs a:hover,
+      .tabs a:focus {
+        background: rgba(56, 189, 248, 0.12);
+        color: #f8fafc;
+      }
+
+      main {
+        flex: 1;
+        padding: 3rem clamp(1rem, 4vw, 3rem);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .panel {
+        background: rgba(15, 23, 42, 0.75);
+        padding: clamp(1.5rem, 4vw, 2.5rem);
+        border-radius: 24px;
+        box-shadow: 0 18px 70px rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .panel.hidden {
+        display: none;
+      }
+
+      .panel h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+      }
+
+      .summary-bar {
+        padding: 0.75rem 1rem;
+        border-radius: 14px;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        font-weight: 500;
+        margin-bottom: 1rem;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+
+      .filters label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.875rem;
+        color: rgba(226, 232, 240, 0.8);
+      }
+
+      .filters select,
+      .filters input[type="checkbox"] {
+        margin-top: 0.25rem;
+      }
+
+      .filters button {
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        border: none;
+        background: #38bdf8;
+        color: #0f172a;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border-spacing: 0;
+      }
+
+      th,
+      td {
+        padding: 0.65rem 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        text-align: left;
+      }
+
+      th {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: rgba(226, 232, 240, 0.7);
+      }
+
+      tbody tr:hover {
+        background: rgba(30, 41, 59, 0.5);
+      }
+
+      .status-running {
+        color: #4ade80;
+      }
+
+      .status-stopped {
+        color: #94a3b8;
+      }
+
+      .status-failed {
+        color: #f87171;
+      }
+
+      .status-unknown {
+        color: #facc15;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.1rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: rgba(15, 23, 42, 0.2);
+        text-transform: capitalize;
+      }
+
+      .type-pill,
+      .mls-type-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.15rem 0.65rem;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: capitalize;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.35);
+      }
+
+      .type-bridge {
+        color: #f472b6;
+        border-color: rgba(244, 114, 182, 0.4);
+      }
+
+      .type-worker {
+        color: #a78bfa;
+        border-color: rgba(167, 139, 250, 0.4);
+      }
+
+      .type-automation {
+        color: #fbbf24;
+        border-color: rgba(251, 191, 36, 0.45);
+      }
+
+      .type-monitoring {
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.45);
+      }
+
+      .type-other,
+      .mls-type-other {
+        color: #94a3b8;
+        border-color: rgba(148, 163, 184, 0.35);
+      }
+
+      .mls-type-solution {
+        color: #4ade80;
+        border-color: rgba(74, 222, 128, 0.5);
+      }
+
+      .mls-type-failure {
+        color: #f87171;
+        border-color: rgba(248, 113, 113, 0.5);
+      }
+
+      .mls-type-pattern {
+        color: #f472b6;
+        border-color: rgba(244, 114, 182, 0.45);
+      }
+
+      .mls-type-improvement {
+        color: #38bdf8;
+        border-color: rgba(56, 189, 248, 0.45);
+      }
+
+      .filters input[type="search"] {
+        margin-top: 0.25rem;
+        padding: 0.45rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.3);
+        color: inherit;
+      }
+
+      .filters input[type="search"]::placeholder {
+        color: rgba(226, 232, 240, 0.5);
+      }
+
+      .detail-panel {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 16px;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .detail-panel button {
+        margin-top: 0.75rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+
+      footer {
+        padding: 2rem;
+        text-align: center;
+        color: rgba(148, 163, 184, 0.8);
+        font-size: 0.875rem;
+      }
+
+      @media (max-width: 600px) {
+        header {
+          padding: 1.5rem 1.25rem;
+        }
+
+        main {
+          padding: 2rem 1rem;
+        }
+
+        .filters {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Operations Dashboard</h1>
+      <p class="tagline">Monitor WO flows, LaunchAgents, and MLS lessons</p>
+      <ul class="tabs">
+        <li><a href="#overview-panel" class="tab active" data-panel="overview-panel">Overview</a></li>
+        <li><a href="#services-panel" class="tab" data-panel="services-panel">Services</a></li>
+        <li><a href="#mls-panel" class="tab" data-panel="mls-panel">MLS Lessons</a></li>
+        <li><a href="followup.html">Follow-Up Tracker</a></li>
+      </ul>
+    </header>
+    <main>
+      <section id="overview-panel" class="panel">
+        <h2>Overview</h2>
+        <p>
+          Use the navigation to monitor follow-up commitments, LaunchAgent services, and
+          MLS lessons. Additional dashboard modules will appear here as they graduate
+          from prototype to production.
+        </p>
+      </section>
+
+      <section id="services-panel" class="panel hidden">
+        <h2>Services (LaunchAgents)</h2>
+        <div id="services-summary" class="summary-bar">
+          Total: – | Running: – | Stopped: – | Failed: –
         </div>
-        <div style="margin-bottom: 16px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="font-size: 14px; font-weight: 500;">Overall Progress</span>
-            <span style="font-size: 14px; font-weight: 600; color: #667eea;" id="overall-pct">-</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="overall-progress-bar" style="width: 0%"></div>
-          </div>
-        </div>
-        <div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="font-size: 14px; font-weight: 500;" id="current-phase-name">Current Phase</span>
-            <span style="font-size: 14px; font-weight: 600; color: #ed8936;" id="phase-pct">-</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="phase-progress-bar" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
 
-      <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
-        <h3 style="font-size: 14px; font-weight: 600; color: #2d3748; margin-bottom: 12px;">📝 Current Tasks</h3>
-        <div id="current-tasks" style="font-size: 13px; color: #4a5568;">
-          Loading tasks...
+        <div class="filters">
+          <label>Status:
+            <select id="services-status-filter">
+              <option value="">All</option>
+              <option value="running">Running</option>
+              <option value="stopped">Stopped</option>
+              <option value="failed">Failed</option>
+            </select>
+          </label>
+
+          <label>Type:
+            <select id="services-type-filter">
+              <option value="">All</option>
+              <option value="bridge">Bridge</option>
+              <option value="worker">Worker</option>
+              <option value="automation">Automation</option>
+              <option value="monitoring">Monitoring</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+
+          <button id="services-refresh-btn" type="button">Refresh</button>
         </div>
-      </div>
-    </div>
 
-    <!-- Main Grid -->
-    <div class="grid">
-      <!-- WO History -->
-      <div class="panel">
-        <h2>🎯 Work Order History</h2>
-        <div class="btn-group" role="toolbar" aria-label="WO filters" style="margin-bottom: 12px; display: flex; gap: 8px;">
-          <button data-wo-filter="all" aria-pressed="true" style="padding: 6px 12px; font-size: 12px;">All</button>
-          <button data-wo-filter="success" aria-pressed="false" style="padding: 6px 12px; font-size: 12px;">Success</button>
-          <button data-wo-filter="failed" aria-pressed="false" style="padding: 6px 12px; font-size: 12px;">Failed/Blocked</button>
-          <button data-wo-filter="pending" aria-pressed="false" style="padding: 6px 12px; font-size: 12px;">Pending</button>
+        <table class="table" id="services-table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>PID</th>
+              <th>Exit</th>
+            </tr>
+          </thead>
+          <tbody id="services-tbody">
+            <tr>
+              <td colspan="5">Loading…</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="mls-panel" class="panel hidden">
+        <h2>MLS Lessons</h2>
+
+        <div class="filters">
+          <label>Type:
+            <select id="mls-type-filter">
+              <option value="">All</option>
+              <option value="solution">Solution</option>
+              <option value="failure">Failure</option>
+              <option value="pattern">Pattern</option>
+              <option value="improvement">Improvement</option>
+            </select>
+          </label>
+
+          <label>
+            <input type="checkbox" id="mls-verified-only" />
+            Verified only
+          </label>
+
+          <label>Search:
+            <input
+              type="search"
+              id="mls-search"
+              placeholder="Title, details, tags"
+              autocomplete="off"
+            />
+          </label>
+
+          <button id="mls-refresh-btn" type="button">Refresh</button>
         </div>
-        <div id="wo-error" role="status" aria-live="polite" style="color: #f56565; margin-bottom: 8px;"></div>
-        <div id="wo-list">
-          <div style="text-align: center; padding: 40px; color: #a0aec0;">
-            Loading WOs...
-          </div>
+
+        <div id="mls-summary" class="summary-bar">
+          Total: – | Solutions: – | Failures: – | Patterns: – | Improvements: –
         </div>
-        <div id="wo-detail" style="margin-top: 16px;"></div>
-      </div>
 
-      <!-- Current Tasks & MLS -->
-      <div class="panel">
-        <h2>📚 Machine Learning System (MLS)</h2>
-        <div style="margin-bottom: 20px;">
-          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #48bb78;" id="mls-total">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Total Lessons</div>
-            </div>
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #4299e1;" id="mls-solutions">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Solutions</div>
-            </div>
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #f56565;" id="mls-failures">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Failures</div>
-            </div>
-          </div>
+        <table class="table" id="mls-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Title</th>
+              <th>Score</th>
+              <th>Tags</th>
+              <th>Verified</th>
+            </tr>
+          </thead>
+          <tbody id="mls-tbody">
+            <tr>
+              <td colspan="6">Loading…</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div id="mls-detail" class="detail-panel hidden">
+          <h3 id="mls-detail-title"></h3>
+          <p id="mls-detail-details"></p>
+          <p><strong>Context:</strong> <span id="mls-detail-context"></span></p>
+          <p><strong>Related WO:</strong> <span id="mls-detail-wo"></span></p>
+          <p><strong>Related Session:</strong> <span id="mls-detail-session"></span></p>
+          <p><strong>Tags:</strong> <span id="mls-detail-tags"></span></p>
+          <button id="mls-detail-close" type="button">Close</button>
         </div>
-        <h3 style="font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; margin-top: 20px;">⚙️ Services Status</h3>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <div style="flex: 1; background: #c6f6d5; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #22543d;" id="services-running">-</div>
-            <div style="font-size: 10px; color: #22543d;">Running</div>
-          </div>
-          <div style="flex: 1; background: #bee3f8; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #2c5282;" id="services-ondemand">-</div>
-            <div style="font-size: 10px; color: #2c5282;">OnDemand</div>
-          </div>
-          <div style="flex: 1; background: #e2e8f0; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #4a5568;" id="services-stopped">-</div>
-            <div style="font-size: 10px; color: #4a5568;">Stopped</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Logs -->
-    <div class="panel">
-      <h2>📜 Live System Logs (WO Executor)</h2>
-      <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
-        <button data-btn="logs-refresh" style="padding: 6px 12px; font-size: 12px;">🔄 Refresh</button>
-        <label style="font-size: 12px; color: #718096;">
-          <input type="checkbox" data-chk="logs-autorefresh" checked>
-          Auto-refresh every 5s
-        </label>
-      </div>
-      <div id="logs-error" role="status" aria-live="polite" style="color: #f56565; margin-bottom: 8px;"></div>
-      <div class="log-viewer" id="live-logs" tabindex="0" aria-label="Live system logs">
-        <div class="log-line">Loading logs...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- WO Detail Drawer -->
-  <div class="wo-drawer-backdrop" id="wo-drawer-backdrop"></div>
-  <div class="wo-drawer" id="wo-drawer">
-    <div class="wo-drawer-header">
-      <button class="wo-drawer-close" id="wo-drawer-close" aria-label="Close drawer">×</button>
-      <h2 id="wo-drawer-title">Work Order Details</h2>
-      <div class="subtitle" id="wo-drawer-subtitle">Loading...</div>
-    </div>
-    <div class="wo-drawer-content" id="wo-drawer-content">
-      <div style="text-align: center; padding: 40px; color: #a0aec0;">
-        Select a work order to view details
-      </div>
-    </div>
-  </div>
-
-  <!-- Service Detail Drawer (v2.2.0) -->
-  <div class="wo-drawer-backdrop" id="service-drawer-backdrop"></div>
-  <div class="wo-drawer" id="service-drawer">
-    <div class="wo-drawer-header">
-      <button class="wo-drawer-close" id="service-drawer-close" aria-label="Close service drawer">×</button>
-      <h2 id="service-drawer-title">Service Status</h2>
-      <div class="subtitle" id="service-drawer-subtitle">Loading...</div>
-    </div>
-    <div class="wo-drawer-content" id="service-drawer-content">
-      <div style="text-align: center; padding: 40px; color: #a0aec0;">
-        Loading services...
-      </div>
-    </div>
-  </div>
-
-</body>
+      </section>
+    </main>
+    <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
+    <script src="dashboard.js"></script>
+  </body>
 </html>

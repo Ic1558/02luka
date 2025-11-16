@@ -1,0 +1,131 @@
+name: Ops Mirror Pipeline
+
+on:
+  schedule:
+    # 02:50 Asia/Bangkok (UTC+7) = 19:50 UTC
+    - cron: '50 19 * * *'
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Data source (api or cache)'
+        required: false
+        default: 'api'
+        type: choice
+        options:
+          - api
+          - cache
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
+concurrency:
+  group: "ops-mirror"
+  cancel-in-progress: true
+
+jobs:
+  build-ops-mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js with cache
+        uses: ./.github/actions/node-setup
+
+      - name: Setup GitHub CLI
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          # yamllint disable-line rule:line-length
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | "$SUDO_BIN" dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          # yamllint disable-line rule:line-length
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | "$SUDO_BIN" tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          "$SUDO_BIN" apt update
+          "$SUDO_BIN" apt install gh
+
+      - name: Fetch latest OPS data
+        run: |
+          # Create cache directory
+          mkdir -p ~/.cache/ops-mirror
+          
+          # Try to fetch from API first (if not cache mode)
+          if [[ "${{ github.event.inputs.source || 'api' }}" == "api" ]]; then
+            echo "Attempting to fetch from API..."
+            if curl -s -f "https://ops.theedges.work/api/ops/latest" -o ~/.cache/ops-mirror/latest.json; then
+              echo "✅ Fetched from API"
+            else
+              echo "⚠️ API unavailable, will use fallback"
+            fi
+            
+            if curl -s -f "https://ops.theedges.work/api/ops/dashboard" -o ~/.cache/ops-mirror/dashboard.html; then
+              echo "✅ Fetched dashboard from API"
+            else
+              echo "⚠️ Dashboard API unavailable"
+            fi
+          fi
+
+      - name: Build Ops Mirror
+        run: |
+          # Set up cache directory for script
+          mkdir -p ~/Library/02luka_runtime/ops
+          cp ~/.cache/ops-mirror/* ~/Library/02luka_runtime/ops/ 2>/dev/null || true
+          
+          # Run the build script
+          if [[ "${{ github.event.inputs.source || 'api' }}" == "cache" ]]; then
+            ./g/tools/build_ops_mirror.zsh --from-cache
+          else
+            ./g/tools/build_ops_mirror.zsh --from-api=https://ops.theedges.work/api/ops/latest
+          fi
+
+      - name: Verify build output
+        run: |
+          echo "📁 Build output:"
+          ls -la dist/ops/
+          echo ""
+          echo "📊 File sizes:"
+          du -h dist/ops/*
+          echo ""
+          echo "🔍 Content verification:"
+          echo "Health check:"
+          head -5 dist/ops/_health.html
+          echo ""
+          echo "Manifest:"
+          cat dist/ops/manifest.json
+          echo ""
+          echo "Latest JSON (first 5 lines):"
+          head -5 dist/ops/latest.json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/ops
+
+  deploy-ops-mirror:
+    runs-on: ubuntu-latest
+    needs: build-ops-mirror
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify deployment
+        run: |
+          echo "🚀 Ops Mirror deployed to: ${{ steps.deployment.outputs.page_url }}"
+          echo "📋 Available endpoints:"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/_health.html"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/manifest.json"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/latest.json"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/latest.tsv"
+          echo "  - ${{ steps.deployment.outputs.page_url }}/ops/dashboard.html"

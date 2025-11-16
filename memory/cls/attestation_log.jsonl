@@ -1,0 +1,28 @@
+{
+  "attestation_id": "attest_1761781327_86841",
+  "type": "text",
+  "subject": "phase6-verify",
+  "data": "verification test",
+  "timestamp": "2025-10-30T06:42:07+0700",
+  "timestamp_unix": 1761781327,
+  "content_hash": "97e197f14bbb0e05f9e98120e6b366b5c632a9be2c52ac106f071b2ffa470e67",
+  "signature": "97e197f14bbb0e05f9e98120e6b366b5c632a9be2c52ac106f071b2ffa470e67",
+  "attested_by": "cls_attest.zsh",
+  "user": "icmini",
+  "hostname": "Ittipongs-Mac-mini.local",
+  "working_dir": "/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
+}
+{
+  "attestation_id": "attest_1761837085_96733",
+  "type": "operation",
+  "subject": "op_1761837085_96589",
+  "data": "success",
+  "timestamp": "2025-10-30T22:11:25+0700",
+  "timestamp_unix": 1761837085,
+  "content_hash": "c485269ca41893b8e3e072fff056ae85d38f7c6d0174e6e6390d15e4f226fc63",
+  "signature": "c485269ca41893b8e3e072fff056ae85d38f7c6d0174e6e6390d15e4f226fc63",
+  "attested_by": "cls_attest.zsh",
+  "user": "icmini",
+  "hostname": "Ittipongs-Mac-mini.local",
+  "working_dir": "/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
+}

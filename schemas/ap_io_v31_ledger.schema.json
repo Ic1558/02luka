@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AP/IO v3.1 Ledger Entry Schema",
+  "description": "Schema for AP/IO v3.1 ledger entries (extends protocol schema)",
+  "type": "object",
+  "required": ["protocol", "version", "agent", "ts", "event", "ledger_id"],
+  "allOf": [
+    {
+      "$ref": "ap_io_v31.schema.json"
+    }
+  ],
+  "properties": {
+    "ledger_id": {
+      "type": "string",
+      "pattern": "^ledger-[0-9]{8}-[0-9]{6}-(cls|andy|hybrid|liam|gg|kim)-[0-9]{3}$",
+      "description": "Unique ledger entry identifier (format: ledger-YYYYMMDD-HHMMSS-<agent>-<seq>)"
+    },
+    "parent_id": {
+      "type": ["string", "null"],
+      "pattern": "^parent-(wo|event|session)-[a-zA-Z0-9_-]+$",
+      "description": "Parent identifier (format: parent-<type>-<id>)"
+    },
+    "execution_duration_ms": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Execution duration in milliseconds"
+    }
+  }
+}
