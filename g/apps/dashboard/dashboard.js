@@ -714,7 +714,7 @@ async function openWODrawer(woId) {
 
   // Fetch and display WO details
   try {
-    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=100`);
+    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=200&timeline=1`);
 
     // Update header
     titleEl.textContent = wo.id || 'Work Order';
@@ -840,7 +840,57 @@ function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
         ` : ''}
       </div>
     ` : ''}
+
+    ${renderTimelineSection(wo.timeline)}
   `;
+}
+
+function renderTimelineSection(events) {
+  const heading = '<h3>🕒 Timeline</h3>';
+
+  if (!Array.isArray(events) || events.length === 0) {
+    return `
+      <div class="wo-drawer-section">
+        ${heading}
+        <div class="wo-timeline-empty">No timeline data available.</div>
+      </div>
+    `;
+  }
+
+  const items = events.map((event) => {
+    const type = event.type ? `<span class="wo-timeline-type">${escapeHtml(event.type)}</span>` : '';
+    const ts = event.ts ? `<span class="wo-timeline-ts">${escapeHtml(formatTimelineTimestamp(event.ts))}</span>` : '';
+    const label = `<div class="wo-timeline-label">${escapeHtml(event.label || event.type || 'event')}
+      ${event.status ? `<span class="wo-timeline-status">${escapeHtml(String(event.status))}</span>` : ''}
+    </div>`;
+
+    return `
+      <li class="wo-timeline-item">
+        <div class="wo-timeline-meta">${type}${ts}</div>
+        ${label}
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <div class="wo-drawer-section">
+      ${heading}
+      <ol class="wo-timeline-list">${items}</ol>
+    </div>
+  `;
+}
+
+function formatTimelineTimestamp(value) {
+  if (!value) return '';
+  try {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleString();
+    }
+  } catch (err) {
+    // ignore
+  }
+  return String(value);
 }
 
 // I-O Tab
@@ -874,7 +924,7 @@ function renderLogsTab(wo) {
     const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `
       <div class="wo-drawer-section">
-        <h3>📜 Log Tail (last 100 lines)</h3>
+        <h3>📜 Log Tail (last 200 lines)</h3>
         <div class="wo-drawer-code">${logLines}</div>
       </div>
     `;
