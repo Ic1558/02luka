@@ -127,48 +127,6 @@ function initTabs() {
     showPanel(defaultPanel);
   }
 
-  const tabOverview = document.getElementById('tab-overview');
-  const tabWos = document.getElementById('tab-wos');
-  const tabWoHistory = document.getElementById('tab-wo-history');
-
-  const viewOverview = document.getElementById('view-overview');
-  const viewWos = document.getElementById('view-wos');
-  const viewWoHistory = document.getElementById('view-wo-history');
-
-  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
-    const buttons = [tabOverview, tabWos, tabWoHistory];
-    const views = [viewOverview, viewWos, viewWoHistory];
-
-    function setActiveButton(target) {
-      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
-    }
-
-    function show(view) {
-      views.forEach((v) => v.classList.add('hidden'));
-      view.classList.remove('hidden');
-    }
-
-    tabOverview.addEventListener('click', () => {
-      setActiveButton(tabOverview);
-      show(viewOverview);
-    });
-
-    tabWos.addEventListener('click', () => {
-      setActiveButton(tabWos);
-      show(viewWos);
-    });
-
-    tabWoHistory.addEventListener('click', () => {
-      setActiveButton(tabWoHistory);
-      show(viewWoHistory);
-      if (!woHistoryLoadedOnce) {
-        loadWoHistory();
-      }
-    });
-
-    setActiveButton(tabOverview);
-    show(viewOverview);
-  }
 }
 
 function showErrorBanner(id, message) {
@@ -843,6 +801,44 @@ function initWoHistoryTab() {
   });
 }
 
+function initWorkOrderTabs() {
+  const tabButtons = document.querySelectorAll('#work-orders-panel .tab-button');
+  const tabPanels = document.querySelectorAll('#work-orders-panel .tab-panel');
+
+  if (!tabButtons.length || !tabPanels.length) {
+    return;
+  }
+
+  function showTab(tabName) {
+    tabPanels.forEach((panel) => {
+      const shouldShow = panel.id === `tab-${tabName}`;
+      if (shouldShow) {
+        panel.removeAttribute('hidden');
+      } else {
+        panel.setAttribute('hidden', '');
+      }
+    });
+
+    tabButtons.forEach((btn) => {
+      const isActive = btn.dataset.tab === tabName;
+      btn.classList.toggle('tab-button--active', isActive);
+    });
+
+    if (tabName === 'history' && !woHistoryLoadedOnce) {
+      loadWoHistory();
+    }
+  }
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!btn.dataset.tab) return;
+      showTab(btn.dataset.tab);
+    });
+  });
+
+  showTab('overview');
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) {
     return '';
@@ -1215,6 +1211,7 @@ function initRealityPanel() {
 
 function initDashboard() {
   initTabs();
+  initWorkOrderTabs();
   initWoHistoryTab();
   initWoFilters();
   loadWos();

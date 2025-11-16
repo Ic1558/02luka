@@ -15,8 +15,8 @@ This is a **front-end only** feature.
 ## Files
 
 - `apps/dashboard/index.html`
-  - Adds "History" tab button to the Work Orders view switcher.
-  - Adds `#view-wo-history` panel containing:
+  - Adds "History" tab button (`data-tab="history"`) to the Work Orders view switcher.
+  - Adds `#tab-history` panel containing:
     - Range selector (`#wo-history-range`).
     - Status selector (`#wo-history-status`).
     - Summary container (`#wo-history-summary`).
@@ -41,8 +41,9 @@ This is a **front-end only** feature.
   - Init:
     - `initWoHistoryTab()`:
       - Wires change handlers on range + status selectors.
-    - Updates tab handler to:
-      - Call `loadWoHistory()` on first switch to History tab.
+    - `initWorkOrderTabs()`:
+      - Handles Overview / Work Orders / History buttons.
+      - Calls `loadWoHistory()` on first switch to History tab.
 
 - `g/reports/system/wo_history_timeline_feature_20251116.md`
   - This document.

@@ -74,7 +74,8 @@
       .tabs a:hover,
       .tabs button:hover,
       .tabs a:focus,
-      .tabs button:focus {
+      .tabs button:focus,
+      .tab-button--active {
         background: rgba(56, 189, 248, 0.12);
         color: #f8fafc;
       }
@@ -920,20 +921,20 @@
 
         <!-- Tabs navigation -->
         <nav class="tabs">
-          <button id="tab-overview" type="button">Overview</button>
-          <button id="tab-wos" type="button">Work Orders</button>
-          <button id="tab-wo-history" type="button">History</button>
+          <button class="tab-button" data-tab="overview" type="button">Overview</button>
+          <button class="tab-button" data-tab="wos" type="button">Work Orders</button>
+          <button class="tab-button" data-tab="history" type="button">History</button>
         </nav>
 
         <!-- Existing sections -->
-        <section id="view-overview">
+        <section id="tab-overview" class="tab-panel">
           <p>
             Use this view to see aggregate WO metrics and high-level signals. Additional
             visualizations will land here as the WO command center evolves.
           </p>
         </section>
 
-        <section id="view-wos" class="hidden">
+        <section id="tab-wos" class="tab-panel" hidden>
           <header class="wos-header">
             <h2>Work Orders</h2>
             <div class="wos-filters">
@@ -963,7 +964,7 @@
         </section>
 
         <!-- NEW: Global WO History view -->
-        <section id="view-wo-history" class="hidden">
+        <section id="tab-history" class="tab-panel" hidden>
           <header class="wo-history-header">
             <h2>Work Order History</h2>
             <p class="wo-history-subtitle">
