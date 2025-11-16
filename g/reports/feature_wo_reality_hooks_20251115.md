@@ -45,9 +45,9 @@ Response (simplified):
 ```
 
 Tool: `tools/wo_reality_snapshot.zsh`
-- Usage: `tools/wo_reality_snapshot.zsh WO-20251115-001`
+- Usage: `tools/wo_reality_snapshot.zsh [--api-base URL] WO-20251115-001`
 - Output: `g/reports/system/reality_hooks/WO-WO-20251115-001.json`
-- Config: honors `WO_API_BASE` (defaults to `http://localhost:8767`)
+- Config: honors `WO_API_BASE` (defaults to `http://localhost:8767`) or `--api-base`
 - Purpose: Stable JSON snapshot for agents, CI, and dashboards.
 
 ## Non-Goals

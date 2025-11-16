@@ -1,23 +1,55 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-# Simple Reality Hook snapshot script.
-# Fetches WO insights and stores them in g/reports/system/reality_hooks/.
-# Honors WO_API_BASE env var for non-default dashboard ports.
+usage() {
+  cat >&2 <<'EOF'
+Usage: tools/wo_reality_snapshot.zsh [options] WO_ID
+
+Options:
+  --api-base URL  Override the dashboard API base (default: http://localhost:8767)
+
+Environment variables:
+  WO_API_BASE     Alternative way to override the API base.
+EOF
+  exit 1
+}
 
 BASE="${HOME}/02luka"
 REPORT_DIR="${BASE}/g/reports/system/reality_hooks"
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 WO_ID" >&2
-  exit 1
-fi
+API_BASE_URL="${WO_API_BASE:-http://localhost:8767}"
+WO_ID=""
 
-WO_ID="$1"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --api-base)
+      shift || usage
+      API_BASE_URL="$1"
+      ;;
+    --api-base=*)
+      API_BASE_URL="${1#*=}"
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      if [ -z "${WO_ID}" ]; then
+        WO_ID="$1"
+      else
+        echo "Error: multiple WO IDs provided" >&2
+        usage
+      fi
+      ;;
+  esac
+  shift
+done
+
+if [ -z "${WO_ID}" ]; then
+  usage
+fi
 
 mkdir -p "${REPORT_DIR}"
 
-API_BASE_URL="${WO_API_BASE:-http://localhost:8767}"
 URL="${API_BASE_URL%/}/api/wos/${WO_ID}/insights"
 echo "Using API base: ${API_BASE_URL}" >&2
 
