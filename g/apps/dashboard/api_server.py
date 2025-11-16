@@ -263,16 +263,19 @@ class APIHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        if path == '/api/wos':
+        if path.rstrip('/') == '/api/wos':
             self.handle_list_wos(query)
         elif path.startswith('/api/wos/'):
-            parts = path.split('/')
-            if len(parts) == 4:
-                wo_id = parts[-1]
-                self.handle_get_wo(wo_id, query)
-            elif len(parts) == 5 and parts[-1] == 'insights':
-                wo_id = parts[-2]
-                self.handle_get_wo_insights(wo_id, query)
+            segments = [segment for segment in path.split('/') if segment]
+            # Expected shapes: api/wos/<id> or api/wos/<id>/insights
+            if len(segments) >= 3 and segments[0] == 'api' and segments[1] == 'wos':
+                wo_id = segments[2]
+                if len(segments) == 3:
+                    self.handle_get_wo(wo_id, query)
+                elif len(segments) == 4 and segments[-1] == 'insights':
+                    self.handle_get_wo_insights(wo_id, query)
+                else:
+                    self.send_error(404, "Not found")
             else:
                 self.send_error(404, "Not found")
         elif path == '/api/services':
@@ -617,41 +620,32 @@ class APIHandler(BaseHTTPRequestHandler):
         if not mls_file.exists():
             raise FileNotFoundError("MLS lessons file not found")
 
-        with open(mls_file, 'r', encoding='utf-8') as handle:
-            content = handle.read().strip()
-
         entries = []
-        if not content:
-            return entries
+        with open(mls_file, 'r', encoding='utf-8') as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
 
-        parts = content.split('}\n{')
-        for index, part in enumerate(parts):
-            if index == 0:
-                json_str = part + '}'
-            elif index == len(parts) - 1:
-                json_str = '{' + part
-            else:
-                json_str = '{' + part + '}'
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {exc}")
+                    continue
 
-            try:
-                entry = json.loads(json_str)
-            except json.JSONDecodeError as exc:
-                print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {exc}")
-                continue
-
-            entries.append({
-                'id': entry.get('id', 'MLS-UNKNOWN'),
-                'type': entry.get('type', 'other'),
-                'title': entry.get('title', 'Untitled'),
-                'details': entry.get('description', ''),
-                'context': entry.get('context', ''),
-                'time': entry.get('timestamp', ''),
-                'related_wo': entry.get('related_wo'),
-                'related_session': entry.get('related_session'),
-                'tags': entry.get('tags', []),
-                'verified': entry.get('verified', False),
-                'score': entry.get('usefulness_score', 0)
-            })
+                entries.append({
+                    'id': entry.get('id', 'MLS-UNKNOWN'),
+                    'type': entry.get('type', 'other'),
+                    'title': entry.get('title', 'Untitled'),
+                    'details': entry.get('description', ''),
+                    'context': entry.get('context', ''),
+                    'time': entry.get('timestamp', ''),
+                    'related_wo': entry.get('related_wo'),
+                    'related_session': entry.get('related_session'),
+                    'tags': entry.get('tags', []),
+                    'verified': entry.get('verified', False),
+                    'score': entry.get('usefulness_score', 0)
+                })
 
         return entries
 
