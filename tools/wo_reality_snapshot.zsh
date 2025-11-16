@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Simple Reality Hook snapshot script.
 # Fetches WO insights and stores them in g/reports/system/reality_hooks/.
+# Honors WO_API_BASE env var for non-default dashboard ports.
 
 BASE="${HOME}/02luka"
 REPORT_DIR="${BASE}/g/reports/system/reality_hooks"
@@ -16,7 +17,9 @@ WO_ID="$1"
 
 mkdir -p "${REPORT_DIR}"
 
-URL="http://localhost:8080/api/wos/${WO_ID}/insights"
+API_BASE_URL="${WO_API_BASE:-http://localhost:8767}"
+URL="${API_BASE_URL%/}/api/wos/${WO_ID}/insights"
+echo "Using API base: ${API_BASE_URL}" >&2
 
 TMP_FILE="$(mktemp)"
 OUT_FILE="${REPORT_DIR}/WO-${WO_ID}.json"
