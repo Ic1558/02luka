@@ -602,6 +602,7 @@ function renderWosTable(wos) {
 
   if (!Array.isArray(wos) || !wos.length) {
     tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    highlightActiveTimelineRow();
     return;
   }
 
@@ -620,6 +621,7 @@ function renderWosTable(wos) {
 
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7">No work orders match your filters.</td></tr>';
+    highlightActiveTimelineRow();
     return;
   }
 
@@ -635,6 +637,8 @@ function renderWosTable(wos) {
 
   sorted.forEach((wo) => {
     const tr = document.createElement('tr');
+    const woId = wo?.id ? String(wo.id) : '';
+    tr.dataset.woId = woId;
 
     const idTd = document.createElement('td');
     const idCode = document.createElement('code');
@@ -663,7 +667,9 @@ function renderWosTable(wos) {
     btn.type = 'button';
     btn.textContent = 'Timeline';
     btn.className = 'wo-timeline-button';
-    btn.dataset.woId = wo?.id || '';
+    btn.dataset.woId = woId;
+    btn.setAttribute('aria-pressed', currentTimelineWoId && woId === currentTimelineWoId ? 'true' : 'false');
+    btn.setAttribute('aria-label', woId ? `Open timeline for work order ${woId}` : 'Open work order timeline');
     btn.addEventListener('click', () => {
       const woId = wo?.id;
       if (!woId) return;
@@ -679,8 +685,14 @@ function renderWosTable(wos) {
     tr.appendChild(actionsTd);
     tr.appendChild(timelineTd);
 
+    if (currentTimelineWoId && woId === currentTimelineWoId) {
+      tr.classList.add('wo-timeline-active-row');
+    }
+
     tbody.appendChild(tr);
   });
+
+  highlightActiveTimelineRow();
 }
 
 function getWoSearchableText(wo) {
@@ -741,11 +753,24 @@ function formatWoTime(value) {
 function initWoTimeline() {
   const closeBtn = document.getElementById('wo-timeline-close');
   const section = document.getElementById('wo-timeline-section');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const contentEl = document.getElementById('wo-timeline-content');
   if (!closeBtn || !section) return;
 
   closeBtn.addEventListener('click', () => {
     section.classList.add('hidden');
     currentTimelineWoId = null;
+    if (titleEl) {
+      titleEl.textContent = 'WO Timeline';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = 'Select a work order from the table to see its history.';
+    }
+    if (contentEl) {
+      contentEl.innerHTML = '';
+    }
+    highlightActiveTimelineRow();
   });
 }
 
@@ -758,6 +783,7 @@ async function openWoTimeline(woId) {
   if (!section || !titleEl || !subtitleEl || !contentEl) return;
 
   currentTimelineWoId = woId;
+  highlightActiveTimelineRow();
 
   titleEl.textContent = `WO Timeline — ${woId}`;
   subtitleEl.textContent = 'Loading timeline and log tail…';
@@ -881,6 +907,20 @@ function renderWoTimelineContent(wo) {
   contentEl.innerHTML = '';
   contentEl.appendChild(eventsColumn);
   contentEl.appendChild(logsColumn);
+}
+
+function highlightActiveTimelineRow() {
+  const rows = document.querySelectorAll('#wos-table-body tr');
+  const activeId = currentTimelineWoId ? String(currentTimelineWoId) : '';
+  rows.forEach((row) => {
+    const rowId = row.dataset.woId || '';
+    const isActive = Boolean(activeId && rowId === activeId);
+    row.classList.toggle('wo-timeline-active-row', isActive);
+    const button = row.querySelector('.wo-timeline-button');
+    if (button) {
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+  });
 }
 
 function buildWoEventsList(wo) {

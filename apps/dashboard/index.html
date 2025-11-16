@@ -505,6 +505,24 @@
         cursor: pointer;
       }
 
+      #wos-table-body tr {
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      #wos-table-body tr.wo-timeline-active-row {
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      #wos-table-body tr.wo-timeline-active-row code {
+        color: #bae6fd;
+      }
+
+      #wos-table-body tr.wo-timeline-active-row .wo-timeline-button {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.6);
+        color: #e0f2fe;
+      }
+
       .wo-timeline-button {
         border-radius: 999px;
         border: 1px solid #1f2937;
@@ -904,9 +922,7 @@
                 </tr>
               </thead>
               <tbody id="wos-table-body">
-                <tr>
-                  <td colspan="7">Loading…</td>
-                </tr>
+                <!-- JS populated -->
               </tbody>
             </table>
           </div>

@@ -21,6 +21,7 @@ This is a **front-end only** feature that uses the existing
       - `#wo-timeline-subtitle`
       - `#wo-timeline-close` button.
     - Content container: `#wo-timeline-content`.
+  - Highlights the selected WO row via `.wo-timeline-active-row` so operators always know which WO is open in the panel.
 
 - `apps/dashboard/dashboard.js`
   - State:
@@ -35,6 +36,7 @@ This is a **front-end only** feature that uses the existing
       - Fetches `/api/wos/:id?tail=200`.
       - Updates title, subtitle, and panel visibility.
       - Delegates to `renderWoTimelineContent(wo)`.
+      - Keeps the originating row highlighted via `highlightActiveTimelineRow()`.
     - `buildTimelineSubtitle(wo)`:
       - Shows status + important timestamps.
     - `formatWoTime(value)`:
@@ -48,6 +50,7 @@ This is a **front-end only** feature that uses the existing
         - `created_at`, `started_at`, `finished_at`,
           `updated_at`/`last_update`
         - Optional `wo.events[]`.
+    - `highlightActiveTimelineRow()` keeps the WO table button state (`aria-pressed`) and background in sync with the panel, and `initWoTimeline()` now resets the panel text/content when closing.
 
 - `g/reports/system/wo_timeline_feature_20251115.md`
   - This document.
@@ -58,7 +61,9 @@ This is a **front-end only** feature that uses the existing
   - Opens the panel.
   - Loads detailed WO info with `tail=200`.
   - Shows lifecycle events on the left, log tail on the right.
+  - Highlights the active WO row until the panel is closed.
 - Clicking **Close** hides the panel.
+  - The panel header resets to the default helper text and the table highlight is cleared.
 - If there is no timeline data:
   - Shows a friendly "No timeline events available" message.
 - If there is no log tail:
