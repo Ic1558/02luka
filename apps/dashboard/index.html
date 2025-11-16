@@ -492,32 +492,6 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
-      .wo-history-header {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-
-      .wo-history-header h2 {
-        margin: 0;
-      }
-
-      .wo-history-filters {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-
-      .wo-history-filters label {
-        display: flex;
-        flex-direction: column;
-        font-size: 0.875rem;
-        color: rgba(226, 232, 240, 0.8);
-      }
-
       .modal {
         position: fixed;
         inset: 0;
@@ -625,6 +599,103 @@
         padding: 0.5rem;
         border-radius: 0.5rem;
         font-size: 0.75rem;
+      }
+
+      .wo-history-header {
+        margin-bottom: 0.75rem;
+      }
+
+      .wo-history-header h2 {
+        font-size: 1rem;
+        margin: 0;
+      }
+
+      .wo-history-subtitle {
+        margin: 0.15rem 0 0;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+
+      .wo-history-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+      }
+
+      .wo-history-controls select {
+        background: #020617;
+        color: #e5e7eb;
+        border: 1px solid #4b5563;
+        border-radius: 0.25rem;
+        padding: 0.15rem 0.4rem;
+      }
+
+      .wo-history-summary {
+        font-size: 0.8rem;
+        margin-bottom: 0.75rem;
+        color: #e5e7eb;
+      }
+
+      .wo-history-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .wo-history-day {
+        border-left: 2px solid #374151;
+        padding-left: 0.75rem;
+      }
+
+      .wo-history-day-header {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+      }
+
+      .wo-history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.8rem;
+        padding: 0.15rem 0;
+      }
+
+      .wo-history-item-main {
+        display: flex;
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+
+      .wo-history-item-status {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        border-radius: 999px;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid #4b5563;
+      }
+
+      .wo-history-item-status--completed {
+        border-color: #22c55e;
+        color: #22c55e;
+      }
+
+      .wo-history-item-status--failed {
+        border-color: #ef4444;
+        color: #ef4444;
+      }
+
+      .wo-history-item-title {
+        font-weight: 500;
+      }
+
+      .wo-history-item-meta {
+        font-size: 0.7rem;
+        color: #9ca3af;
       }
 
       .wo-timeline-button {
@@ -851,7 +922,7 @@
         <nav class="tabs">
           <button id="tab-overview" type="button">Overview</button>
           <button id="tab-wos" type="button">Work Orders</button>
-          <button id="tab-wo-history" type="button">WO History</button>
+          <button id="tab-wo-history" type="button">History</button>
         </nav>
 
         <!-- Existing sections -->
@@ -895,45 +966,39 @@
         <section id="view-wo-history" class="hidden">
           <header class="wo-history-header">
             <h2>Work Order History</h2>
-            <div class="wo-history-filters">
-              <label>
-                Status:
-                <select id="wo-history-status-filter">
-                  <option value="">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="running">Running</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </label>
-              <label>
-                Max rows:
-                <select id="wo-history-limit">
-                  <option value="50">50</option>
-                  <option value="100" selected>100</option>
-                  <option value="200">200</option>
-                </select>
-              </label>
-            </div>
+            <p class="wo-history-subtitle">
+              Grouped by day, showing completed / failed runs and their durations.
+            </p>
           </header>
 
-          <table class="wo-history-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Started</th>
-                <th>Status</th>
-                <th>Agent</th>
-                <th>Type</th>
-                <th>Summary</th>
-                <th>Timeline</th>
-              </tr>
-            </thead>
-            <tbody id="wo-history-body">
-              <!-- filled by JS -->
-            </tbody>
-          </table>
+          <div class="wo-history-controls">
+            <label>
+              Show:
+              <select id="wo-history-range">
+                <option value="50">Last 50 WOs</option>
+                <option value="100">Last 100 WOs</option>
+                <option value="200">Last 200 WOs</option>
+              </select>
+            </label>
+
+            <label>
+              Status:
+              <select id="wo-history-status">
+                <option value="completed,failed,error">Completed + Failed</option>
+                <option value="">All statuses</option>
+                <option value="completed">Completed only</option>
+                <option value="failed,error">Failed only</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="wo-history-summary" class="wo-history-summary">
+            <!-- filled by JS: totals, success rate, avg duration -->
+          </div>
+
+          <div id="wo-history-timeline" class="wo-history-timeline">
+            <!-- filled by JS: date groups + WOs -->
+          </div>
         </section>
       </section>
     </main>
