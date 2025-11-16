@@ -18,6 +18,12 @@ workflows.
       - `status: "error"` if snapshot is invalid.
       - `status: "ok"`, `snapshot_path`, and `data` when successful.
 
+- `apps/dashboard/wo_dashboard_server.js`
+  - Adds the same `GET /api/reality/snapshot` endpoint for the Node-based dashboard server.
+  - Looks in `g/reports/system/`, `reports/system/`, and the logs parent
+    directory for the newest `reality_hooks_snapshot_*.json` file (using
+    modification time).
+
 - `apps/dashboard/index.html` **and** `g/apps/dashboard/index.html`
   - New `Reality` tab / nav link (`#tab-reality` / `#reality-panel`).
   - New Reality section with:
