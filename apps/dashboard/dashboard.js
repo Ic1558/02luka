@@ -223,8 +223,17 @@ function renderRealityError(message) {
 
   if (meta) meta.textContent = `Reality snapshot error: ${message}`;
   if (deployEl) deployEl.textContent = '';
-  if (saveBody) saveBody.innerHTML = '';
+  setRealitySaveMessage(saveBody, 'Unable to load save.sh runs.');
   if (orchEl) orchEl.textContent = '';
+}
+
+function setRealitySaveMessage(saveBody, message) {
+  if (!saveBody) return;
+  saveBody.innerHTML = `
+    <tr>
+      <td colspan="7">${escapeHtml(message)}</td>
+    </tr>
+  `;
 }
 
 function renderRealitySnapshot(payload) {
@@ -240,7 +249,7 @@ function renderRealitySnapshot(payload) {
   if (!payload || payload.status === 'no_snapshot') {
     meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
     deployEl.textContent = '';
-    saveBody.innerHTML = '';
+    setRealitySaveMessage(saveBody, 'No save.sh runs captured.');
     orchEl.textContent = '';
     return;
   }
@@ -267,12 +276,10 @@ function renderRealitySnapshot(payload) {
     deployEl.textContent = 'No deployment report in snapshot.';
   }
 
-  saveBody.innerHTML = '';
   if (!saveRuns.length) {
-    const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="7">No save.sh runs captured.</td>';
-    saveBody.appendChild(row);
+    setRealitySaveMessage(saveBody, 'No save.sh runs captured.');
   } else {
+    saveBody.innerHTML = '';
     saveRuns.forEach((run) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `

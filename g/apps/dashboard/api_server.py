@@ -561,7 +561,7 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.send_json_response(response)
                 return
 
-            latest_file = max(snapshot_files)
+            latest_file = max(snapshot_files, key=os.path.getmtime)
             with open(latest_file, 'r') as f:
                 try:
                     data = json.load(f)

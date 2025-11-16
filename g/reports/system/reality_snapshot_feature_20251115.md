@@ -13,6 +13,8 @@ workflows.
   - Adds `GET /api/reality/snapshot`:
     - Locates latest `reality_hooks_snapshot_*.json` under
       `g/reports/system/`.
+    - Picks the newest file by modification time so we never regress to an older snapshot
+      even if filenames are out of lexicographic order.
     - Returns:
       - `status: "no_snapshot"` if none found.
       - `status: "error"` if snapshot is invalid.
@@ -39,6 +41,8 @@ workflows.
   - Hooks:
     - `tab-reality` → shows `view-reality` and triggers `loadRealitySnapshot()` in the static dashboard.
     - `refreshAllData()` now pulls the snapshot inside the g/ dashboard to keep data current.
+  - Static dashboard now shows a descriptive table row when errors occur or when the save.sh
+    portion of the snapshot is empty, keeping the layout stable.
 
 ## Behavior
 
