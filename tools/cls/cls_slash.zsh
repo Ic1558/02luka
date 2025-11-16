@@ -150,7 +150,19 @@ fi
 # Copy to clipboard (macOS)
 command -v pbcopy >/dev/null && cat "$OUT" | pbcopy || true
 
+# Ledger integration: Log CLS command execution
+LEDGER_HOOK="$ROOT/tools/cls_ledger_hook.zsh"
+TASK_ID="cls-$(date +%y%m%d-%H%M%S)"
+if [[ -x "$LEDGER_HOOK" ]]; then
+  "$LEDGER_HOOK" "task_start" "$TASK_ID" "CLS: $CMD ${BRIEF:-(none)}" "{\"command\":\"$CMD\",\"brief\":\"${BRIEF:-(none)}\",\"output_file\":\"$OUT\"}" || true
+fi
+
 print -P "%F{green}✓%f prompt packet: $OUT"
 if [[ "$NEED_CLC" = "1" ]]; then
   print -P "%F{yellow}!%f flagged for CLC (complexity threshold)"
+fi
+
+# Ledger integration: Log task result
+if [[ -x "$LEDGER_HOOK" ]]; then
+  "$LEDGER_HOOK" "task_result" "$TASK_ID" "CLS: $CMD completed" "{\"status\":\"success\",\"output_file\":\"$OUT\",\"escalate_to_clc\":$NEED_CLC}" || true
 fi

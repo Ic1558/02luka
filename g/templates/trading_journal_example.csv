@@ -1,0 +1,3 @@
+Date,Time,Market,Account,Symbol,Instrument,Side,Position Effect,Volume,Price,Fee,Tax,Net P/L,Order ID,Strategy,Remark
+2025-11-15,09:15:22,TFEX,BIZ-01,S50Z25,Futures,Buy,Open,2,950.25,12.5,0,-150.0,ORD-123456,scalp,Opened hedge leg
+2025-11-15,10:32:10,TFEX,BIZ-01,S50Z25,Futures,Sell,Close,1,955.75,6.25,0,200.0,ORD-123789,scalp,Partial exit
