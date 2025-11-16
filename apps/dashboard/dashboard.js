@@ -515,6 +515,18 @@ async function loadWos() {
 
 // === Summary cards ===
 
+function setSummaryText(cardEl, main, sub) {
+  if (!cardEl) return;
+  const mainEl = cardEl.querySelector('.summary-card-main');
+  const subEl = cardEl.querySelector('.summary-card-sub');
+  if (mainEl) {
+    mainEl.textContent = main;
+  }
+  if (subEl) {
+    subEl.textContent = sub;
+  }
+}
+
 function initSummaryCards() {
   const wosCard = document.getElementById('summary-wos');
   const servicesCard = document.getElementById('summary-services');
@@ -542,11 +554,18 @@ async function refreshSummaryWos(cardEl) {
   if (!cardEl) return;
 
   try {
-    setText(cardEl, '—', 'loading…');
-    const wos = await fetchJSON('/api/wos');
+    setSummaryText(cardEl, '—', 'loading…');
+    const payload = await fetchJSON('/api/wos');
+    const wos = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.wos)
+        ? payload.wos
+        : Array.isArray(payload?.results)
+          ? payload.results
+          : null;
 
     if (!Array.isArray(wos)) {
-      setText(cardEl, '0', 'no data');
+      setSummaryText(cardEl, '0', 'no data');
       return;
     }
 
@@ -570,10 +589,10 @@ async function refreshSummaryWos(cardEl) {
       subParts.push(`failed: ${failed}`);
     }
 
-    setText(cardEl, String(total), subParts.join(' | '));
+    setSummaryText(cardEl, String(total), subParts.join(' | '));
   } catch (error) {
     console.error('Failed to refresh WO summary:', error);
-    setText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading');
   }
 }
 
@@ -581,7 +600,7 @@ async function refreshSummaryServices(cardEl) {
   if (!cardEl) return;
 
   try {
-    setText(cardEl, '—', 'loading…');
+    setSummaryText(cardEl, '—', 'loading…');
     const data = await fetchJSON('/api/services');
 
     const summary = data?.summary ?? {};
@@ -595,10 +614,10 @@ async function refreshSummaryServices(cardEl) {
     }
 
     const mainValue = total > 0 ? `${running}/${total}` : String(running);
-    setText(cardEl, mainValue, subParts.join(' | '));
+    setSummaryText(cardEl, mainValue, subParts.join(' | '));
   } catch (error) {
     console.error('Failed to refresh services summary:', error);
-    setText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading');
   }
 }
 
@@ -606,7 +625,7 @@ async function refreshSummaryMls(cardEl) {
   if (!cardEl) return;
 
   try {
-    setText(cardEl, '—', 'loading…');
+    setSummaryText(cardEl, '—', 'loading…');
     const data = await fetchJSON('/api/mls');
 
     const summary = data?.summary ?? {};
@@ -619,10 +638,10 @@ async function refreshSummaryMls(cardEl) {
       subParts.push(`failures: ${failures}`);
     }
 
-    setText(cardEl, String(total), subParts.join(' | '));
+    setSummaryText(cardEl, String(total), subParts.join(' | '));
   } catch (error) {
     console.error('Failed to refresh MLS summary:', error);
-    setText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading');
   }
 }
 
@@ -893,18 +912,6 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-function setText(el, main, sub) {
-  if (!el) return;
-  const mainEl = el.querySelector('.summary-card-main');
-  const subEl = el.querySelector('.summary-card-sub');
-  if (mainEl) {
-    mainEl.textContent = main;
-  }
-  if (subEl) {
-    subEl.textContent = sub;
-  }
 }
 
 function initWoHistoryFilters() {
