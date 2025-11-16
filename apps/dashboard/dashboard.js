@@ -457,7 +457,7 @@ function renderWoHistory(wos, limit) {
   const maxRows = Number.isFinite(limit) ? limit : 100;
 
   if (!Array.isArray(wos) || !wos.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No work orders found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
     return;
   }
 
@@ -489,6 +489,19 @@ function renderWoHistory(wos, limit) {
       <td>${escapeHtml(summary)}</td>
     `;
 
+    const timelineCell = document.createElement('td');
+    const timelineButton = document.createElement('button');
+    timelineButton.type = 'button';
+    timelineButton.className = 'wo-timeline-button';
+    timelineButton.textContent = 'View';
+    if (wo?.id) {
+      timelineButton.addEventListener('click', () => openWoTimeline(wo.id));
+    } else {
+      timelineButton.disabled = true;
+    }
+    timelineCell.appendChild(timelineButton);
+    tr.appendChild(timelineCell);
+
     tbody.appendChild(tr);
   });
 }
@@ -511,6 +524,152 @@ function initWoHistoryFilters() {
 
   statusFilter?.addEventListener('change', () => loadWoHistory());
   limitSelect?.addEventListener('change', () => loadWoHistory());
+}
+
+async function openWoTimeline(woId) {
+  if (!woId) return;
+
+  const modal = document.getElementById('wo-timeline-modal');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const metaEl = document.getElementById('wo-timeline-meta');
+  const eventsEl = document.getElementById('wo-timeline-events');
+  const logEl = document.getElementById('wo-timeline-log-tail');
+
+  if (!modal || !titleEl || !metaEl || !eventsEl || !logEl) {
+    return;
+  }
+
+  titleEl.textContent = `WO Timeline: ${woId}`;
+  metaEl.textContent = 'Loading…';
+  eventsEl.innerHTML = '';
+  logEl.textContent = '';
+
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      metaEl.textContent = `Failed to load WO: HTTP ${res.status}`;
+      return;
+    }
+    const wo = await res.json();
+    renderWoTimeline(wo);
+  } catch (error) {
+    metaEl.textContent = `Error loading WO: ${String(error)}`;
+  }
+}
+
+function closeWoTimeline() {
+  const modal = document.getElementById('wo-timeline-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+}
+
+function renderWoTimeline(wo = {}) {
+  const metaEl = document.getElementById('wo-timeline-meta');
+  const eventsEl = document.getElementById('wo-timeline-events');
+  const logEl = document.getElementById('wo-timeline-log-tail');
+
+  if (!metaEl || !eventsEl || !logEl) {
+    return;
+  }
+
+  const id = wo.id || 'UNKNOWN';
+  const status = wo.status || 'unknown';
+  const started = wo.started_at || wo.created_at || '';
+  const finished = wo.finished_at || '';
+  const updated = wo.updated_at || wo.last_update || '';
+
+  let metaText = `ID: ${id} · Status: ${status}`;
+  if (started) metaText += ` · Started: ${started}`;
+  if (finished) metaText += ` · Finished: ${finished}`;
+  if (updated) metaText += ` · Last update: ${updated}`;
+  metaEl.textContent = metaText;
+
+  const logLines = Array.isArray(wo.log_tail)
+    ? wo.log_tail.map((line) => String(line || ''))
+    : typeof wo.log_tail === 'string'
+    ? wo.log_tail.split(/\r?\n/)
+    : [];
+
+  const events = buildTimelineEventsFromWo(wo, logLines);
+
+  eventsEl.innerHTML = '';
+  if (!events.length) {
+    const placeholder = document.createElement('li');
+    placeholder.textContent = 'No timeline events available yet.';
+    eventsEl.appendChild(placeholder);
+  } else {
+    events.forEach((event) => {
+      const li = document.createElement('li');
+      if (event.level === 'error') {
+        li.classList.add('wo-event-error');
+      }
+      li.innerHTML = `
+        <div>${escapeHtml(event.label || '')}</div>
+        <time>${escapeHtml(event.time || '')}</time>
+        ${event.detail ? `<div class="wo-event-detail">${escapeHtml(event.detail)}</div>` : ''}
+      `;
+      eventsEl.appendChild(li);
+    });
+  }
+
+  logEl.textContent = logLines.join('\n');
+}
+
+function buildTimelineEventsFromWo(wo = {}, logLines = []) {
+  const events = [];
+
+  if (wo.created_at) {
+    events.push({
+      time: wo.created_at,
+      label: 'Created',
+      detail: wo.created_by || '',
+      level: 'info'
+    });
+  }
+
+  if (wo.started_at) {
+    events.push({
+      time: wo.started_at,
+      label: 'Started',
+      detail: wo.worker || wo.agent || '',
+      level: 'info'
+    });
+  }
+
+  if (wo.finished_at) {
+    events.push({
+      time: wo.finished_at,
+      label: 'Finished',
+      detail: wo.result || '',
+      level: wo.status === 'failed' ? 'error' : 'info'
+    });
+  }
+
+  if (!wo.finished_at && wo.status) {
+    events.push({
+      time: wo.updated_at || wo.last_update || '',
+      label: `Status: ${wo.status}`,
+      detail: wo.last_error || '',
+      level: wo.status === 'failed' ? 'error' : 'info'
+    });
+  }
+
+  logLines.slice(-5).forEach((line) => {
+    const trimmed = String(line || '').trim();
+    if (!trimmed) return;
+    events.push({
+      time: '',
+      label: 'Log tail',
+      detail: trimmed,
+      level: trimmed.toLowerCase().includes('error') ? 'error' : 'info'
+    });
+  });
+
+  return events;
 }
 
 function formatRelativeTime(isoString) {
