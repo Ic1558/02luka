@@ -206,25 +206,41 @@
         margin-bottom: 0.75rem;
       }
 
-      .wos-filters {
+      .wo-section {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
+        flex-direction: column;
       }
 
-      .wo-filter-button {
+      .wo-header {
+        margin-bottom: 0.75rem;
+      }
+
+      .wo-status-filters {
+        margin-bottom: 0.75rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .wo-status-filters .wo-status-chip {
         border-radius: 999px;
         border: 1px solid #1f2937;
-        padding: 0.15rem 0.6rem;
-        font-size: 0.75rem;
+        padding: 0.15rem 0.7rem;
+        font-size: 0.7rem;
         background: #020617;
         color: #e5e7eb;
         cursor: pointer;
+        white-space: nowrap;
       }
 
-      .wo-filter-button.active {
+      .wo-status-filters .wo-status-chip:hover {
         background: #111827;
-        border-color: #4b5563;
+      }
+
+      .wo-status-filters .wo-status-chip--active {
+        background: #fbbf24;
+        color: #111827;
+        border-color: #fbbf24;
       }
 
       .wos-summary {
@@ -863,32 +879,49 @@
         </section>
 
         <section id="view-wos" class="hidden">
-          <header class="wos-header">
-            <h2>Work Orders</h2>
-            <div class="wos-filters">
-              <button type="button" class="wo-filter-button active" data-status="all">All</button>
-              <button type="button" class="wo-filter-button" data-status="pending">Pending</button>
-              <button type="button" class="wo-filter-button" data-status="running">Running</button>
-              <button type="button" class="wo-filter-button" data-status="completed">Completed</button>
-              <button type="button" class="wo-filter-button" data-status="failed">Failed</button>
-            </div>
-            <div id="wos-summary" class="wos-summary"><!-- Filled by JS --></div>
-          </header>
+          <section class="wo-section">
+            <header class="wo-header">
+              <h2>Work Orders</h2>
+            </header>
 
-          <table id="wos-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Status</th>
-                <th>Started</th>
-                <th>Finished</th>
-                <th>Last Update</th>
-                <th>Actions</th>
-                <th>Timeline</th>
-              </tr>
-            </thead>
-            <tbody id="wos-table-body"><!-- JS populated --></tbody>
-          </table>
+            <div id="wo-status-filters" class="wo-status-filters">
+              <button type="button" data-status="" class="wo-status-chip wo-status-chip--active">
+                All
+              </button>
+              <button type="button" data-status="pending,running" class="wo-status-chip">
+                Active
+              </button>
+              <button type="button" data-status="pending" class="wo-status-chip">
+                Pending
+              </button>
+              <button type="button" data-status="running" class="wo-status-chip">
+                Running
+              </button>
+              <button type="button" data-status="completed" class="wo-status-chip">
+                Completed
+              </button>
+              <button type="button" data-status="failed,error" class="wo-status-chip">
+                Failed
+              </button>
+            </div>
+
+            <div id="wos-summary" class="wos-summary"><!-- Filled by JS --></div>
+
+            <table id="wos-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th>Started</th>
+                  <th>Finished</th>
+                  <th>Last Update</th>
+                  <th>Actions</th>
+                  <th>Timeline</th>
+                </tr>
+              </thead>
+              <tbody id="wos-table-body"><!-- JS populated --></tbody>
+            </table>
+          </section>
         </section>
 
         <!-- NEW: Global WO History view -->
