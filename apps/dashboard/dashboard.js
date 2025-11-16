@@ -7,6 +7,9 @@ let realityPanelInitialized = false;
 let servicesIntervalId;
 let mlsIntervalId;
 let currentMlsType = '';
+let allWos = [];
+let visibleWos = [];
+let currentWoFilter = 'all';
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -408,6 +411,204 @@ function createMLSCard(entry) {
   }
 
   return card;
+}
+
+// --- Work Orders list ---
+
+async function loadWos() {
+  try {
+    const res = await fetch('/api/wos', {
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch WOs', res.status);
+      return;
+    }
+    const payload = await res.json();
+    if (Array.isArray(payload)) {
+      allWos = payload;
+    } else if (Array.isArray(payload?.wos)) {
+      allWos = payload.wos;
+    } else if (Array.isArray(payload?.results)) {
+      allWos = payload.results;
+    } else {
+      allWos = [];
+    }
+    applyWoFilter();
+  } catch (error) {
+    console.error('Error loading WOs', error);
+  }
+}
+
+function initWoFilters() {
+  const buttons = document.querySelectorAll('.wo-filter-button');
+  if (!buttons.length) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const status = btn.getAttribute('data-status') || 'all';
+      setWoFilter(status);
+    });
+  });
+}
+
+function setWoFilter(statusKey) {
+  currentWoFilter = statusKey;
+  const buttons = document.querySelectorAll('.wo-filter-button');
+  buttons.forEach((btn) => {
+    const buttonStatus = btn.getAttribute('data-status') || 'all';
+    btn.classList.toggle('active', buttonStatus === statusKey);
+  });
+  applyWoFilter();
+}
+
+function applyWoFilter() {
+  let filtered = Array.isArray(allWos) ? allWos.slice() : [];
+  if (currentWoFilter !== 'all') {
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo?.status) === currentWoFilter);
+  }
+  visibleWos = filtered;
+  renderWosTable(filtered);
+  renderWoSummary(filtered);
+}
+
+function normalizeWoStatus(raw) {
+  const status = String(raw ?? '').toLowerCase();
+  if (!status) return 'pending';
+  if (['pending', 'queued', 'created'].includes(status)) return 'pending';
+  if (['running', 'in_progress', 'in-progress', 'working'].includes(status)) return 'running';
+  if (['completed', 'success', 'done'].includes(status)) return 'completed';
+  if (['failed', 'error', 'errored'].includes(status)) return 'failed';
+  return 'other';
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+
+    const idCell = document.createElement('td');
+    idCell.innerHTML = `<code>${escapeHtml(wo?.id ?? '')}</code>`;
+    tr.appendChild(idCell);
+
+    const statusCell = document.createElement('td');
+    const statusChip = document.createElement('span');
+    const norm = normalizeWoStatus(wo?.status);
+    let chipClass = 'wo-status-other';
+    if (norm === 'pending') chipClass = 'wo-status-pending';
+    else if (norm === 'running') chipClass = 'wo-status-running';
+    else if (norm === 'completed') chipClass = 'wo-status-completed';
+    else if (norm === 'failed') chipClass = 'wo-status-failed';
+    statusChip.className = `wo-status-chip ${chipClass}`;
+    statusChip.textContent = wo?.status || norm;
+    statusCell.appendChild(statusChip);
+    tr.appendChild(statusCell);
+
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.started_at || wo?.created_at)));
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.finished_at || wo?.completed_at)));
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.updated_at || wo?.last_update)));
+
+    const actionsCell = document.createElement('td');
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy ID';
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(String(wo?.id ?? ''));
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy ID';
+        }, 1200);
+      } catch (error) {
+        console.error('Failed to copy WO id', error);
+      }
+    });
+    actionsCell.appendChild(copyBtn);
+    tr.appendChild(actionsCell);
+
+    tr.appendChild(createTextCell(buildTimelineSummary(wo)));
+
+    tbody.appendChild(tr);
+  });
+}
+
+function createTextCell(value) {
+  const td = document.createElement('td');
+  td.textContent = value || '—';
+  return td;
+}
+
+function formatWoTimestamp(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+  return date.toLocaleString();
+}
+
+function buildTimelineSummary(wo) {
+  if (Array.isArray(wo?.timeline) && wo.timeline.length) {
+    const labels = wo.timeline
+      .map((event) => event?.label || event?.status || event?.state || event)
+      .filter(Boolean);
+    if (labels.length) {
+      return labels.join(' → ');
+    }
+  }
+  if (wo?.timeline_summary) return wo.timeline_summary;
+  if (typeof wo?.duration === 'number') {
+    return `${Math.round(wo.duration)}s`;
+  }
+  if (typeof wo?.duration_ms === 'number') {
+    const seconds = Math.max(0, Math.round(wo.duration_ms / 1000));
+    return `${seconds}s`;
+  }
+  return '—';
+}
+
+function renderWoSummary(filtered) {
+  const summaryEl = document.getElementById('wos-summary');
+  if (!summaryEl) return;
+
+  const counts = {
+    pending: 0,
+    running: 0,
+    completed: 0,
+    failed: 0,
+    other: 0
+  };
+
+  allWos.forEach((wo) => {
+    const key = normalizeWoStatus(wo?.status);
+    if (counts[key] !== undefined) {
+      counts[key] += 1;
+    } else {
+      counts.other += 1;
+    }
+  });
+
+  const total = allWos.length;
+  const filteredCount = filtered.length;
+  const parts = [];
+  parts.push(`${total} WOs`);
+  if (counts.running) parts.push(`${counts.running} running`);
+  if (counts.failed) parts.push(`${counts.failed} failed`);
+  if (currentWoFilter !== 'all') {
+    parts.push(`filter: ${currentWoFilter} (${filteredCount} shown)`);
+  }
+
+  summaryEl.textContent = parts.join(' · ');
 }
 
 // --- WO History ---
@@ -887,6 +1088,8 @@ function initRealityPanel() {
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
+  initWoFilters();
+  loadWos();
 }
 
 function cleanupIntervals() {
