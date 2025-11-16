@@ -452,6 +452,195 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
+      .wo-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+      }
+
+      .wo-controls label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.85rem;
+        color: rgba(226, 232, 240, 0.8);
+      }
+
+      .wo-controls input,
+      .wo-controls select {
+        margin-top: 0.25rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 0.35rem;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.5);
+        color: #e5e7eb;
+      }
+
+      .wo-controls button {
+        padding: 0.45rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        background: rgba(56, 189, 248, 0.15);
+        color: #e0f2fe;
+        cursor: pointer;
+      }
+
+      .wo-autorefresh-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.85rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .wo-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      #wos-table th[data-sort-key] {
+        cursor: pointer;
+      }
+
+      .wo-timeline-button {
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        padding: 0.1rem 0.55rem;
+        font-size: 0.7rem;
+        background: #020617;
+        color: #e5e7eb;
+        cursor: pointer;
+      }
+
+      .wo-timeline-button:hover {
+        background: #111827;
+      }
+
+      .wo-timeline-section {
+        margin-top: 1.5rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        border: 1px solid #1f2937;
+        background: #020617;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: 360px;
+        overflow: hidden;
+      }
+
+      .wo-timeline-section.hidden {
+        display: none;
+      }
+
+      .wo-timeline-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .wo-timeline-header h3 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0;
+      }
+
+      .wo-timeline-subtitle {
+        margin: 0.1rem 0 0;
+        font-size: 0.75rem;
+        color: #9ca3af;
+      }
+
+      .wo-timeline-close {
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        padding: 0.15rem 0.7rem;
+        font-size: 0.75rem;
+        background: #020617;
+        color: #e5e7eb;
+        cursor: pointer;
+      }
+
+      .wo-timeline-close:hover {
+        background: #111827;
+      }
+
+      .wo-timeline-content {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        gap: 1rem;
+        overflow: hidden;
+      }
+
+      .wo-timeline-events,
+      .wo-timeline-logs {
+        border-radius: 0.5rem;
+        border: 1px solid #111827;
+        background: #020617;
+        padding: 0.6rem 0.75rem;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .wo-timeline-events h4,
+      .wo-timeline-logs h4 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0 0 0.35rem;
+      }
+
+      .wo-timeline-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        font-size: 0.75rem;
+      }
+
+      .wo-timeline-item {
+        padding: 0.3rem 0;
+        border-bottom: 1px solid #0f172a;
+      }
+
+      .wo-timeline-item:last-child {
+        border-bottom: none;
+      }
+
+      .wo-timeline-item-time {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: #9ca3af;
+      }
+
+      .wo-timeline-item-label {
+        color: #e5e7eb;
+      }
+
+      .wo-timeline-item-meta {
+        color: #9ca3af;
+        font-size: 0.7rem;
+      }
+
+      .wo-log-lines {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: #e5e7eb;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .wo-log-empty {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
       footer {
         padding: 2rem;
         text-align: center;
@@ -675,9 +864,70 @@
 
         <section id="view-wos" class="hidden">
           <p>
-            Per-work-order drilldowns are being migrated into this panel. For now, use the
-            history tab to review recent activity.
+            Inspect individual work orders without leaving the dashboard. Use the table
+            below to search, sort, and open the timeline panel for any WO.
           </p>
+
+          <div class="wo-controls">
+            <label>
+              Search:
+              <input type="search" id="wo-search-input" placeholder="ID, agent, or summary" />
+            </label>
+            <label>
+              Status:
+              <select id="wo-status-filter">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="running">Running</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <label class="wo-autorefresh-toggle">
+              <input type="checkbox" id="wo-autorefresh-toggle" checked /> Auto-refresh
+            </label>
+            <button type="button" id="wo-refresh-btn">Refresh</button>
+          </div>
+
+          <div class="wo-table-wrapper">
+            <table id="wos-table">
+              <thead>
+                <tr>
+                  <th data-sort-key="id">ID</th>
+                  <th data-sort-key="status">Status</th>
+                  <th data-sort-key="started_at">Started</th>
+                  <th data-sort-key="finished_at">Finished</th>
+                  <th data-sort-key="updated_at">Last Update</th>
+                  <th>Actions</th>
+                  <th>Timeline</th>
+                </tr>
+              </thead>
+              <tbody id="wos-table-body">
+                <tr>
+                  <td colspan="7">Loading…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <section id="wo-timeline-section" class="wo-timeline-section hidden">
+            <header class="wo-timeline-header">
+              <div>
+                <h3 id="wo-timeline-title">WO Timeline</h3>
+                <p id="wo-timeline-subtitle" class="wo-timeline-subtitle">
+                  Select a work order from the table to see its history.
+                </p>
+              </div>
+              <button type="button" id="wo-timeline-close" class="wo-timeline-close">
+                Close
+              </button>
+            </header>
+
+            <div id="wo-timeline-content" class="wo-timeline-content">
+              <!-- Filled by JS -->
+            </div>
+          </section>
         </section>
 
         <!-- NEW: Global WO History view -->
