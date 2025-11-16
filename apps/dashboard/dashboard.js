@@ -7,6 +7,12 @@ let realityPanelInitialized = false;
 let servicesIntervalId;
 let mlsIntervalId;
 let currentMlsType = '';
+let allWos = [];
+let visibleWos = [];
+let currentWoFilter = 'all';
+let woAutorefreshTimer = null;
+let woAutorefreshEnabled = false;
+let woAutorefreshIntervalMs = 30000;
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -118,6 +124,262 @@ function showErrorBanner(id, message) {
 function hideErrorBanner(id) {
   const banner = document.getElementById(id);
   banner?.classList.add('hidden');
+}
+
+// --- Work Orders ---
+
+function initWoFilters() {
+  const buttons = document.querySelectorAll('.wo-filter-button');
+  if (!buttons.length) {
+    return;
+  }
+
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      buttons.forEach((btn) => btn.classList.remove('active'));
+      button.classList.add('active');
+      currentWoFilter = button.dataset.status || 'all';
+      applyWoFilter();
+    });
+  });
+
+  const initiallyActive = Array.from(buttons).find((btn) => btn.classList.contains('active'));
+  if (initiallyActive?.dataset?.status) {
+    currentWoFilter = initiallyActive.dataset.status;
+  }
+}
+
+function applyWoFilter() {
+  if (!Array.isArray(allWos)) {
+    allWos = [];
+  }
+
+  if (currentWoFilter === 'all') {
+    visibleWos = [...allWos];
+  } else {
+    const filter = (currentWoFilter || '').toLowerCase();
+    visibleWos = allWos.filter((wo) => (wo?.status || '').toLowerCase() === filter);
+  }
+
+  renderWoSummary(allWos);
+  renderWosTable(visibleWos);
+}
+
+function renderWoSummary(wos) {
+  const el = document.getElementById('wos-summary');
+  if (!el) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    el.innerHTML = '<span>No work orders found.</span>';
+    return;
+  }
+
+  const counts = wos.reduce(
+    (acc, wo) => {
+      const status = (wo?.status || 'unknown').toLowerCase();
+      acc.total += 1;
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    },
+    { total: 0 }
+  );
+
+  const running = counts.running || 0;
+  const pending = counts.pending || 0;
+  const completed = counts.completed || 0;
+  const failed = counts.failed || 0;
+
+  el.innerHTML = `
+    <span><strong>Total:</strong> ${counts.total}</span>
+    <span><span class="summary-dot running"></span>Running: ${running}</span>
+    <span><span class="summary-dot stopped"></span>Pending: ${pending}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${failed}</span>
+    <span><span class="summary-dot running"></span>Completed: ${completed}</span>
+  `;
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match this filter.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+
+    const idCell = document.createElement('td');
+    idCell.innerHTML = `<code>${escapeHtml(wo?.id ?? '')}</code>`;
+
+    const statusCell = document.createElement('td');
+    statusCell.appendChild(createStatusChip((wo?.status || 'unknown').toLowerCase()));
+
+    const startedCell = document.createElement('td');
+    startedCell.textContent = formatWoDate(wo?.started_at || wo?.created_at);
+
+    const finishedCell = document.createElement('td');
+    finishedCell.textContent = formatWoDate(wo?.finished_at || wo?.completed_at);
+
+    const updatedCell = document.createElement('td');
+    updatedCell.textContent = formatWoDate(wo?.updated_at || wo?.last_update);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.textContent = formatWoActions(wo);
+
+    const timelineCell = document.createElement('td');
+    timelineCell.textContent = formatWoTimeline(wo);
+
+    tr.append(idCell, statusCell, startedCell, finishedCell, updatedCell, actionsCell, timelineCell);
+    tbody.appendChild(tr);
+  });
+}
+
+function formatWoDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+}
+
+function formatWoActions(wo) {
+  if (Array.isArray(wo?.actions) && wo.actions.length) {
+    return wo.actions.join(', ');
+  }
+  if (typeof wo?.action === 'string' && wo.action.trim()) {
+    return wo.action;
+  }
+  if (typeof wo?.summary === 'string' && wo.summary.trim()) {
+    return wo.summary;
+  }
+  return '—';
+}
+
+function formatWoTimeline(wo) {
+  if (typeof wo?.timeline_url === 'string' && wo.timeline_url) {
+    return wo.timeline_url;
+  }
+  if (Array.isArray(wo?.timeline) && wo.timeline.length) {
+    return `${wo.timeline.length} events`;
+  }
+  if (typeof wo?.last_event === 'string' && wo.last_event.trim()) {
+    return wo.last_event;
+  }
+  return '—';
+}
+
+async function refreshWos() {
+  try {
+    const res = await fetch('/api/wos');
+    if (!res.ok) {
+      console.error('Failed to fetch WOs', res.status);
+      updateWoLastRefreshLabel(false);
+      return;
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    allWos = Array.isArray(wos) ? wos : [];
+    applyWoFilter();
+    updateWoLastRefreshLabel(true);
+  } catch (err) {
+    console.error('Error loading WOs', err);
+    updateWoLastRefreshLabel(false);
+  }
+}
+
+function loadWos() {
+  refreshWos();
+}
+
+function updateWoLastRefreshLabel(success) {
+  const el = document.getElementById('wos-last-refresh');
+  if (!el) return;
+
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+
+  if (success) {
+    el.textContent = `Last refresh: ${hh}:${mm}:${ss}`;
+  } else {
+    el.textContent = `Last refresh: error at ${hh}:${mm}:${ss}`;
+  }
+}
+
+function initWoAutorefreshControls() {
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const intervalSelect = document.getElementById('wo-autorefresh-interval');
+  const refreshNowBtn = document.getElementById('wo-refresh-now');
+
+  if (intervalSelect) {
+    const initial = parseInt(intervalSelect.value, 10);
+    if (!Number.isNaN(initial)) {
+      woAutorefreshIntervalMs = initial;
+    }
+    intervalSelect.addEventListener('change', () => {
+      const ms = parseInt(intervalSelect.value, 10);
+      if (!Number.isNaN(ms)) {
+        woAutorefreshIntervalMs = ms;
+        restartWoAutorefreshIfNeeded();
+      }
+    });
+  }
+
+  if (toggle) {
+    woAutorefreshEnabled = Boolean(toggle.checked);
+    toggle.addEventListener('change', () => {
+      woAutorefreshEnabled = !!toggle.checked;
+      if (woAutorefreshEnabled) {
+        startWoAutorefresh();
+      } else {
+        stopWoAutorefresh();
+      }
+    });
+  }
+
+  if (refreshNowBtn) {
+    refreshNowBtn.addEventListener('click', () => {
+      refreshWos();
+    });
+  }
+
+  if (woAutorefreshEnabled) {
+    startWoAutorefresh();
+  }
+}
+
+function startWoAutorefresh() {
+  stopWoAutorefresh();
+  woAutorefreshTimer = setInterval(() => {
+    refreshWos();
+  }, woAutorefreshIntervalMs);
+  refreshWos();
+}
+
+function stopWoAutorefresh() {
+  if (woAutorefreshTimer !== null) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
+}
+
+function restartWoAutorefreshIfNeeded() {
+  if (woAutorefreshEnabled) {
+    startWoAutorefresh();
+  }
 }
 
 // --- Services ---
@@ -728,6 +990,9 @@ function initRealityPanel() {
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
+  initWoFilters();
+  initWoAutorefreshControls();
+  loadWos();
 }
 
 function cleanupIntervals() {
@@ -740,6 +1005,8 @@ function cleanupIntervals() {
     clearInterval(mlsIntervalId);
     mlsIntervalId = null;
   }
+
+  stopWoAutorefresh();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
