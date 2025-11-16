@@ -1448,6 +1448,192 @@ document.addEventListener('click', (event) => {
   focusMlsCardById(mlsId);
 });
 
+// --- WO detail rendering / history ---
+
+function renderWoDetail(wo) {
+  const container = document.getElementById('wo-detail-content');
+
+  if (!container) {
+    renderWoDetailHistory(wo);
+    return;
+  }
+
+  container.innerHTML = '';
+
+  if (!wo) {
+    const placeholder = document.createElement('p');
+    placeholder.textContent = 'Select a work order to view its details.';
+    container.appendChild(placeholder);
+    renderWoDetailHistory(null);
+    return;
+  }
+
+  const title = document.createElement('h3');
+  title.textContent = wo.id || 'Work Order';
+  container.appendChild(title);
+
+  if (wo.status) {
+    const statusLine = document.createElement('div');
+    statusLine.textContent = `Status: ${wo.status}`;
+    container.appendChild(statusLine);
+  }
+
+  const description = wo.description || wo.goal || wo.summary;
+  if (description) {
+    const descEl = document.createElement('p');
+    descEl.textContent = description;
+    container.appendChild(descEl);
+  }
+
+  const metaFields = [
+    { label: 'Owner', value: wo.owner || wo.created_by || wo.requested_by },
+    { label: 'Worker', value: wo.worker || wo.agent },
+    { label: 'Type', value: wo.type },
+    { label: 'Started', value: formatWoTimestamp(wo.started_at || wo.created_at) },
+    { label: 'Finished', value: formatWoTimestamp(wo.finished_at) },
+    { label: 'Updated', value: formatWoTimestamp(wo.updated_at || wo.last_update) }
+  ].filter((item) => item.value);
+
+  if (metaFields.length) {
+    const list = document.createElement('ul');
+    list.className = 'wo-detail-meta';
+    metaFields.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = `${item.label}: ${item.value}`;
+      list.appendChild(li);
+    });
+    container.appendChild(list);
+  }
+
+  renderWoDetailHistory(wo);
+}
+
+function renderWoDetailHistory(wo) {
+  const listEl = document.getElementById('wo-detail-history-list');
+  const emptyEl = document.getElementById('wo-detail-history-empty');
+
+  if (!listEl) {
+    return;
+  }
+
+  listEl.innerHTML = '';
+
+  const historyItems = normalizeWoDetailHistory(wo);
+
+  if (!historyItems.length) {
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'No history recorded for this work order yet.';
+    }
+    return;
+  }
+
+  if (emptyEl) {
+    emptyEl.style.display = 'none';
+  }
+
+  historyItems.forEach((rawItem) => {
+    const item = typeof rawItem === 'object' && rawItem !== null ? rawItem : { message: rawItem };
+    const li = document.createElement('li');
+    li.className = 'wo-history-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'wo-history-meta';
+    const timeValue =
+      item.time ||
+      item.timestamp ||
+      item.date ||
+      item.when ||
+      item.created_at ||
+      item.updated_at ||
+      '';
+    const formattedTime = formatWoTimestamp(timeValue) || timeValue || '';
+    const statusValue = item.status || item.state || item.type || item.event || '';
+    const metaParts = [formattedTime, statusValue].filter(Boolean);
+    if (metaParts.length) {
+      meta.textContent = metaParts.join(' · ');
+      li.appendChild(meta);
+    }
+
+    const message =
+      item.message ||
+      item.details ||
+      item.note ||
+      item.summary ||
+      item.description ||
+      (typeof rawItem === 'string' || typeof rawItem === 'number' ? String(rawItem) : '');
+
+    if (message) {
+      const body = document.createElement('div');
+      body.textContent = message;
+      li.appendChild(body);
+    } else if (!metaParts.length) {
+      const fallback = document.createElement('div');
+      fallback.textContent = 'Event recorded';
+      li.appendChild(fallback);
+    }
+
+    listEl.appendChild(li);
+  });
+}
+
+function normalizeWoDetailHistory(wo) {
+  if (!wo) {
+    return [];
+  }
+
+  const candidates = [wo.history, wo.events, wo.timeline];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length) {
+      return candidate;
+    }
+  }
+  return [];
+}
+
+async function loadAndRenderWorkOrder(woId) {
+  const historyList = document.getElementById('wo-detail-history-list');
+  const historyEmpty = document.getElementById('wo-detail-history-empty');
+  const detailContainer = document.getElementById('wo-detail-content');
+
+  if (!woId) {
+    renderWoDetail(null);
+    return;
+  }
+
+  if (detailContainer) {
+    detailContainer.innerHTML = '<p>Loading work order…</p>';
+  }
+  if (historyList) {
+    historyList.innerHTML = '';
+  }
+  if (historyEmpty) {
+    historyEmpty.style.display = '';
+    historyEmpty.textContent = 'Loading history…';
+  }
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=50`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const wo = await res.json();
+    renderWoDetail(wo);
+  } catch (error) {
+    console.error('Error loading WO detail', woId, error);
+    if (detailContainer) {
+      detailContainer.innerHTML = '';
+      const message = document.createElement('p');
+      message.textContent = `Failed to load work order ${woId}.`;
+      detailContainer.appendChild(message);
+    }
+    if (historyEmpty) {
+      historyEmpty.style.display = '';
+      historyEmpty.textContent = 'Failed to load history for this work order.';
+    }
+  }
+}
+
 // --- WO Timeline Panel ---
 
 function initWoTimelinePanel() {
@@ -1661,6 +1847,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSummaryCards();
   initDashboard();
   initWoTimelinePanel();
+  renderWoDetail(null);
 
   window.addEventListener('wo:select', (event) => {
     const detail = event?.detail;
@@ -1673,10 +1860,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (woId) {
       onWorkOrderSelected(woId);
+      loadAndRenderWorkOrder(woId);
+    } else {
+      onWorkOrderSelected(null);
+      renderWoDetail(null);
     }
   });
 
   refreshWoDetailMls();
+  window.loadAndRenderWorkOrder = loadAndRenderWorkOrder;
 });
 
 window.addEventListener('beforeunload', () => {
