@@ -1,6 +1,7 @@
 const SERVICES_REFRESH_MS = 30000;
 const WO_TIMELINE_REFRESH_MS = 45000;
 const SUMMARY_REFRESH_MS = 60000;
+const SUMMARY_LOADING_FOOTER = 'Updated: —';
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
 let realityPanelInitialized = false;
@@ -515,16 +516,36 @@ async function loadWos() {
 
 // === Summary cards ===
 
-function setSummaryText(cardEl, main, sub) {
+function setSummaryText(cardEl, main, sub, foot) {
   if (!cardEl) return;
   const mainEl = cardEl.querySelector('.summary-card-main');
   const subEl = cardEl.querySelector('.summary-card-sub');
+  const footEl = cardEl.querySelector('.summary-card-foot');
   if (mainEl) {
     mainEl.textContent = main;
   }
   if (subEl) {
     subEl.textContent = sub;
   }
+  if (footEl && typeof foot !== 'undefined') {
+    footEl.textContent = foot;
+  }
+}
+
+function formatSummaryUpdatedLabel(date = new Date()) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return SUMMARY_LOADING_FOOTER;
+  }
+  try {
+    return `Updated ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  } catch (error) {
+    console.warn('Falling back to default time string for summary footer', error);
+    return `Updated ${date.toLocaleTimeString()}`;
+  }
+}
+
+function setSummaryLoading(cardEl) {
+  setSummaryText(cardEl, '—', 'loading…', SUMMARY_LOADING_FOOTER);
 }
 
 function initSummaryCards() {
@@ -554,7 +575,7 @@ async function refreshSummaryWos(cardEl) {
   if (!cardEl) return;
 
   try {
-    setSummaryText(cardEl, '—', 'loading…');
+    setSummaryLoading(cardEl);
     const payload = await fetchJSON('/api/wos');
     const wos = Array.isArray(payload)
       ? payload
@@ -589,10 +610,10 @@ async function refreshSummaryWos(cardEl) {
       subParts.push(`failed: ${failed}`);
     }
 
-    setSummaryText(cardEl, String(total), subParts.join(' | '));
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
   } catch (error) {
     console.error('Failed to refresh WO summary:', error);
-    setSummaryText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
   }
 }
 
@@ -600,7 +621,7 @@ async function refreshSummaryServices(cardEl) {
   if (!cardEl) return;
 
   try {
-    setSummaryText(cardEl, '—', 'loading…');
+    setSummaryLoading(cardEl);
     const data = await fetchJSON('/api/services');
 
     const summary = data?.summary ?? {};
@@ -614,10 +635,10 @@ async function refreshSummaryServices(cardEl) {
     }
 
     const mainValue = total > 0 ? `${running}/${total}` : String(running);
-    setSummaryText(cardEl, mainValue, subParts.join(' | '));
+    setSummaryText(cardEl, mainValue, subParts.join(' | '), formatSummaryUpdatedLabel());
   } catch (error) {
     console.error('Failed to refresh services summary:', error);
-    setSummaryText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
   }
 }
 
@@ -625,7 +646,7 @@ async function refreshSummaryMls(cardEl) {
   if (!cardEl) return;
 
   try {
-    setSummaryText(cardEl, '—', 'loading…');
+    setSummaryLoading(cardEl);
     const data = await fetchJSON('/api/mls');
 
     const summary = data?.summary ?? {};
@@ -638,10 +659,10 @@ async function refreshSummaryMls(cardEl) {
       subParts.push(`failures: ${failures}`);
     }
 
-    setSummaryText(cardEl, String(total), subParts.join(' | '));
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
   } catch (error) {
     console.error('Failed to refresh MLS summary:', error);
-    setSummaryText(cardEl, '—', 'error loading');
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
   }
 }
 
