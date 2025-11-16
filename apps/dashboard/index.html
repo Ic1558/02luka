@@ -767,6 +767,43 @@
         color: #2563eb;
       }
 
+      .wo-detail-meta {
+        list-style: none;
+        padding: 0;
+        margin: 0.75rem 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        font-size: 0.85rem;
+      }
+
+      .wo-detail-history-list {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.8rem;
+      }
+
+      .wo-history-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+
+      .wo-history-meta {
+        color: #6b7280;
+        font-size: 0.75rem;
+      }
+
+      .wo-detail-history-empty {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+      }
+
       .mls-card-highlight {
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
         border-radius: 12px;
@@ -1349,6 +1386,17 @@
             No MLS lessons linked to this work order yet.
           </div>
           <ul id="wo-detail-mls-list" class="wo-detail-mls-list">
+            <!-- populated by dashboard.js -->
+          </ul>
+        </div>
+
+        <!-- WO History / timeline for this WO -->
+        <div id="wo-detail-history" class="wo-detail-section">
+          <h3>History</h3>
+          <div id="wo-detail-history-empty" class="wo-detail-history-empty">
+            No history recorded for this work order yet.
+          </div>
+          <ul id="wo-detail-history-list" class="wo-detail-history-list">
             <!-- populated by dashboard.js -->
           </ul>
         </div>
