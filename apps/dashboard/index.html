@@ -142,6 +142,79 @@
         background: #f87171;
       }
 
+      .reality-header {
+        margin-bottom: 1rem;
+      }
+
+      .reality-header h2 {
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+      }
+
+      .reality-subtitle {
+        margin: 0.5rem 0 0;
+        color: rgba(226, 232, 240, 0.75);
+      }
+
+      .reality-meta {
+        margin-bottom: 1.5rem;
+      }
+
+      .reality-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      .reality-card {
+        background: rgba(30, 41, 59, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 16px;
+        padding: 1rem;
+      }
+
+      .reality-card h3 {
+        margin-top: 0;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        margin-left: 0.25rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        vertical-align: middle;
+      }
+
+      .badge-ok {
+        background: #e6ffed;
+        color: #036635;
+      }
+
+      .badge-degraded {
+        background: #fff4e5;
+        color: #7a3e00;
+      }
+
+      .badge-no_data,
+      .badge-no_snapshot {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+
+      .badge-unknown {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .badge-muted {
+        background: #e5e7eb;
+        color: #6b7280;
+      }
+
       .filters {
         display: flex;
         flex-wrap: wrap;
@@ -410,6 +483,7 @@
         <li><a href="#overview-panel" class="tab active" data-panel="overview-panel">Overview</a></li>
         <li><a href="#services-panel" class="tab" data-panel="services-panel">Services</a></li>
         <li><a href="#mls-panel" class="tab" data-panel="mls-panel">MLS Lessons</a></li>
+        <li><a href="#reality-panel" class="tab" data-panel="reality-panel">Reality</a></li>
         <li><a href="#work-orders-panel" class="tab" data-panel="work-orders-panel">Work Orders</a></li>
         <li><a href="followup.html">Follow-Up Tracker</a></li>
       </ul>
@@ -509,6 +583,72 @@
         </div>
 
         <div id="mls-list" class="mls-list">Loading…</div>
+      </section>
+
+      <section id="reality-panel" class="panel hidden">
+        <section id="view-reality">
+          <header class="reality-header">
+            <h2>
+              Reality Snapshot
+              <span id="reality-badge-deploy" class="badge badge-muted">Deployment</span>
+              <span id="reality-badge-save" class="badge badge-muted">save.sh</span>
+              <span id="reality-badge-orch" class="badge badge-muted">Orchestrator</span>
+            </h2>
+            <p class="reality-subtitle">
+              Latest Reality Hooks snapshot aggregated from deployment reports,
+              save.sh full-cycle tests, and orchestrator summaries.
+            </p>
+          </header>
+
+          <div id="reality-meta" class="summary-bar reality-meta">
+            Loading Reality snapshot…
+          </div>
+
+          <div id="reality-error" class="error-banner hidden">
+            <span>Reality snapshot unavailable.</span>
+            <button type="button" id="reality-error-retry">Retry</button>
+          </div>
+
+          <div class="filters">
+            <button id="reality-refresh-btn" type="button">Refresh</button>
+          </div>
+
+          <div class="reality-grid">
+            <article class="reality-card">
+              <h3>Deployment Report</h3>
+              <p id="reality-deployment">Waiting for snapshot…</p>
+            </article>
+
+            <article class="reality-card">
+              <h3>save.sh Full-Cycle Tests</h3>
+              <div class="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Test</th>
+                      <th>Lane</th>
+                      <th>Layer 1</th>
+                      <th>Layer 2</th>
+                      <th>Layer 3</th>
+                      <th>Layer 4</th>
+                      <th>Git</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reality-save-body">
+                    <tr>
+                      <td colspan="7">Waiting for snapshot…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="reality-card">
+              <h3>Orchestrator Summary</h3>
+              <pre id="reality-orchestrator">Waiting for snapshot…</pre>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section id="work-orders-panel" class="panel hidden">
