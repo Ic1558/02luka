@@ -680,6 +680,9 @@ async function refreshSummaryWos(cardEl) {
       return;
     }
 
+    allWos = wos.slice();
+    updateSystemHealthBar();
+
     const total = wos.length;
     let active = 0;
     let failed = 0;
