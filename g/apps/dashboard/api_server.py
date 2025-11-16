@@ -265,6 +265,8 @@ class APIHandler(BaseHTTPRequestHandler):
 
         if path == '/api/wos':
             self.handle_list_wos(query)
+        elif path == '/api/wos/history':
+            self.handle_list_wos_history(query)
         elif path.startswith('/api/wos/'):
             wo_id = path.split('/')[-1]
             self.handle_get_wo(wo_id, query)
@@ -312,6 +314,123 @@ class APIHandler(BaseHTTPRequestHandler):
         )
 
         self.send_json_response(wos_sorted)
+
+    def handle_list_wos_history(self, query):
+        """Handle GET /api/wos/history - normalized WO history view."""
+        # Refresh WO list
+        self.collector.collect_all()
+
+        wos = self.collector.wos or []
+
+        status_filter = query.get('status', [''])[0]
+        statuses = []
+        if status_filter:
+            statuses = [s.strip().lower() for s in status_filter.split(',') if s.strip()]
+        status_set = set(statuses)
+
+        agent_filter = query.get('agent', [''])[0].strip().lower()
+
+        limit_raw = query.get('limit', [''])[0]
+        limit_value = 100
+        if limit_raw:
+            try:
+                limit_value = max(1, min(1000, int(limit_raw)))
+            except (TypeError, ValueError):
+                limit_value = 100
+
+        include_mls = query.get('include_mls', ['0'])[0] == '1'
+
+        mls_by_wo = {}
+        if include_mls:
+            try:
+                mls_entries = self._load_mls_entries()
+                for entry in mls_entries:
+                    wo_id = entry.get('related_wo')
+                    if not wo_id:
+                        continue
+
+                    bucket = mls_by_wo.setdefault(wo_id, {
+                        'total': 0,
+                        'solutions': 0,
+                        'failures': 0,
+                        'patterns': 0,
+                        'improvements': 0,
+                    })
+
+                    bucket['total'] += 1
+                    entry_type = entry.get('type')
+                    if entry_type in bucket:
+                        bucket[entry_type] += 1
+            except Exception as exc:
+                print(f"Warning: failed to load MLS entries for timeline: {exc}")
+
+        def normalize(wo):
+            started_at = wo.get('started_at')
+            finished_at = wo.get('finished_at') or wo.get('completed_at')
+            duration = None
+            if started_at and finished_at:
+                try:
+                    start_dt = datetime.fromisoformat(started_at.replace('Z', '+00:00'))
+                    finish_dt = datetime.fromisoformat(finished_at.replace('Z', '+00:00'))
+                    duration = int((finish_dt - start_dt).total_seconds())
+                except Exception:
+                    duration = None
+
+            item = {
+                'id': wo.get('id'),
+                'status': wo.get('status'),
+                'type': wo.get('type'),
+                'agent': wo.get('agent') or wo.get('runner'),
+                'started_at': started_at,
+                'finished_at': finished_at,
+                'created_at': wo.get('created_at') or wo.get('id'),
+                'duration_sec': duration,
+                'summary': wo.get('summary') or wo.get('title'),
+                'log_tail': wo.get('log_tail'),
+                'related_pr': wo.get('related_pr'),
+                'tags': wo.get('tags', []),
+            }
+
+            if include_mls and item['id'] in mls_by_wo:
+                item['mls_summary'] = mls_by_wo[item['id']]
+
+            return item
+
+        items = []
+        for wo in wos:
+            if status_set:
+                status_value = str(wo.get('status') or '').lower()
+                if status_value not in status_set:
+                    continue
+
+            if agent_filter:
+                agent_value = str(wo.get('agent') or wo.get('runner') or '').lower()
+                if agent_value != agent_filter:
+                    continue
+
+            items.append(normalize(wo))
+
+        items_sorted = sorted(
+            items,
+            key=lambda w: w.get('started_at') or w.get('created_at') or w.get('id'),
+            reverse=True
+        )
+
+        if limit_value > 0:
+            items_sorted = items_sorted[:limit_value]
+
+        self.send_json_response({
+            'items': items_sorted,
+            'summary': {
+                'total': len(items_sorted),
+                'status_counts': {
+                    'success': len([i for i in items_sorted if i['status'] == 'success']),
+                    'failed': len([i for i in items_sorted if i['status'] == 'failed']),
+                    'running': len([i for i in items_sorted if i['status'] == 'running']),
+                    'queued': len([i for i in items_sorted if i['status'] == 'queued']),
+                }
+            }
+        })
 
     def _build_wo_timeline(self, wo):
         """Build a derived timeline for a work order from timestamps and log tail."""
@@ -467,59 +586,40 @@ class APIHandler(BaseHTTPRequestHandler):
     def handle_list_mls(self, query):
         """Handle GET /api/mls - list all MLS lessons"""
         try:
-            mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
-
-            if not mls_file.exists():
-                # Return empty response if file doesn't exist
+            raw_entries = self._load_mls_entries()
+            if not raw_entries:
                 self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
                 return
 
-            # Read multi-line JSONL file (pretty-printed JSON objects separated by newlines)
             entries = []
-            with open(mls_file, 'r') as f:
-                content = f.read().strip()
-
-            # Split by "}\n{" to separate pretty-printed JSON objects
-            json_objects = []
-            if content:
-                # Add back the braces that were removed by split
-                parts = content.split('}\n{')
-                for i, part in enumerate(parts):
-                    if i == 0:
-                        json_str = part + '}'
-                    elif i == len(parts) - 1:
-                        json_str = '{' + part
-                    else:
-                        json_str = '{' + part + '}'
-                    json_objects.append(json_str)
-
-            # Parse each JSON object
-            for json_str in json_objects:
-                try:
-                    entry = json.loads(json_str)
-                    # Normalize the entry for frontend
-                    entries.append({
-                        'id': entry.get('id', 'MLS-UNKNOWN'),
-                        'type': entry.get('type', 'other'),
-                        'title': entry.get('title', 'Untitled'),
-                        'details': entry.get('description', ''),
-                        'context': entry.get('context', ''),
-                        'time': entry.get('timestamp', ''),
-                        'related_wo': entry.get('related_wo'),
-                        'related_session': entry.get('related_session'),
-                        'tags': entry.get('tags', []),
-                        'verified': entry.get('verified', False),
-                        'score': entry.get('usefulness_score', 0)
-                    })
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {e}")
-                    continue
+            for entry in raw_entries:
+                entries.append({
+                    'id': entry.get('id', 'MLS-UNKNOWN'),
+                    'type': entry.get('type', 'other'),
+                    'title': entry.get('title', 'Untitled'),
+                    'details': entry.get('description', ''),
+                    'context': entry.get('context', ''),
+                    'time': entry.get('timestamp', ''),
+                    'related_wo': entry.get('related_wo'),
+                    'related_session': entry.get('related_session'),
+                    'tags': entry.get('tags', []),
+                    'verified': entry.get('verified', False),
+                    'score': entry.get('usefulness_score', 0)
+                })
 
             # Filter by type if requested
             type_filter = query.get('type', [''])[0]
             filtered_entries = entries
             if type_filter:
                 filtered_entries = [e for e in entries if e['type'] == type_filter]
+
+            # Filter by related WO id if requested
+            wo_filter = query.get('wo_id', [''])[0]
+            if wo_filter:
+                filtered_entries = [
+                    e for e in filtered_entries
+                    if (e.get('related_wo') or '') == wo_filter
+                ]
 
             # Sort by timestamp descending (newest first)
             filtered_entries.sort(key=lambda e: e['time'], reverse=True)
@@ -543,6 +643,43 @@ class APIHandler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Error reading MLS lessons: {e}")
             self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
+
+    def _load_mls_entries(self):
+        """Internal helper: read MLS lessons JSONL and return raw entries."""
+        mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
+        if not mls_file.exists():
+            return []
+
+        try:
+            with open(mls_file, 'r') as handle:
+                content = handle.read().strip()
+        except Exception as exc:
+            print(f"Warning: failed to read MLS file: {exc}")
+            return []
+
+        if not content:
+            return []
+
+        parts = content.split('}\n{')
+        json_objects = []
+        for index, part in enumerate(parts):
+            if index == 0:
+                json_str = part + '}'
+            elif index == len(parts) - 1:
+                json_str = '{' + part
+            else:
+                json_str = '{' + part + '}'
+            json_objects.append(json_str)
+
+        entries = []
+        for json_str in json_objects:
+            try:
+                entries.append(json.loads(json_str))
+            except json.JSONDecodeError as exc:
+                print(f"Warning: skipping invalid MLS JSON object: {exc}")
+                continue
+
+        return entries
 
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""

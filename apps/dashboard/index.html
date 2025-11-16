@@ -659,6 +659,49 @@
         min-width: 180px;
       }
 
+      #wo-filters label {
+        font-size: 0.8rem;
+        color: rgba(226, 232, 240, 0.85);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      #timeline-limit {
+        width: 80px;
+        font-size: 0.85rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 6px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        background: rgba(15, 23, 42, 0.85);
+        color: #f8fafc;
+      }
+
+      #timeline-refresh {
+        background: rgba(56, 189, 248, 0.2);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        color: #e0f2fe;
+        border-radius: 999px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      #timeline-refresh:hover {
+        background: rgba(56, 189, 248, 0.35);
+      }
+
+      .wo-mls {
+        font-size: 0.75rem;
+        color: rgba(226, 232, 240, 0.8);
+        margin-top: 0.5rem;
+      }
+
+      .wo-mls strong {
+        color: #f8fafc;
+      }
+
       /* WO Timeline panel */
       #wo-timeline-panel {
         display: flex;
@@ -1500,6 +1543,18 @@
             type="search"
             placeholder="Search WO by id or text…"
           />
+
+          <label>
+            Limit:
+            <input type="number" id="timeline-limit" value="100" min="10" max="1000" />
+          </label>
+
+          <label>
+            <input type="checkbox" id="timeline-include-mls" checked />
+            Include MLS overlay
+          </label>
+
+          <button id="timeline-refresh" type="button">Refresh</button>
         </div>
 
         <div id="wo-timeline-summary" class="wo-timeline-summary">

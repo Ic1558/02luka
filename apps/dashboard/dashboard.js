@@ -3,6 +3,9 @@ const WO_TIMELINE_REFRESH_MS = 45000;
 const SUMMARY_REFRESH_MS = 60000;
 const SUMMARY_LOADING_FOOTER = 'Updated: —';
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
+const TIMELINE_LIMIT_MIN = 10;
+const TIMELINE_LIMIT_MAX = 1000;
+const TIMELINE_DEFAULT_LIMIT = 100;
 
 let realityPanelInitialized = false;
 
@@ -23,6 +26,11 @@ let woTimelineSearchQuery = '';
 let woTimelineInitialized = false;
 let serviceData = [];
 let serviceAutoRefreshTimer = null;
+
+const hasDocument = typeof document !== 'undefined';
+const timelineLimitInput = hasDocument ? document.getElementById('timeline-limit') : null;
+const timelineIncludeMlsCheckbox = hasDocument ? document.getElementById('timeline-include-mls') : null;
+const timelineRefreshButton = hasDocument ? document.getElementById('timeline-refresh') : null;
 
 function formatBadgeLabel(text) {
   return String(text || '')
@@ -82,6 +90,7 @@ function normalizeWoTimelineEntry(rawWo = {}) {
   const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
   const title = rawWo.title || rawWo.summary || rawWo.name || '';
   const description = rawWo.description || rawWo.summary || rawWo.notes || '';
+  const mlsSummary = rawWo.mls_summary || rawWo.mlsSummary || null;
 
   return {
     id,
@@ -91,7 +100,8 @@ function normalizeWoTimelineEntry(rawWo = {}) {
     finishedAt,
     updatedAt,
     title,
-    description
+    description,
+    mlsSummary
   };
 }
 
@@ -103,6 +113,42 @@ function normalizeWoTimelineStatus(status) {
   if (['completed', 'done', 'success'].includes(raw)) return 'done';
   if (['failed', 'error'].includes(raw)) return 'failed';
   return raw;
+}
+
+function getTimelineLimitValue() {
+  if (!timelineLimitInput) {
+    return TIMELINE_DEFAULT_LIMIT;
+  }
+
+  const parsed = parseInt(timelineLimitInput.value || '', 10);
+  if (Number.isFinite(parsed)) {
+    const clamped = Math.min(TIMELINE_LIMIT_MAX, Math.max(TIMELINE_LIMIT_MIN, parsed));
+    timelineLimitInput.value = String(clamped);
+    return clamped;
+  }
+
+  timelineLimitInput.value = String(TIMELINE_DEFAULT_LIMIT);
+  return TIMELINE_DEFAULT_LIMIT;
+}
+
+function shouldIncludeMlsOverlay() {
+  if (!timelineIncludeMlsCheckbox) {
+    return false;
+  }
+  return timelineIncludeMlsCheckbox.checked;
+}
+
+function buildTimelineStatusParam() {
+  switch (woTimelineFilterStatus) {
+    case 'failed':
+      return 'failed';
+    case 'done':
+      return 'success,completed,done';
+    case 'active':
+      return 'pending,running,queued';
+    default:
+      return '';
+  }
 }
 
 async function fetchJSON(url) {
@@ -1811,6 +1857,18 @@ function initWoTimelinePanel() {
     }
   });
 
+  timelineRefreshButton?.addEventListener('click', () => {
+    refreshWoTimeline();
+  });
+
+  timelineLimitInput?.addEventListener('change', () => {
+    refreshWoTimeline();
+  });
+
+  timelineIncludeMlsCheckbox?.addEventListener('change', () => {
+    refreshWoTimeline();
+  });
+
   woTimelineInitialized = true;
   refreshWoTimeline();
   woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
@@ -1823,7 +1881,24 @@ async function refreshWoTimeline() {
   const listEl = document.getElementById('wo-timeline-list');
 
   try {
-    const res = await fetch('/api/wos', { headers: { Accept: 'application/json' } });
+    const params = new URLSearchParams();
+    const statusParam = buildTimelineStatusParam();
+    if (statusParam) {
+      params.set('status', statusParam);
+    }
+
+    const limit = getTimelineLimitValue();
+    if (limit) {
+      params.set('limit', String(limit));
+    }
+
+    if (shouldIncludeMlsOverlay()) {
+      params.set('include_mls', '1');
+    }
+
+    const query = params.toString();
+    const url = query ? `/api/wos/history?${query}` : '/api/wos/history';
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -1832,6 +1907,8 @@ async function refreshWoTimeline() {
     let dataset = [];
     if (Array.isArray(payload)) {
       dataset = payload;
+    } else if (Array.isArray(payload?.items)) {
+      dataset = payload.items;
     } else if (Array.isArray(payload?.wos)) {
       dataset = payload.wos;
     } else if (Array.isArray(payload?.results)) {
@@ -1933,6 +2010,7 @@ function renderWoTimelineItem(entry) {
   const statusHtml = statusBadge
     ? statusBadge.outerHTML
     : `<span class="wo-timeline-status ${statusClass}">${statusLabel}</span>`;
+  const mlsHtml = renderMlsSummary(entry.mlsSummary);
 
   return `
     <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
@@ -1941,10 +2019,36 @@ function renderWoTimelineItem(entry) {
         ${statusHtml}
       </div>
       <div class="wo-timeline-when">${timelineMarkup}</div>
+      ${mlsHtml}
       <div class="wo-timeline-actions">
         <button type="button" class="wo-timeline-view" data-wo-id="${escapeHtml(entry.id)}">View details</button>
       </div>
     </article>
+  `;
+}
+
+function renderMlsSummary(mlsSummary) {
+  if (!mlsSummary) {
+    return '';
+  }
+
+  const metrics = {
+    total: Number.isFinite(mlsSummary.total) ? mlsSummary.total : 0,
+    solutions: Number.isFinite(mlsSummary.solutions) ? mlsSummary.solutions : 0,
+    failures: Number.isFinite(mlsSummary.failures) ? mlsSummary.failures : 0,
+    patterns: Number.isFinite(mlsSummary.patterns) ? mlsSummary.patterns : 0,
+    improvements: Number.isFinite(mlsSummary.improvements) ? mlsSummary.improvements : 0
+  };
+
+  return `
+    <div class="wo-mls">
+      <strong>MLS:</strong>
+      total ${metrics.total},
+      solutions ${metrics.solutions},
+      failures ${metrics.failures},
+      patterns ${metrics.patterns},
+      improvements ${metrics.improvements}
+    </div>
   `;
 }
 
