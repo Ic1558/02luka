@@ -1,14 +1,15 @@
 const SERVICES_REFRESH_MS = 30000;
-const MLS_REFRESH_MS = 30000;
 const WO_TIMELINE_REFRESH_MS = 45000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
 let realityPanelInitialized = false;
 
 let servicesIntervalId;
-let mlsIntervalId;
 let woTimelineIntervalId;
-let currentMlsType = '';
+let mlsPanelInitialized = false;
+let mlsAllEntries = [];
+let mlsFilterType = '';
+let mlsSearchQuery = '';
 let allWos = [];
 let currentWoStatusFilter = '';
 let woTimelineAll = [];
@@ -287,162 +288,190 @@ function initServicesPanel() {
   servicesIntervalId = setInterval(loadServices, SERVICES_REFRESH_MS);
 }
 
-// --- MLS ---
+// --- MLS Lessons Panel ---
 
-function setMLSLoading() {
-  const summary = document.getElementById('mls-summary');
-  const list = document.getElementById('mls-list');
-  if (summary) {
-    summary.innerHTML = '<span>Loading lessons…</span>';
+async function refreshMlsEntries() {
+  const listEl = document.getElementById('mls-list');
+  const summaryEl = document.getElementById('mls-summary');
+  if (listEl) {
+    listEl.innerHTML = '<div class="mls-item"><div class="mls-item-header"><span>Loading MLS lessons…</span></div></div>';
   }
-  if (list) {
-    list.textContent = 'Loading…';
+  if (summaryEl) {
+    summaryEl.textContent = 'Loading MLS lessons…';
   }
-}
-
-async function loadMLS(typeOverride) {
-  const summary = document.getElementById('mls-summary');
-  const list = document.getElementById('mls-list');
-  if (!summary || !list) return;
-
-  if (typeof typeOverride === 'string') {
-    currentMlsType = typeOverride;
-  }
-
-  setMLSLoading();
-  hideErrorBanner('mls-error');
 
   try {
-    const params = new URLSearchParams();
-    if (currentMlsType) params.set('type', currentMlsType);
-    const query = params.toString();
+    const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
-    const data = await fetchJSON(`/api/mls${query ? `?${query}` : ''}`);
-    const entries = Array.isArray(data?.entries) ? data.entries : [];
+    const data = await res.json();
+    mlsAllEntries = Array.isArray(data.entries) ? data.entries.slice() : [];
 
-    renderMLSSummary(data?.summary);
-    renderMLSList(entries);
+    mlsAllEntries.sort((a, b) => {
+      const aKey = a.time || a.id || '';
+      const bKey = b.time || b.id || '';
+      if (aKey === bKey) return 0;
+      return aKey > bKey ? -1 : 1;
+    });
+
+    renderMlsList();
   } catch (error) {
-    console.error('Failed to load MLS lessons', error);
-    showErrorBanner('mls-error', 'Failed to load MLS lessons.');
-    summary.innerHTML = '<span>Failed to load MLS lessons.</span>';
-    list.textContent = 'Failed to load MLS lessons.';
+    console.error('Failed to refresh MLS entries:', error);
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="mls-item">
+          <div class="mls-item-header">
+            <span>Failed to load MLS lessons.</span>
+          </div>
+          <div class="mls-item-meta">${escapeHtml(error.message || String(error))}</div>
+        </div>
+      `;
+    }
+    if (summaryEl) {
+      summaryEl.textContent = 'Unable to load MLS summary.';
+    }
   }
 }
 
-function renderMLSSummary(summary = {}) {
-  const el = document.getElementById('mls-summary');
-  if (!el) return;
-
-  el.innerHTML = `
-    <span><strong>Total:</strong> ${summary.total ?? '–'}</span>
-    <span>Solutions: ${summary.solutions ?? '–'}</span>
-    <span>Failures: ${summary.failures ?? '–'}</span>
-    <span>Patterns: ${summary.patterns ?? '–'}</span>
-    <span>Improvements: ${summary.improvements ?? '–'}</span>
-  `;
-}
-
-function renderMLSList(entries) {
-  const list = document.getElementById('mls-list');
-  if (!list) return;
-
-  if (!entries.length) {
-    list.textContent = 'No MLS lessons found.';
+function initMLSPanel() {
+  if (mlsPanelInitialized) {
     return;
   }
 
-  list.innerHTML = '';
+  const panel = document.getElementById('mls-panel');
+  if (!panel) {
+    return;
+  }
 
-  entries.forEach((entry) => {
-    list.appendChild(createMLSCard(entry));
+  const filterButtons = panel.querySelectorAll('.mls-filter-btn[data-mls-type]');
+  filterButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const type = btn.getAttribute('data-mls-type') || '';
+      mlsFilterType = type;
+
+      filterButtons.forEach((b) => b.classList.remove('mls-filter-btn-active'));
+      btn.classList.add('mls-filter-btn-active');
+
+      renderMlsList();
+    });
   });
+
+  const searchInput = document.getElementById('mls-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      mlsSearchQuery = searchInput.value || '';
+      renderMlsList();
+    });
+  }
+
+  refreshMlsEntries();
+  mlsPanelInitialized = true;
 }
 
-function createMLSCard(entry) {
-  const card = document.createElement('article');
-  card.className = 'mls-card';
+function renderMlsList() {
+  const listEl = document.getElementById('mls-list');
+  const summaryEl = document.getElementById('mls-summary');
+  if (!listEl || !summaryEl) {
+    return;
+  }
 
-  const header = document.createElement('header');
-  const badge = document.createElement('span');
-  const badgeType = entry.type ? `badge-${entry.type}` : 'badge-pattern';
-  badge.className = `badge ${badgeType}`;
-  badge.textContent = entry.type ?? 'entry';
-  const title = document.createElement('h3');
-  title.textContent = entry.title ?? 'Untitled lesson';
-  header.append(badge, title);
-  card.appendChild(header);
+  let entries = mlsAllEntries.slice();
 
-  const score = typeof entry.score === 'number' ? entry.score.toFixed(2) : entry.score ?? '–';
+  if (mlsFilterType) {
+    entries = entries.filter((entry) => (entry.type || '') === mlsFilterType);
+  }
+
+  if (mlsSearchQuery.trim()) {
+    const needle = mlsSearchQuery.trim().toLowerCase();
+    entries = entries.filter((entry) => {
+      const haystack = [
+        entry.id,
+        entry.title,
+        entry.details,
+        entry.context,
+        entry.related_wo,
+        entry.related_session,
+        Array.isArray(entry.tags) ? entry.tags.join(' ') : ''
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }
+
+  if (!entries.length) {
+    listEl.innerHTML = `
+      <div class="mls-item">
+        <div class="mls-item-header">
+          <span>No MLS lessons match this filter.</span>
+        </div>
+      </div>
+    `;
+  } else {
+    listEl.innerHTML = entries.map((entry) => renderMlsItem(entry)).join('');
+  }
+
+  const total = mlsAllEntries.length;
+  const solutions = mlsAllEntries.filter((entry) => entry.type === 'solution').length;
+  const failures = mlsAllEntries.filter((entry) => entry.type === 'failure').length;
+  const patterns = mlsAllEntries.filter((entry) => entry.type === 'pattern').length;
+  const improvements = mlsAllEntries.filter((entry) => entry.type === 'improvement').length;
+  const activeType = mlsFilterType || 'all';
+  const searchLabel = mlsSearchQuery ? ` | search: "${mlsSearchQuery}"` : '';
+
+  summaryEl.textContent = `Total: ${total} | solutions: ${solutions} | failures: ${failures} | patterns: ${patterns} | improvements: ${improvements} | type filter: ${activeType}${searchLabel}`;
+}
+
+function renderMlsItem(entry) {
+  const id = entry.id || 'MLS-UNKNOWN';
+  const title = entry.title || 'Untitled lesson';
+  const type = entry.type || 'other';
+  const details = entry.details || entry.context || '';
+  const time = entry.time || '';
   const tags = Array.isArray(entry.tags) ? entry.tags : [];
-  const relativeTime = formatRelativeTime(entry.time);
+  const verified = Boolean(entry.verified);
+  const relatedWo = entry.related_wo || '';
+  const relatedSession = entry.related_session || '';
 
-  const meta = document.createElement('div');
-  meta.className = 'mls-meta';
-  if (relativeTime) {
-    const timeSpan = document.createElement('span');
-    timeSpan.textContent = relativeTime;
-    meta.appendChild(timeSpan);
-  }
-  const scoreSpan = document.createElement('span');
-  scoreSpan.textContent = `score ${score}`;
-  meta.appendChild(scoreSpan);
-  if (tags.length) {
-    const tagsSpan = document.createElement('span');
-    tagsSpan.textContent = `tags: ${tags.join(', ')}`;
-    meta.appendChild(tagsSpan);
-  }
-  card.appendChild(meta);
+  const typeClass = getMlsTypeClass(type);
+  const typeLabel = type.toUpperCase();
 
-  const detailsText = (entry.details || entry.context || '').trim();
-  if (detailsText) {
-    const detailParagraph = document.createElement('p');
-    const truncated = detailsText.length > 280;
-    detailParagraph.textContent = truncated ? `${detailsText.slice(0, 280)}…` : detailsText;
-    card.appendChild(detailParagraph);
+  const metaParts = [];
+  if (time) metaParts.push(`time: ${time}`);
+  if (relatedWo) metaParts.push(`WO: ${relatedWo}`);
+  if (relatedSession) metaParts.push(`session: ${relatedSession}`);
+  if (verified) metaParts.push('✅ verified');
+  const metaText = metaParts.join(' | ');
+  const tagsText = tags.length ? `tags: ${tags.join(', ')}` : '';
 
-    if (truncated) {
-      const toggleBtn = document.createElement('button');
-      toggleBtn.type = 'button';
-      toggleBtn.textContent = 'Show more';
-      toggleBtn.addEventListener('click', () => {
-        const isExpanded = toggleBtn.getAttribute('data-expanded') === 'true';
-        if (isExpanded) {
-          detailParagraph.textContent = `${detailsText.slice(0, 280)}…`;
-          toggleBtn.textContent = 'Show more';
-          toggleBtn.setAttribute('data-expanded', 'false');
-        } else {
-          detailParagraph.textContent = detailsText;
-          toggleBtn.textContent = 'Show less';
-          toggleBtn.setAttribute('data-expanded', 'true');
-        }
-      });
-      card.appendChild(toggleBtn);
-    }
-  }
+  return `
+    <div class="mls-item" data-mls-id="${escapeHtml(id)}">
+      <div class="mls-item-header">
+        <span class="mls-item-title">${escapeHtml(title)}</span>
+        <span class="mls-item-type ${typeClass}">${escapeHtml(typeLabel)}</span>
+      </div>
+      ${metaText ? `<div class="mls-item-meta">${escapeHtml(metaText)}</div>` : ''}
+      ${details ? `<div class="mls-item-meta">${escapeHtml(details)}</div>` : ''}
+      ${tagsText ? `<div class="mls-item-tags">${escapeHtml(tagsText)}</div>` : ''}
+    </div>
+  `;
+}
 
-  const footer = document.createElement('div');
-  footer.className = 'mls-footer';
-  if (entry.related_wo) {
-    const woSpan = document.createElement('span');
-    woSpan.textContent = `WO: ${entry.related_wo}`;
-    footer.appendChild(woSpan);
+function getMlsTypeClass(type) {
+  switch (type) {
+    case 'solution':
+      return 'mls-type-solution';
+    case 'failure':
+      return 'mls-type-failure';
+    case 'pattern':
+      return 'mls-type-pattern';
+    case 'improvement':
+      return 'mls-type-improvement';
+    default:
+      return 'mls-type-other';
   }
-  if (entry.related_session) {
-    const sessionSpan = document.createElement('span');
-    sessionSpan.textContent = `Session: ${entry.related_session}`;
-    footer.appendChild(sessionSpan);
-  }
-  if (entry.verified) {
-    const verifiedSpan = document.createElement('span');
-    verifiedSpan.textContent = 'Verified';
-    footer.appendChild(verifiedSpan);
-  }
-  if (footer.childNodes.length) {
-    card.appendChild(footer);
-  }
-
-  return card;
 }
 
 // --- Work Orders list ---
@@ -905,61 +934,6 @@ function buildTimelineEventsFromWo(wo = {}, logLines = []) {
   return events;
 }
 
-function formatRelativeTime(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) {
-    return isoString;
-  }
-
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const absDiffMs = Math.abs(diffMs);
-  const thresholds = [
-    { unit: 'day', value: 86400000 },
-    { unit: 'hour', value: 3600000 },
-    { unit: 'minute', value: 60000 }
-  ];
-
-  let unit = 'second';
-  let value = diffMs / 1000;
-
-  for (const threshold of thresholds) {
-    if (absDiffMs >= threshold.value) {
-      unit = threshold.unit;
-      value = diffMs / threshold.value;
-      break;
-    }
-  }
-
-  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-  return `${rtf.format(Math.round(value), unit)} · ${date.toLocaleString()}`;
-}
-
-function initMLSPanel() {
-  if (mlsIntervalId) {
-    return;
-  }
-
-  const refreshBtn = document.getElementById('mls-refresh-btn');
-  const retryBtn = document.getElementById('mls-error-retry');
-  const pills = document.querySelectorAll('#mls-type-pills .pill-button');
-
-  pills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      pills.forEach((btn) => btn.classList.remove('active'));
-      pill.classList.add('active');
-      loadMLS(pill.dataset.type || '');
-    });
-  });
-
-  refreshBtn?.addEventListener('click', () => loadMLS());
-  retryBtn?.addEventListener('click', () => loadMLS());
-
-  loadMLS('');
-  mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
-}
-
 // --- Reality Snapshot ---
 
 async function loadRealitySnapshot() {
@@ -1306,11 +1280,6 @@ function cleanupIntervals() {
   if (servicesIntervalId) {
     clearInterval(servicesIntervalId);
     servicesIntervalId = null;
-  }
-
-  if (mlsIntervalId) {
-    clearInterval(mlsIntervalId);
-    mlsIntervalId = null;
   }
 
   if (woTimelineIntervalId) {
