@@ -265,11 +265,11 @@ class APIHandler(BaseHTTPRequestHandler):
 
         if path == '/api/wos':
             self.handle_list_wos(query)
+        elif path == '/api/wos/history':
+            self.handle_list_wos_history(query)
         elif path.startswith('/api/wos/'):
             wo_id = path.split('/')[-1]
             self.handle_get_wo(wo_id, query)
-        elif path == '/api/wos/history':
-            self.handle_list_wos_history(query)
         elif path == '/api/services':
             self.handle_list_services(query)
         elif path == '/api/mls':
