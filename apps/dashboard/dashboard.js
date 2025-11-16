@@ -666,7 +666,7 @@ function renderRealityError(message) {
 
 function updateRealityBadge(el, label, status) {
   if (!el) return;
-  el.className = 'badge badge-muted';
+  el.className = 'reality-badge reality-badge-muted';
   el.textContent = label;
 
   if (!status) {
@@ -674,7 +674,7 @@ function updateRealityBadge(el, label, status) {
   }
 
   const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
-  el.className = `badge badge-${normalized}`;
+  el.className = `reality-badge reality-badge-${normalized}`;
   el.textContent = `${label}: ${status}`;
 }
 
