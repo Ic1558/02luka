@@ -12,6 +12,8 @@ let mlsPanelInitialized = false;
 let mlsAllEntries = [];
 let mlsFilterType = '';
 let mlsSearchQuery = '';
+let currentWoId = null;
+let cachedMlsEntries = null;
 let allWos = [];
 let currentWoStatusFilter = '';
 let woTimelineAll = [];
@@ -317,6 +319,11 @@ async function refreshMlsEntries() {
       if (aKey === bKey) return 0;
       return aKey > bKey ? -1 : 1;
     });
+
+    cachedMlsEntries = mlsAllEntries.slice();
+    if (currentWoId) {
+      refreshWoDetailMls();
+    }
 
     renderMlsList();
   } catch (error) {
@@ -1225,6 +1232,141 @@ function initRealityPanel() {
   realityPanelInitialized = true;
 }
 
+// --- WO ↔ MLS linking (detail panel) ---
+
+function onWorkOrderSelected(woId) {
+  if (!woId) {
+    currentWoId = null;
+  } else {
+    currentWoId = String(woId);
+  }
+  refreshWoDetailMls();
+}
+
+async function refreshWoDetailMls() {
+  const emptyEl = document.getElementById('wo-detail-mls-empty');
+  const listEl = document.getElementById('wo-detail-mls-list');
+
+  if (!listEl) {
+    return;
+  }
+
+  const defaultMessage = emptyEl?.dataset?.defaultMessage || 'No MLS lessons linked to this work order yet.';
+
+  if (!currentWoId) {
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = defaultMessage;
+    }
+    return;
+  }
+
+  try {
+    if (!Array.isArray(cachedMlsEntries)) {
+      const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const payload = await res.json();
+      cachedMlsEntries = Array.isArray(payload.entries) ? payload.entries : [];
+    }
+
+    const related = cachedMlsEntries.filter((entry) => {
+      if (!entry || entry.related_wo === undefined || entry.related_wo === null) {
+        return false;
+      }
+      return String(entry.related_wo) === String(currentWoId);
+    });
+
+    listEl.innerHTML = '';
+
+    if (!related.length) {
+      if (emptyEl) {
+        emptyEl.style.display = '';
+        emptyEl.textContent = defaultMessage;
+      }
+      return;
+    }
+
+    if (emptyEl) {
+      emptyEl.style.display = 'none';
+      emptyEl.textContent = defaultMessage;
+    }
+
+    related.forEach((entry) => {
+      const li = document.createElement('li');
+      li.className = 'wo-detail-mls-item';
+      const entryId = entry.id || entry.mls_id || 'MLS-UNKNOWN';
+      li.dataset.mlsId = entryId;
+      li.textContent = entry.title || entryId || 'MLS lesson';
+      listEl.appendChild(li);
+    });
+  } catch (error) {
+    console.error('Failed to load related MLS lessons for WO', currentWoId, error);
+    cachedMlsEntries = null;
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'Error loading MLS lessons for this work order.';
+    }
+  }
+}
+
+function focusMlsCardById(mlsId) {
+  const list = document.getElementById('mls-list');
+  if (!list || !mlsId) {
+    return;
+  }
+
+  const safeId = cssEscapeAttr(mlsId);
+  if (!safeId) {
+    return;
+  }
+
+  const card = list.querySelector(`[data-mls-id="${safeId}"]`);
+  if (card && typeof card.scrollIntoView === 'function') {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('mls-card-highlight');
+    setTimeout(() => card.classList.remove('mls-card-highlight'), 1500);
+  }
+}
+
+function cssEscapeAttr(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const stringValue = String(value);
+  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
+    return window.CSS.escape(stringValue);
+  }
+  return stringValue.replace(/"/g, '\\"');
+}
+
+document.addEventListener('click', (event) => {
+  const baseTarget = event.target;
+  if (!(baseTarget instanceof Element)) {
+    return;
+  }
+
+  const target = baseTarget.closest('.wo-detail-mls-item');
+  if (!target) {
+    return;
+  }
+
+  const mlsId = target.dataset?.mlsId;
+  if (!mlsId) {
+    return;
+  }
+
+  if (typeof window.selectMlsLesson === 'function') {
+    window.selectMlsLesson(mlsId);
+    return;
+  }
+
+  focusMlsCardById(mlsId);
+});
+
 // --- WO Timeline Panel ---
 
 function initWoTimelinePanel() {
@@ -1431,6 +1573,22 @@ document.addEventListener('DOMContentLoaded', () => {
   initSummaryCards();
   initDashboard();
   initWoTimelinePanel();
+
+  window.addEventListener('wo:select', (event) => {
+    const detail = event?.detail;
+    let woId = null;
+    if (detail && typeof detail === 'object') {
+      woId = detail.id || detail.woId || detail.wo_id || detail.value;
+    } else if (detail) {
+      woId = detail;
+    }
+
+    if (woId) {
+      onWorkOrderSelected(woId);
+    }
+  });
+
+  refreshWoDetailMls();
 });
 
 window.addEventListener('beforeunload', () => {
