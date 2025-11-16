@@ -1,35 +1,327 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-16T22:18:16.543Z",
+    "created_at": "2025-11-16T23:00:39.747Z",
     "source": "hub_autoindex.cjs",
-    "total": 22,
-    "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
+    "total": 46,
+    "mem_root": "/Users/icmini/LocalProjects/02luka-memory"
   },
   "items": [
     {
-      "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 453,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
-      "meta": {},
-      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
+      "rel": "g/reports/sessions/session_20251117_060038.md",
+      "mtime": "2025-11-16T23:00:38.901Z",
+      "bytes": 834,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-17",
+      "summary": "# CLS Session Summary — 2025-11-17\n\n**Date:** 2025-11-17  \n**Timestamp:** 2025-11-17 06:00:38 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 0  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 0\n- Improvements: 0\n- Failures: 0\n- Patterns: 0\n\n**Total Activities:** 0\n\n---\n\n## Major Activities\n\n\n---\n\n## Files Modified\n\n_(Auto-detected from MLS entries)_\n\n\n---\n\n## Next St",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-17",
+        "date": "2025-11-17",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "239db7dc3ecc266fa604a3a11b202fde39835dc79341d2f11d24d4d8398b10f5"
     },
     {
-      "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 453,
+      "rel": "g/reports/sessions/session_20251117.ai.json",
+      "mtime": "2025-11-16T19:36:42.222Z",
+      "bytes": 437,
       "kind": "json",
       "title": "",
-      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
+      "summary": "{\"date\":\"2025-11-17\",\"ts_utc\":\"2025-11-16T19:36:42Z\",\"ts_local\":\"2025-11-17T02:36:42+0700\",\"agent\":\"CLS\",\"summary\":{\"total_entries\":0,\"top_activities\":[],\"stats\":{\"solutions\":0,\"improvements\":0,\"failures\":0,\"patterns\":0}},\"links\":{\"mls_ledger\":\"mls/ledger/2025-11-17.jsonl\",\"full_session\":\"g/reports/sessions/session_20251117_023641.md\"}}",
       "meta": {},
-      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
+      "sha256": "1fb39c9887ffd33febfebb2cb87b206416a193490b0b3e6267760d89bacbcb5a"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251117_023641.md",
+      "mtime": "2025-11-16T19:36:41.773Z",
+      "bytes": 834,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-17",
+      "summary": "# CLS Session Summary — 2025-11-17\n\n**Date:** 2025-11-17  \n**Timestamp:** 2025-11-17 02:36:41 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 0  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 0\n- Improvements: 0\n- Failures: 0\n- Patterns: 0\n\n**Total Activities:** 0\n\n---\n\n## Major Activities\n\n\n---\n\n## Files Modified\n\n_(Auto-detected from MLS entries)_\n\n\n---\n\n## Next St",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-17",
+        "date": "2025-11-17",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "6ea7fc1b942cbe02c212f475be5472d17ae70500e3aa22c8874c26ce83627569"
+    },
+    {
+      "rel": "Boss/Chat archive/cursor_gg_251115.md",
+      "mtime": "2025-11-15T08:42:50.006Z",
+      "bytes": 38281,
+      "kind": "md",
+      "title": "ออกแบบสถาปัตยกรรมและสัญญา CLI",
+      "summary": "# ออกแบบสถาปัตยกรรมและสัญญา CLI\n_Exported on 11/15/2025 at 15:42:14 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nคุณคือ GG Orchestrator สำหรับระบบ 02LUKA (ใช้ใน Cursor แท็บนี้เท่านั้น)\n\n\n\nบทบาท:\n\n- ออกแบบ, วางสถาปัตยกรรม, เขียนสัญญา (Contract), Matrix, Template ให้เอเจ้นต์ตัวอื่นไปทำต่อ\n\n- โฟกัสที่:\n\n  1) CLI Orchestration Contract (Codex CLI / Gemini CLI / Luka CLI / CLS / CLC)\n\n  2) PR Prompt Con",
+      "meta": {},
+      "sha256": "b2298b4c75bc5ddcbac666e5091ede571d7af7ec1a45279297b15b3f3b7574aa"
+    },
+    {
+      "rel": "Boss/Chat archive/cls_251115.md",
+      "mtime": "2025-11-15T07:56:23.352Z",
+      "bytes": 3085377,
+      "kind": "md",
+      "title": "GitHub Actions run details",
+      "summary": "# GitHub Actions run details\n_Exported on 11/15/2025 at 14:56:03 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nLast login: Fri Nov 14 01:45:27 on ttys015\n\n\n\nYou have new mail.\n\nicmini@Ittipongs-Mac-mini g % cd ~/02luka\n\nbash tools/complete_block3_safest.sh\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🛡️  BLOCK 3: SAFEST RECOVERY MODE\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nStep 0: Creating safety ",
+      "meta": {},
+      "sha256": "b48618bc35ff7fa31923c22a3edad1ea6f5b9d9843b86834f58fb2ee6345f395"
+    },
+    {
+      "rel": "Boss/Chat archive/cls_251113-4.md",
+      "mtime": "2025-11-14T06:50:26.441Z",
+      "bytes": 847497,
+      "kind": "md",
+      "title": "GitHub Actions run details",
+      "summary": "# GitHub Actions run details\n_Exported on 11/14/2025 at 13:50:10 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nLast login: Fri Nov 14 01:45:27 on ttys015\n\n\n\nYou have new mail.\n\nicmini@Ittipongs-Mac-mini g % cd ~/02luka\n\nbash tools/complete_block3_safest.sh\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🛡️  BLOCK 3: SAFEST RECOVERY MODE\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nStep 0: Creating safety ",
+      "meta": {},
+      "sha256": "81ddfd0517ad6fca2cc839e98bcd3d962936971ef82d0cd6a002784b99100ace"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113.ai.json",
+      "mtime": "2025-11-13T16:41:01.718Z",
+      "bytes": 651,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"date\":\"2025-11-13\",\"ts_utc\":\"2025-11-13T16:41:01Z\",\"ts_local\":\"2025-11-13T23:41:01+0700\",\"agent\":\"CLS\",\"summary\":{\"total_entries\":299,\"top_activities\":[\"CLS strict CI artifact uploaded\",\"MLS Core Brain Auto-Recording System\",\"MLS Ledger is Primary Memory Layer\",\"CLS WO Cleanup Bot Created\",\"CLS Session: WO Cleanup Bot & MLS Prompt Capture Gap\"],\"stats\":{\"solutions\":286,\"improvements\":12,\"failure",
+      "meta": {},
+      "sha256": "81c3e2a131bed8612f3037c4e902837bd8f80e8c09a7939858bde07bd5cae0ba"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_234101.md",
+      "mtime": "2025-11-13T16:41:01.382Z",
+      "bytes": 33282,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-13",
+      "summary": "# CLS Session Summary — 2025-11-13\n\n**Date:** 2025-11-13  \n**Timestamp:** 2025-11-13 23:41:01 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 299  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 286\n- Improvements: 12\n- Failures: 1\n- Patterns: 0\n\n**Total Activities:** 299\n\n---\n\n## Major Activities\n\n\n### Solutions (286)\n\n**CLS strict CI artifact uploaded**\n- Time: 2025",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-13",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "b0a5fc4b1ca3ceb05268f9a1fef5c6211d0edc139b86e46e0161c3be018e534b"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_233807.md",
+      "mtime": "2025-11-13T16:38:07.974Z",
+      "bytes": 33282,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-13",
+      "summary": "# CLS Session Summary — 2025-11-13\n\n**Date:** 2025-11-13  \n**Timestamp:** 2025-11-13 23:38:07 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 299  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 286\n- Improvements: 12\n- Failures: 1\n- Patterns: 0\n\n**Total Activities:** 299\n\n---\n\n## Major Activities\n\n\n### Solutions (286)\n\n**CLS strict CI artifact uploaded**\n- Time: 2025",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-13",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "f5b6155bc9e586c29478748748e9bcb0931bd564776c94749b54dc476b3c67cd"
+    },
+    {
+      "rel": "Boss/Chat archive/cls_251113-1.md",
+      "mtime": "2025-11-13T15:55:01.953Z",
+      "bytes": 3940195,
+      "kind": "md",
+      "title": "Execute command for cls function",
+      "summary": "# Execute command for cls function\n_Exported on 11/13/2025 at 22:54:41 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nwhen have problem > why not finding the root first as \n This confirms our diagnosis - the WO architecture pipeline is completely broken. All 21 WOs show:\n  - ⚪ 0% progress\n  - Status: \"Unknown\" (should be \"pending\", \"in_progress\", \"completed\")\n  - Owner: \"unassigned\" (should be assign",
+      "meta": {},
+      "sha256": "c0a4d638a61864a9641b73b2ebc38a64a144c317021f0f1140c5e7b14aa1f6f3"
+    },
+    {
+      "rel": "Boss/Chat archive/cls_251113-2.md",
+      "mtime": "2025-11-13T15:54:22.645Z",
+      "bytes": 446982,
+      "kind": "md",
+      "title": "Resume from previous chat",
+      "summary": "# Resume from previous chat\n_Exported on 11/13/2025 at 22:54:05 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nresume from previous chat\n\n---\n\n**Cursor**\n\nReviewing open files and recent context to resume.\n\n\nChecking recent reports and work order files to understand the context:\n\n\nChecking for CLS-related commands or tools that might have been executed:\n\n\nChecking CLS-related tools and verification f",
+      "meta": {},
+      "sha256": "718ca3555cc407ea99bd885c7a03d3aabe6c50054c100dd37f1f4dd4e1c41429"
+    },
+    {
+      "rel": "Boss/Chat archive/cls_251113-3.md",
+      "mtime": "2025-11-13T15:53:50.167Z",
+      "bytes": 978287,
+      "kind": "md",
+      "title": "GitHub Actions run details",
+      "summary": "# GitHub Actions run details\n_Exported on 11/13/2025 at 22:53:04 GMT+7 from Cursor (2.0.75)_\n\n---\n\n**User**\n\nhttps://github.com/Ic1558/02luka/actions/runs/19311134817 \n\n---\n\n**Cursor**\n\nInvestigating the Docs Publisher workflow failure. Reviewing the workflow file and failure tracking.\n\n\nChecking for the workflow file and any extracted logs for this run:\n\n\nReading the extracted log file to identif",
+      "meta": {},
+      "sha256": "8d6259cc0f3cab32fce474020add2d02bc5ba8cf28ad2afb371d690854a5632d"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_153405.md",
+      "mtime": "2025-11-13T08:34:05.695Z",
+      "bytes": 32235,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-13",
+      "summary": "# CLS Session Summary — 2025-11-13\n\n**Date:** 2025-11-13  \n**Timestamp:** 2025-11-13 15:34:05 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 289  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 276\n- Improvements: 12\n- Failures: 1\n- Patterns: 0\n\n**Total Activities:** 289\n\n---\n\n## Major Activities\n\n\n### Usolutions (276)\n\n**CLS strict CI artifact uploaded**\n- Time: 202",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-13",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "c84d295bf7a7bd643f487d679f8c642584bb792ecf66633628e00602aeff22c0"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_153350.md",
+      "mtime": "2025-11-13T08:33:50.917Z",
+      "bytes": 517,
+      "kind": "md",
+      "title": "CLS Session Summary — 2025-11-13",
+      "summary": "# CLS Session Summary — 2025-11-13\n\n**Date:** 2025-11-13  \n**Timestamp:** 2025-11-13 15:33:50 +07  \n**Agent:** CLS (Cursor AI Agent)  \n**MLS Entries:** 289  \n\n---\n\n## Session Statistics\n\n**MLS Entries by Type:**\n- Solutions: 276\n- Improvements: 12\n- Failures: 1\n- Patterns: 0\n\n**Total Activities:** 289\n\n---\n\n## Major Activities\n\n\n",
+      "meta": {
+        "title": "CLS Session Summary — 2025-11-13",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[CLS, session, auto-generated, mls-derived]"
+      },
+      "sha256": "8d63ac4bba842746f28fc6dad4b45450d5a20c8c856d0a1376b4a4910a08b4fb"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_150700.md",
+      "mtime": "2025-11-13T08:29:58.174Z",
+      "bytes": 8074,
+      "kind": "md",
+      "title": "CLS Session Summary — 13 Nov 2025",
+      "summary": "# CLS Session Summary — 13 Nov 2025\n\n**Date:** 2025-11-13  \n**Agent:** CLS (Cursor AI Agent)  \n**Session Duration:** Full day (multiple sessions)  \n**Status:** ✅ Phase 6 Deployed and Verified\n\n---\n\n## Major Accomplishments\n\n### 1. MLS Auto-Prompt Capture System (Complete)\n\n**Phase 1: Investigation**\n- Located Cursor prompts database: `state.vscdb`\n- Found prompts in `aiService.prompts` key\n- 269 p",
+      "meta": {
+        "title": "CLS Session Summary — Phase 6 Deployment & MLS Auto-Capture",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[cls, phase6, adaptive-governance, mls, deployment, bug-fix]"
+      },
+      "sha256": "53a76b5d3a9be2c71ac65e5ead7c8dff4cf2d97e8f93fa0275dbcacdd2c03808"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251112_002000.md",
+      "mtime": "2025-11-13T08:29:56.904Z",
+      "bytes": 2139,
+      "kind": "md",
+      "title": "CLS Session Summary — 12 Nov 2025",
+      "summary": "# CLS Session Summary — 12 Nov 2025\n\n**Date:** 2025-11-12  \n**Agent:** CLS (Cursor AI Agent)  \n**Session Duration:** Multiple sessions throughout the day  \n**Status:** ✅ Infrastructure deployed\n\n---\n\n## Major Accomplishments\n\n### 1. Claude Code Phase 1.5 - Directory Structure\n\n**Problem:** Directory structure confusion between repos  \n**Solution:** \n- Fixed directory structure organization\n- Clari",
+      "meta": {
+        "title": "CLS Session Summary — Infrastructure & CI Setup",
+        "date": "2025-11-12",
+        "type": "session",
+        "category": "system",
+        "source": "CLS",
+        "auto_generated": "true",
+        "tags": "[cls, ci, infrastructure, phase15, slash-commands]"
+      },
+      "sha256": "7c47885d4064d109c0f66b9ec6d13c0fb52805025fd0a0c80e2287e0c0d0132e"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251113_145301.md",
+      "mtime": "2025-11-13T08:06:11.771Z",
+      "bytes": 11869,
+      "kind": "md",
+      "title": "🧠 Session Log — 13 Nov 2025  ",
+      "summary": "# 🧠 Session Log — 13 Nov 2025  \n\n**Context:** Cursor model update, WO pipeline repair, Phase 6 deployment, GG governance update\n\n---\n\n## 1. Cursor Update & Model Behaviour (Critical Insight)\n\n### 1.1 Evidence: Cursor now supports model switching  \n\nUser screenshot shows Cursor multi-model menu (Composer 1, Sonnet 4.5, GPT-5, GPT-5 Codex, Haiku 4.5, Grok Code).\n\n### 1.2 Root Cause: Slash commands ",
+      "meta": {
+        "title": "System Memory Session Log — Phase 6 / Cursor Multi-Agent Update",
+        "date": "2025-11-13",
+        "type": "session",
+        "category": "system",
+        "source": "GG",
+        "auto_generated": "true",
+        "tags": "[phase6, adaptive, cursor, cls, clc, wo-pipeline, governance]"
+      },
+      "sha256": "b07c0466bbcc3df0867fd344409d189370c667674d2a339cf1fb2fbc1725047f"
+    },
+    {
+      "rel": "Boss/Ideas/BLUEPRINTS_COMPLETE_PACKAGE.md",
+      "mtime": "2025-11-12T11:27:12.071Z",
+      "bytes": 13692,
+      "kind": "md",
+      "title": "02LUKA DOMAIN ENHANCEMENT BLUEPRINTS",
+      "summary": "# 02LUKA DOMAIN ENHANCEMENT BLUEPRINTS\n## Complete Package Summary\n\n**Status:** ✅ COMPLETE & PRODUCTION-READY  \n**Created:** 2025-11-12  \n**Total ROI:** $140K-$280K/year  \n**Deployment Timeline:** 2-12 weeks\n\n---\n\n## 📦 WHAT'S INCLUDED\n\n### Complete Blueprint Documentation Suite\n\n**Total:** 9 comprehensive documents (180+ KB)  \n**Location:** `/Users/icmini/02luka/g/reports/`\n\n```\n✅ BLUEPRINTS_INDE",
+      "meta": {},
+      "sha256": "457fa78434eb2801fdd61aa577707fb19eef54973b54340261689affa6ed53f1"
+    },
+    {
+      "rel": "Boss/Ideas/BLUEPRINTS_COMPLETE_DELIVERY.md",
+      "mtime": "2025-11-12T11:26:47.463Z",
+      "bytes": 14923,
+      "kind": "md",
+      "title": "02LUKA DOMAIN ENHANCEMENT COMPLETE DELIVERY",
+      "summary": "# 02LUKA DOMAIN ENHANCEMENT COMPLETE DELIVERY\n**Blueprints + Strategic Documentation Package**\n\n**Delivery Date:** 2025-11-12  \n**Status:** ✅ COMPLETE & PRODUCTION-READY  \n**Total Value:** $140K-$280K/year potential  \n**Files Delivered:** 14 comprehensive documents (245+ KB)\n\n---\n\n## 📦 COMPLETE DELIVERABLES\n\n### Blueprint Tier (Technical Implementation)\n\n```\n✅ BLUEPRINTS_INDEX.md (30 KB)\n   • Mas",
+      "meta": {},
+      "sha256": "05f258b2b74226e50e773203a0723b897e5fd01bf36b816dcc6b86e9d8c38342"
+    },
+    {
+      "rel": "Boss/Ideas/README_DOMAIN_ENHANCEMENTS.md",
+      "mtime": "2025-11-12T11:19:09.983Z",
+      "bytes": 12163,
+      "kind": "md",
+      "title": "02LUKA Domain Enhancement Strategy - Complete Guide",
+      "summary": "# 02LUKA Domain Enhancement Strategy - Complete Guide\n\n**Navigation & Quick Reference**  \n**Created:** 2025-11-12  \n**Status:** Ready for Implementation  \n**Location:** `/Users/icmini/02luka/g/reports/`\n\n---\n\n## 📚 DOCUMENT GUIDE\n\n### Choose What to Read Based on Your Need:\n\n| If You Want To... | Read This | Time |\n|---|---|---|\n| **Get the quick summary** | `DOMAIN_ENHANCEMENT_SUMMARY.md` | 5 min",
+      "meta": {},
+      "sha256": "ee050e15d3f55d407a1a57649520a04dd23cd05682b860e7e57841ea9af99ba4"
+    },
+    {
+      "rel": "Boss/Ideas/DOMAIN_ENHANCEMENT_SUMMARY.md",
+      "mtime": "2025-11-12T11:18:56.777Z",
+      "bytes": 9488,
+      "kind": "md",
+      "title": "02LUKA Domain Enhancement - One-Page Summary",
+      "summary": "# 02LUKA Domain Enhancement - One-Page Summary\n\n**Status:** Ready to Deploy  \n**Created:** 2025-11-12  \n**For:** GC Co-Core Orchestrator\n\n---\n\n## 🎯 THE OPPORTUNITY\n\nYour 02LUKA system has powerful capabilities (vision analysis, automation, multi-AI orchestration) that can be adapted for 5 professional domains with significant time + money savings.\n\n**Potential Annual Value: $140K - $280K** depend",
+      "meta": {},
+      "sha256": "b5b75dd51da43ff8cc6cf349b474d988016f48109f31562f732ca93621d7004c"
+    },
+    {
+      "rel": "Boss/Ideas/DOMAIN_QUICKSTART.md",
+      "mtime": "2025-11-12T11:18:33.838Z",
+      "bytes": 15131,
+      "kind": "md",
+      "title": "02LUKA Domain Enhancement - Quick Start Guide",
+      "summary": "# 02LUKA Domain Enhancement - Quick Start Guide\n**Choose Your Priority + Get Started in 2 Weeks**\n\n---\n\n## 🎯 QUICK DOMAIN SELECTOR\n\n### Which domain should YOU start with?\n\n**Choose based on your immediate need:**\n\n#### 🏢 **CONSTRUCTION MANAGEMENT** ✅ BEST FOR SPEED\n**If you:** Need to track daily project progress, manage costs, coordinate teams  \n**Time to value:** 2 weeks  \n**Time saved:** 10 ",
+      "meta": {},
+      "sha256": "52e5cab9fb68ec46ce1e7ba0552f17e4471280f9f28948efa91240e570825ae3"
+    },
+    {
+      "rel": "Boss/Ideas/DOMAIN_ENHANCEMENT_STRATEGY.md",
+      "mtime": "2025-11-12T11:18:22.334Z",
+      "bytes": 22127,
+      "kind": "md",
+      "title": "02LUKA Domain Enhancement Strategy",
+      "summary": "# 02LUKA Domain Enhancement Strategy\n**For:** Architect, Interior Design, Construction Mgmt, Accounting/Finance, Trading  \n**Status:** Strategic Recommendations  \n**Updated:** 2025-11-12  \n**Prepared for:** GC Co-Core Orchestrator\n\n---\n\n## 🎯 Overview\n\nYour 02LUKA system has **strong foundational capabilities** (document processing, multi-AI coordination, vision analysis, automation). To unlock do",
+      "meta": {},
+      "sha256": "0a738be9e28c40e22437821ca149622500641dab73ac7df03282e3e469d863e3"
+    },
+    {
+      "rel": "Boss/Ideas/DOMAIN_DECISION_MATRIX.md",
+      "mtime": "2025-11-12T11:17:22.303Z",
+      "bytes": 15427,
+      "kind": "md",
+      "title": "Domain Enhancement - Decision Matrices & Comparison",
+      "summary": "# Domain Enhancement - Decision Matrices & Comparison\n\n---\n\n## 🎯 DOMAIN SELECTION MATRIX\n\n### Quick Score (Highest = Start Here)\n\n```\nCRITERIA SCORING:\nTime to Value ........... How soon you see results (weeks)\nWeekly ROI .............. Hours saved per week\nSetup Complexity ........ Effort to implement (hours)\nData Readiness .......... Do you have sample data now?\nQuick Wins .............. Immedi",
+      "meta": {},
+      "sha256": "144238e34be240f085c751c781f0cb2e115a6e5135117e7d47ed9ed25483911a"
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
+      "mtime": "2025-11-11T18:50:16.867Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -38,26 +330,140 @@
       "sha256": "11249329f1852c363cde2a6918663ce554eb2e923e4900ec69a476b37c92bc21"
     },
     {
-      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 10267,
+      "rel": "GG/context/INTEGRATION_CHECK.md",
+      "mtime": "2025-11-11T18:50:16.866Z",
+      "bytes": 229,
       "kind": "md",
-      "title": "MCP Configuration Crisis Resolution",
-      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
+      "title": "Integration Test Ping",
+      "summary": "# Integration Test Ping\n# Generated: 2025-11-11T17:14:46Z\n# Purpose: Verify end-to-end memory sync workflow\n\nThis file is created by the integration test to verify:\n- mem_sync_from_core.zsh (pull)\n- mem_push_to_memory.zsh (push)\n",
+      "meta": {},
+      "sha256": "327e69370dac60d1a0bdcceec3165beaf0aa6e8736edaa4b37d8bc14bd34f84c"
+    },
+    {
+      "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
+      "mtime": "2025-11-11T18:50:16.866Z",
+      "bytes": 146,
+      "kind": "md",
+      "title": "Integration Ping",
+      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:36:19Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
+      "meta": {},
+      "sha256": "670d9ecd0b435aeba65283cb5e3cf48a4506fb61eff711bba94d97adbc32979d"
+    },
+    {
+      "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
+      "mtime": "2025-11-11T18:50:16.866Z",
+      "bytes": 146,
+      "kind": "md",
+      "title": "Integration Ping",
+      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:39:37Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
+      "meta": {},
+      "sha256": "dec324bcee7fbfd520b16d91dca0b4586e529a95e9c95b53f0f09652fab0ca94"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251111_054601.md",
+      "mtime": "2025-11-11T05:46:01.888Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-11\n**Timestamp**: 2025-11-11 05:46:01 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
       "meta": {
-        "title": "MCP Configuration Crisis Resolution",
-        "date": "2025-11-07",
-        "type": "solution",
-        "category": "infrastructure",
-        "severity": "critical",
-        "status": "resolved",
-        "tags": "[mcp, cursor, configuration, troubleshooting]"
+        "title": "CLC Session Summary",
+        "date": "2025-11-11",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
       },
-      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
+      "sha256": "0e83d792dd6906e6d8103986f6387f3e2a22fb34659343cdffd8c0f72d515261"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215450.md",
+      "mtime": "2025-11-09T21:54:50.438Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:50 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "c21383614f87ac4c47719682295b6ce1da3c358cd8ccbb89295ed18e903de353"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215448.md",
+      "mtime": "2025-11-09T21:54:48.628Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215231.md",
+      "mtime": "2025-11-09T21:52:31.486Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251108_102049.md",
+      "mtime": "2025-11-08T10:20:49.190Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251108_033807.md",
+      "mtime": "2025-11-08T03:38:07.388Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 03:38:07 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
+      "mtime": "2025-11-07T22:11:43.120Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -74,120 +480,26 @@
       "sha256": "4347ed21c10c32fccf8f8c79db7eeea01248d3186fe322833d558af033a75fd5"
     },
     {
-      "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
+      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
+      "mtime": "2025-11-07T22:02:00.160Z",
+      "bytes": 10267,
       "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 03:38:07 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "title": "MCP Configuration Crisis Resolution",
+      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
       "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
+        "title": "MCP Configuration Crisis Resolution",
+        "date": "2025-11-07",
+        "type": "solution",
+        "category": "infrastructure",
+        "severity": "critical",
+        "status": "resolved",
+        "tags": "[mcp, cursor, configuration, troubleshooting]"
       },
-      "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:50 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "c21383614f87ac4c47719682295b6ce1da3c358cd8ccbb89295ed18e903de353"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-11\n**Timestamp**: 2025-11-11 05:46:01 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-11",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "0e83d792dd6906e6d8103986f6387f3e2a22fb34659343cdffd8c0f72d515261"
-    },
-    {
-      "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-16T22:18:08.550Z",
-      "bytes": 261,
-      "kind": "md",
-      "title": "Manual Git Setup Test",
-      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
-      "meta": {},
-      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
+      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
     },
     {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-16T22:18:08.549Z",
+      "mtime": "2025-11-07T21:37:18.539Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
@@ -196,38 +508,60 @@
       "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
     },
     {
-      "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 229,
+      "rel": "GG/context/LATEST.md",
+      "mtime": "2025-11-07T20:32:10.311Z",
+      "bytes": 8969,
       "kind": "md",
-      "title": "Integration Test Ping",
-      "summary": "# Integration Test Ping\n# Generated: 2025-11-11T17:14:46Z\n# Purpose: Verify end-to-end memory sync workflow\n\nThis file is created by the integration test to verify:\n- mem_sync_from_core.zsh (pull)\n- mem_push_to_memory.zsh (push)\n",
-      "meta": {},
-      "sha256": "327e69370dac60d1a0bdcceec3165beaf0aa6e8736edaa4b37d8bc14bd34f84c"
+      "title": "Context Summary - 02LUKA System",
+      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
+      "meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "2025-11-07 20:32:06 UTC",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": "20",
+        "revision": "bf119ef"
+      },
+      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
     },
     {
-      "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 146,
+      "rel": "GG/context/context_summary_20251107_203206Z.md",
+      "mtime": "2025-11-07T20:32:10.311Z",
+      "bytes": 8969,
       "kind": "md",
-      "title": "Integration Ping",
-      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:36:19Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
-      "meta": {},
-      "sha256": "670d9ecd0b435aeba65283cb5e3cf48a4506fb61eff711bba94d97adbc32979d"
+      "title": "Context Summary - 02LUKA System",
+      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
+      "meta": {
+        "created_by": "GG_Agent_02luka",
+        "created_at": "2025-11-07 20:32:06 UTC",
+        "source_script": "tools/generate_context_summary.zsh",
+        "phase": "20",
+        "revision": "bf119ef"
+      },
+      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
     },
     {
-      "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 146,
-      "kind": "md",
-      "title": "Integration Ping",
-      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:39:37Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
+      "rel": "GG/context/LATEST.meta.json",
+      "mtime": "2025-11-07T20:32:10.264Z",
+      "bytes": 453,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
       "meta": {},
-      "sha256": "dec324bcee7fbfd520b16d91dca0b4586e529a95e9c95b53f0f09652fab0ca94"
+      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
+    },
+    {
+      "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
+      "mtime": "2025-11-07T20:32:10.264Z",
+      "bytes": 453,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"generated_at\":\"2025-11-07T20:32:06Z\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"revision\":\"bf119ef\",\"outputs\":{\"md\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md\",\"json\":\"/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json\"},\"signals\":{\"hub\":\"running\",\"redis\":\"failed\"}}",
+      "meta": {},
+      "sha256": "a6d83e57a7b2cbf810ec4fd903ad8c112e5ada09a52c68c7060507cc4574a4cf"
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-16T22:18:08.549Z",
+      "mtime": "2025-11-07T20:32:10.254Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -243,39 +577,25 @@
       "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
     },
     {
-      "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 8969,
-      "kind": "md",
-      "title": "Context Summary - 02LUKA System",
-      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
-      "meta": {
-        "created_by": "GG_Agent_02luka",
-        "created_at": "2025-11-07 20:32:06 UTC",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": "20",
-        "revision": "bf119ef"
-      },
-      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
-    },
-    {
-      "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 15223,
+      "rel": "GG/context/context_summary_20251107_203206Z.json",
+      "mtime": "2025-11-07T20:32:10.254Z",
+      "bytes": 14873,
       "kind": "json",
       "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
       "meta": {
-        "generated_at": "2025-11-07T20:21:38Z",
-        "revision": "f67de55",
+        "generated_at": "2025-11-07T20:32:06Z",
+        "revision": "bf119ef",
+        "created_by": "GG_Agent_02luka",
         "source_script": "tools/generate_context_summary.zsh",
+        "gh_auth": "ok",
         "phase": 20
       },
-      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
+      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
+      "mtime": "2025-11-07T20:21:41.519Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -290,37 +610,29 @@
       "sha256": "6e42f3be0c33545497c7f3ad8195160fefdfb8cb98b33fc1f6169cb97ab7faa3"
     },
     {
-      "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 14873,
+      "rel": "GG/context/context_summary_20251107_202138Z.json",
+      "mtime": "2025-11-07T20:21:41.467Z",
+      "bytes": 15223,
       "kind": "json",
       "title": "",
-      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:32:06Z\",\"revision\":\"bf119ef\",\"created_by\":\"GG_Agent_02luka\",\"source_script\":\"tools/generate_context_summary.zsh\",\"gh_auth\":\"ok\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"",
+      "summary": "{\"meta\":{\"generated_at\":\"2025-11-07T20:21:38Z\",\"revision\":\"f67de55\",\"source_script\":\"tools/generate_context_summary.zsh\",\"phase\":20},\"ci\":{\"open_prs\":[{\"createdAt\":\"2025-11-07T20:15:45Z\",\"headRefName\":\"claude/resolve-conflicting-prs-011CUu7xxmicXCMGtnjyUFkZ\",\"labels\":[],\"number\":219,\"state\":\"OPEN\",\"title\":\"Resolve conflicts across 10 pull requests\"},{\"createdAt\":\"2025-11-07T00:18:20Z\",\"headRefName",
       "meta": {
-        "generated_at": "2025-11-07T20:32:06Z",
-        "revision": "bf119ef",
-        "created_by": "GG_Agent_02luka",
+        "generated_at": "2025-11-07T20:21:38Z",
+        "revision": "f67de55",
         "source_script": "tools/generate_context_summary.zsh",
-        "gh_auth": "ok",
         "phase": 20
       },
-      "sha256": "99b8e834f0aa60ebc9fc1919bb52d71b998c7ff4406d413b2535c272a6f895ad"
+      "sha256": "7f374bbdd4b07871b6fff2d9c33d2b3261570c4ec54033ee05b383c305f753b4"
     },
     {
-      "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-16T22:18:08.549Z",
-      "bytes": 8969,
+      "rel": "test/manual_setup/git_manual_test.md",
+      "mtime": "2025-11-07T20:19:20.031Z",
+      "bytes": 261,
       "kind": "md",
-      "title": "Context Summary - 02LUKA System",
-      "summary": "# Context Summary - 02LUKA System\n\n**Generated:** 2025-11-07 20:32:06 UTC\n**System:** 02LUKA Cognitive Architecture\n**Phase:** 20 - Hub Dashboard & CI/CD Automation\n\n---\n\n## Executive Summary\n\nThis document provides a comprehensive context summary of the 02LUKA system, including:\n- CI/CD reliability improvements\n- PR automation status\n- Hub Dashboard monitoring\n- System health and status\n\n---\n\n## ",
-      "meta": {
-        "created_by": "GG_Agent_02luka",
-        "created_at": "2025-11-07 20:32:06 UTC",
-        "source_script": "tools/generate_context_summary.zsh",
-        "phase": "20",
-        "revision": "bf119ef"
-      },
-      "sha256": "764c80c56ff9ae0ba22b5d2ad190b27172bf5121aab6cfe1fe3e80a76c5cad82"
+      "title": "Manual Git Setup Test",
+      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
+      "meta": {},
+      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
     }
   ]
 }

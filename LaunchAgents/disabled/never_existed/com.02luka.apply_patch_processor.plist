@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.02luka.apply_patch_processor</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-l</string>
+    <string>-c</string>
+    <string>/Users/icmini/02luka/agents/apply_patch_processor/apply_patch_processor.zsh</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>15</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/icmini/Library/Logs/apply_patch_processor.out</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/icmini/Library/Logs/apply_patch_processor.err</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LUKA_SOT</key>
+    <string>/Users/icmini/02luka</string>
+  </dict>
+</dict>
+</plist>

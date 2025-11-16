@@ -1,0 +1,14 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.watch.notes_rollup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/icmini/02luka/g/tools/watchers/notes_rollup.zsh</string>
+  </array>
+  <key>WatchPaths</key>
+  <array><string>/Users/icmini/02luka/g/inbox/notes</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/telemetry/watch.notes_rollup.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/telemetry/watch.notes_rollup.err.log</string>
+</dict></plist>
