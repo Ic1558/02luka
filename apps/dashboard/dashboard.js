@@ -13,6 +13,8 @@ let currentWoFilter = 'all';
 let woAutorefreshTimer = null;
 let woAutorefreshEnabled = false;
 let woAutorefreshIntervalMs = 30000;
+let woRefreshAbortController = null;
+let woRefreshRequestId = 0;
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -274,8 +276,21 @@ function formatWoTimeline(wo) {
 }
 
 async function refreshWos() {
+  const requestId = ++woRefreshRequestId;
+
+  if (woRefreshAbortController) {
+    try {
+      woRefreshAbortController.abort();
+    } catch (abortErr) {
+      console.warn('Failed to abort previous WO refresh', abortErr);
+    }
+  }
+
+  const controller = new AbortController();
+  woRefreshAbortController = controller;
+
   try {
-    const res = await fetch('/api/wos');
+    const res = await fetch('/api/wos', { signal: controller.signal });
     if (!res.ok) {
       console.error('Failed to fetch WOs', res.status);
       updateWoLastRefreshLabel(false);
@@ -292,10 +307,21 @@ async function refreshWos() {
     }
     allWos = Array.isArray(wos) ? wos : [];
     applyWoFilter();
-    updateWoLastRefreshLabel(true);
+    if (requestId === woRefreshRequestId) {
+      updateWoLastRefreshLabel(true);
+    }
   } catch (err) {
+    if (err?.name === 'AbortError') {
+      return;
+    }
     console.error('Error loading WOs', err);
-    updateWoLastRefreshLabel(false);
+    if (requestId === woRefreshRequestId) {
+      updateWoLastRefreshLabel(false);
+    }
+  } finally {
+    if (woRefreshAbortController === controller) {
+      woRefreshAbortController = null;
+    }
   }
 }
 

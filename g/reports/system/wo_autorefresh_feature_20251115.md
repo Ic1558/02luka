@@ -23,6 +23,8 @@ endpoint at a configurable interval.
     - `woAutorefreshTimer`
     - `woAutorefreshEnabled`
     - `woAutorefreshIntervalMs`
+    - `woRefreshAbortController`
+    - `woRefreshRequestId`
   - Adds functions:
     - `refreshWos()` → fetches `/api/wos`, updates `allWos` and calls
       `applyWoFilter()`, updates `#wos-last-refresh`.
@@ -41,6 +43,8 @@ endpoint at a configurable interval.
 - When **Auto-refresh** is enabled:
   - `refreshWos()` is called every N milliseconds as configured by the
     interval select (default 30s).
+- `refreshWos()` cancels any prior in-flight fetch so only the latest
+  response updates the UI and timestamp label.
 - The **Last refresh** label displays:
   - `Last refresh: HH:MM:SS` on success.
   - `Last refresh: error at HH:MM:SS` if the fetch fails.
