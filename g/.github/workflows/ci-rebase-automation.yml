@@ -1,0 +1,267 @@
+---
+name: CI Rebase Automation
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode (report or rebase)'
+        required: false
+        default: 'report'
+        type: choice
+        options:
+          - report
+          - rebase
+      only_failing:
+        description: 'Only rebase PRs with failing checks'
+        required: false
+        default: false
+        type: boolean
+      force:
+        description: 'Skip confirmation (auto-approve)'
+        required: false
+        default: false
+        type: boolean
+      base_branch:
+        description: 'Base branch to rebase onto'
+        required: false
+        default: 'origin/main'
+        type: string
+
+  # Bot command trigger via PR comment
+  issue_comment:
+    types: [created]
+
+  # Scheduled trigger (optional - runs daily)
+  schedule:
+    # Run every day at 2 AM UTC to check for CI PR conflicts
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Check if this was triggered by a bot command
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  check-command:
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+      mode: ${{ steps.check.outputs.mode }}
+      only_failing: ${{ steps.check.outputs.only_failing }}
+    steps:
+      - name: Check for bot command
+        id: check
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          COMMENT="$COMMENT_BODY"
+          SHOULD_RUN="false"
+          MODE="report"
+          ONLY_FAILING="false"
+
+          # Check for rebase commands
+          if echo "$COMMENT" | grep -qE '^/rebase-ci\s*'; then
+            SHOULD_RUN="true"
+            MODE="rebase"
+
+            # Check for flags
+            if echo "$COMMENT" | grep -qE '--only-failing'; then
+              ONLY_FAILING="true"
+            fi
+          elif echo "$COMMENT" | grep -qE '^/check-ci-rebases\s*'; then
+            SHOULD_RUN="true"
+            MODE="report"
+          fi
+
+          echo "should_run=$SHOULD_RUN" >> $GITHUB_OUTPUT
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
+          echo "only_failing=$ONLY_FAILING" >> $GITHUB_OUTPUT
+
+      - name: React to comment
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -f content='rocket'
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Run CI Rebase Automation
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  rebase-ci-prs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [check-command]
+    if: |
+      always() &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'schedule' ||
+       needs.check-command.outputs.should_run == 'true')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up environment
+        run: |
+          # Determine mode
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            MODE="${{ inputs.mode }}"
+            ONLY_FAILING="${{ inputs.only_failing }}"
+            FORCE="${{ inputs.force }}"
+            BASE="${{ inputs.base_branch }}"
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            MODE="${{ needs.check-command.outputs.mode }}"
+            ONLY_FAILING="${{ needs.check-command.outputs.only_failing }}"
+            FORCE="true"  # Auto-approve for bot commands
+            BASE="origin/main"
+          else
+            # Scheduled run - report only by default
+            MODE="report"
+            ONLY_FAILING="false"
+            FORCE="true"
+            BASE="origin/main"
+          fi
+
+          echo "MODE=$MODE" >> $GITHUB_ENV
+          echo "ONLY_FAILING=$ONLY_FAILING" >> $GITHUB_ENV
+          echo "FORCE=$FORCE" >> $GITHUB_ENV
+          echo "BASE=$BASE" >> $GITHUB_ENV
+
+      - name: Run CI Rebase Tool
+        id: rebase
+        run: |
+          # Build command
+          CMD="./tools/global_ci_branches.zsh"
+
+          # Add mode
+          if [[ "$MODE" == "rebase" ]]; then
+            CMD="$CMD --rebase"
+          else
+            CMD="$CMD --report"
+          fi
+
+          # Add flags
+          [[ "$ONLY_FAILING" == "true" ]] && CMD="$CMD --only-failing"
+          [[ "$FORCE" == "true" ]] && CMD="$CMD --force"
+          [[ -n "$BASE" ]] && CMD="$CMD --base $BASE"
+
+          # Add repo
+          CMD="$CMD --repo ${{ github.repository }}"
+
+          echo "Running: $CMD"
+          echo ""
+
+          # Run command and capture output
+          set +e
+          OUTPUT=$($CMD 2>&1)
+          EXIT_CODE=$?
+          set -e
+
+          echo "$OUTPUT"
+
+          # Save output for comment
+          echo "$OUTPUT" > /tmp/rebase-output.txt
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - name: Post result to PR (if triggered by comment)
+        if: github.event_name == 'issue_comment' && always()
+        run: |
+          OUTPUT=$(cat /tmp/rebase-output.txt || echo "No output available")
+          EXIT_CODE="${{ steps.rebase.outputs.exit_code }}"
+
+          # Truncate if too long
+          if [[ ${#OUTPUT} -gt 4000 ]]; then
+            OUTPUT="${OUTPUT:0:4000}
+
+          ... (output truncated)"
+          fi
+
+          # Create comment body
+          if [[ "$EXIT_CODE" == "0" ]]; then
+            EMOJI="✅"
+            STATUS="Success"
+          else
+            EMOJI="❌"
+            STATUS="Failed"
+          fi
+
+          COMMENT="## $EMOJI CI Rebase Automation - $STATUS
+
+          **Mode:** \`${{ env.MODE }}\`
+          **Base:** \`${{ env.BASE }}\`
+          **Only Failing:** \`${{ env.ONLY_FAILING }}\`
+
+          <details>
+          <summary>Show output</summary>
+
+          \`\`\`
+          $OUTPUT
+          \`\`\`
+
+          </details>
+
+          ---
+          🤖 Triggered by @${{ github.event.comment.user.login }} via bot command"
+
+          # Post comment
+          gh pr comment ${{ github.event.issue.number }} --body "$COMMENT"
+
+      - name: Check exit code
+        if: steps.rebase.outputs.exit_code != '0' && github.event_name != 'schedule'
+        run: |
+          echo "CI Rebase automation failed with exit code ${{ steps.rebase.outputs.exit_code }}"
+          exit 1
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Summary notification (for scheduled runs)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  notify-scheduled-result:
+    if: github.event_name == 'schedule' && always()
+    needs: [rebase-ci-prs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue if rebases needed
+        if: needs.rebase-ci-prs.result == 'failure'
+        run: |
+          # Check if there's already an open issue
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --label "ci-rebase-needed" \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+
+          if [[ -z "$EXISTING" ]]; then
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "🔄 CI Rebases Needed" \
+              --label "ci-rebase-needed,automated" \
+              --body "The scheduled CI rebase check found PRs that need attention.
+
+          **Action Required:**
+          - Review the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Run manual rebase: \`/rebase-ci\` in any PR comment
+          - Or trigger via Actions: [CI Rebase Automation](${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci-rebase-automation.yml)
+
+          ---
+          🤖 Auto-generated by scheduled CI rebase check"
+          fi

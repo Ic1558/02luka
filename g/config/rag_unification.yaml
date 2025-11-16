@@ -1,0 +1,59 @@
+# Phase 14 – SOT Unification / RAG Integration
+# Classification: Strategic Integration Patch (SIP)
+# Deployed by: CLS (Cognitive Local System Orchestrator)
+# Maintainer: GG Core (02LUKA Automation)
+# Version: v1.2-cross-agent-binding
+# Revision: r1
+# Timestamp: 2025-11-07T00:05:00+07:00
+# WO-ID: WO-251107-PHASE-14-RAG-UNIFICATION
+# Verified by: CDC / CLC / GG SOT Audit Layer
+# Author: cls
+# Identity: CLS
+# Created: 2025-11-07
+
+embedding:
+  model: text-embedding-3-large
+
+reranker:
+  model: bge-reranker-v2-m3
+
+chunking:
+  size: 1200
+  overlap: 200
+
+safety:
+  max_doc_size_mb: 20
+
+telemetry:
+  reports_dir: ~/02luka/g/reports/rag_federation
+  logs_dir:    ~/02luka/logs
+
+sources:
+  - name: memory_center_local_jsonl
+    type: jsonl
+    path: ~/02luka/memory/local/jsonl
+    include_globs: ["**/*.jsonl"]
+    exclude_globs: ["**/autosave/**", "**/tmp/**"]
+    priority: 10
+
+  - name: memory_center_cloud_jsonl
+    type: jsonl
+    path: ~/02luka/memory/cloud/jsonl
+    include_globs: ["**/*.jsonl"]
+    exclude_globs: ["**/autosave/**", "**/tmp/**"]
+    priority: 20
+
+  - name: notes_text
+    type: text
+    path: ~/02luka/docs/notes
+    include_globs: ["**/*.md", "**/*.txt"]
+    exclude_globs: ["archive/**"]
+    priority: 50
+
+  - name: legacy_sqlite_indices
+    type: sqlite
+    path: ~/02luka/memory/legacy
+    include_globs: ["**/*.db", "**/*.sqlite"]
+    exclude_globs: []
+    priority: 90
+

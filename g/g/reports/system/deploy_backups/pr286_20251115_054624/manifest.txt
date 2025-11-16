@@ -1,0 +1,22 @@
+PR #286 Resolution Deployment Artifact Manifest
+Generated: 2025-11-15 05:46:43
+
+Backup Directory: g/reports/system/deploy_backups/pr286_20251115_054624
+Plan Document: g/reports/system/pr286_resolution_plan_20251115.md
+
+Files Backed Up:
+- current_branch.txt (current branch at backup time)
+- recent_commits.txt (last 5 commits)
+- pr286_commits.txt (PR #286 commit history)
+- rollback_pr286_resolution.sh (rollback script)
+
+Deployment Summary:
+- PR #286: ai/codex-review-251114
+- Strategy: Full cleanup - rebase, remove runtime files, preserve security fixes
+- Base: Current main branch (with PR #280, #289, #290 fixes)
+
+Next Steps:
+1. Execute PR #286 resolution plan (7 phases)
+2. Create clean commits from salvageable content
+3. Update PR description
+4. Verify and merge

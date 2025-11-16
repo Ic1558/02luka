@@ -1,0 +1,251 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║            PR MERGE CONFLICTS & CI/CD ROOT ERROR ANALYSIS                    ║
+║                          14 Conflicting Branches                             ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+CONFLICT DISTRIBUTION BY FILE
+═══════════════════════════════════════════════════════════════════════════════
+
+.github/workflows/ci.yml       ████████████████████████████████████ 9 conflicts
+.gitignore                     ██████████████ 5 conflicts
+docs/DEPLOY.md                 ███████ 2 conflicts
+boss-api/server.cjs            ███████ 2 conflicts (MODIFY/DELETE)
+.codex/preflight.sh            ███████ 2 conflicts (MODIFY/DELETE)
+run/smoke_api_ui.sh            ███████ 2 conflicts (MODIFY/DELETE)
+scripts/*.sh (4 files)         ███████ 2 conflicts (MODIFY/DELETE)
+CI_RELIABILITY_PACK.md         ███████ 2 conflicts (ADD/ADD)
+[Other files with 1 conflict each] ████ 4 conflicts
+
+═══════════════════════════════════════════════════════════════════════════════
+TIMELINE: BRANCH DIVERGENCE FROM MAIN
+═══════════════════════════════════════════════════════════════════════════════
+
+Oct 15, 2025, 2:25 AM  [DIVERGENCE POINT: 222 commits behind]
+                       ├─ chore/auto-update-branch ❌ OBSOLETE ARCHITECTURE
+                       └─ chore/ci-docs-links ❌ OBSOLETE ARCHITECTURE
+
+Nov 6, 2025, 20:08 PM  [DIVERGENCE POINT: 22 commits behind]
+                       └─ claude/fix-ci-node-lockfile-check-011C ⚠️ CONFLICT
+
+Nov 6, 2025, 21:24 PM  [DIVERGENCE POINT: 17 commits behind]
+                       └─ claude/fix-dangling-symlink-chmod-011C ⚠️ CONFLICT
+
+Nov 6, 2025, 22:06 PM  [DIVERGENCE POINT: 15 commits behind]
+                       └─ claude/phase15-rag-faiss-prod-011C ⚠️ CONFLICT
+
+Nov 6, 2025, 23:12 PM  [DIVERGENCE POINT: 26 commits behind]
+                       └─ claude/exploration-and-research-011C ⚠️ CONFLICT
+
+Nov 7, 2025, 01:26 AM  [DIVERGENCE POINT: 13 commits behind]
+                       └─ claude/phase15-router-core-akr-011C ⚠️ CONFLICT
+
+Nov 7, 2025, 02:01 AM  [DIVERGENCE POINT: 2 commits behind] ⚠️ VERY RECENT
+  ├─ claude/ci-optin-smoke-011C ⚠️ UNEXPECTED CONFLICT (recent branch!)
+  └─ claude/ci-reliability-pack-011C ⚠️ UNEXPECTED CONFLICT (recent branch!)
+
+                   ↓
+         [MAJOR REFACTOR d12d5d7]
+         "feat(ci): make CI quiet & reliable by default (#200)"
+         Changes: ci.yml refactor, SKIP_BOSS_API guard, optional jobs
+                   ↓
+
+Nov 7, 2025, 02:18 AM  [MAIN BRANCH: d12d5d7 - CRITICAL REFACTOR]
+                       ├─ .github/workflows/ci.yml COMPLETELY REWRITTEN
+                       ├─ Added ops-gate (optional)
+                       ├─ Added rag-vector-selftest (optional)
+                       ├─ Added ci-summary (always)
+                       └─ Added SKIP_BOSS_API guard
+
+Nov 7, 2025, 02:25 AM  [DIVERGENCE POINT: 1 commit behind]
+  ├─ claude/phase-16-bus ⚠️ CREATED AFTER REFACTOR
+  ├─ claude/phase-17-ci-observer
+  ├─ claude/phase-18-ops-sandbox-runner
+  ├─ claude/phase-19-ci-hygiene-health
+  └─ claude/phase-19.1-gc-hardening
+
+                   ↓
+         [DOCUMENTATION UPDATE 6f03320]
+         "docs(ci): CI automation runbook + repo hygiene (.gitignore)"
+         Changes: .gitignore updated, CI runbook added
+                   ↓
+
+Nov 7, 2025, ?????     [MAIN BRANCH: 6f03320 - LATEST]
+                       └─ .gitignore modified (added 6 lines)
+                       └─ CI AUTOMATION_RUNBOOK.md created
+                       └─ ❌ pages.yml has BROKEN YAML (heredoc issue)
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT ERROR #1: CRITICAL - pages.yml INVALID YAML
+═══════════════════════════════════════════════════════════════════════════════
+
+❌ CURRENT (BROKEN):
+   cat > dist/manifest.json << JSON  # ← bare word "JSON" - INVALID YAML!
+   {
+     "status": "ok",
+     ...
+   }
+   JSON
+
+✅ FIXED:
+   cat > dist/manifest.json << 'JSON'  # ← quoted - valid YAML
+   {
+     "status": "ok",
+     ...
+   }
+   JSON
+
+IMPACT: GitHub Pages deployment workflow will FAIL TO PARSE
+LINE: 45 in .github/workflows/pages.yml
+ERROR: yaml.scanner.ScannerError: could not find expected ':' on line 44
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT ERROR #2: ARCHITECTURE DEPRECATION (13 MODIFY/DELETE CONFLICTS)
+═══════════════════════════════════════════════════════════════════════════════
+
+DELETED FILES (Old Architecture):
+  ❌ boss-api/server.cjs → old Node.js API (superseded by new architecture)
+  ❌ boss-ui/* → old React frontend (no longer needed)
+  ❌ crawler/ingest.py → old web crawler
+  ❌ .codex/* (12+ files) → old Cursor IDE integration scripts
+  ❌ scripts/cutover_launchagents.sh → old deployment tooling
+  ❌ scripts/health_proxy_launcher.sh → old infrastructure
+  ❌ scripts/repo_root_resolver.sh → old path resolution
+  ❌ run/smoke_api_ui.sh → old smoke test for deleted API/UI
+
+AFFECTED BRANCHES (222 commits behind):
+  ├─ chore/auto-update-branch (Oct 15)
+  └─ chore/ci-docs-links (Oct 15)
+
+STATUS: These branches contain ~40 file changes to components that NO LONGER EXIST
+ACTION: Should be CLOSED (unmergeable without major rewrite)
+
+═══════════════════════════════════════════════════════════════════════════════
+ROOT ERROR #3: CI.yml MASSIVE REFACTORING (9 CONTENT CONFLICTS)
+═══════════════════════════════════════════════════════════════════════════════
+
+CHANGE: Commit d12d5d7 on Nov 7 02:18 (feat(ci): make CI quiet & reliable)
+IMPACT: Completely restructured .github/workflows/ci.yml
+
+MODIFICATIONS:
+  ✓ validate job: Added SKIP_BOSS_API guard, lockfile detection
+  ✓ ops-gate job: Made optional (continue-on-error)
+  ✓ rag-vector-selftest: Made optional (continue-on-error)
+  ✓ Added label gating: [run-smoke] label for heavy tests
+  ✓ Added ci-summary: Always-running status job
+  ✓ Added fail-fast: false for matrix strategies
+
+CONSEQUENCE: Branches created before this refactor have structural conflicts
+AFFECTED: 9 branches (both old and new)
+
+TIMELINE PROBLEM:
+  chore/auto-update-branch    ─────────────────────────────────────────→ Oct 15
+                                                                ↓
+                                                    [d12d5d7 REFACTOR]
+                                                          ↓
+  claude/ci-optin-smoke       ────────────────────→ Nov 7 (2 commits behind!)
+                              ❌ Still conflicts with refactored ci.yml!
+
+═══════════════════════════════════════════════════════════════════════════════
+SYSTEMIC ISSUES
+═══════════════════════════════════════════════════════════════════════════════
+
+ISSUE 1: Weak Branch Lifecycle Management
+┌─────────────────────────────────────────────────────────────────────────┐
+│ OLD BRANCHES (222 commits behind) still active and conflicting          │
+│ No automatic cleanup mechanism                                          │
+│ No notification when architecture changes                               │
+│ IMPACT: 2 unmergeable branches, maintenance burden                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+ISSUE 2: CI/CD Workflow Validation Gap
+┌─────────────────────────────────────────────────────────────────────────┐
+│ pages.yml has INVALID YAML syntax (heredoc issue)                      │
+│ No YAML linting in CI pipeline                                         │
+│ Workflows merged without syntax validation                             │
+│ IMPACT: Deployment blocking, syntax errors in production workflow      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+ISSUE 3: Incomplete Rebase Strategy
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Branches created immediately after major refactor (same timestamp!)    │
+│ No stabilization period before new feature branches                    │
+│ Recent branches (2 commits behind!) have conflicts due to refactor     │
+│ IMPACT: Newer PRs inheriting conflicts from refactor                  │
+└─────────────────────────────────────────────────────────────────────────┘
+
+ISSUE 4: Missing Backward Compatibility
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Architecture deprecated without transition plan                         │
+│ Active branches based on deleted components                            │
+│ No deprecation timeline or migration guide                             │
+│ IMPACT: 40+ file changes in old branches become useless               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+CONFLICT RESOLUTION STRATEGY
+═══════════════════════════════════════════════════════════════════════════════
+
+IMMEDIATE (FIX BLOCKING ISSUES):
+  1. Fix pages.yml YAML syntax (5 min) - blocks GitHub Pages
+  2. Add YAML linting to CI (15 min) - prevents future issues
+
+SHORT-TERM (CLEAR CONFLICTS):
+  3. Close 2 obsolete branches (4 min total) - 222 commits behind, architecturally
+  4. Rebase 12 recent branches (2-3 hours) - fixable conflicts
+
+MEDIUM-TERM (PREVENT RECURRENCE):
+  5. Implement branch lifecycle automation - close stale branches
+  6. Create deprecation process - notify teams of architecture changes
+  7. Enforce workflow validation - yamllint as required check
+
+LONG-TERM (STRATEGIC IMPROVEMENT):
+  8. Establish CI/CD governance - approval process for major refactors
+  9. Document branch strategy - ideal lifetime, rebase frequency
+
+═══════════════════════════════════════════════════════════════════════════════
+BRANCH STATUS SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+READY FOR MERGE (after conflict resolution):
+  ✅ claude/phase-16-bus (1 commit, minor .gitignore conflict)
+  ✅ claude/phase-17-ci-observer (1 commit, minor .gitignore conflict)
+  ✅ claude/phase-18-ops-sandbox-runner (1 commit, minor .gitignore conflict)
+  ✅ claude/phase-19-ci-hygiene-health (1 commit, minor .gitignore conflict)
+  ✅ claude/phase-19.1-gc-hardening (1 commit, minor .gitignore conflict)
+  ✅ claude/phase15-rag-faiss-prod-011C (15 commits, ci.yml conflict)
+  ✅ claude/phase15-router-core-akr-011C (13 commits, ci.yml conflict)
+  ✅ claude/fix-ci-node-lockfile-check-011C (22 commits, ci.yml + other)
+  ✅ claude/fix-dangling-symlink-chmod-011C (17 commits, ci.yml + validate.sh)
+  ⚠️  claude/ci-optin-smoke-011C (2 commits, ci.yml conflict - should be clean!)
+  ⚠️  claude/ci-reliability-pack-011C (2 commits, ci.yml conflict - should be clean!)
+  ⚠️  claude/exploration-and-research-011C (26 commits, multi-file conflicts)
+
+SHOULD BE CLOSED (Architecturally Obsolete):
+  ❌ chore/auto-update-branch (222 commits behind, old boss-api architecture)
+  ❌ chore/ci-docs-links (222 commits behind, old boss-api architecture)
+
+═══════════════════════════════════════════════════════════════════════════════
+KEY METRICS
+═══════════════════════════════════════════════════════════════════════════════
+
+Total conflicting branches:          14
+Unique conflicting files:            13
+Most conflicted file:                .github/workflows/ci.yml (9 branches)
+Branches >100 commits behind:        2 (should close)
+Branches <20 commits behind:         10 (easily fixable)
+Critical workflow errors:            1 (pages.yml YAML syntax)
+
+Fix complexity:
+  ├─ Critical (pages.yml):           ⏱️  5 minutes
+  ├─ High (close 2 branches):        ⏱️  4 minutes
+  ├─ Medium (rebase 12 branches):    ⏱️  2-3 hours
+  └─ Prevention measures:            ⏱️  4-8 hours
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Report generated: 2025-11-06 23:56:00 UTC
+Repository: /home/user/02luka
+Analysis depth: ROOT CAUSE (beyond surface conflicts)
+Recommendations: 9 prioritized actions from immediate to long-term
+

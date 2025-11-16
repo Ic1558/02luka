@@ -1,2097 +1,2172 @@
-/**
- * Dashboard Interactive Logic
- * Makes the dashboard actually useful with proper error handling and state management
- */
+const SERVICES_REFRESH_MS = 30000;
+const WO_TIMELINE_REFRESH_MS = 45000;
+const SUMMARY_REFRESH_MS = 60000;
+const SUMMARY_LOADING_FOOTER = 'Updated: —';
+const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
+const TIMELINE_LIMIT_MIN = 10;
+const TIMELINE_LIMIT_MAX = 1000;
+const TIMELINE_DEFAULT_LIMIT = 100;
 
-// --- IMMEDIATE HEARTBEAT (proves script loaded) ---
-(function immediateHeartbeat() {
-  const timestamp = new Date().toISOString();
-  const version = '2.2.0'; // Phase 3.1: Service detail drawer + clickable service cards
-  console.log(`🔥 DASHBOARD.JS LOADED @ ${timestamp} (v${version})`);
-  console.log(`🔍 DOM state: ${document.readyState}`);
-  console.log(`🔍 Scripts in page: ${document.scripts.length}`);
+let realityPanelInitialized = false;
 
-  // Make functions globally accessible for DevTools testing
-  window.__dashboardVersion = version;
-  window.__dashboardLoaded = timestamp;
-})();
+let servicesIntervalId;
+let woTimelineIntervalId;
+let summaryIntervalId;
+let mlsPanelInitialized = false;
+let mlsAllEntries = [];
+let mlsFilterType = '';
+let mlsSearchQuery = '';
+let currentWoId = null;
+let cachedMlsEntries = null;
+let allWos = [];
+let currentWoStatusFilter = '';
+let woTimelineAll = [];
+let woTimelineFilterStatus = '';
+let woTimelineSearchQuery = '';
+let woTimelineInitialized = false;
+let serviceData = [];
+let serviceAutoRefreshTimer = null;
 
-// --- TEXT NORMALIZATION (strip emoji, collapse whitespace) ---
-function normalizeText(s) {
-  if (!s) return '';
-  return s
-    .toLowerCase()
-    .replace(/\p{Emoji_Presentation}/gu, '') // strip emoji
-    .replace(/\s+/g, ' ')                     // collapse whitespace
-    .trim();
+const hasDocument = typeof document !== 'undefined';
+const timelineLimitInput = hasDocument ? document.getElementById('timeline-limit') : null;
+const timelineIncludeMlsCheckbox = hasDocument ? document.getElementById('timeline-include-mls') : null;
+const timelineRefreshButton = hasDocument ? document.getElementById('timeline-refresh') : null;
+
+function formatBadgeLabel(text) {
+  return String(text || '')
+    .trim()
+    .replace(/_/g, ' ');
 }
 
-// --- SINGLE SOURCE OF TRUTH: Filter Change ---
-function applyFilter(nextFilter) {
-  if (state.wos.filter === nextFilter) return; // no-op
-
-  console.log(`🔄 Filter change: ${state.wos.filter} → ${nextFilter}`);
-  state.wos.filter = nextFilter;
-  updateWOFilterUI();           // immediate visual feedback
-  triggerLoadWOs({ filter: nextFilter }); // debounced fetch
+function makeBadge(text, extraClass = '') {
+  const label = formatBadgeLabel(text);
+  if (!label) return null;
+  const span = document.createElement('span');
+  span.className = ['badge', extraClass].filter(Boolean).join(' ').trim();
+  span.textContent = label;
+  return span;
 }
 
-// --- BULLETPROOF DELEGATION (works without data-* attributes) ---
-function setupBulletproofDelegation() {
-  const filterMap = {
-    'all': 'all',
-    'success': 'success',
-    'failed/blocked': 'failed',
-    'failed': 'failed',
-    'blocked': 'failed',
-    'pending': 'pending'
+function woStatusBadge(statusRaw) {
+  const raw = formatBadgeLabel(statusRaw);
+  if (!raw) return null;
+  const status = raw.toLowerCase();
+
+  if (status === 'failed' || status === 'error') {
+    return makeBadge(raw, 'badge-wo badge-wo-failed');
+  }
+
+  if (['done', 'completed', 'success'].includes(status)) {
+    return makeBadge(raw, 'badge-wo badge-wo-done');
+  }
+
+  if (['pending', 'running', 'in progress', 'in-progress', 'in_progress', 'active', 'queued'].includes(status)) {
+    return makeBadge(raw, 'badge-wo badge-wo-active');
+  }
+
+  return makeBadge(raw, 'badge-wo');
+}
+
+function mlsTypeBadge(typeRaw) {
+  const raw = formatBadgeLabel(typeRaw);
+  if (!raw) return null;
+  const type = raw.toLowerCase();
+
+  if (type === 'solution') {
+    return makeBadge('solution', 'badge-mls badge-mls-solution');
+  }
+  if (type === 'failure') {
+    return makeBadge('failure', 'badge-mls badge-mls-failure');
+  }
+  return makeBadge(raw, 'badge-mls');
+}
+
+function normalizeWoTimelineEntry(rawWo = {}) {
+  const id = rawWo.id || rawWo.wo_id || 'UNKNOWN';
+  const normalizedStatus = normalizeWoTimelineStatus(rawWo.status);
+  const createdAt = rawWo.created_at || rawWo.queued_at || rawWo.timestamp || '';
+  const startedAt = rawWo.started_at || '';
+  const finishedAt = rawWo.finished_at || rawWo.completed_at || '';
+  const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
+  const title = rawWo.title || rawWo.summary || rawWo.name || '';
+  const description = rawWo.description || rawWo.summary || rawWo.notes || '';
+  const mlsSummary = rawWo.mls_summary || rawWo.mlsSummary || null;
+
+  return {
+    id,
+    status: normalizedStatus,
+    createdAt,
+    startedAt,
+    finishedAt,
+    updatedAt,
+    title,
+    description,
+    mlsSummary
   };
+}
 
-  function onClick(e) {
-    const el = e.target.closest('button, [role="button"], .clickable');
-    if (!el) return;
+function normalizeWoTimelineStatus(status) {
+  const raw = String(status || '').toLowerCase();
+  if (!raw) return 'unknown';
+  if (['pending', 'queued', 'created'].includes(raw)) return 'pending';
+  if (['running', 'in_progress', 'in-progress', 'working'].includes(raw)) return 'running';
+  if (['completed', 'done', 'success'].includes(raw)) return 'done';
+  if (['failed', 'error'].includes(raw)) return 'failed';
+  return raw;
+}
 
-    const text = normalizeText(el.textContent);
+function getTimelineLimitValue() {
+  if (!timelineLimitInput) {
+    return TIMELINE_DEFAULT_LIMIT;
+  }
 
-    // WO filters - match by normalized text
-    const filterKey = filterMap[text];
-    if (filterKey) {
-      e.preventDefault();
-      console.log(`✅ Delegation: ${filterKey} (matched: "${text}")`);
-      applyFilter(filterKey);
-      return;
+  const parsed = parseInt(timelineLimitInput.value || '', 10);
+  if (Number.isFinite(parsed)) {
+    const clamped = Math.min(TIMELINE_LIMIT_MAX, Math.max(TIMELINE_LIMIT_MIN, parsed));
+    timelineLimitInput.value = String(clamped);
+    return clamped;
+  }
+
+  timelineLimitInput.value = String(TIMELINE_DEFAULT_LIMIT);
+  return TIMELINE_DEFAULT_LIMIT;
+}
+
+function shouldIncludeMlsOverlay() {
+  if (!timelineIncludeMlsCheckbox) {
+    return false;
+  }
+  return timelineIncludeMlsCheckbox.checked;
+}
+
+function buildTimelineStatusParam() {
+  switch (woTimelineFilterStatus) {
+    case 'failed':
+      return 'failed';
+    case 'done':
+      return 'success,completed,done';
+    case 'active':
+      return 'pending,running,queued';
+    default:
+      return '';
+  }
+}
+
+async function fetchJSON(url) {
+  const response = await fetch(url, {
+    headers: {
+      'Accept': 'application/json'
     }
-
-    // Logs refresh
-    if (text === 'refresh' || text.includes('refresh')) {
-      e.preventDefault();
-      console.log('✅ Delegation: Refresh logs');
-      loadLogs();
-      return;
-    }
-  }
-
-  // Remove previous handler if exists
-  if (window.__dashboardDelegationHandler) {
-    document.removeEventListener('click', window.__dashboardDelegationHandler);
-  }
-
-  // Install new handler
-  window.__dashboardDelegationHandler = onClick;
-  document.addEventListener('click', onClick, { passive: false });
-  console.log('✅ Bulletproof delegation attached');
-}
-
-// --- KEYBOARD DELEGATION (Enter/Space on buttons) ---
-function setupKeyboardDelegation() {
-  const onKeyDown = (e) => {
-    if (e.key !== 'Enter' && e.code !== 'Space') return;
-    const el = e.target.closest('button, [role="button"], .clickable');
-    if (!el) return;
-
-    e.preventDefault();
-    el.click();
-    console.log('⌨️ Keyboard activated:', el.textContent.trim().slice(0, 30));
-  };
-
-  // Remove previous if exists
-  if (window.__dashboardKeyboardHandler) {
-    document.removeEventListener('keydown', window.__dashboardKeyboardHandler);
-  }
-
-  window.__dashboardKeyboardHandler = onKeyDown;
-  document.addEventListener('keydown', onKeyDown);
-  console.log('✅ Keyboard delegation attached');
-}
-
-// --- GLOBAL STATE (single source of truth) ---
-const state = {
-  wos: {
-    data: [],
-    filter: 'all',        // 'all'|'success'|'failed'|'pending'
-    loading: false,
-    error: null,
-    fetchController: null // AbortController for in-flight request
-  },
-  logs: {
-    lines: [],            // array of strings (rendered as-is with HTML-escaping)
-    cursor: null,         // server-provided opaque cursor/offset
-    loading: false,
-    error: null,
-    auto: true,           // checkbox drives this
-    follow: true,         // "auto-scroll to bottom" (pause when user scrolls up)
-    maxLines: 5000,       // backpressure: cap DOM memory
-    fetchController: null,
-    intervalId: null,
-    backoff: 0            // Exponential backoff for retries
-  },
-  roadmap: {
-    data: null,           // { name, overall_progress_pct, current_phase_pct, current_phase_name, tasks }
-    loading: false,
-    error: null,
-    fetchController: null
-  },
-  services: {
-    data: null,           // { running, ondemand, stopped, total }
-    loading: false,
-    error: null,
-    fetchController: null
-  },
-  // View scope and filters (Phase 2 - Interactive KPI Cards)
-  viewScope: 'wo',        // 'wo' | 'mls' | 'services'
-  mlsFilter: null,        // null | 'total' | 'solutions' | 'failures'
-  serviceFilter: null,    // null | 'running' | 'ondemand' | 'stopped'
-  autoRefreshEnabled: true,
-  refreshInterval: null,
-  logRefreshInterval: null
-};
-
-// --- TELEMETRY & METRICS ---
-const metrics = {
-  wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  logs: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  roadmap: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
-};
-
-// Timed fetch wrapper with metrics tracking
-async function timed(name, fn) {
-  const t0 = performance.now();
-  try {
-    const result = await fn();
-    const duration = performance.now() - t0;
-
-    // Track success
-    metrics[name].ok++;
-    metrics[name].consecutiveErrors = 0;
-    metrics[name].ms.push(duration);
-
-    // Keep only last 50 measurements
-    if (metrics[name].ms.length > 50) {
-      metrics[name].ms.shift();
-    }
-
-    return result;
-  } catch (error) {
-    // Track failure
-    metrics[name].err++;
-    metrics[name].consecutiveErrors++;
-    throw error;
-  }
-}
-
-// Get average response time for a section
-function getAvgMs(name) {
-  const times = metrics[name].ms;
-  if (!times.length) return 0;
-  return Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-}
-
-// Check if section is healthy
-function isHealthy(name) {
-  const m = metrics[name];
-  return m.consecutiveErrors < 3 && (m.ok > 0 || m.err === 0);
-}
-
-// --- RETRY BACKOFF WITH JITTER ---
-function getNextDelay(currentBackoff) {
-  // Exponential backoff: 5s → 8s → 13s → 21s → 34s → max 60s
-  const next = Math.min(60000, (currentBackoff || 5000) * 1.6);
-  const jitter = Math.random() * 1000; // +0-1s jitter
-  return Math.round(next + jitter);
-}
-
-function resetBackoff(section) {
-  if (state[section]) {
-    state[section].backoff = 0;
-  }
-}
-
-// --- HEALTH MONITORING UI ---
-function updateHealthPill() {
-  const pill = document.getElementById('health-pill');
-  if (!pill) return;
-
-  const sections = ['wos', 'logs', 'roadmap', 'services'];
-  const allHealthy = sections.every(isHealthy);
-  const anyDegraded = sections.some(name => metrics[name].consecutiveErrors > 0 && metrics[name].consecutiveErrors < 3);
-  const anyDown = sections.some(name => metrics[name].consecutiveErrors >= 3);
-
-  let status, color, bgColor;
-  if (anyDown) {
-    status = 'Degraded';
-    color = '#742a2a';
-    bgColor = '#fed7d7';
-  } else if (anyDegraded) {
-    status = 'Warning';
-    color = '#7c2d12';
-    bgColor = '#fed7aa';
-  } else if (allHealthy) {
-    status = 'Healthy';
-    color = '#22543d';
-    bgColor = '#c6f6d5';
-  } else {
-    status = 'Unknown';
-    color = '#4a5568';
-    bgColor = '#e2e8f0';
-  }
-
-  // Calculate average response time across all sections
-  const avgTimes = sections.map(getAvgMs).filter(ms => ms > 0);
-  const overallAvg = avgTimes.length > 0
-    ? Math.round(avgTimes.reduce((a, b) => a + b, 0) / avgTimes.length)
-    : 0;
-
-  pill.textContent = overallAvg > 0 ? `${status} (${overallAvg}ms)` : status;
-  pill.style.color = color;
-  pill.style.background = bgColor;
-  pill.title = sections.map(name => {
-    const m = metrics[name];
-    const avg = getAvgMs(name);
-    const health = isHealthy(name) ? '✅' : '⚠️';
-    return `${health} ${name}: ${m.ok} ok, ${m.err} err, ${avg}ms avg`;
-  }).join('\n');
-}
-
-// --- URL STATE MANAGEMENT (Phase 2) ---
-function syncStateFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  const scope = params.get('scope');
-  const mlsFilter = params.get('mls');
-  const serviceFilter = params.get('svc');
-
-  if (scope === 'mls' && mlsFilter) {
-    state.viewScope = 'mls';
-    state.mlsFilter = mlsFilter;
-  } else if (scope === 'services' && serviceFilter) {
-    state.viewScope = 'services';
-    state.serviceFilter = serviceFilter;
-  } else {
-    state.viewScope = 'wo';
-    state.mlsFilter = null;
-    state.serviceFilter = null;
-  }
-
-  console.log(`📍 URL state synced: scope=${state.viewScope}, mls=${state.mlsFilter}, svc=${state.serviceFilter}`);
-}
-
-function updateURL(scope, filter = null) {
-  const url = new URL(window.location);
-  url.searchParams.delete('scope');
-  url.searchParams.delete('mls');
-  url.searchParams.delete('svc');
-
-  if (scope === 'mls' && filter) {
-    url.searchParams.set('scope', 'mls');
-    url.searchParams.set('mls', filter);
-  } else if (scope === 'services' && filter) {
-    url.searchParams.set('scope', 'services');
-    url.searchParams.set('svc', filter);
-  }
-  // else: default (wo scope, no filters) = clean URL
-
-  window.history.pushState({}, '', url);
-}
-
-function clearFilter() {
-  state.viewScope = 'wo';
-  state.mlsFilter = null;
-  state.serviceFilter = null;
-  updateURL('wo');
-  updateKPICardsUI();
-  console.log('🔄 Filter cleared');
-}
-
-// --- KPI CARDS INTERACTIVE (Phase 2) ---
-function initKPICards() {
-  console.log('🎯 Initializing interactive KPI cards...');
-
-  // MLS cards
-  const mlsCards = ['total', 'solutions', 'failures'].map(type => ({
-    type,
-    element: document.getElementById(`mls-${type}`)?.closest('div')
-  })).filter(c => c.element);
-
-  mlsCards.forEach(({ type, element }) => {
-    element.setAttribute('role', 'button');
-    element.setAttribute('tabindex', '0');
-    element.setAttribute('data-kpi-mls', type);
-    element.style.cursor = 'pointer';
-    element.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
-
-    const onClick = () => {
-      console.log(`📊 MLS card clicked: ${type}`);
-      state.viewScope = 'mls';
-      state.mlsFilter = type;
-      updateURL('mls', type);
-      updateKPICardsUI();
-
-      // Phase 3: Scroll to Work Order History section
-      const woHistorySection = document.querySelector('#wo-list')?.closest('.panel');
-      if (woHistorySection) {
-        setTimeout(() => {
-          woHistorySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      }
-
-      // Phase 3: Auto-select first WO if any exist
-      setTimeout(() => {
-        const firstWOItem = document.querySelector('.wo-item[data-wo-id]');
-        if (firstWOItem) {
-          const woId = firstWOItem.getAttribute('data-wo-id');
-          console.log(`🎯 Auto-selecting first WO: ${woId}`);
-          loadWODetail(woId);
-        } else {
-          console.log(`📭 No work orders to auto-select`);
-        }
-      }, 300);
-    };
-
-    element.addEventListener('click', onClick);
-    element.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onClick();
-      }
-    });
   });
 
-  // Service cards
-  const serviceCards = ['running', 'ondemand', 'stopped'].map(type => ({
-    type,
-    element: document.getElementById(`services-${type}`)?.closest('div')
-  })).filter(c => c.element);
-
-  serviceCards.forEach(({ type, element }) => {
-    element.setAttribute('role', 'button');
-    element.setAttribute('tabindex', '0');
-    element.setAttribute('data-kpi-service', type);
-    element.style.cursor = 'pointer';
-    element.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
-
-    const onClick = async () => {
-      console.log(`⚙️ Service card clicked: ${type}`);
-      state.viewScope = 'services';
-      state.serviceFilter = type;
-      updateURL('services', type);
-      updateKPICardsUI();
-
-      // v2.2.0: Open service drawer with filtered services
-      await openServiceDrawer(type);
-    };
-
-    element.addEventListener('click', onClick);
-    element.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onClick();
-      }
-    });
-  });
-
-  console.log(`✅ Initialized ${mlsCards.length} MLS cards + ${serviceCards.length} service cards`);
-}
-
-function updateKPICardsUI() {
-  // Remove active state from all cards
-  document.querySelectorAll('[data-kpi-mls], [data-kpi-service]').forEach(el => {
-    el.removeAttribute('data-active');
-    el.style.boxShadow = '';
-    el.style.transform = '';
-  });
-
-  // Set active state on selected card
-  if (state.viewScope === 'mls' && state.mlsFilter) {
-    const activeCard = document.querySelector(`[data-kpi-mls="${state.mlsFilter}"]`);
-    if (activeCard) {
-      activeCard.setAttribute('data-active', 'true');
-      activeCard.style.boxShadow = '0 0 0 3px #667eea';
-      activeCard.style.transform = 'scale(1.03)';
-    }
-  } else if (state.viewScope === 'services' && state.serviceFilter) {
-    const activeCard = document.querySelector(`[data-kpi-service="${state.serviceFilter}"]`);
-    if (activeCard) {
-      activeCard.setAttribute('data-active', 'true');
-      activeCard.style.boxShadow = '0 0 0 3px #667eea';
-      activeCard.style.transform = 'scale(1.03)';
-    }
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
   }
 
-  // Show/hide clear filter badge
-  renderFilterBadge();
+  return response.json();
 }
 
-// Small utility: debounce to avoid double/rapid clicks
-function debounce(fn, ms = 300) {
-  let t = null;
+function debounce(fn, delay = 200) {
+  let timeoutId;
   return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => fn(...args), delay);
   };
 }
 
-// Debounced fetch trigger (debounce at data layer, not DOM event layer)
-const triggerLoadWOs = (() => {
-  let timeout = null;
-  return (params = {}) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => loadWOs(params), 150);
-  };
-})();
+function initTabs() {
+  const tabLinks = document.querySelectorAll('.tabs a[data-panel]');
+  const panels = document.querySelectorAll('.panel');
 
-// Utility: Safe fetch with timeout
-async function safeFetch(url, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  function showPanel(targetId) {
+    panels.forEach((panel) => {
+      const shouldShow = panel.id === targetId;
+      panel.classList.toggle('hidden', !shouldShow);
+    });
 
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
+    tabLinks.forEach((link) => {
+      const isActive = link.dataset.panel === targetId;
+      link.classList.toggle('active', isActive);
+      if (isActive) {
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.removeAttribute('aria-current');
+      }
+    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (targetId === 'services-panel') {
+      initServicesPanel();
+    } else if (targetId === 'mls-panel') {
+      initMLSPanel();
+    } else if (targetId === 'reality-panel') {
+      initRealityPanel();
+    }
+  }
+
+  tabLinks.forEach((link) => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      showPanel(link.dataset.panel);
+    });
+  });
+
+  if (tabLinks.length) {
+    const defaultPanel = tabLinks[0].dataset.panel;
+    showPanel(defaultPanel);
+  }
+
+  const tabOverview = document.getElementById('tab-overview');
+  const tabWos = document.getElementById('tab-wos');
+  const tabWoHistory = document.getElementById('tab-wo-history');
+
+  const viewOverview = document.getElementById('view-overview');
+  const viewWos = document.getElementById('view-wos');
+  const viewWoHistory = document.getElementById('view-wo-history');
+
+  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
+    const buttons = [tabOverview, tabWos, tabWoHistory];
+    const views = [viewOverview, viewWos, viewWoHistory];
+
+    function setActiveButton(target) {
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
     }
 
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeout);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout');
+    function show(view) {
+      views.forEach((v) => v.classList.add('hidden'));
+      view.classList.remove('hidden');
     }
-    throw error;
+
+    tabOverview.addEventListener('click', () => {
+      setActiveButton(tabOverview);
+      show(viewOverview);
+    });
+
+    tabWos.addEventListener('click', () => {
+      setActiveButton(tabWos);
+      show(viewWos);
+    });
+
+    tabWoHistory.addEventListener('click', () => {
+      setActiveButton(tabWoHistory);
+      show(viewWoHistory);
+      loadWoHistory();
+    });
+
+    setActiveButton(tabOverview);
+    show(viewOverview);
   }
 }
 
-// Utility: Show error message
-function showError(elementId, message) {
-  const el = document.getElementById(elementId);
-  if (el) {
-    el.innerHTML = `<div style="color: #f56565; padding: 12px; background: #fff5f5; border-radius: 6px; margin: 8px 0;">⚠️ ${message}</div>`;
+function showErrorBanner(id, message) {
+  const banner = document.getElementById(id);
+  if (!banner) return;
+  const textSpan = banner.querySelector('span');
+  if (textSpan && message) {
+    textSpan.textContent = message;
+  }
+  banner.classList.remove('hidden');
+}
+
+function hideErrorBanner(id) {
+  const banner = document.getElementById(id);
+  banner?.classList.add('hidden');
+}
+
+// --- Services ---
+
+function setServicesLoading() {
+  const summary = document.getElementById('services-summary');
+  const tbody = document.getElementById('services-tbody');
+  if (summary) {
+    summary.innerHTML = '<span>Loading services…</span>';
+  }
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="5">Loading…</td></tr>';
   }
 }
 
-// Utility: Show loading skeleton
-function showLoading(elementId) {
-  const el = document.getElementById(elementId);
-  if (el) {
-    el.innerHTML = '<div style="padding: 20px; text-align: center; color: #a0aec0;">Loading...</div>';
-  }
-}
+async function loadServices() {
+  const tbody = document.getElementById('services-tbody');
+  const summary = document.getElementById('services-summary');
+  if (!tbody || !summary) return;
 
-// Initialize WO filters (call once on boot)
-function initWOFilters() {
-  const buttons = [...document.querySelectorAll('[data-wo-filter]')];
-  console.log(`✅ initWOFilters: Found ${buttons.length} buttons`);
+  setServicesLoading();
+  hideErrorBanner('services-error');
 
-  buttons.forEach(btn => {
-    // Guard: use data attribute OR fall back to normalized text
-    const filterValue = btn.getAttribute('data-wo-filter') || normalizeText(btn.textContent);
-
-    const onClick = (ev) => {
-      ev.preventDefault();
-      console.log(`✅ Filter clicked: ${filterValue}`);
-      applyFilter(filterValue); // single source of truth
-    };
-
-    btn.addEventListener('click', onClick);
-    console.log(`✅ Attached listener to: ${filterValue}`);
-  });
-  updateWOFilterUI(); // initialize the visual state
-}
-
-function updateWOFilterUI() {
-  const buttons = document.querySelectorAll('[data-wo-filter]');
-  buttons.forEach(btn => {
-    const isActive = btn.getAttribute('data-wo-filter') === state.wos.filter;
-    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    btn.classList.toggle('is-active', isActive);
-  });
-}
-
-// Centralized WOs loader with abort controller + metrics
-async function loadWOs() {
-  // Cancel the previous fetch if it's still running
-  if (state.wos.fetchController) {
-    try { state.wos.fetchController.abort(); } catch {}
-  }
-  const ctrl = new AbortController();
-  state.wos.fetchController = ctrl;
-
-  // Render skeleton + reset error
-  state.wos.loading = true;
-  state.wos.error = null;
-  renderWOs();
+  const statusFilter = document.getElementById('services-status-filter')?.value || '';
+  const typeFilter = document.getElementById('services-type-filter')?.value || '';
 
   try {
-    await timed('wos', async () => {
-      const url = state.wos.filter === 'all'
-        ? 'http://127.0.0.1:8767/api/wos'
-        : `http://127.0.0.1:8767/api/wos?status=${state.wos.filter}`;
+    const params = new URLSearchParams();
+    if (statusFilter) params.set('status', statusFilter);
+    const query = params.toString();
 
-      const res = await fetch(url, {
-        signal: ctrl.signal,
-        headers: { 'Accept': 'application/json' }
+    const data = await fetchJSON(`/api/services${query ? `?${query}` : ''}`);
+    let services = Array.isArray(data?.services) ? data.services : [];
+
+    if (typeFilter) {
+      services = services.filter((svc) => {
+        const svcType = (svc.type || '').toLowerCase();
+        if (typeFilter === 'other') {
+          return !KNOWN_SERVICE_TYPES.has(svcType);
+        }
+        return svcType === typeFilter;
       });
-
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      const data = await res.json();
-      state.wos.data = Array.isArray(data) ? data : [];
-      return data;
-    });
-
-  } catch (err) {
-    // If aborted, don't show error; another load is coming
-    if (err.name === 'AbortError') return;
-    state.wos.error = String(err);
-  } finally {
-    // Only clear controller if this load is the current one
-    if (state.wos.fetchController === ctrl) {
-      state.wos.fetchController = null;
-      state.wos.loading = false;
-      renderWOs();
     }
-  }
-}
 
-// Render WOs with skeleton, empty-state, and error handling
-function renderWOs() {
-  const root = document.querySelector('#wo-list');
-  const errBox = document.querySelector('#wo-error');
-
-  if (!root) return;
-
-  // Show error if exists
-  if (errBox) {
-    errBox.textContent = state.wos.error ? `⚠️ ${state.wos.error}` : '';
-  }
-
-  // Loading skeleton
-  if (state.wos.loading) {
-    root.innerHTML = `
-      <div style="height: 1.25rem; background: linear-gradient(90deg, #eee, #f5f5f5, #eee); border-radius: 8px; animation: shimmer 1.2s infinite;"></div>
-      <div style="height: 1.25rem; background: linear-gradient(90deg, #eee, #f5f5f5, #eee); border-radius: 8px; margin-top: 8px; animation: shimmer 1.2s infinite;"></div>
-    `;
-    return;
-  }
-
-  // Error state with retry
-  if (state.wos.error) {
-    root.innerHTML = `
-      <div style="text-align: center; padding: 20px;">
-        <button onclick="loadWOs()" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Retry</button>
-      </div>
-    `;
-    return;
-  }
-
-  // Empty state with helpful message (Phase 3 enhanced)
-  if (!state.wos.data.length) {
-    const emptyStates = {
-      'success': {
-        icon: '✨',
-        title: 'No Successful Work Orders',
-        message: 'No completed work orders in the last 24 hours.',
-        hint: 'Submit a new work order to get started.'
-      },
-      'failed': {
-        icon: '✅',
-        title: 'All Clear!',
-        message: 'No failed or blocked work orders.',
-        hint: 'Your system is running smoothly.'
-      },
-      'pending': {
-        icon: '📭',
-        title: 'No Pending Work Orders',
-        message: 'All work orders have been processed.',
-        hint: 'Drop a new .json file in bridge/inbox/LLM to create one.'
-      },
-      'all': {
-        icon: '🔍',
-        title: 'No Work Orders Found',
-        message: 'No work orders match the current filter.',
-        hint: 'Try changing the filter or refresh the dashboard.'
-      }
-    };
-
-    const state_info = emptyStates[state.wos.filter] || emptyStates['all'];
-
-    root.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; color: #718096;">
-        <div style="font-size: 48px; margin-bottom: 16px;">${state_info.icon}</div>
-        <div style="font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 8px;">${state_info.title}</div>
-        <div style="font-size: 14px; color: #a0aec0; margin-bottom: 4px;">${state_info.message}</div>
-        <div style="font-size: 13px; color: #cbd5e0; font-style: italic;">${state_info.hint}</div>
-      </div>
-    `;
-    return;
-  }
-
-  // Render data
-  root.innerHTML = state.wos.data.slice(0, 20).map(wo => renderWOCard(wo)).join('');
-
-  // Update completed count
-  const completedCount = state.wos.data.filter(w => w.status === 'success').length;
-  const completedEl = document.getElementById('completed-wos');
-  if (completedEl) completedEl.textContent = completedCount;
-}
-
-// Keep old function name for compatibility
-async function loadWOList(filter = 'all') {
-  state.wos.filter = filter;
-  updateWOFilterUI();
-  await loadWOs();
-}
-
-// Render single WO card
-function renderWOCard(wo) {
-  const statusColors = {
-    'success': '#48bb78',
-    'failed': '#f56565',
-    'pending': '#ed8936',
-    'running': '#4299e1',
-    'queued': '#a0aec0'
-  };
-
-  const statusIcons = {
-    'success': '✅',
-    'failed': '❌',
-    'pending': '⏳',
-    'running': '▶️',
-    'queued': '⚪'
-  };
-
-  const color = statusColors[wo.status] || '#a0aec0';
-  const icon = statusIcons[wo.status] || '⚪';
-  const duration = wo.duration_ms ? `${(wo.duration_ms / 1000).toFixed(1)}s` : '-';
-  const timestamp = wo.started_at || '';
-
-  return `
-    <div class="wo-item"
-         style="padding: 10px; margin-bottom: 6px; background: #f7fafc; border-radius: 6px; border-left: 3px solid ${color};"
-         data-wo-id="${wo.id}"
-         onclick="loadWODetail('${wo.id}')">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-weight: 600; color: #2d3748; font-size: 13px;">${icon} ${wo.id}</div>
-          <div style="font-size: 11px; color: #718096; margin-top: 2px;">${wo.goal || 'No description'}</div>
-        </div>
-        <div style="text-align: right; font-size: 11px; color: #a0aec0;">
-          <div>${timestamp}</div>
-          <div>${duration}</div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// Load WO detail in drawer
-async function loadWODetail(woId) {
-  console.log('📂 Opening WO drawer for:', woId);
-  openWODrawer(woId);
-}
-
-// Open WO drawer
-async function openWODrawer(woId) {
-  const drawer = document.getElementById('wo-drawer');
-  const backdrop = document.getElementById('wo-drawer-backdrop');
-  const titleEl = document.getElementById('wo-drawer-title');
-  const subtitleEl = document.getElementById('wo-drawer-subtitle');
-  const contentEl = document.getElementById('wo-drawer-content');
-
-  if (!drawer || !backdrop || !contentEl) {
-    console.error('Drawer elements not found');
-    return;
-  }
-
-  // Show drawer immediately with loading state
-  titleEl.textContent = 'Work Order Details';
-  subtitleEl.textContent = `Loading ${woId}...`;
-  contentEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #a0aec0;">Loading details...</div>';
-
-  backdrop.classList.add('open');
-  drawer.classList.add('open');
-
-  // Fetch and display WO details
-  try {
-    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=200&timeline=1`);
-
-    // Update header
-    titleEl.textContent = wo.id || 'Work Order';
-    subtitleEl.textContent = wo.goal || 'No description';
-
-    // Render full details
-    contentEl.innerHTML = renderWODrawerContent(wo);
+    renderServicesSummary(data?.summary);
+    renderServicesTable(services);
   } catch (error) {
-    contentEl.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #f56565;">
-        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-        <div style="font-weight: 600; margin-bottom: 8px;">Failed to load details</div>
-        <div style="font-size: 13px; opacity: 0.8;">${error.message}</div>
-      </div>
-    `;
+    console.error('Failed to load services', error);
+    showErrorBanner('services-error', 'Failed to load services.');
+    summary.innerHTML = '<span>Failed to load services.</span>';
+    tbody.innerHTML = '<tr><td colspan="5">Failed to load services.</td></tr>';
   }
 }
 
-// Close WO drawer
-function closeWODrawer() {
-  console.log('📂 Closing WO drawer');
-  const drawer = document.getElementById('wo-drawer');
-  const backdrop = document.getElementById('wo-drawer-backdrop');
+function renderServicesSummary(summary = {}) {
+  const el = document.getElementById('services-summary');
+  if (!el) return;
+  const total = summary.total ?? '–';
+  const running = summary.running ?? '–';
+  const stopped = summary.stopped ?? '–';
+  const failed = summary.failed ?? '–';
 
-  if (drawer) drawer.classList.remove('open');
-  if (backdrop) backdrop.classList.remove('open');
-}
-
-// Render drawer content with tabs (Phase 3)
-function renderWODrawerContent(wo) {
-  const statusBadgeClass = wo.status === 'success' ? 'success' :
-                          wo.status === 'failed' ? 'failed' : 'pending';
-
-  const duration = wo.duration_ms ? `${(wo.duration_ms / 1000).toFixed(2)}s` : 'N/A';
-  const exitCodeColor = wo.exit_code === 0 ? '#48bb78' : '#f56565';
-
-  // Build tab system
-  return `
-    <div class="wo-drawer-tabs">
-      <button class="wo-tab active" data-tab="summary">📋 Summary</button>
-      <button class="wo-tab" data-tab="io">📥 I-O</button>
-      <button class="wo-tab" data-tab="logs">📜 Logs</button>
-      <button class="wo-tab" data-tab="actions">⚡ Actions</button>
-    </div>
-
-    <div class="wo-tab-content active" data-tab-content="summary">
-      ${renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor)}
-    </div>
-
-    <div class="wo-tab-content" data-tab-content="io">
-      ${renderIOTab(wo)}
-    </div>
-
-    <div class="wo-tab-content" data-tab-content="logs">
-      ${renderLogsTab(wo)}
-    </div>
-
-    <div class="wo-tab-content" data-tab-content="actions">
-      ${renderActionsTab(wo)}
-    </div>
+  el.innerHTML = `
+    <span><strong>Total:</strong> ${total}</span>
+    <span><span class="summary-dot running"></span>Running: ${running}</span>
+    <span><span class="summary-dot stopped"></span>Stopped: ${stopped}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${failed}</span>
   `;
 }
 
-// Summary Tab
-function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
-  return `
-    <div class="wo-drawer-section">
-      <h3>📋 Basic Information</h3>
-      <div class="wo-drawer-field">
-        <div class="label">Status</div>
-        <div class="value"><span class="wo-drawer-badge ${statusBadgeClass}">${wo.status || 'unknown'}</span></div>
-      </div>
-      <div class="wo-drawer-field">
-        <div class="label">Work Order ID</div>
-        <div class="value">${wo.id || 'N/A'}</div>
-      </div>
-      <div class="wo-drawer-field">
-        <div class="label">Goal</div>
-        <div class="value">${wo.goal || 'No description provided'}</div>
-      </div>
-      <div class="wo-drawer-field">
-        <div class="label">Duration</div>
-        <div class="value">${duration}</div>
-      </div>
-      ${wo.exit_code !== undefined ? `
-        <div class="wo-drawer-field">
-          <div class="label">Exit Code</div>
-          <div class="value" style="color: ${exitCodeColor}; font-weight: 700;">${wo.exit_code}</div>
-        </div>
-      ` : ''}
-    </div>
+function renderServicesTable(services) {
+  const tbody = document.getElementById('services-tbody');
+  if (!tbody) return;
 
-    <div class="wo-drawer-section">
-      <h3>🕐 Timestamps</h3>
-      ${wo.started_at ? `
-        <div class="wo-drawer-field">
-          <div class="label">Started At</div>
-          <div class="value">${wo.started_at}</div>
-        </div>
-      ` : ''}
-      ${wo.completed_at ? `
-        <div class="wo-drawer-field">
-          <div class="label">Completed At</div>
-          <div class="value">${wo.completed_at}</div>
-        </div>
-      ` : ''}
-    </div>
-
-    ${(wo.script_path || wo.log_path) ? `
-      <div class="wo-drawer-section">
-        <h3>📁 File Paths</h3>
-        ${wo.script_path ? `
-          <div class="wo-drawer-field">
-            <div class="label">Script Path</div>
-            <div class="value">${wo.script_path}</div>
-          </div>
-        ` : ''}
-        ${wo.log_path ? `
-          <div class="wo-drawer-field">
-            <div class="label">Log Path</div>
-            <div class="value">${wo.log_path}</div>
-          </div>
-        ` : ''}
-      </div>
-    ` : ''}
-
-    ${renderTimelineSection(wo.timeline)}
-  `;
-}
-
-function renderTimelineSection(events) {
-  const heading = '<h3>🕒 Timeline</h3>';
-
-  if (!Array.isArray(events) || events.length === 0) {
-    return `
-      <div class="wo-drawer-section">
-        ${heading}
-        <div class="wo-timeline-empty">No timeline data available.</div>
-      </div>
-    `;
+  if (!services.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No services found.</td></tr>';
+    return;
   }
 
-  const items = events.map((event) => {
-    const type = event.type ? `<span class="wo-timeline-type">${escapeHtml(event.type)}</span>` : '';
-    const ts = event.ts ? `<span class="wo-timeline-ts">${escapeHtml(formatTimelineTimestamp(event.ts))}</span>` : '';
-    const label = `<div class="wo-timeline-label">${escapeHtml(event.label || event.type || 'event')}
-      ${event.status ? `<span class="wo-timeline-status">${escapeHtml(String(event.status))}</span>` : ''}
-    </div>`;
+  tbody.innerHTML = '';
 
-    return `
-      <li class="wo-timeline-item">
-        <div class="wo-timeline-meta">${type}${ts}</div>
-        ${label}
-      </li>
-    `;
-  }).join('');
+  services.forEach((svc) => {
+    const tr = document.createElement('tr');
+    const statusLabel = (svc.status || 'unknown').toLowerCase();
+    const pid = svc.pid ?? '–';
+    const exitCode = svc.exit_code ?? '–';
+    const type = svc.type ?? '—';
 
-  return `
-    <div class="wo-drawer-section">
-      ${heading}
-      <ol class="wo-timeline-list">${items}</ol>
-    </div>
-  `;
-}
+    const labelCell = document.createElement('td');
+    labelCell.textContent = svc.label ?? '';
 
-function formatTimelineTimestamp(value) {
-  if (!value) return '';
-  try {
-    const date = new Date(value);
-    if (!isNaN(date.getTime())) {
-      return date.toLocaleString();
-    }
-  } catch (err) {
-    // ignore
-  }
-  return String(value);
-}
+    const statusCell = document.createElement('td');
+    statusCell.appendChild(createStatusChip(statusLabel));
 
-// I-O Tab
-function renderIOTab(wo) {
-  let html = '';
+    const pidCell = document.createElement('td');
+    pidCell.textContent = pid;
 
-  if (wo.stdout && wo.stdout.trim()) {
-    html += `
-      <div class="wo-drawer-section">
-        <h3>📤 Standard Output</h3>
-        <div class="wo-drawer-code">${wo.stdout.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-      </div>
-    `;
-  }
+    const exitCell = document.createElement('td');
+    exitCell.textContent = exitCode;
 
-  if (wo.stderr && wo.stderr.trim()) {
-    html += `
-      <div class="wo-drawer-section">
-        <h3>⚠️ Standard Error</h3>
-        <div class="wo-drawer-code error">${wo.stderr.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-      </div>
-    `;
-  }
+    const typeCell = document.createElement('td');
+    typeCell.textContent = type;
 
-  return html || '<div style="text-align: center; padding: 40px; color: #a0aec0;">No input/output data available</div>';
-}
-
-// Logs Tab
-function renderLogsTab(wo) {
-  if (wo.log_tail && wo.log_tail.length > 0) {
-    const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `
-      <div class="wo-drawer-section">
-        <h3>📜 Log Tail (last 200 lines)</h3>
-        <div class="wo-drawer-code">${logLines}</div>
-      </div>
-    `;
-  }
-
-  return '<div style="text-align: center; padding: 40px; color: #a0aec0;">No log data available</div>';
-}
-
-// Actions Tab (Phase 3)
-function renderActionsTab(wo) {
-  return `
-    <div class="wo-drawer-section">
-      <h3>⚡ Available Actions</h3>
-      <p style="color: #718096; font-size: 14px; margin-bottom: 16px;">
-        Perform actions on this work order. Use with caution.
-      </p>
-
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <button class="wo-action-btn retry" onclick="retryWorkOrder('${wo.id}')"
-                style="background: #4299e1; color: white; padding: 12px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-          🔄 Retry Work Order
-          <div style="font-size: 12px; font-weight: 400; margin-top: 4px; opacity: 0.9;">
-            Creates a new idempotent work order with same parameters
-          </div>
-        </button>
-
-        <button class="wo-action-btn cancel" onclick="cancelWorkOrder('${wo.id}')"
-                style="background: #f56565; color: white; padding: 12px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-          ❌ Cancel Work Order
-          <div style="font-size: 12px; font-weight: 400; margin-top: 4px; opacity: 0.9;">
-            Send cancel signal (if supported by WO type)
-          </div>
-        </button>
-
-        <button class="wo-action-btn tail" onclick="tailWorkOrderLog('${wo.id}')"
-                style="background: #48bb78; color: white; padding: 12px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-          📡 Tail Live Logs
-          <div style="font-size: 12px; font-weight: 400; margin-top: 4px; opacity: 0.9;">
-            Opens live log streaming viewer
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <div class="wo-drawer-section" style="margin-top: 24px;">
-      <h3>ℹ️ Action Information</h3>
-      <div style="font-size: 13px; color: #718096; line-height: 1.6;">
-        <p><strong>Retry:</strong> Creates a new work order JSON file with the same goal/parameters. Safe for idempotent operations.</p>
-        <p><strong>Cancel:</strong> Attempts to send a cancellation signal. Only works if the work order processor supports it.</p>
-        <p><strong>Tail:</strong> Opens a live streaming view of the work order's log file. Useful for monitoring long-running tasks.</p>
-      </div>
-    </div>
-  `;
-}
-
-// Initialize WO drawer event handlers
-function initWODrawer() {
-  const closeBtn = document.getElementById('wo-drawer-close');
-  const backdrop = document.getElementById('wo-drawer-backdrop');
-
-  // Close button click
-  if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeWODrawer();
-    });
-  }
-
-  // Backdrop click to close
-  if (backdrop) {
-    backdrop.addEventListener('click', () => {
-      closeWODrawer();
-    });
-  }
-
-  // ESC key to close
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const drawer = document.getElementById('wo-drawer');
-      if (drawer && drawer.classList.contains('open')) {
-        closeWODrawer();
-      }
-    }
-  });
-
-  console.log('✅ WO drawer initialized (ESC, backdrop, close button)');
-
-  // Tab switching (Phase 3)
-  document.addEventListener('click', (e) => {
-    if (e.target.matches('.wo-tab')) {
-      const targetTab = e.target.getAttribute('data-tab');
-
-      // Update tab buttons
-      document.querySelectorAll('.wo-tab').forEach(tab => tab.classList.remove('active'));
-      e.target.classList.add('active');
-
-      // Update tab content
-      document.querySelectorAll('.wo-tab-content').forEach(content => content.classList.remove('active'));
-      const targetContent = document.querySelector(`[data-tab-content="${targetTab}"]`);
-      if (targetContent) targetContent.classList.add('active');
-
-      console.log(`📑 Switched to tab: ${targetTab}`);
-    }
+    tr.append(labelCell, statusCell, pidCell, exitCell, typeCell);
+    tbody.appendChild(tr);
   });
 }
 
-// Action: Retry Work Order (Phase 3)
-function retryWorkOrder(woId) {
-  console.log(`🔄 Retry requested for WO: ${woId}`);
+function createStatusChip(status) {
+  const normalized = status || 'unknown';
+  const span = document.createElement('span');
+  span.className = `status-chip status-${normalized}`;
+  span.textContent = normalized;
+  return span;
+}
 
-  // Show confirmation
-  if (!confirm(`Create a retry work order for ${woId}?\n\nThis will drop a new WO JSON file with the same parameters.`)) {
+function initServicesPanel() {
+  if (servicesIntervalId) {
     return;
   }
 
-  // TODO: Call API to create retry WO or drop new JSON file
-  // For now, just show a success message
-  alert(`✅ Retry work order created for ${woId}\n\nCheck bridge/inbox/LLM for the new work order.`);
-  console.log(`✅ Retry WO created for ${woId}`);
+  const statusSelect = document.getElementById('services-status-filter');
+  const typeSelect = document.getElementById('services-type-filter');
+  const refreshBtn = document.getElementById('services-refresh-btn');
+  document.getElementById('services-error-retry')?.addEventListener('click', loadServices);
+
+  statusSelect?.addEventListener('change', loadServices);
+  typeSelect?.addEventListener('change', loadServices);
+  refreshBtn?.addEventListener('click', loadServices);
+
+  loadServices();
+  servicesIntervalId = setInterval(loadServices, SERVICES_REFRESH_MS);
 }
 
-// Action: Cancel Work Order (Phase 3)
-function cancelWorkOrder(woId) {
-  console.log(`❌ Cancel requested for WO: ${woId}`);
+// --- MLS Lessons Panel ---
 
-  // Show confirmation
-  if (!confirm(`Cancel work order ${woId}?\n\nThis will send a cancellation signal if supported.`)) {
-    return;
+async function refreshMlsEntries() {
+  const listEl = document.getElementById('mls-list');
+  const summaryEl = document.getElementById('mls-summary');
+  if (listEl) {
+    listEl.innerHTML = '<div class="mls-item"><div class="mls-item-header"><span>Loading MLS lessons…</span></div></div>';
+  }
+  if (summaryEl) {
+    summaryEl.textContent = 'Loading MLS lessons…';
   }
 
-  // TODO: Call API to cancel WO
-  // For now, just show a message
-  alert(`⚠️ Cancel signal sent to ${woId}\n\nNote: Not all work order types support cancellation.`);
-  console.log(`❌ Cancel signal sent for ${woId}`);
-}
-
-// Action: Tail Work Order Log (Phase 3)
-function tailWorkOrderLog(woId) {
-  console.log(`📡 Tail log requested for WO: ${woId}`);
-
-  // Show info
-  alert(`📡 Live log streaming for ${woId}\n\n` +
-        `This feature will open a live streaming view of the work order's log file.\n\n` +
-        `Implementation: SSE endpoint or fetch polling every 2s.`);
-
-  console.log(`📡 Tail log viewer opened for ${woId}`);
-
-  // TODO: Implement live log streaming
-  // Options:
-  // 1. Open a new window with SSE connection to /api/wos/{woId}/tail
-  // 2. Show a modal with live log updates
-  // 3. Replace drawer content with live streaming view
-}
-
-// ========== SERVICE DRAWER FUNCTIONS (v2.2.0) ==========
-
-// Open service drawer with filtered services
-async function openServiceDrawer(statusFilter = 'all') {
-  console.log(`🔧 Opening service drawer, filter: ${statusFilter}`);
-
-  const drawer = document.getElementById('service-drawer');
-  const backdrop = document.getElementById('service-drawer-backdrop');
-  const titleEl = document.getElementById('service-drawer-title');
-  const subtitleEl = document.getElementById('service-drawer-subtitle');
-  const contentEl = document.getElementById('service-drawer-content');
-
-  if (!drawer || !backdrop || !contentEl) {
-    console.error('Service drawer elements not found');
-    return;
-  }
-
-  // Show drawer immediately with loading state
-  const filterLabels = {
-    'running': 'Running Services',
-    'stopped': 'Stopped Services',
-    'ondemand': 'On-Demand Services',
-    'failed': 'Failed Services',
-    'all': 'All Services'
-  };
-
-  titleEl.textContent = filterLabels[statusFilter] || 'Services';
-  subtitleEl.textContent = 'Loading...';
-  contentEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #a0aec0;">Loading services...</div>';
-
-  backdrop.classList.add('open');
-  drawer.classList.add('open');
-
-  // Fetch services from API
   try {
-    const url = statusFilter === 'all' || statusFilter === 'ondemand'
-      ? 'http://127.0.0.1:8767/api/services'
-      : `http://127.0.0.1:8767/api/services?status=${statusFilter}`;
-
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
     const data = await res.json();
+    mlsAllEntries = Array.isArray(data.entries) ? data.entries.slice() : [];
 
-    // For ondemand, we need to filter client-side (API doesn't have this status)
-    let services = data.services || [];
-    if (statusFilter === 'ondemand') {
-      // Ondemand services are those not running and not failed
-      services = services.filter(s => s.status === 'stopped' && s.exit_code === 0);
+    mlsAllEntries.sort((a, b) => {
+      const aKey = a.time || a.id || '';
+      const bKey = b.time || b.id || '';
+      if (aKey === bKey) return 0;
+      return aKey > bKey ? -1 : 1;
+    });
+
+    cachedMlsEntries = mlsAllEntries.slice();
+    if (currentWoId) {
+      refreshWoDetailMls();
     }
 
-    // Update subtitle with count
-    subtitleEl.textContent = `${services.length} service${services.length !== 1 ? 's' : ''}`;
-
-    // Render service list
-    contentEl.innerHTML = renderServiceList(services, statusFilter);
-
+    renderMlsList();
   } catch (error) {
-    console.error('Failed to load services:', error);
-    contentEl.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #f56565;">
-        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-        <div style="font-weight: 600; margin-bottom: 8px;">Failed to load services</div>
-        <div style="font-size: 13px; opacity: 0.8;">${error.message}</div>
-      </div>
-    `;
-  }
-}
-
-// Close service drawer
-function closeServiceDrawer() {
-  console.log('🔧 Closing service drawer');
-  const drawer = document.getElementById('service-drawer');
-  const backdrop = document.getElementById('service-drawer-backdrop');
-
-  if (drawer) drawer.classList.remove('open');
-  if (backdrop) backdrop.classList.remove('open');
-}
-
-// Render service list
-function renderServiceList(services, filterType) {
-  if (!services || services.length === 0) {
-    const emptyMessages = {
-      'running': { icon: '✅', title: 'No Running Services', hint: 'All services are currently stopped or on-demand' },
-      'stopped': { icon: '🛑', title: 'No Stopped Services', hint: 'All services are currently running' },
-      'failed': { icon: '✨', title: 'No Failed Services', hint: 'All services are running smoothly!' },
-      'ondemand': { icon: '💤', title: 'No On-Demand Services', hint: 'All services are either running or stopped' }
-    };
-
-    const msg = emptyMessages[filterType] || { icon: '🔍', title: 'No Services Found', hint: 'No services match the current filter' };
-
-    return `
-      <div style="text-align: center; padding: 60px 20px; color: #718096;">
-        <div style="font-size: 48px; margin-bottom: 16px;">${msg.icon}</div>
-        <div style="font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 8px;">${msg.title}</div>
-        <div style="font-size: 13px; color: #cbd5e0; font-style: italic;">${msg.hint}</div>
-      </div>
-    `;
-  }
-
-  let html = '<div style="padding: 16px;">';
-
-  services.forEach(service => {
-    const statusColors = {
-      'running': '#48bb78',
-      'stopped': '#a0aec0',
-      'failed': '#f56565'
-    };
-
-    const statusIcons = {
-      'running': '✅',
-      'stopped': '⏸️',
-      'failed': '❌'
-    };
-
-    const color = statusColors[service.status] || '#a0aec0';
-    const icon = statusIcons[service.status] || '⚪';
-
-    // Extract readable name from label
-    const displayName = service.label.replace('com.02luka.', '').replace(/\./g, ' ');
-
-    html += `
-      <div style="padding: 12px; margin-bottom: 8px; background: #f7fafc; border-radius: 6px; border-left: 3px solid ${color};">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="flex: 1;">
-            <div style="font-weight: 600; color: #2d3748; font-size: 14px;">${icon} ${displayName}</div>
-            <div style="font-size: 11px; color: #718096; margin-top: 4px; font-family: monospace;">${service.label}</div>
-            ${service.type !== 'other' ? `<div style="font-size: 10px; color: #a0aec0; margin-top: 2px;">Type: ${service.type}</div>` : ''}
+    console.error('Failed to refresh MLS entries:', error);
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="mls-item">
+          <div class="mls-item-header">
+            <span>Failed to load MLS lessons.</span>
           </div>
-          <div style="text-align: right; font-size: 11px; color: #a0aec0;">
-            ${service.pid ? `<div style="color: ${color}; font-weight: 600;">PID: ${service.pid}</div>` : ''}
-            ${service.exit_code !== null ? `<div>Exit: ${service.exit_code}</div>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  html += '</div>';
-  return html;
-}
-
-// Initialize service drawer
-function initServiceDrawer() {
-  const closeBtn = document.getElementById('service-drawer-close');
-  const backdrop = document.getElementById('service-drawer-backdrop');
-
-  // Close button click
-  if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      closeServiceDrawer();
-    });
-  }
-
-  // Backdrop click to close
-  if (backdrop) {
-    backdrop.addEventListener('click', () => {
-      closeServiceDrawer();
-    });
-  }
-
-  // ESC key to close (reuse keyboard handler for both drawers)
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const serviceDrawer = document.getElementById('service-drawer');
-      if (serviceDrawer && serviceDrawer.classList.contains('open')) {
-        closeServiceDrawer();
-      }
-    }
-  });
-
-  console.log('✅ Service drawer initialized');
-}
-
-// ========== END SERVICE DRAWER FUNCTIONS ==========
-
-// Render WO detail panel
-function renderWODetail(wo) {
-  const statusColor = wo.status === 'success' ? '#48bb78' :
-                     wo.status === 'failed' ? '#f56565' : '#a0aec0';
-
-  let logSection = '';
-  if (wo.log_tail && wo.log_tail.length > 0) {
-    const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    logSection = `
-      <details open style="margin-top: 12px;">
-        <summary style="cursor: pointer; font-weight: 600; color: #2d3748; padding: 8px 0;">📜 Log Tail</summary>
-        <pre style="margin-top: 8px; padding: 12px; background: #1a202c; color: #48bb78; border-radius: 6px; font-size: 11px; max-height: 300px; overflow-y: auto; font-family: monospace;">${logLines}</pre>
-      </details>
-    `;
-  }
-
-  let errorSection = '';
-  if (wo.error) {
-    errorSection = `
-      <div style="padding: 10px; background: #fed7d7; border-radius: 6px; margin-bottom: 12px; border-left: 3px solid #f56565;">
-        <strong style="color: #742a2a;">Error:</strong>
-        <div style="font-size: 12px; color: #742a2a; margin-top: 4px;">${wo.error.message || 'Unknown error'}</div>
-      </div>
-    `;
-  }
-
-  return `
-    <div style="padding: 16px; background: #edf2f7; border-radius: 8px; border-left: 4px solid ${statusColor}; margin-top: 16px;">
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
-        <h3 style="font-size: 16px; color: #1a202c; margin: 0;">${wo.id}</h3>
-        <button onclick="closeWODetail()" style="padding: 4px 12px; font-size: 12px; background: #cbd5e0; border: none; border-radius: 4px; cursor: pointer;">Close</button>
-      </div>
-
-      <div style="font-size: 13px; color: #2d3748; margin-bottom: 12px;">
-        <strong>Goal:</strong> ${wo.goal || 'No description'}
-      </div>
-
-      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 12px; color: #4a5568; margin-bottom: 12px;">
-        <div><strong>Owner:</strong> ${wo.owner}</div>
-        <div><strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${wo.status}</span></div>
-        <div><strong>Operation:</strong> ${wo.op || '-'}</div>
-        <div><strong>Duration:</strong> ${wo.duration_ms ? (wo.duration_ms / 1000).toFixed(1) + 's' : '-'}</div>
-      </div>
-
-      ${errorSection}
-
-      <details style="margin-top: 12px;">
-        <summary style="cursor: pointer; font-weight: 600; color: #2d3748; padding: 8px 0;">⚙️ Inputs/Outputs</summary>
-        <pre style="margin-top: 8px; padding: 10px; background: #f7fafc; border-radius: 6px; font-size: 11px; overflow-x: auto;">${JSON.stringify({inputs: wo.inputs, outputs: wo.outputs}, null, 2)}</pre>
-      </details>
-
-      ${logSection}
-
-      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #cbd5e0; font-size: 11px; color: #a0aec0;">
-        Script: <code style="background: #f7fafc; padding: 2px 6px; border-radius: 3px;">${wo.script_path || '-'}</code>
-      </div>
-    </div>
-  `;
-}
-
-// Close WO detail
-function closeWODetail() {
-  const detailEl = document.getElementById('wo-detail');
-  if (detailEl) detailEl.innerHTML = '';
-}
-
-// Initialize logs (call once on boot)
-function initLogs() {
-  console.log('initLogs: Starting...');
-
-  const refreshBtn = document.querySelector('[data-btn="logs-refresh"]');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      console.log('Logs refresh button clicked');
-      loadLogs(true);
-    });
-    console.log('Attached logs refresh listener');
-  } else {
-    console.warn('Logs refresh button not found!');
-  }
-
-  const autoCheckbox = document.querySelector('[data-chk="logs-autorefresh"]');
-  if (autoCheckbox) {
-    autoCheckbox.addEventListener('change', (e) => {
-      console.log(`Logs auto-refresh toggled: ${e.target.checked}`);
-      state.logs.auto = !!e.target.checked;
-      setupLogsAutoRefresh();
-    });
-    console.log('Attached logs checkbox listener');
-  } else {
-    console.warn('Logs auto-refresh checkbox not found!');
-  }
-
-  // Pause follow when user scrolls up; resume when they hit bottom
-  const box = document.querySelector('#live-logs');
-  if (box) {
-    box.addEventListener('scroll', () => {
-      const nearBottom = (box.scrollHeight - box.scrollTop - box.clientHeight) < 8;
-      state.logs.follow = nearBottom;
-    });
-    console.log('Attached logs scroll listener');
-  } else {
-    console.warn('Logs box not found!');
-  }
-
-  // First load gets the tail and cursor
-  console.log('Loading initial logs...');
-  loadLogs(true).then(() => {
-    console.log('Initial logs loaded, setting up auto-refresh');
-    setupLogsAutoRefresh();
-  });
-}
-
-// Abortable fetch with cursor logic + backoff + metrics
-async function loadLogs(force = false) {
-  // Cancel any in-flight request
-  if (state.logs.fetchController) {
-    try { state.logs.fetchController.abort(); } catch {}
-  }
-  const ctrl = new AbortController();
-  state.logs.fetchController = ctrl;
-
-  if (force) {
-    state.logs.cursor = null;   // reset to tail
-    state.logs.lines = [];      // clear screen
-  }
-  state.logs.loading = true;
-  state.logs.error = null;
-  renderLogsHeader();           // updates error/status only
-
-  try {
-    await timed('logs', async () => {
-      // Build URL with cursor if present
-      const qs = state.logs.cursor ? `?cursor=${encodeURIComponent(state.logs.cursor)}` : '?lines=200';
-      const res = await fetch(`http://127.0.0.1:8767/api/health/logs${qs}`, {
-        signal: ctrl.signal,
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      const { lines = [], cursor = null } = await res.json();
-
-      // If this is first load (force=true), replace all lines
-      if (force && Array.isArray(lines) && lines.length) {
-        state.logs.lines = lines;
-        renderLogsReplace();
-      }
-      // Otherwise append new lines, cap to maxLines
-      else if (Array.isArray(lines) && lines.length) {
-        state.logs.lines.push(...lines);
-        if (state.logs.lines.length > state.logs.maxLines) {
-          state.logs.lines.splice(0, state.logs.lines.length - state.logs.maxLines);
-        }
-        renderLogsAppend(lines);
-      }
-
-      // Advance cursor only after successful render
-      if (cursor) state.logs.cursor = cursor;
-
-      // Auto-scroll if following live
-      if (state.logs.follow) scrollLogsToBottom();
-
-      return { lines, cursor };
-    });
-
-    // Success - reset backoff
-    state.logs.backoff = 0;
-
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      state.logs.error = String(err);
-      renderLogsHeader();
-
-      // Apply backoff for next retry
-      state.logs.backoff = getNextDelay(state.logs.backoff);
-    }
-    return; // don't flip loading if aborted by a newer call
-  } finally {
-    if (state.logs.fetchController === ctrl) {
-      state.logs.fetchController = null;
-      state.logs.loading = false;
-      renderLogsHeader();
-      updateHealthPill(); // Update health after logs update
-    }
-  }
-}
-
-// Render logs header (error state)
-function renderLogsHeader() {
-  const err = document.querySelector('#logs-error');
-  if (err) {
-    err.textContent = state.logs.error ? `⚠️ ${state.logs.error}` : '';
-  }
-}
-
-// Render logs - replace all (for initial load)
-function renderLogsReplace() {
-  const box = document.querySelector('#live-logs');
-  if (!box) return;
-
-  if (!state.logs.lines.length) {
-    box.innerHTML = '<div class="log-line" style="color: #a0aec0;">No logs available</div>';
-    return;
-  }
-
-  box.innerHTML = state.logs.lines.map(line => formatLogLine(line)).join('');
-}
-
-// Render logs - append new lines (incremental)
-function renderLogsAppend(newLines) {
-  const box = document.querySelector('#live-logs');
-  if (!box || !Array.isArray(newLines) || !newLines.length) return;
-
-  // Use a DocumentFragment for performance
-  const frag = document.createDocumentFragment();
-  newLines.forEach(line => {
-    const div = document.createElement('div');
-    div.className = 'log-line';
-
-    // Apply color based on content
-    const lower = line.toLowerCase();
-    if (lower.includes('error') || lower.includes('failed')) {
-      div.style.color = '#fc8181';
-    } else if (lower.includes('warn')) {
-      div.style.color = '#f6ad55';
-    }
-
-    div.textContent = line; // safe: textContent (no HTML injection)
-    frag.appendChild(div);
-  });
-  box.appendChild(frag);
-}
-
-// Format a single log line with color
-function formatLogLine(line) {
-  const lower = line.toLowerCase();
-  let color = '';
-
-  if (lower.includes('error') || lower.includes('failed')) {
-    color = 'color: #fc8181;';
-  } else if (lower.includes('warn')) {
-    color = 'color: #f6ad55;';
-  }
-
-  return `<div class="log-line" style="${color}">${escapeHtml(line)}</div>`;
-}
-
-// Scroll logs to bottom
-function scrollLogsToBottom() {
-  const box = document.querySelector('#live-logs');
-  if (!box) return;
-  box.scrollTop = box.scrollHeight;
-}
-
-// Setup logs auto-refresh with polling/backpressure + adaptive timing
-function setupLogsAutoRefresh() {
-  clearInterval(state.logs.intervalId);
-  if (!state.logs.auto || document.hidden) return;
-
-  // Use backoff delay if there were recent errors, otherwise default 5s
-  const delay = state.logs.backoff > 0 ? state.logs.backoff : 5000;
-
-  // Light polling; server sends only new lines after cursor
-  state.logs.intervalId = setInterval(() => {
-    // If user is reading older logs (follow=false), we still fetch
-    // but we DO NOT auto-scroll; the new lines buffer at the bottom.
-    loadLogs(false);
-  }, delay);
-}
-
-// Keep old function name for compatibility
-async function loadSystemLogs() {
-  await loadLogs(true);
-}
-
-// Escape HTML
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ========================================
-// ROADMAP & SERVICES (Dashboard Data)
-// ========================================
-
-// Load roadmap data with abort controller + metrics
-async function loadRoadmap() {
-  // Cancel the previous fetch if it's still running
-  if (state.roadmap.fetchController) {
-    try { state.roadmap.fetchController.abort(); } catch {}
-  }
-  const ctrl = new AbortController();
-  state.roadmap.fetchController = ctrl;
-
-  state.roadmap.loading = true;
-  state.roadmap.error = null;
-  renderRoadmap();
-
-  try {
-    await timed('roadmap', async () => {
-      const res = await fetch('./dashboard_data.json', {
-        signal: ctrl.signal,
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      const data = await res.json();
-      state.roadmap.data = data.roadmap || null;
-      return data.roadmap;
-    });
-
-  } catch (err) {
-    if (err.name === 'AbortError') return;
-    state.roadmap.error = String(err);
-  } finally {
-    if (state.roadmap.fetchController === ctrl) {
-      state.roadmap.fetchController = null;
-      state.roadmap.loading = false;
-      renderRoadmap();
-    }
-  }
-}
-
-// Render roadmap with skeleton, error, and data states
-function renderRoadmap() {
-  // Update stat cards
-  const roadmapProgressEl = document.getElementById('roadmap-progress');
-  const phaseProgressEl = document.getElementById('phase-progress');
-
-  // Loading skeleton
-  if (state.roadmap.loading) {
-    if (roadmapProgressEl) roadmapProgressEl.textContent = '...';
-    if (phaseProgressEl) phaseProgressEl.textContent = '...';
-    renderRoadmapDetails('skeleton');
-    return;
-  }
-
-  // Error state
-  if (state.roadmap.error) {
-    if (roadmapProgressEl) roadmapProgressEl.textContent = '⚠️';
-    if (phaseProgressEl) phaseProgressEl.textContent = '⚠️';
-    renderRoadmapDetails('error', state.roadmap.error);
-    return;
-  }
-
-  // Empty/no data state
-  if (!state.roadmap.data) {
-    if (roadmapProgressEl) roadmapProgressEl.textContent = '-';
-    if (phaseProgressEl) phaseProgressEl.textContent = '-';
-    renderRoadmapDetails('empty');
-    return;
-  }
-
-  // Render data
-  const rd = state.roadmap.data;
-  if (roadmapProgressEl) roadmapProgressEl.textContent = `${rd.overall_progress_pct || 0}%`;
-  if (phaseProgressEl) phaseProgressEl.textContent = `${rd.current_phase_pct || 0}%`;
-  renderRoadmapDetails('data', null, rd);
-}
-
-// Render roadmap details panel
-function renderRoadmapDetails(mode, error = null, data = null) {
-  const nameEl = document.getElementById('roadmap-name');
-  const overallPctEl = document.getElementById('overall-pct');
-  const overallBarEl = document.getElementById('overall-progress-bar');
-  const phaseNameEl = document.getElementById('current-phase-name');
-  const phasePctEl = document.getElementById('phase-pct');
-  const phaseBarEl = document.getElementById('phase-progress-bar');
-  const tasksEl = document.getElementById('current-tasks');
-
-  if (mode === 'skeleton') {
-    if (nameEl) nameEl.textContent = 'Loading...';
-    if (overallPctEl) overallPctEl.textContent = '...';
-    if (overallBarEl) overallBarEl.style.width = '0%';
-    if (phaseNameEl) phaseNameEl.textContent = 'Loading...';
-    if (phasePctEl) phasePctEl.textContent = '...';
-    if (phaseBarEl) phaseBarEl.style.width = '0%';
-    if (tasksEl) tasksEl.innerHTML = '<div style="color: #a0aec0;">Loading tasks...</div>';
-    return;
-  }
-
-  if (mode === 'error') {
-    if (nameEl) nameEl.textContent = 'Error loading roadmap';
-    if (overallPctEl) overallPctEl.textContent = '-';
-    if (overallBarEl) overallBarEl.style.width = '0%';
-    if (phaseNameEl) phaseNameEl.textContent = 'Error';
-    if (phasePctEl) phasePctEl.textContent = '-';
-    if (phaseBarEl) phaseBarEl.style.width = '0%';
-    if (tasksEl) {
-      tasksEl.innerHTML = `
-        <div style="color: #f56565; padding: 10px; background: #fed7d7; border-radius: 6px;">
-          ⚠️ ${error}
-          <button onclick="loadRoadmap()" style="margin-left: 10px; padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">Retry</button>
+          <div class="mls-item-meta">${escapeHtml(error.message || String(error))}</div>
         </div>
       `;
     }
-    return;
-  }
-
-  if (mode === 'empty' || !data) {
-    if (nameEl) nameEl.textContent = 'No roadmap data';
-    if (overallPctEl) overallPctEl.textContent = '-';
-    if (overallBarEl) overallBarEl.style.width = '0%';
-    if (phaseNameEl) phaseNameEl.textContent = 'N/A';
-    if (phasePctEl) phasePctEl.textContent = '-';
-    if (phaseBarEl) phaseBarEl.style.width = '0%';
-    if (tasksEl) tasksEl.innerHTML = '<div style="color: #a0aec0;"><em>No active roadmap</em></div>';
-    return;
-  }
-
-  // Render data
-  if (nameEl) nameEl.textContent = data.name || 'Roadmap';
-  if (overallPctEl) overallPctEl.textContent = `${data.overall_progress_pct || 0}%`;
-  if (overallBarEl) overallBarEl.style.width = `${data.overall_progress_pct || 0}%`;
-  if (phaseNameEl) phaseNameEl.textContent = data.current_phase_name || 'Current Phase';
-  if (phasePctEl) phasePctEl.textContent = `${data.current_phase_pct || 0}%`;
-  if (phaseBarEl) phaseBarEl.style.width = `${data.current_phase_pct || 0}%`;
-
-  if (tasksEl) {
-    if (data.tasks && data.tasks.length > 0) {
-      tasksEl.innerHTML = data.tasks.map(task => `
-        <div style="padding: 6px 0; border-bottom: 1px solid #e2e8f0;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 14px;">${task.status === 'completed' ? '✅' : task.status === 'in_progress' ? '▶️' : '⏳'}</span>
-            <span style="flex: 1; color: #2d3748;">${task.name}</span>
-          </div>
-        </div>
-      `).join('');
-    } else {
-      tasksEl.innerHTML = '<div style="color: #a0aec0;"><em>No active tasks</em></div>';
+    if (summaryEl) {
+      summaryEl.textContent = 'Unable to load MLS summary.';
     }
   }
 }
 
-// Load services data with abort controller + metrics
-async function loadServices() {
-  // Cancel the previous fetch if it's still running
-  if (state.services.fetchController) {
-    try { state.services.fetchController.abort(); } catch {}
+function initMLSPanel() {
+  if (mlsPanelInitialized) {
+    return;
   }
-  const ctrl = new AbortController();
-  state.services.fetchController = ctrl;
 
-  state.services.loading = true;
-  state.services.error = null;
-  renderServices();
+  const panel = document.getElementById('mls-panel');
+  if (!panel) {
+    return;
+  }
 
-  try {
-    await timed('services', async () => {
-      const res = await fetch('./dashboard_data.json', {
-        signal: ctrl.signal,
-        headers: { 'Accept': 'application/json' }
-      });
+  const filterButtons = panel.querySelectorAll('.mls-filter-btn[data-mls-type]');
+  filterButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const type = btn.getAttribute('data-mls-type') || '';
+      mlsFilterType = type;
 
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      filterButtons.forEach((b) => b.classList.remove('mls-filter-btn-active'));
+      btn.classList.add('mls-filter-btn-active');
 
-      const data = await res.json();
-      state.services.data = data.services || null;
-      return data.services;
+      renderMlsList();
     });
-
-  } catch (err) {
-    if (err.name === 'AbortError') return;
-    state.services.error = String(err);
-  } finally {
-    if (state.services.fetchController === ctrl) {
-      state.services.fetchController = null;
-      state.services.loading = false;
-      renderServices();
-    }
-  }
-}
-
-// Render services with skeleton, error, and data states
-function renderServices() {
-  const runningCountEl = document.getElementById('running-count');
-  const servicesRunningEl = document.getElementById('services-running');
-  const servicesOndemandEl = document.getElementById('services-ondemand');
-  const servicesStoppedEl = document.getElementById('services-stopped');
-  const mlsTotalEl = document.getElementById('mls-total');
-  const mlsSolutionsEl = document.getElementById('mls-solutions');
-  const mlsFailuresEl = document.getElementById('mls-failures');
-
-  // Loading skeleton
-  if (state.services.loading) {
-    if (runningCountEl) runningCountEl.textContent = '...';
-    if (servicesRunningEl) servicesRunningEl.textContent = '...';
-    if (servicesOndemandEl) servicesOndemandEl.textContent = '...';
-    if (servicesStoppedEl) servicesStoppedEl.textContent = '...';
-    if (mlsTotalEl) mlsTotalEl.textContent = '...';
-    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '...';
-    if (mlsFailuresEl) mlsFailuresEl.textContent = '...';
-    return;
-  }
-
-  // Error state
-  if (state.services.error) {
-    if (runningCountEl) runningCountEl.textContent = '⚠️';
-    if (servicesRunningEl) servicesRunningEl.textContent = '⚠️';
-    if (servicesOndemandEl) servicesOndemandEl.textContent = '⚠️';
-    if (servicesStoppedEl) servicesStoppedEl.textContent = '⚠️';
-    if (mlsTotalEl) mlsTotalEl.textContent = '⚠️';
-    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '⚠️';
-    if (mlsFailuresEl) mlsFailuresEl.textContent = '⚠️';
-    return;
-  }
-
-  // Empty/no data state
-  if (!state.services.data) {
-    if (runningCountEl) runningCountEl.textContent = '-';
-    if (servicesRunningEl) servicesRunningEl.textContent = '-';
-    if (servicesOndemandEl) servicesOndemandEl.textContent = '-';
-    if (servicesStoppedEl) servicesStoppedEl.textContent = '-';
-    if (mlsTotalEl) mlsTotalEl.textContent = '-';
-    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '-';
-    if (mlsFailuresEl) mlsFailuresEl.textContent = '-';
-    return;
-  }
-
-  // Render data
-  const svc = state.services.data;
-  if (runningCountEl) runningCountEl.textContent = svc.running || 0;
-  if (servicesRunningEl) servicesRunningEl.textContent = svc.running || 0;
-  if (servicesOndemandEl) servicesOndemandEl.textContent = svc.ondemand || 0;
-  if (servicesStoppedEl) servicesStoppedEl.textContent = svc.stopped || 0;
-
-  // MLS data (if available in services)
-  if (svc.mls) {
-    if (mlsTotalEl) mlsTotalEl.textContent = svc.mls.total || 0;
-    if (mlsSolutionsEl) mlsSolutionsEl.textContent = svc.mls.solutions || 0;
-    if (mlsFailuresEl) mlsFailuresEl.textContent = svc.mls.failures || 0;
-  } else {
-    if (mlsTotalEl) mlsTotalEl.textContent = '-';
-    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '-';
-    if (mlsFailuresEl) mlsFailuresEl.textContent = '-';
-  }
-}
-
-// Refresh all dashboard data
-async function refreshAllData() {
-  const timestamp = new Date().toLocaleTimeString();
-  const updateEl = document.getElementById('last-update');
-  if (updateEl) {
-    updateEl.textContent = `Last updated: ${timestamp}`;
-  }
-
-  // Load all sections in parallel
-  await Promise.all([
-    loadRoadmap(),
-    loadServices(),
-    loadWOs()
-  ]);
-
-  // Update health indicator
-  updateHealthPill();
-}
-
-// Setup auto-refresh (for dashboard data)
-function setupAutoRefresh() {
-  if (state.refreshInterval) {
-    clearInterval(state.refreshInterval);
-  }
-
-  if (state.autoRefreshEnabled) {
-    state.refreshInterval = setInterval(refreshAllData, 30000); // 30 seconds
-  }
-
-  // Handle visibility change (pause when hidden)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (state.refreshInterval) clearInterval(state.refreshInterval);
-      if (state.logs.intervalId) clearInterval(state.logs.intervalId);
-    } else {
-      setupAutoRefresh();
-      setupLogsAutoRefresh();
-    }
   });
+
+  const searchInput = document.getElementById('mls-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      mlsSearchQuery = searchInput.value || '';
+      renderMlsList();
+    });
+  }
+
+  refreshMlsEntries();
+  mlsPanelInitialized = true;
 }
 
-// Safety net: Assert hooks exist
-function assertHooks() {
-  const filterButtons = document.querySelectorAll('[data-wo-filter]');
-  const logsRefreshBtn = document.querySelector('[data-btn="logs-refresh"]');
-  const logsCheckbox = document.querySelector('[data-chk="logs-autorefresh"]');
-
-  if (filterButtons.length !== 4) {
-    console.error(`⚠️ HOOK FAILURE: Expected 4 filter buttons, found ${filterButtons.length}`);
-    console.error('Filter buttons in DOM:', document.querySelectorAll('button'));
-
-    // Fallback: Add delegation for text-based clicking
-    console.warn('⚙️ Activating text-based delegation fallback...');
-    setupFallbackDelegation();
-    return false;
-  }
-
-  if (!logsRefreshBtn) {
-    console.error('⚠️ HOOK FAILURE: Logs refresh button not found');
-  }
-
-  if (!logsCheckbox) {
-    console.error('⚠️ HOOK FAILURE: Logs auto-refresh checkbox not found');
-  }
-
-  return filterButtons.length === 4 && logsRefreshBtn && logsCheckbox;
-}
-
-// Fallback: Text-based event delegation (works even without data-* attributes)
-function setupFallbackDelegation() {
-  console.log('🔧 Setting up fallback delegation...');
-
-  // Map button text to filter values
-  const filterMap = {
-    'All': 'all',
-    'Success': 'success',
-    'Failed/Blocked': 'failed',
-    'Pending': 'pending'
-  };
-
-  // Remove old listener if exists
-  if (window.__dashboardDelegationHandler) {
-    document.removeEventListener('click', window.__dashboardDelegationHandler);
-  }
-
-  // Delegate all button clicks
-  const handler = (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
-    const text = (btn.textContent || '').trim();
-
-    // WO Filter buttons
-    if (text in filterMap) {
-      const next = filterMap[text];
-      if (state.wos.filter === next) return;
-
-      console.log(`✅ Fallback delegation: Filter clicked → ${next}`);
-      state.wos.filter = next;
-
-      // Update UI manually since we don't have data attributes
-      document.querySelectorAll('button').forEach(b => {
-        const btnText = (b.textContent || '').trim();
-        if (btnText in filterMap) {
-          const isActive = filterMap[btnText] === state.wos.filter;
-          b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-          b.classList.toggle('is-active', isActive);
-        }
-      });
-
-      loadWOs();
-      return;
-    }
-
-    // Logs refresh button
-    if (text === '🔄 Refresh') {
-      console.log('✅ Fallback delegation: Logs refresh clicked');
-      loadLogs(true);
-      return;
-    }
-
-    // Main refresh button
-    if (text === '🔄 Refresh Now') {
-      console.log('✅ Fallback delegation: Main refresh clicked');
-      refreshAllData();
-      return;
-    }
-  };
-
-  window.__dashboardDelegationHandler = handler;
-  document.addEventListener('click', handler, { passive: true });
-
-  console.log('✅ Fallback delegation active');
-}
-
-// Expose for DevTools testing
-window.setupFallbackDelegation = setupFallbackDelegation;
-
-// Render filter badge (shows when a filter is active)
-function renderFilterBadge() {
-  let badge = document.getElementById('filter-badge');
-
-  if (state.viewScope === 'wo' || (!state.mlsFilter && !state.serviceFilter)) {
-    // No filter active - remove badge
-    if (badge) badge.remove();
+function renderMlsList() {
+  const listEl = document.getElementById('mls-list');
+  const summaryEl = document.getElementById('mls-summary');
+  if (!listEl || !summaryEl) {
     return;
   }
 
-  // Create badge if it doesn't exist
-  if (!badge) {
-    const container = document.querySelector('.status-bar');
-    if (!container) return;
+  let entries = mlsAllEntries.slice();
 
-    badge = document.createElement('div');
-    badge.id = 'filter-badge';
-    badge.style.cssText = `
-      grid-column: 1 / -1;
-      background: #667eea;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 14px;
-      font-weight: 500;
+  if (mlsFilterType) {
+    entries = entries.filter((entry) => (entry.type || '') === mlsFilterType);
+  }
+
+  if (mlsSearchQuery.trim()) {
+    const needle = mlsSearchQuery.trim().toLowerCase();
+    entries = entries.filter((entry) => {
+      const haystack = [
+        entry.id,
+        entry.title,
+        entry.details,
+        entry.context,
+        entry.related_wo,
+        entry.related_session,
+        Array.isArray(entry.tags) ? entry.tags.join(' ') : ''
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
+  }
+
+  if (!entries.length) {
+    listEl.innerHTML = `
+      <div class="mls-item">
+        <div class="mls-item-header">
+          <span>No MLS lessons match this filter.</span>
+        </div>
+      </div>
     `;
-    container.appendChild(badge);
+  } else {
+    listEl.innerHTML = entries.map((entry) => renderMlsItem(entry)).join('');
   }
 
-  // Update badge content
-  let filterText = '';
-  if (state.viewScope === 'mls') {
-    const labels = { total: 'All Lessons', solutions: 'Solutions', failures: 'Failures' };
-    filterText = `📚 Viewing: ${labels[state.mlsFilter] || state.mlsFilter}`;
-  } else if (state.viewScope === 'services') {
-    const labels = { running: 'Running Services', ondemand: 'OnDemand Services', stopped: 'Stopped Services' };
-    filterText = `⚙️ Viewing: ${labels[state.serviceFilter] || state.serviceFilter}`;
-  }
+  const total = mlsAllEntries.length;
+  const solutions = mlsAllEntries.filter((entry) => entry.type === 'solution').length;
+  const failures = mlsAllEntries.filter((entry) => entry.type === 'failure').length;
+  const patterns = mlsAllEntries.filter((entry) => entry.type === 'pattern').length;
+  const improvements = mlsAllEntries.filter((entry) => entry.type === 'improvement').length;
+  const activeType = mlsFilterType || 'all';
+  const searchLabel = mlsSearchQuery ? ` | search: "${mlsSearchQuery}"` : '';
 
-  badge.innerHTML = `
-    <span>${filterText}</span>
-    <button onclick="clearFilter()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600;">
-      Clear Filter
-    </button>
+  summaryEl.textContent = `Total: ${total} | solutions: ${solutions} | failures: ${failures} | patterns: ${patterns} | improvements: ${improvements} | type filter: ${activeType}${searchLabel}`;
+}
+
+function renderMlsItem(entry) {
+  const id = entry.id || 'MLS-UNKNOWN';
+  const title = entry.title || 'Untitled lesson';
+  const type = entry.type || 'other';
+  const details = entry.details || entry.context || '';
+  const time = entry.time || '';
+  const tags = Array.isArray(entry.tags) ? entry.tags : [];
+  const verified = Boolean(entry.verified);
+  const relatedWo = entry.related_wo || '';
+  const relatedSession = entry.related_session || '';
+
+  const typeClass = getMlsTypeClass(type);
+  const typeLabel = type.toUpperCase();
+  const typeBadge = mlsTypeBadge(type);
+  if (typeBadge) {
+    typeBadge.classList.add('mls-item-type');
+    if (typeClass) {
+      typeBadge.classList.add(typeClass);
+    }
+  }
+  const typeBadgeHtml = typeBadge
+    ? typeBadge.outerHTML
+    : `<span class="mls-item-type ${typeClass}">${escapeHtml(typeLabel)}</span>`;
+
+  const metaParts = [];
+  if (time) metaParts.push(`time: ${time}`);
+  if (relatedWo) metaParts.push(`WO: ${relatedWo}`);
+  if (relatedSession) metaParts.push(`session: ${relatedSession}`);
+  if (verified) metaParts.push('✅ verified');
+  const metaText = metaParts.join(' | ');
+  const tagsText = tags.length ? `tags: ${tags.join(', ')}` : '';
+
+  return `
+    <div class="mls-item" data-mls-id="${escapeHtml(id)}">
+      <div class="mls-item-header">
+        <span class="mls-item-title">${escapeHtml(title)}</span>
+        ${typeBadgeHtml}
+      </div>
+      ${metaText ? `<div class="mls-item-meta">${escapeHtml(metaText)}</div>` : ''}
+      ${details ? `<div class="mls-item-meta">${escapeHtml(details)}</div>` : ''}
+      ${tagsText ? `<div class="mls-item-tags">${escapeHtml(tagsText)}</div>` : ''}
+    </div>
   `;
 }
 
-// Initialize dashboard
-async function initDashboard() {
-  console.log('🚀 Initializing dashboard v2.0.1...');
-
-  // ALWAYS setup bulletproof delegation first (belt + suspenders)
-  setupBulletproofDelegation();
-  setupKeyboardDelegation();
-
-  // Sync state from URL (Phase 2)
-  syncStateFromURL();
-
-  // Check if required elements exist
-  const filterButtons = document.querySelectorAll('[data-wo-filter]');
-  const logsRefreshBtn = document.querySelector('[data-btn="logs-refresh"]');
-  const logsCheckbox = document.querySelector('[data-chk="logs-autorefresh"]');
-
-  console.log(`Found ${filterButtons.length} filter buttons`);
-  console.log(`Found logs refresh button: ${!!logsRefreshBtn}`);
-  console.log(`Found logs checkbox: ${!!logsCheckbox}`);
-
-  // Try standard initialization (but delegation is already active as backup)
-  if (filterButtons.length > 0) {
-    console.log('✅ Using standard initialization with data-wo-filter hooks');
-    initWOFilters();
-    initLogs();
-  } else {
-    console.warn('⚠️ No data-wo-filter hooks found - relying on bulletproof delegation');
-    if (logsCheckbox) {
-      initLogs();
-    }
+function getMlsTypeClass(type) {
+  switch (type) {
+    case 'solution':
+      return 'mls-type-solution';
+    case 'failure':
+      return 'mls-type-failure';
+    case 'pattern':
+      return 'mls-type-pattern';
+    case 'improvement':
+      return 'mls-type-improvement';
+    default:
+      return 'mls-type-other';
   }
-
-  // Initialize KPI cards (Phase 2)
-  initKPICards();
-
-  // Initialize WO drawer (Phase 3)
-  initWODrawer();
-
-  // Initialize service drawer (v2.2.0)
-  initServiceDrawer();
-
-  // Initial load
-  await refreshAllData();
-
-  // Setup auto-refresh
-  setupAutoRefresh();
-
-  // Update KPI UI based on URL state
-  updateKPICardsUI();
-
-  console.log('✅ Dashboard initialized');
-  console.log('✅ Bulletproof delegation: ACTIVE');
-  console.log('Metrics:', metrics);
 }
 
-// Expose critical functions and state for DevTools testing
-window.assertHooks = assertHooks;
-window.setupBulletproofDelegation = setupBulletproofDelegation;
-window.setupKeyboardDelegation = setupKeyboardDelegation;
-window.normalizeText = normalizeText;
-window.applyFilter = applyFilter;
-window.state = state;
-window.metrics = metrics;
-window.loadWOs = loadWOs;
-window.triggerLoadWOs = triggerLoadWOs;
-window.loadLogs = loadLogs;
-window.refreshAllData = refreshAllData;
-window.openWODrawer = openWODrawer;
-window.closeWODrawer = closeWODrawer;
-window.loadWODetail = loadWODetail;
-window.clearFilter = clearFilter;
-window.updateKPICardsUI = updateKPICardsUI;
+// --- Work Orders list ---
 
-// Wait for DOM to be ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initDashboard);
-} else {
-  initDashboard();
-}
+async function loadWos() {
+  const params = new URLSearchParams();
+  if (currentWoStatusFilter) {
+    params.set('status', currentWoStatusFilter);
+  }
+  const query = params.toString();
+  const url = query ? `/api/wos?${query}` : '/api/wos';
 
-// --- LAST RESORT SAFETY NET ---
-// If everything else fails, this ensures delegation is active
-setTimeout(() => {
-  const filterCount = document.querySelectorAll('[data-wo-filter]').length;
-
-  if (filterCount === 0) {
-    console.warn('🚨 LAST RESORT: No data-wo-filter hooks found after init');
-    console.warn('🚨 Activating emergency delegation...');
-
-    if (!window.__dashboardDelegationHandler) {
-      setupFallbackDelegation();
-    }
-
-    // Double-check buttons exist at all
-    const allButtons = document.querySelectorAll('button');
-    console.log(`🚨 Total buttons in DOM: ${allButtons.length}`);
-    allButtons.forEach((btn, i) => {
-      console.log(`  Button ${i}: "${(btn.textContent || '').trim().substring(0, 30)}"`);
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json'
+      }
     });
-  } else {
-    console.log(`✅ Post-init check: Found ${filterCount} hooked filter buttons`);
+    if (!res.ok) {
+      console.error('Failed to fetch WOs', res.status);
+      return;
+    }
+    const payload = await res.json();
+    if (Array.isArray(payload)) {
+      allWos = payload;
+    } else if (Array.isArray(payload?.wos)) {
+      allWos = payload.wos;
+    } else if (Array.isArray(payload?.results)) {
+      allWos = payload.results;
+    } else {
+      allWos = [];
+    }
+    renderWosTable(allWos);
+    renderWoSummary(allWos);
+  } catch (error) {
+    console.error('Error loading WOs', error);
+  }
+}
+
+// === Summary cards ===
+
+function setSummaryText(cardEl, main, sub, foot) {
+  if (!cardEl) return;
+  const mainEl = cardEl.querySelector('.summary-card-main');
+  const subEl = cardEl.querySelector('.summary-card-sub');
+  const footEl = cardEl.querySelector('.summary-card-foot');
+  if (mainEl) {
+    mainEl.textContent = main;
+  }
+  if (subEl) {
+    subEl.textContent = sub;
+  }
+  if (footEl && typeof foot !== 'undefined') {
+    footEl.textContent = foot;
+  }
+}
+
+function formatSummaryUpdatedLabel(date = new Date()) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return SUMMARY_LOADING_FOOTER;
+  }
+  try {
+    return `Updated ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  } catch (error) {
+    console.warn('Falling back to default time string for summary footer', error);
+    return `Updated ${date.toLocaleTimeString()}`;
+  }
+}
+
+function setSummaryLoading(cardEl) {
+  setSummaryText(cardEl, '—', 'loading…', SUMMARY_LOADING_FOOTER);
+}
+
+function initSummaryCards() {
+  const wosCard = document.getElementById('summary-wos');
+  const servicesCard = document.getElementById('summary-services');
+  const mlsCard = document.getElementById('summary-mls');
+
+  if (!wosCard && !servicesCard && !mlsCard) {
+    return;
   }
 
-  console.log('✅ Dashboard v' + window.__dashboardVersion + ' ready');
-  console.log('🔍 Test commands:');
-  console.log('  window.assertHooks() - Check hook status');
-  console.log('  window.setupFallbackDelegation() - Force fallback mode');
-  console.log('  window.state - View current state');
-  console.log('  window.metrics - View performance metrics');
-}, 1000);
+  const refreshAll = () => {
+    refreshSummaryWos(wosCard);
+    refreshSummaryServices(servicesCard);
+    refreshSummaryMls(mlsCard);
+  };
+
+  refreshAll();
+
+  if (summaryIntervalId) {
+    clearInterval(summaryIntervalId);
+  }
+  summaryIntervalId = setInterval(refreshAll, SUMMARY_REFRESH_MS);
+}
+
+async function refreshSummaryWos(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const payload = await fetchJSON('/api/wos');
+    const wos = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.wos)
+        ? payload.wos
+        : Array.isArray(payload?.results)
+          ? payload.results
+          : null;
+
+    if (!Array.isArray(wos)) {
+      setSummaryText(cardEl, '0', 'no data');
+      return;
+    }
+
+    const total = wos.length;
+    let active = 0;
+    let failed = 0;
+
+    wos.forEach((wo) => {
+      const status = String(wo?.status || '').toLowerCase();
+      if (!status) return;
+
+      if (status === 'failed' || status === 'error') {
+        failed += 1;
+      } else if (!['done', 'completed', 'cancelled', 'canceled'].includes(status)) {
+        active += 1;
+      }
+    });
+
+    const subParts = [`active: ${active}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh WO summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+async function refreshSummaryServices(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const data = await fetchJSON('/api/services');
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const running = Number(summary.running) || 0;
+    const failed = Number(summary.failed) || 0;
+
+    const subParts = [`running: ${running}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    const mainValue = total > 0 ? `${running}/${total}` : String(running);
+    setSummaryText(cardEl, mainValue, subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh services summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+async function refreshSummaryMls(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const data = await fetchJSON('/api/mls');
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const solutions = Number(summary.solutions) || 0;
+    const failures = Number(summary.failures) || 0;
+
+    const subParts = [`solutions: ${solutions}`];
+    if (failures > 0) {
+      subParts.push(`failures: ${failures}`);
+    }
+
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh MLS summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+function initWoStatusFilters() {
+  const container = document.getElementById('wo-status-filters');
+  if (!container) return;
+
+  const chips = Array.from(container.querySelectorAll('.wo-status-chip'));
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const newStatus = chip.dataset.status || '';
+      currentWoStatusFilter = newStatus;
+
+      chips.forEach((c) => c.classList.remove('wo-status-chip--active'));
+      chip.classList.add('wo-status-chip--active');
+
+      loadWos();
+    });
+  });
+}
+
+function normalizeWoStatus(raw) {
+  const status = String(raw ?? '').toLowerCase();
+  if (!status) return 'pending';
+  if (['pending', 'queued', 'created'].includes(status)) return 'pending';
+  if (['running', 'in_progress', 'in-progress', 'working'].includes(status)) return 'running';
+  if (['completed', 'success', 'done'].includes(status)) return 'completed';
+  if (['failed', 'error', 'errored'].includes(status)) return 'failed';
+  return 'other';
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+
+    const idCell = document.createElement('td');
+    idCell.innerHTML = `<code>${escapeHtml(wo?.id ?? '')}</code>`;
+    tr.appendChild(idCell);
+
+    const statusCell = document.createElement('td');
+    const statusBadge = woStatusBadge(wo?.status);
+    if (statusBadge) {
+      statusCell.appendChild(statusBadge);
+    } else {
+      statusCell.textContent = wo?.status || '—';
+    }
+    tr.appendChild(statusCell);
+
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.started_at || wo?.created_at)));
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.finished_at || wo?.completed_at)));
+    tr.appendChild(createTextCell(formatWoTimestamp(wo?.updated_at || wo?.last_update)));
+
+    const actionsCell = document.createElement('td');
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy ID';
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(String(wo?.id ?? ''));
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy ID';
+        }, 1200);
+      } catch (error) {
+        console.error('Failed to copy WO id', error);
+      }
+    });
+    actionsCell.appendChild(copyBtn);
+    tr.appendChild(actionsCell);
+
+    tr.appendChild(createTextCell(buildTimelineSummary(wo)));
+
+    tbody.appendChild(tr);
+  });
+}
+
+function createTextCell(value) {
+  const td = document.createElement('td');
+  td.textContent = value || '—';
+  return td;
+}
+
+function formatWoTimestamp(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+  return date.toLocaleString();
+}
+
+function buildTimelineSummary(wo) {
+  if (Array.isArray(wo?.timeline) && wo.timeline.length) {
+    const labels = wo.timeline
+      .map((event) => event?.label || event?.status || event?.state || event)
+      .filter(Boolean);
+    if (labels.length) {
+      return labels.join(' → ');
+    }
+  }
+  if (wo?.timeline_summary) return wo.timeline_summary;
+  if (typeof wo?.duration === 'number') {
+    return `${Math.round(wo.duration)}s`;
+  }
+  if (typeof wo?.duration_ms === 'number') {
+    const seconds = Math.max(0, Math.round(wo.duration_ms / 1000));
+    return `${seconds}s`;
+  }
+  return '—';
+}
+
+function renderWoSummary(wos = []) {
+  const summaryEl = document.getElementById('wos-summary');
+  if (!summaryEl) return;
+
+  const counts = {
+    pending: 0,
+    running: 0,
+    completed: 0,
+    failed: 0,
+    other: 0
+  };
+
+  const dataset = Array.isArray(wos) ? wos : [];
+  dataset.forEach((wo) => {
+    const key = normalizeWoStatus(wo?.status);
+    if (counts[key] !== undefined) {
+      counts[key] += 1;
+    } else {
+      counts.other += 1;
+    }
+  });
+
+  const total = dataset.length;
+  const filteredCount = dataset.length;
+  const parts = [];
+  parts.push(`${total} WOs`);
+  if (counts.running) parts.push(`${counts.running} running`);
+  if (counts.failed) parts.push(`${counts.failed} failed`);
+  if (currentWoStatusFilter) {
+    const label = currentWoStatusFilter
+      .split(',')
+      .map((status) => status.trim() || 'all')
+      .join('/');
+    parts.push(`filter: ${label} (${filteredCount} shown)`);
+  }
+
+  summaryEl.textContent = parts.join(' · ');
+}
+
+// --- WO History ---
+
+async function loadWoHistory() {
+  const statusFilter = document.getElementById('wo-history-status-filter');
+  const limitSelect = document.getElementById('wo-history-limit');
+
+  const status = statusFilter ? statusFilter.value : '';
+  const limit = limitSelect ? parseInt(limitSelect.value, 10) : 100;
+
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+
+  const query = params.toString();
+  const url = `/api/wos${query ? `?${query}` : ''}`;
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json'
+      }
+    });
+    if (!res.ok) {
+      console.error('Failed to fetch WO history', res.status, await res.text());
+      return;
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    renderWoHistory(wos, limit);
+  } catch (error) {
+    console.error('Error loading WO history', error);
+  }
+}
+
+function renderWoHistory(wos, limit) {
+  const tbody = document.getElementById('wo-history-body');
+  if (!tbody) return;
+
+  const maxRows = Number.isFinite(limit) ? limit : 100;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    return;
+  }
+
+  const sorted = [...wos].sort((a, b) => {
+    const aKey = a?.started_at || a?.id || 0;
+    const bKey = b?.started_at || b?.id || 0;
+    if (aKey > bKey) return -1;
+    if (aKey < bKey) return 1;
+    return 0;
+  });
+
+  const slice = sorted.slice(0, maxRows);
+  tbody.innerHTML = '';
+
+  slice.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const started = wo?.started_at || '';
+    const status = wo?.status || '';
+    const agent = wo?.agent || wo?.worker || '';
+    const type = wo?.type || '';
+    const summary = wo?.summary || wo?.description || '';
+    const statusBadge = woStatusBadge(status);
+    if (statusBadge) {
+      statusBadge.classList.add('wo-history-status');
+    }
+    const statusHtml = statusBadge ? statusBadge.outerHTML : escapeHtml(status || '—');
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(started)}</td>
+      <td>${statusHtml}</td>
+      <td>${escapeHtml(agent)}</td>
+      <td>${escapeHtml(type)}</td>
+      <td>${escapeHtml(summary)}</td>
+    `;
+
+    const timelineCell = document.createElement('td');
+    const timelineButton = document.createElement('button');
+    timelineButton.type = 'button';
+    timelineButton.className = 'wo-timeline-button';
+    timelineButton.textContent = 'View';
+    if (wo?.id) {
+      timelineButton.addEventListener('click', () => openWoTimeline(wo.id));
+    } else {
+      timelineButton.disabled = true;
+    }
+    timelineCell.appendChild(timelineButton);
+    tr.appendChild(timelineCell);
+
+    tbody.appendChild(tr);
+  });
+}
+
+// === Service health panel ===
+
+function serviceStatusBadge(statusRaw) {
+  const label = formatBadgeLabel(statusRaw || 'unknown') || 'unknown';
+  const badge = makeBadge(label);
+  if (!badge) return null;
+
+  const status = label.toLowerCase();
+  badge.textContent = status;
+
+  if (status === 'running') {
+    badge.classList.add('badge-service-running');
+  } else if (status === 'failed') {
+    badge.classList.add('badge-service-failed');
+  } else if (status === 'stopped') {
+    badge.classList.add('badge-service-stopped');
+  }
+
+  return badge;
+}
+
+async function refreshServices(fromUser) {
+  try {
+    const res = await fetch('/api/services', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      console.error('Failed to load services', res.status);
+      if (fromUser) {
+        alert('Failed to load services status.');
+      }
+      return;
+    }
+    const payload = await res.json();
+    serviceData = Array.isArray(payload?.services) ? payload.services : [];
+    renderServiceTable(serviceData);
+  } catch (error) {
+    console.error('Error fetching services', error);
+    if (fromUser) {
+      alert('Error fetching services.');
+    }
+  }
+}
+
+function renderServiceTable(services) {
+  const tbody = document.getElementById('service-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!Array.isArray(services) || services.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 6;
+    td.textContent = 'No 02luka services found.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  services.forEach((svc) => {
+    const tr = document.createElement('tr');
+
+    const tdLabel = document.createElement('td');
+    tdLabel.textContent = svc?.label || '-';
+    tr.appendChild(tdLabel);
+
+    const tdStatus = document.createElement('td');
+    const badge = serviceStatusBadge(svc?.status);
+    if (badge) {
+      tdStatus.appendChild(badge);
+    } else {
+      tdStatus.textContent = svc?.status || 'unknown';
+    }
+    tr.appendChild(tdStatus);
+
+    const tdType = document.createElement('td');
+    tdType.textContent = svc?.type || '-';
+    tr.appendChild(tdType);
+
+    const tdPid = document.createElement('td');
+    tdPid.textContent = svc?.pid != null ? String(svc.pid) : '-';
+    tr.appendChild(tdPid);
+
+    const tdExit = document.createElement('td');
+    tdExit.textContent = svc?.exit_code != null ? String(svc.exit_code) : '-';
+    tr.appendChild(tdExit);
+
+    const tdAction = document.createElement('td');
+    const btnLogs = document.createElement('button');
+    btnLogs.type = 'button';
+    btnLogs.textContent = 'Logs';
+    btnLogs.style.fontSize = '0.7rem';
+    btnLogs.addEventListener('click', () => {
+      openServiceLogs();
+    });
+    tdAction.appendChild(btnLogs);
+    tr.appendChild(tdAction);
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function openServiceLogs() {
+  try {
+    const res = await fetch('/api/health/logs?lines=200', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      alert('Failed to load health logs.');
+      return;
+    }
+    const data = await res.json();
+    const lines = Array.isArray(data?.lines) ? data.lines : [];
+    const text = lines.join('\n');
+
+    const w = window.open('', 'health-logs');
+    if (w) {
+      w.document.write('<pre style="font-size:11px; white-space:pre-wrap; margin:0;">');
+      w.document.write(escapeHtml(text));
+      w.document.write('</pre>');
+      w.document.close();
+    } else {
+      alert(text.slice(0, 2000) || 'No log data available.');
+    }
+  } catch (error) {
+    console.error('Error loading health logs', error);
+    alert('Error loading health logs.');
+  }
+}
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) {
+    return '';
+  }
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function initWoHistoryFilters() {
+  const statusFilter = document.getElementById('wo-history-status-filter');
+  const limitSelect = document.getElementById('wo-history-limit');
+
+  statusFilter?.addEventListener('change', () => loadWoHistory());
+  limitSelect?.addEventListener('change', () => loadWoHistory());
+}
+
+async function openWoTimeline(woId) {
+  if (!woId) return;
+
+  const modal = document.getElementById('wo-timeline-modal');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const metaEl = document.getElementById('wo-timeline-meta');
+  const eventsEl = document.getElementById('wo-timeline-events');
+  const logEl = document.getElementById('wo-timeline-log-tail');
+
+  if (!modal || !titleEl || !metaEl || !eventsEl || !logEl) {
+    return;
+  }
+
+  titleEl.textContent = `WO Timeline: ${woId}`;
+  metaEl.textContent = 'Loading…';
+  eventsEl.innerHTML = '';
+  logEl.textContent = '';
+
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      metaEl.textContent = `Failed to load WO: HTTP ${res.status}`;
+      return;
+    }
+    const wo = await res.json();
+    renderWoTimeline(wo);
+  } catch (error) {
+    metaEl.textContent = `Error loading WO: ${String(error)}`;
+  }
+}
+
+function closeWoTimeline() {
+  const modal = document.getElementById('wo-timeline-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+}
+
+function renderWoTimeline(wo = {}) {
+  const metaEl = document.getElementById('wo-timeline-meta');
+  const eventsEl = document.getElementById('wo-timeline-events');
+  const logEl = document.getElementById('wo-timeline-log-tail');
+
+  if (!metaEl || !eventsEl || !logEl) {
+    return;
+  }
+
+  const id = wo.id || 'UNKNOWN';
+  const status = wo.status || 'unknown';
+  const started = wo.started_at || wo.created_at || '';
+  const finished = wo.finished_at || '';
+  const updated = wo.updated_at || wo.last_update || '';
+
+  let metaText = `ID: ${id} · Status: ${status}`;
+  if (started) metaText += ` · Started: ${started}`;
+  if (finished) metaText += ` · Finished: ${finished}`;
+  if (updated) metaText += ` · Last update: ${updated}`;
+  metaEl.textContent = metaText;
+
+  const logLines = Array.isArray(wo.log_tail)
+    ? wo.log_tail.map((line) => String(line || ''))
+    : typeof wo.log_tail === 'string'
+    ? wo.log_tail.split(/\r?\n/)
+    : [];
+
+  const events = buildTimelineEventsFromWo(wo, logLines);
+
+  eventsEl.innerHTML = '';
+  if (!events.length) {
+    const placeholder = document.createElement('li');
+    placeholder.textContent = 'No timeline events available yet.';
+    eventsEl.appendChild(placeholder);
+  } else {
+    events.forEach((event) => {
+      const li = document.createElement('li');
+      if (event.level === 'error') {
+        li.classList.add('wo-event-error');
+      }
+      li.innerHTML = `
+        <div>${escapeHtml(event.label || '')}</div>
+        <time>${escapeHtml(event.time || '')}</time>
+        ${event.detail ? `<div class="wo-event-detail">${escapeHtml(event.detail)}</div>` : ''}
+      `;
+      eventsEl.appendChild(li);
+    });
+  }
+
+  logEl.textContent = logLines.join('\n');
+}
+
+function buildTimelineEventsFromWo(wo = {}, logLines = []) {
+  const events = [];
+
+  if (wo.created_at) {
+    events.push({
+      time: wo.created_at,
+      label: 'Created',
+      detail: wo.created_by || '',
+      level: 'info'
+    });
+  }
+
+  if (wo.started_at) {
+    events.push({
+      time: wo.started_at,
+      label: 'Started',
+      detail: wo.worker || wo.agent || '',
+      level: 'info'
+    });
+  }
+
+  if (wo.finished_at) {
+    events.push({
+      time: wo.finished_at,
+      label: 'Finished',
+      detail: wo.result || '',
+      level: wo.status === 'failed' ? 'error' : 'info'
+    });
+  }
+
+  if (!wo.finished_at && wo.status) {
+    events.push({
+      time: wo.updated_at || wo.last_update || '',
+      label: `Status: ${wo.status}`,
+      detail: wo.last_error || '',
+      level: wo.status === 'failed' ? 'error' : 'info'
+    });
+  }
+
+  logLines.slice(-5).forEach((line) => {
+    const trimmed = String(line || '').trim();
+    if (!trimmed) return;
+    events.push({
+      time: '',
+      label: 'Log tail',
+      detail: trimmed,
+      level: trimmed.toLowerCase().includes('error') ? 'error' : 'info'
+    });
+  });
+
+  return events;
+}
+
+// --- Reality Snapshot ---
+
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = 'Loading Reality snapshot…';
+  }
+  hideErrorBanner('reality-error');
+
+  try {
+    const res = await fetch('/api/reality/snapshot?advisory=1');
+    if (!res.ok) {
+      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
+      renderRealityError(`HTTP ${res.status}`);
+      return;
+    }
+    const payload = await res.json();
+    renderRealitySnapshot(payload);
+  } catch (error) {
+    console.error('Error loading Reality snapshot', error);
+    renderRealityError(String(error));
+  }
+}
+
+function renderRealitySnapshot(payload) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  const badgeDeploy = document.getElementById('reality-badge-deploy');
+  const badgeSave = document.getElementById('reality-badge-save');
+  const badgeOrch = document.getElementById('reality-badge-orch');
+
+  if (!meta || !deployEl || !saveBody || !orchEl) {
+    return;
+  }
+
+  updateRealityBadge(badgeDeploy, 'Deployment', null);
+  updateRealityBadge(badgeSave, 'save.sh', null);
+  updateRealityBadge(badgeOrch, 'Orchestrator', null);
+
+  if (!payload || payload.status === 'no_snapshot') {
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
+    deployEl.textContent = '';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs in snapshot.</td></tr>';
+    orchEl.textContent = '';
+
+    if (payload?.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+
+    return;
+  }
+
+  if (payload.status === 'error') {
+    renderRealityError(payload.error || 'invalid snapshot');
+    if (payload.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || '';
+  const deployment = data.deployment_report || null;
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
+
+  if (deployment && deployment.path) {
+    deployEl.textContent = `Report: ${deployment.path}`;
+  } else {
+    deployEl.textContent = 'No deployment report in snapshot.';
+  }
+
+  saveBody.innerHTML = '';
+  if (!saveRuns.length) {
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh full-cycle runs in snapshot.</td></tr>';
+  } else {
+    saveRuns.forEach((run) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
+        <td>${escapeHtml(run?.lane || '')}</td>
+        <td>${escapeHtml(run?.layer1 || '')}</td>
+        <td>${escapeHtml(run?.layer2 || '')}</td>
+        <td>${escapeHtml(run?.layer3 || '')}</td>
+        <td>${escapeHtml(run?.layer4 || '')}</td>
+        <td>${escapeHtml(run?.git || '')}</td>
+      `;
+      saveBody.appendChild(tr);
+    });
+  }
+
+  if (orchestrator) {
+    try {
+      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+    } catch (error) {
+      console.error('Failed to stringify orchestrator summary', error);
+      orchEl.textContent = String(orchestrator);
+    }
+  } else {
+    orchEl.textContent = 'No orchestrator summary in snapshot.';
+  }
+
+  if (payload.advisory) {
+    const adv = payload.advisory;
+    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+  }
+}
+
+function renderRealityError(message) {
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = 'Reality snapshot unavailable.';
+  }
+  showErrorBanner('reality-error', message || 'Failed to load Reality snapshot.');
+}
+
+function updateRealityBadge(el, label, status) {
+  if (!el) return;
+  el.className = 'badge badge-muted';
+
+  if (!status) {
+    el.textContent = label;
+    return;
+  }
+
+  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
+  el.className = `badge badge-${normalized}`;
+  el.textContent = `${label}: ${status}`;
+}
+
+function initRealityPanel() {
+  if (realityPanelInitialized) {
+    return;
+  }
+
+  const refreshBtn = document.getElementById('reality-refresh-btn');
+  const retryBtn = document.getElementById('reality-error-retry');
+
+  refreshBtn?.addEventListener('click', () => loadRealitySnapshot());
+  retryBtn?.addEventListener('click', () => loadRealitySnapshot());
+
+  loadRealitySnapshot();
+  realityPanelInitialized = true;
+}
+
+// --- WO ↔ MLS linking (detail panel) ---
+
+function onWorkOrderSelected(woId) {
+  if (!woId) {
+    currentWoId = null;
+  } else {
+    currentWoId = String(woId);
+  }
+  refreshWoDetailMls();
+}
+
+async function refreshWoDetailMls() {
+  const emptyEl = document.getElementById('wo-detail-mls-empty');
+  const listEl = document.getElementById('wo-detail-mls-list');
+
+  if (!listEl) {
+    return;
+  }
+
+  const defaultMessage = emptyEl?.dataset?.defaultMessage || 'No MLS lessons linked to this work order yet.';
+
+  if (!currentWoId) {
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = defaultMessage;
+    }
+    return;
+  }
+
+  try {
+    if (!Array.isArray(cachedMlsEntries)) {
+      const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const payload = await res.json();
+      cachedMlsEntries = Array.isArray(payload.entries) ? payload.entries : [];
+    }
+
+    const related = cachedMlsEntries.filter((entry) => {
+      if (!entry || entry.related_wo === undefined || entry.related_wo === null) {
+        return false;
+      }
+      return String(entry.related_wo) === String(currentWoId);
+    });
+
+    listEl.innerHTML = '';
+
+    if (!related.length) {
+      if (emptyEl) {
+        emptyEl.style.display = '';
+        emptyEl.textContent = defaultMessage;
+      }
+      return;
+    }
+
+    if (emptyEl) {
+      emptyEl.style.display = 'none';
+      emptyEl.textContent = defaultMessage;
+    }
+
+    related.forEach((entry) => {
+      const li = document.createElement('li');
+      li.className = 'wo-detail-mls-item';
+      const entryId = entry.id || entry.mls_id || 'MLS-UNKNOWN';
+      li.dataset.mlsId = entryId;
+      li.textContent = entry.title || entryId || 'MLS lesson';
+      listEl.appendChild(li);
+    });
+  } catch (error) {
+    console.error('Failed to load related MLS lessons for WO', currentWoId, error);
+    cachedMlsEntries = null;
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'Error loading MLS lessons for this work order.';
+    }
+  }
+}
+
+function focusMlsCardById(mlsId) {
+  const list = document.getElementById('mls-list');
+  if (!list || !mlsId) {
+    return;
+  }
+
+  const safeId = cssEscapeAttr(mlsId);
+  if (!safeId) {
+    return;
+  }
+
+  const card = list.querySelector(`[data-mls-id="${safeId}"]`);
+  if (card && typeof card.scrollIntoView === 'function') {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('mls-card-highlight');
+    setTimeout(() => card.classList.remove('mls-card-highlight'), 1500);
+  }
+}
+
+function cssEscapeAttr(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const stringValue = String(value);
+  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
+    return window.CSS.escape(stringValue);
+  }
+  return stringValue.replace(/"/g, '\\"');
+}
+
+document.addEventListener('click', (event) => {
+  const baseTarget = event.target;
+  if (!(baseTarget instanceof Element)) {
+    return;
+  }
+
+  const target = baseTarget.closest('.wo-detail-mls-item');
+  if (!target) {
+    return;
+  }
+
+  const mlsId = target.dataset?.mlsId;
+  if (!mlsId) {
+    return;
+  }
+
+  if (typeof window.selectMlsLesson === 'function') {
+    window.selectMlsLesson(mlsId);
+    return;
+  }
+
+  focusMlsCardById(mlsId);
+});
+
+// --- WO detail rendering / history ---
+
+function renderWoDetail(wo) {
+  const container = document.getElementById('wo-detail-content');
+
+  if (!container) {
+    renderWoDetailHistory(wo);
+    return;
+  }
+
+  container.innerHTML = '';
+
+  if (!wo) {
+    const placeholder = document.createElement('p');
+    placeholder.textContent = 'Select a work order to view its details.';
+    container.appendChild(placeholder);
+    renderWoDetailHistory(null);
+    return;
+  }
+
+  const title = document.createElement('h3');
+  title.textContent = wo.id || 'Work Order';
+  container.appendChild(title);
+
+  if (wo.status) {
+    const statusLine = document.createElement('div');
+    statusLine.textContent = `Status: ${wo.status}`;
+    container.appendChild(statusLine);
+  }
+
+  const description = wo.description || wo.goal || wo.summary;
+  if (description) {
+    const descEl = document.createElement('p');
+    descEl.textContent = description;
+    container.appendChild(descEl);
+  }
+
+  const metaFields = [
+    { label: 'Owner', value: wo.owner || wo.created_by || wo.requested_by },
+    { label: 'Worker', value: wo.worker || wo.agent },
+    { label: 'Type', value: wo.type },
+    { label: 'Started', value: formatWoTimestamp(wo.started_at || wo.created_at) },
+    { label: 'Finished', value: formatWoTimestamp(wo.finished_at) },
+    { label: 'Updated', value: formatWoTimestamp(wo.updated_at || wo.last_update) }
+  ].filter((item) => item.value);
+
+  if (metaFields.length) {
+    const list = document.createElement('ul');
+    list.className = 'wo-detail-meta';
+    metaFields.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = `${item.label}: ${item.value}`;
+      list.appendChild(li);
+    });
+    container.appendChild(list);
+  }
+
+  renderWoDetailHistory(wo);
+}
+
+function renderWoDetailHistory(wo) {
+  const listEl = document.getElementById('wo-detail-history-list');
+  const emptyEl = document.getElementById('wo-detail-history-empty');
+
+  if (!listEl) {
+    return;
+  }
+
+  listEl.innerHTML = '';
+
+  const historyItems = normalizeWoDetailHistory(wo);
+
+  if (!historyItems.length) {
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'No history recorded for this work order yet.';
+    }
+    return;
+  }
+
+  if (emptyEl) {
+    emptyEl.style.display = 'none';
+  }
+
+  historyItems.forEach((rawItem) => {
+    const item = typeof rawItem === 'object' && rawItem !== null ? rawItem : { message: rawItem };
+    const li = document.createElement('li');
+    li.className = 'wo-history-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'wo-history-meta';
+    const timeValue =
+      item.time ||
+      item.timestamp ||
+      item.date ||
+      item.when ||
+      item.created_at ||
+      item.updated_at ||
+      '';
+    const formattedTime = formatWoTimestamp(timeValue) || timeValue || '';
+    const statusValue = item.status || item.state || item.type || item.event || '';
+    const metaParts = [formattedTime, statusValue].filter(Boolean);
+    if (metaParts.length) {
+      meta.textContent = metaParts.join(' · ');
+      li.appendChild(meta);
+    }
+
+    const message =
+      item.message ||
+      item.details ||
+      item.note ||
+      item.summary ||
+      item.description ||
+      (typeof rawItem === 'string' || typeof rawItem === 'number' ? String(rawItem) : '');
+
+    if (message) {
+      const body = document.createElement('div');
+      body.textContent = message;
+      li.appendChild(body);
+    } else if (!metaParts.length) {
+      const fallback = document.createElement('div');
+      fallback.textContent = 'Event recorded';
+      li.appendChild(fallback);
+    }
+
+    listEl.appendChild(li);
+  });
+}
+
+function normalizeWoDetailHistory(wo) {
+  if (!wo) {
+    return [];
+  }
+
+  const candidates = [wo.history, wo.events, wo.timeline];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length) {
+      return candidate;
+    }
+  }
+  return [];
+}
+
+async function loadAndRenderWorkOrder(woId) {
+  const historyList = document.getElementById('wo-detail-history-list');
+  const historyEmpty = document.getElementById('wo-detail-history-empty');
+  const detailContainer = document.getElementById('wo-detail-content');
+
+  if (!woId) {
+    renderWoDetail(null);
+    return;
+  }
+
+  if (detailContainer) {
+    detailContainer.innerHTML = '<p>Loading work order…</p>';
+  }
+  if (historyList) {
+    historyList.innerHTML = '';
+  }
+  if (historyEmpty) {
+    historyEmpty.style.display = '';
+    historyEmpty.textContent = 'Loading history…';
+  }
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=50`, { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const wo = await res.json();
+    renderWoDetail(wo);
+  } catch (error) {
+    console.error('Error loading WO detail', woId, error);
+    if (detailContainer) {
+      detailContainer.innerHTML = '';
+      const message = document.createElement('p');
+      message.textContent = `Failed to load work order ${woId}.`;
+      detailContainer.appendChild(message);
+    }
+    if (historyEmpty) {
+      historyEmpty.style.display = '';
+      historyEmpty.textContent = 'Failed to load history for this work order.';
+    }
+  }
+}
+
+// --- WO Timeline Panel ---
+
+function initWoTimelinePanel() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel || woTimelineInitialized) {
+    return;
+  }
+
+  const statusSelect = document.getElementById('wo-filter-status');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      woTimelineFilterStatus = statusSelect.value || '';
+      renderWoTimelinePanel();
+    });
+  }
+
+  const searchInput = document.getElementById('wo-filter-search');
+  if (searchInput) {
+    const handleSearch = debounce(() => {
+      woTimelineSearchQuery = searchInput.value || '';
+      renderWoTimelinePanel();
+    }, 200);
+    searchInput.addEventListener('input', handleSearch);
+  }
+
+  const listEl = document.getElementById('wo-timeline-list');
+  listEl?.addEventListener('click', (event) => {
+    const actionBtn = event.target.closest('.wo-timeline-view');
+    if (actionBtn?.dataset.woId) {
+      openWoTimeline(actionBtn.dataset.woId);
+    }
+  });
+
+  timelineRefreshButton?.addEventListener('click', () => {
+    refreshWoTimeline();
+  });
+
+  timelineLimitInput?.addEventListener('change', () => {
+    refreshWoTimeline();
+  });
+
+  timelineIncludeMlsCheckbox?.addEventListener('change', () => {
+    refreshWoTimeline();
+  });
+
+  woTimelineInitialized = true;
+  refreshWoTimeline();
+  woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
+}
+
+async function refreshWoTimeline() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel) return;
+
+  const listEl = document.getElementById('wo-timeline-list');
+
+  try {
+    const params = new URLSearchParams();
+    const statusParam = buildTimelineStatusParam();
+    if (statusParam) {
+      params.set('status', statusParam);
+    }
+
+    const limit = getTimelineLimitValue();
+    if (limit) {
+      params.set('limit', String(limit));
+    }
+
+    if (shouldIncludeMlsOverlay()) {
+      params.set('include_mls', '1');
+    }
+
+    const query = params.toString();
+    const url = query ? `/api/wos/history?${query}` : '/api/wos/history';
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const payload = await res.json();
+    let dataset = [];
+    if (Array.isArray(payload)) {
+      dataset = payload;
+    } else if (Array.isArray(payload?.items)) {
+      dataset = payload.items;
+    } else if (Array.isArray(payload?.wos)) {
+      dataset = payload.wos;
+    } else if (Array.isArray(payload?.results)) {
+      dataset = payload.results;
+    }
+
+    const entries = dataset.map((wo) => normalizeWoTimelineEntry(wo));
+    entries.sort((a, b) => getTimelineSortKey(b) - getTimelineSortKey(a));
+    woTimelineAll = entries;
+    renderWoTimelinePanel();
+  } catch (error) {
+    console.error('Failed to refresh WO timeline', error);
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="wo-timeline-item">
+          <div class="wo-timeline-row">
+            <span>Failed to load work orders.</span>
+          </div>
+          <div class="wo-timeline-when">${escapeHtml(error.message || String(error))}</div>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderWoTimelinePanel() {
+  const listEl = document.getElementById('wo-timeline-list');
+  const summaryEl = document.getElementById('wo-timeline-summary');
+  if (!listEl || !summaryEl) return;
+
+  let entries = woTimelineAll;
+  if (woTimelineFilterStatus) {
+    entries = entries.filter((entry) => {
+      if (woTimelineFilterStatus === 'failed') {
+        return entry.status === 'failed';
+      }
+      if (woTimelineFilterStatus === 'done') {
+        return entry.status === 'done';
+      }
+      if (woTimelineFilterStatus === 'active') {
+        return entry.status === 'pending' || entry.status === 'running';
+      }
+      return true;
+    });
+  }
+
+  const normalizedSearch = woTimelineSearchQuery.trim().toLowerCase();
+  if (normalizedSearch) {
+    entries = entries.filter((entry) => {
+      const haystack = [entry.id, entry.title, entry.description]
+        .map((value) => String(value || '').toLowerCase());
+      return haystack.some((field) => field && field.includes(normalizedSearch));
+    });
+  }
+
+  if (!entries.length) {
+    listEl.innerHTML = '<div class="wo-timeline-empty">No work orders match the current filters.</div>';
+  } else {
+    listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
+  }
+
+  const counts = {
+    pending: 0,
+    running: 0,
+    done: 0,
+    failed: 0
+  };
+  woTimelineAll.forEach((entry) => {
+    if (counts[entry.status] !== undefined) {
+      counts[entry.status] += 1;
+    }
+  });
+
+  const total = woTimelineAll.length;
+  const summaryParts = [
+    `Total: ${total}`,
+    `pending: ${counts.pending}`,
+    `running: ${counts.running}`,
+    `done: ${counts.done}`,
+    `failed: ${counts.failed}`,
+    `filter: ${woTimelineFilterStatus || 'all'}`
+  ];
+
+  if (normalizedSearch) {
+    summaryParts.push(`search: "${woTimelineSearchQuery.trim()}"`);
+  }
+
+  summaryEl.textContent = summaryParts.join(' · ');
+}
+
+function renderWoTimelineItem(entry) {
+  const statusClass = getTimelineStatusClass(entry.status);
+  const statusLabel = (entry.status || 'unknown').toUpperCase();
+  const timelineMarkup = buildTimelineSegmentsMarkup(entry);
+  const statusBadge = woStatusBadge(entry.status);
+  if (statusBadge) {
+    statusBadge.classList.add('wo-timeline-status');
+  }
+  const statusHtml = statusBadge
+    ? statusBadge.outerHTML
+    : `<span class="wo-timeline-status ${statusClass}">${statusLabel}</span>`;
+  const mlsHtml = renderMlsSummary(entry.mlsSummary);
+
+  return `
+    <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
+      <div class="wo-timeline-row">
+        <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
+        ${statusHtml}
+      </div>
+      <div class="wo-timeline-when">${timelineMarkup}</div>
+      ${mlsHtml}
+      <div class="wo-timeline-actions">
+        <button type="button" class="wo-timeline-view" data-wo-id="${escapeHtml(entry.id)}">View details</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderMlsSummary(mlsSummary) {
+  if (!mlsSummary) {
+    return '';
+  }
+
+  const metrics = {
+    total: Number.isFinite(mlsSummary.total) ? mlsSummary.total : 0,
+    solutions: Number.isFinite(mlsSummary.solutions) ? mlsSummary.solutions : 0,
+    failures: Number.isFinite(mlsSummary.failures) ? mlsSummary.failures : 0,
+    patterns: Number.isFinite(mlsSummary.patterns) ? mlsSummary.patterns : 0,
+    improvements: Number.isFinite(mlsSummary.improvements) ? mlsSummary.improvements : 0
+  };
+
+  return `
+    <div class="wo-mls">
+      <strong>MLS:</strong>
+      total ${metrics.total},
+      solutions ${metrics.solutions},
+      failures ${metrics.failures},
+      patterns ${metrics.patterns},
+      improvements ${metrics.improvements}
+    </div>
+  `;
+}
+
+function buildTimelineSegmentsMarkup(entry) {
+  const segments = [
+    { label: 'Created', value: entry.createdAt },
+    { label: 'Started', value: entry.startedAt },
+    { label: 'Finished', value: entry.finishedAt || entry.updatedAt }
+  ];
+
+  return segments
+    .map((segment) => {
+      const formatted = formatWoTimestamp(segment.value) || '—';
+      return `
+        <span class="wo-timeline-segment">
+          <span class="wo-timeline-segment-label">${segment.label}</span>
+          <span class="wo-timeline-segment-value">${escapeHtml(formatted)}</span>
+        </span>
+      `;
+    })
+    .join('<span class="wo-timeline-arrow">→</span>');
+}
+
+function getTimelineStatusClass(status) {
+  switch (status) {
+    case 'pending':
+      return 'wo-status-pill-pending';
+    case 'running':
+      return 'wo-status-pill-running';
+    case 'done':
+      return 'wo-status-pill-done';
+    case 'failed':
+      return 'wo-status-pill-failed';
+    default:
+      return 'wo-status-pill-unknown';
+  }
+}
+
+function getTimelineSortKey(entry) {
+  const candidate = entry.updatedAt || entry.finishedAt || entry.startedAt || entry.createdAt;
+  const parsed = candidate ? Date.parse(candidate) : NaN;
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+  return parsed;
+}
+
+function initDashboard() {
+  initTabs();
+  initWoHistoryFilters();
+  initWoStatusFilters();
+  loadWos();
+}
+
+function cleanupIntervals() {
+  if (servicesIntervalId) {
+    clearInterval(servicesIntervalId);
+    servicesIntervalId = null;
+  }
+
+  if (serviceAutoRefreshTimer) {
+    clearInterval(serviceAutoRefreshTimer);
+    serviceAutoRefreshTimer = null;
+  }
+
+  if (woTimelineIntervalId) {
+    clearInterval(woTimelineIntervalId);
+    woTimelineIntervalId = null;
+  }
+
+  if (summaryIntervalId) {
+    clearInterval(summaryIntervalId);
+    summaryIntervalId = null;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const serviceRefreshBtn = document.getElementById('service-refresh');
+  if (serviceRefreshBtn) {
+    serviceRefreshBtn.addEventListener('click', () => {
+      refreshServices(true);
+    });
+  }
+
+  refreshServices(false);
+  if (!serviceAutoRefreshTimer) {
+    serviceAutoRefreshTimer = setInterval(() => {
+      refreshServices(false);
+    }, 60000);
+  }
+
+  initSummaryCards();
+  initDashboard();
+  initWoTimelinePanel();
+  renderWoDetail(null);
+
+  window.addEventListener('wo:select', (event) => {
+    const detail = event?.detail;
+    let woId = null;
+    if (detail && typeof detail === 'object') {
+      woId = detail.id || detail.woId || detail.wo_id || detail.value;
+    } else if (detail) {
+      woId = detail;
+    }
+
+    if (woId) {
+      onWorkOrderSelected(woId);
+      loadAndRenderWorkOrder(woId);
+    } else {
+      onWorkOrderSelected(null);
+      renderWoDetail(null);
+    }
+  });
+
+  refreshWoDetailMls();
+  window.loadAndRenderWorkOrder = loadAndRenderWorkOrder;
+});
+
+window.addEventListener('beforeunload', () => {
+  cleanupIntervals();
+});

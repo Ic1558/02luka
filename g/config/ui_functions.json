@@ -1,0 +1,17 @@
+[
+  {
+    "id": "check_health",
+    "label": "Check System Health",
+    "description": "Runs the health check skill chain to verify monitored services."
+  },
+  {
+    "id": "deploy_dashboard",
+    "label": "Deploy Dashboard",
+    "description": "Redeploy the analytics dashboard stack using the predefined shell workflow."
+  },
+  {
+    "id": "update_docker_yaml",
+    "label": "Update Docker Compose",
+    "description": "Applies templated updates to docker-compose manifests through the automation runner."
+  }
+]

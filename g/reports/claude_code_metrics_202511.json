@@ -1,0 +1,21 @@
+{
+  "month": "202511",
+  "generated_at": "2025-11-12T12:05:22Z",
+  "hooks": {
+    "success": 0,
+    "failures": 0,
+    "total": 0,
+    "success_rate": 0
+  },
+  "subagents": {
+    "reviews": 6,
+    "competes": 2,
+    "total": 8
+  },
+  "deployments": {
+    "success": 0,
+    "failed": 0,
+    "total": 0,
+    "success_rate": 0
+  }
+}

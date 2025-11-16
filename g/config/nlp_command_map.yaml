@@ -1,0 +1,263 @@
+# 02LUKA NLP Command Map
+# Maps natural language intents to agent routing and system commands
+# Updated for Phase 15 - Autonomous Knowledge Routing (AKR)
+
+intents:
+  # System commands (existing)
+  backup.now:
+    desc: "Run Google Drive 02luka backup once (fast, selective)"
+    cmd:  "$HOME/02luka/tools/backup_to_gdrive.zsh --once"
+    route: system
+
+  sync.expense:
+    desc: "Push expense tracker to gd sync path"
+    cmd:  "rsync -a --delete $HOME/02luka/g/expense/ $HOME/gd/02luka_sync/current/g/expense/"
+    route: system
+
+  restart.health:
+    desc: "Restart health_server service"
+    cmd:  "launchctl kickstart -k gui/$(id -u)/com.02luka.health_server || true"
+    route: system
+
+  deploy.dashboard:
+    desc: "Deploy static dashboard"
+    cmd:  "$HOME/02luka/tools/deploy_dashboard.zsh"
+    route: system
+
+  restart.filebridge:
+    desc: "Restart FileBridge"
+    cmd:  "launchctl kickstart -k gui/$(id -u)/com.02luka.filebridge"
+    route: system
+
+  # Kim → Andy delegations (Phase 15 AKR)
+  code.implement:
+    desc: "Implement code feature or function"
+    route: andy
+    from: kim
+    triggers:
+      - "write code"
+      - "implement feature"
+      - "create function"
+      - "add component"
+      - "build API"
+    examples:
+      - "write a function to parse JSON"
+      - "implement user authentication"
+      - "create a React component"
+      - "build a REST API endpoint"
+
+  code.review:
+    desc: "Review code for quality and issues"
+    route: andy
+    from: kim
+    triggers:
+      - "review code"
+      - "check code"
+      - "code quality"
+      - "code review"
+    examples:
+      - "review this pull request"
+      - "check my code for bugs"
+      - "review the authentication module"
+
+  code.fix:
+    desc: "Fix bugs or errors in code"
+    route: andy
+    from: kim
+    triggers:
+      - "fix bug"
+      - "resolve error"
+      - "debug issue"
+      - "repair code"
+    examples:
+      - "fix the authentication bug"
+      - "debug why tests are failing"
+      - "resolve the API timeout error"
+
+  code.test:
+    desc: "Write or run tests"
+    route: andy
+    from: kim
+    triggers:
+      - "write test"
+      - "add test"
+      - "run tests"
+      - "test coverage"
+    examples:
+      - "write tests for the API"
+      - "run the test suite"
+      - "add unit tests for authentication"
+
+  code.refactor:
+    desc: "Refactor or optimize code"
+    route: andy
+    from: kim
+    triggers:
+      - "refactor"
+      - "optimize"
+      - "improve code"
+      - "clean up"
+    examples:
+      - "refactor the database connection"
+      - "optimize the query performance"
+      - "clean up the authentication code"
+
+  # Andy → Kim delegations (Phase 15 AKR)
+  query.explain:
+    desc: "Explain concept or provide information"
+    route: kim
+    from: andy
+    triggers:
+      - "explain"
+      - "what is"
+      - "how does"
+      - "why"
+      - "describe"
+    examples:
+      - "explain OAuth2 flow"
+      - "what is dependency injection"
+      - "how does RAG work"
+      - "why use async/await"
+
+  query.clarify:
+    desc: "Clarify user intent or requirements"
+    route: kim
+    from: andy
+    triggers:
+      - "clarify"
+      - "not sure"
+      - "ambiguous"
+      - "unclear"
+      - "what do you mean"
+    examples:
+      - "user intent is unclear"
+      - "need clarification on requirements"
+      - "what exactly do you want"
+
+  query.translate:
+    desc: "Translate between languages"
+    route: kim
+    from: andy
+    triggers:
+      - "translate"
+      - "แปล"
+    examples:
+      - "translate this to Thai"
+      - "แปลเป็นภาษาอังกฤษ"
+      - "translate to English"
+
+  query.help:
+    desc: "Provide help or guidance"
+    route: kim
+    from: andy
+    triggers:
+      - "help"
+      - "how to"
+      - "guide"
+      - "tutorial"
+    examples:
+      - "help with git workflow"
+      - "how to use the API"
+      - "guide for deployment"
+
+  # Bidirectional capabilities
+  query.search:
+    desc: "Search knowledge base or documentation"
+    route: both
+    rag_query: true
+    triggers:
+      - "search"
+      - "find"
+      - "look for"
+      - "query"
+    examples:
+      - "search for telemetry docs"
+      - "find Phase 14 summary"
+      - "look for authentication examples"
+
+  query.status:
+    desc: "Check system or service status"
+    route: system
+    cmd: "curl -s http://127.0.0.1:4000/api/smoke | jq '.'"
+    triggers:
+      - "status"
+      - "health"
+      - "check"
+      - "is running"
+    examples:
+      - "check system status"
+      - "is everything running"
+      - "health check"
+
+synonyms:
+  # System commands
+  "backup now": backup.now
+  "สำรองข้อมูลตอนนี้": backup.now
+  "expense sync": sync.expense
+  "ซิงค์ค่าใช้จ่าย": sync.expense
+  "restart health": restart.health
+  "รีสตาร์ทเฮลธ์": restart.health
+  "deploy dashboard": deploy.dashboard
+  "รีลีสดาชบอร์ด": deploy.dashboard
+  "restart filebridge": restart.filebridge
+  "รีสตาร์ทไฟล์บริดจ์": restart.filebridge
+
+  # Kim → Andy
+  "write code": code.implement
+  "เขียนโค้ด": code.implement
+  "create function": code.implement
+  "สร้างฟังก์ชัน": code.implement
+  "fix bug": code.fix
+  "แก้บั๊ก": code.fix
+  "debug": code.fix
+  "review code": code.review
+  "รีวิวโค้ด": code.review
+  "write test": code.test
+  "เขียนเทส": code.test
+  "refactor": code.refactor
+  "ปรับปรุงโค้ด": code.refactor
+
+  # Andy → Kim
+  "explain": query.explain
+  "อธิบาย": query.explain
+  "what is": query.explain
+  "คืออะไร": query.explain
+  "translate": query.translate
+  "แปล": query.translate
+  "help": query.help
+  "ช่วยเหลือ": query.help
+
+  # Bidirectional
+  "search": query.search
+  "ค้นหา": query.search
+  "find": query.search
+  "status": query.status
+  "สถานะ": query.status
+
+# Phase 15 AKR routing configuration
+routing:
+  default_agent: kim
+  fallback_agent: system
+
+  confidence_threshold: 0.75
+  ambiguous_threshold: 0.50
+  multi_agent_threshold: 0.85
+
+  context_window: 5  # messages
+
+# Phase 15 AKR telemetry configuration
+telemetry:
+  track_routing: true
+  track_delegation: true
+  track_performance: true
+
+  events:
+    - router.intent.classified
+    - router.agent.selected
+    - router.delegation.initiated
+    - router.delegation.completed
+    - router.query.ambiguous
+    - router.fallback.triggered
+
+  schema: config/telemetry_unified.yaml
+  sink: g/telemetry_unified/unified.jsonl

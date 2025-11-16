@@ -1,0 +1,37 @@
+{
+  "name": "02luka",
+  "version": "1.0.0",
+  "description": "02LUKA AI System - CLS Learning, Ops Monitoring, Public Docs Publisher",
+  "private": true,
+  "scripts": {
+    "test": "bash scripts/smoke.sh",
+    "smoke": "bash scripts/smoke.sh",
+    "validate": "make validate-zones",
+    "proof": "make proof",
+    "status": "make status",
+    "help": "make help",
+    "ui": "node run/local_ui_server.cjs",
+    "boss:stub": "node run/boss_api_stub.cjs"
+  },
+  "keywords": [
+    "ai",
+    "cls",
+    "ops",
+    "monitoring",
+    "github-actions"
+  ],
+  "author": "icmini",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Ic1558/02luka.git"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1",
+    "yaml": "^2.8.1"
+  }
+}

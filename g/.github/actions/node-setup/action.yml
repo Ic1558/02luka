@@ -1,0 +1,53 @@
+---
+name: 'Setup Node.js with Cache'
+description: 'Unified Node.js setup with npm caching and optional dependency installation'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+
+  lockfile:
+    description: 'Path to the lockfile for cache key'
+    required: false
+    default: 'package-lock.json'
+
+  cache-dependency-path:
+    description: 'Optional newline-delimited dependency paths for caching'
+    required: false
+    default: ''
+
+  install-dependencies:
+    description: 'Whether to run npm ci (true/false)'
+    required: false
+    default: 'true'
+
+  continue-on-error:
+    description: 'Continue on error (used for optional setup steps)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.install-dependencies == 'true' && 'npm' || '' }}
+        cache-dependency-path: ${{ inputs['cache-dependency-path'] != '' && inputs['cache-dependency-path'] || inputs.lockfile }}
+      continue-on-error: ${{ inputs.continue-on-error == 'true' || inputs.install-dependencies == 'false' }}
+
+    - name: Install dependencies
+      if: ${{ inputs.install-dependencies == 'true' }}
+      shell: bash
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci --no-audit --no-fund
+        elif [ -f package.json ]; then
+          npm install --no-audit --no-fund
+        else
+          echo "ℹ️  No package.json found, skipping installation"
+        fi
+      continue-on-error: ${{ inputs.continue-on-error == 'true' }}

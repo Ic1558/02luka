@@ -1,0 +1,12 @@
+{
+  "team": "02LUKA",
+  "plan_mode": true,
+  "stop_hooks": ["quality_gate", "verify_deployment"],
+  "subagent_budget_limit": 5,
+  "metrics_enabled": true,
+  "context_map": ".claude/context-map.json",
+  "telemetry": {
+    "mls_capture": true,
+    "reports_dir": "g/reports"
+  }
+}

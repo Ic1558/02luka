@@ -1,0 +1,20 @@
+{
+  "wo_id": "PHASE22-TEL-DASH",
+  "task_type": "apply_patch",
+  "title": "Phase 22 — Telemetry Dashboard (read-only) + fixtures",
+  "description": "Add a static dashboard to visualize g/telemetry/unified.jsonl, plus fixtures and a CI check. No backend, no CI workflow changes.",
+  "files": {
+    "hub/ui/telemetry.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"/><title>Telemetry</title><link rel=\"stylesheet\" href=\"/ui/telemetry.css\"/><body><main><h1>Unified Telemetry</h1><div id=\"stats\"></div><table id=\"tbl\"><thead><tr><th>ts</th><th>agent</th><th>event</th><th>ok</th><th>detail</th></tr></thead><tbody></tbody></table><script src=\"/ui/telemetry.js\"></script></main></body></html>\n",
+    "hub/ui/telemetry.css": "main{font:14px/1.4 system-ui,Arial,sans-serif;padding:16px}table{border-collapse:collapse;width:100%;margin-top:12px}th,td{border:1px solid #ddd;padding:6px}thead th{background:#f5f5f5;text-align:left}#stats{margin:8px 0;display:flex;gap:12px;flex-wrap:wrap}.chip{padding:4px 8px;border-radius:8px;background:#eee}\n",
+    "hub/ui/telemetry.js": "async function load(){const t=document.querySelector('#tbl tbody');const s=document.querySelector('#stats');try{const res=await fetch('/telemetry/unified.jsonl');if(!res.ok) throw new Error('fetch failed');const text=await res.text();const lines=text.trim().split(/\\n+/).filter(Boolean).map(JSON.parse);t.innerHTML='';let ok=0,fail=0;for(const r of lines){if(r.ok) ok++; else fail++;const tr=document.createElement('tr');tr.innerHTML=`<td>${r.ts}</td><td>${r.agent}</td><td>${r.event}</td><td>${r.ok}</td><td><pre style=\"margin:0;white-space:pre-wrap\">${JSON.stringify(r.detail||{},null,0)}</pre></td>`;t.appendChild(tr);}s.innerHTML=`<span class=chip>total: ${lines.length}</span><span class=chip>ok: ${ok}</span><span class=chip>fail: ${fail}</span>`;}catch(e){s.innerHTML='<span class=chip>no telemetry yet</span>';}}window.addEventListener('load',load);\n",
+    "tools/telemetry_fixture.zsh": "#!/usr/bin/env zsh\nset -euo pipefail\ncd \"${0:A:h}/..\"\n./tools/telemetry_unified.zsh ocr sha256_validation true  '{\"file\":\"ok_demo.jpg\",\"sha256\":\"abc\"}'\n./tools/telemetry_unified.zsh ocr sha256_validation false '{\"file\":\"bad_hash.jpg\",\"note\":\"sha_mismatch\"}'\n./tools/telemetry_unified.zsh ocr sha256_validation false '{\"file\":\"corrupt.jpg\",\"note\":\"sha_fail\"}'\necho 'fixtures appended to g/telemetry/unified.jsonl'\n",
+    ".github/workflows/telemetry-ui-check.yml": "name: telemetry-ui-check\non:\n  pull_request:\n    branches: [main, develop]\n    paths:\n      - 'hub/ui/**'\n      - 'tools/telemetry_fixture.zsh'\n      - 'tools/telemetry_unified.zsh'\npermissions:\n  contents: read\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Sanity check files exist\n        run: |\n          test -f hub/ui/telemetry.html\n          test -f hub/ui/telemetry.js\n          test -f hub/ui/telemetry.css\n          test -f tools/telemetry_fixture.zsh\n"
+  },
+  "edits": [
+    { "path": "tools/hub_http.zsh", "mode": "patch", "find": "python3 -m http.server", "after": "# shim /telemetry -> g/telemetry\nmkdir -p g/telemetry\nln -sf ../../g/telemetry/unified.jsonl hub/telemetry/unified.jsonl 2>/dev/null || true\n" }
+  ],
+  "post_verify": [
+    "chmod +x tools/telemetry_fixture.zsh",
+    "./tools/telemetry_fixture.zsh || true"
+  ]
+}
