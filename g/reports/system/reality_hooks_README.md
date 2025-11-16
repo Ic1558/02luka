@@ -1,27 +1,22 @@
 # Reality Hooks
 
-Reality hooks are **lightweight real-world checks** that run on every important PR
-to prove that key parts of the system still behave correctly, not just compile.
+Reality hooks are **lightweight real-world checks** that run on every important PR to prove that key parts of the system still behave correctly, not just compile.
 
 ## What this does
 
 The `tools/reality_hooks/pr_reality_check.zsh` script currently runs:
 
 1. **Dashboard smoke**
-   - Verifies that `apps/dashboard/wo_dashboard_server.js` parses with Node.
-   - Best-effort only; marks `skipped` if the file is missing.
+   - Verifies that `g/apps/dashboard/dashboard_data.json` exists and has sane roadmap + service data.
+   - Ensures `roadmap.overall_progress_pct` and `services.total` are valid numbers.
 
 2. **Orchestrator summary**
-   - Runs `tools/claude_subagents/orchestrator.zsh review "true" 1` with
-     `LUKA_SOT` pointed at the repo so it produces artifacts locally.
-   - Checks that `g/reports/system/claude_orchestrator_summary.json` is created
-     and contains valid JSON.
+   - Runs `tools/subagents/orchestrator.zsh compete "echo reality_hook_success" 1` with `LUKA_SOT` pointed at the repo.
+   - Checks that `g/reports/system/subagent_orchestrator_summary.json` or `claude_orchestrator_summary.json` is created and contains valid JSON with `agents` array and `winner` field.
 
 3. **Telemetry schema vs sample**
-   - Loads `g/schemas/telemetry_v2.schema.json` (or `schemas/telemetry_v2.schema.json`)
-     and the first record from `g/telemetry_unified/unified.jsonl`
-     (falling back to `telemetry_unified/unified.jsonl` or `telemetry/unified.jsonl`).
-   - Fails only if required keys from the schema are missing in the sample.
+   - Loads `schemas/telemetry_v2.schema.json` and validates `telemetry/sample_telemetry_v2.json` against it using `ajv`.
+   - Supports both JSON and JSONL formats.
 
 Each run writes a Markdown report under:
 
@@ -37,14 +32,14 @@ telemetry_schema=ok|failed|skipped
 REALITY_HOOKS_SUMMARY_END
 ```
 
-This can be consumed by scoring agents (e.g. pr_score) to set
-reality_hooks > 0 for PRs that successfully run these checks.
+This can be consumed by scoring agents (e.g. pr_score) to set `reality_hooks > 0` for PRs that successfully run these checks.
 
 ## Running locally
 
 From the repo root:
 
-```
+```bash
+npm install   # only required once for Ajv
 chmod +x tools/reality_hooks/pr_reality_check.zsh
 tools/reality_hooks/pr_reality_check.zsh
 ```
@@ -52,3 +47,7 @@ tools/reality_hooks/pr_reality_check.zsh
 If all hooks pass, the script exits 0 and writes a report.
 
 If any hook fails, it exits non-zero and logs details to stdout.
+
+## CI integration
+
+`.github/workflows/reality_hooks.yml` runs the script on every pull request targeting `main` or `release/*`. The workflow uploads the generated Markdown report as an artifact so governance tooling (e.g., PR scoring agents) can detect that `reality_hooks > 0` for the PR.
