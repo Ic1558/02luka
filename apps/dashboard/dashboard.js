@@ -8,8 +8,7 @@ let servicesIntervalId;
 let mlsIntervalId;
 let currentMlsType = '';
 let allWos = [];
-let visibleWos = [];
-let currentWoFilter = 'all';
+let currentWoStatusFilter = '';
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -416,8 +415,15 @@ function createMLSCard(entry) {
 // --- Work Orders list ---
 
 async function loadWos() {
+  const params = new URLSearchParams();
+  if (currentWoStatusFilter) {
+    params.set('status', currentWoStatusFilter);
+  }
+  const query = params.toString();
+  const url = query ? `/api/wos?${query}` : '/api/wos';
+
   try {
-    const res = await fetch('/api/wos', {
+    const res = await fetch(url, {
       headers: {
         Accept: 'application/json'
       }
@@ -436,41 +442,29 @@ async function loadWos() {
     } else {
       allWos = [];
     }
-    applyWoFilter();
+    renderWosTable(allWos);
+    renderWoSummary(allWos);
   } catch (error) {
     console.error('Error loading WOs', error);
   }
 }
 
-function initWoFilters() {
-  const buttons = document.querySelectorAll('.wo-filter-button');
-  if (!buttons.length) return;
-  buttons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const status = btn.getAttribute('data-status') || 'all';
-      setWoFilter(status);
+function initWoStatusFilters() {
+  const container = document.getElementById('wo-status-filters');
+  if (!container) return;
+
+  const chips = Array.from(container.querySelectorAll('.wo-status-chip'));
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const newStatus = chip.dataset.status || '';
+      currentWoStatusFilter = newStatus;
+
+      chips.forEach((c) => c.classList.remove('wo-status-chip--active'));
+      chip.classList.add('wo-status-chip--active');
+
+      loadWos();
     });
   });
-}
-
-function setWoFilter(statusKey) {
-  currentWoFilter = statusKey;
-  const buttons = document.querySelectorAll('.wo-filter-button');
-  buttons.forEach((btn) => {
-    const buttonStatus = btn.getAttribute('data-status') || 'all';
-    btn.classList.toggle('active', buttonStatus === statusKey);
-  });
-  applyWoFilter();
-}
-
-function applyWoFilter() {
-  let filtered = Array.isArray(allWos) ? allWos.slice() : [];
-  if (currentWoFilter !== 'all') {
-    filtered = filtered.filter((wo) => normalizeWoStatus(wo?.status) === currentWoFilter);
-  }
-  visibleWos = filtered;
-  renderWosTable(filtered);
-  renderWoSummary(filtered);
 }
 
 function normalizeWoStatus(raw) {
@@ -577,7 +571,7 @@ function buildTimelineSummary(wo) {
   return '—';
 }
 
-function renderWoSummary(filtered) {
+function renderWoSummary(wos = []) {
   const summaryEl = document.getElementById('wos-summary');
   if (!summaryEl) return;
 
@@ -589,7 +583,8 @@ function renderWoSummary(filtered) {
     other: 0
   };
 
-  allWos.forEach((wo) => {
+  const dataset = Array.isArray(wos) ? wos : [];
+  dataset.forEach((wo) => {
     const key = normalizeWoStatus(wo?.status);
     if (counts[key] !== undefined) {
       counts[key] += 1;
@@ -598,14 +593,18 @@ function renderWoSummary(filtered) {
     }
   });
 
-  const total = allWos.length;
-  const filteredCount = filtered.length;
+  const total = dataset.length;
+  const filteredCount = dataset.length;
   const parts = [];
   parts.push(`${total} WOs`);
   if (counts.running) parts.push(`${counts.running} running`);
   if (counts.failed) parts.push(`${counts.failed} failed`);
-  if (currentWoFilter !== 'all') {
-    parts.push(`filter: ${currentWoFilter} (${filteredCount} shown)`);
+  if (currentWoStatusFilter) {
+    const label = currentWoStatusFilter
+      .split(',')
+      .map((status) => status.trim() || 'all')
+      .join('/');
+    parts.push(`filter: ${label} (${filteredCount} shown)`);
   }
 
   summaryEl.textContent = parts.join(' · ');
@@ -1088,7 +1087,7 @@ function initRealityPanel() {
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
-  initWoFilters();
+  initWoStatusFilters();
   loadWos();
 }
 
