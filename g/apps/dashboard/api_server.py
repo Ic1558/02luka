@@ -4,6 +4,7 @@ Dashboard API Server - Serves WO data and logs
 Runs alongside the static HTTP server on port 8767
 """
 
+import glob
 import json
 import os
 import re
@@ -273,6 +274,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_list_mls(query)
         elif path == '/api/health/logs':
             self.handle_get_logs(query)
+        elif path == '/api/reality/snapshot':
+            self.handle_reality_snapshot(query)
         else:
             self.send_error(404, "Not found")
 
@@ -562,6 +565,87 @@ class APIHandler(BaseHTTPRequestHandler):
                 self.send_json_response({'lines': [f"Error reading logs: {e}"]})
         else:
             self.send_json_response({'lines': ['No logs available']})
+
+    def _read_reality_advisory(self):
+        """Read latest Reality Hooks advisory summary if available."""
+        advisory = {
+            "deployment": {"status": "unknown"},
+            "save_sh": {"status": "unknown"},
+            "orchestrator": {"status": "unknown"},
+        }
+
+        latest = LOGS / "reality_hooks_advisory_latest.md"
+        if not latest.exists():
+            return advisory
+
+        try:
+            sections = ["deployment", "save_sh", "orchestrator"]
+            section_index = 0
+            with open(latest, 'r') as handle:
+                for raw_line in handle:
+                    line = raw_line.strip()
+                    if not line.startswith("- Advisory: **"):
+                        continue
+                    status = line.split("**")[1].strip() if "**" in line else "unknown"
+                    if section_index < len(sections):
+                        key = sections[section_index]
+                        advisory[key]["status"] = status or "unknown"
+                    section_index += 1
+                    if section_index >= len(sections):
+                        break
+        except Exception as exc:
+            print(f"Error reading Reality advisory: {exc}")
+
+        return advisory
+
+    def handle_reality_snapshot(self, query):
+        """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
+        include_advisory = query.get('advisory', ['0'])[0] == '1'
+        try:
+            pattern = str(LOGS.parent / "reality_hooks_snapshot_*.json")
+            snapshot_files = glob.glob(pattern)
+
+            if not snapshot_files:
+                response = {
+                    "status": "no_snapshot",
+                    "snapshot_path": None,
+                    "data": None,
+                }
+                if include_advisory:
+                    response["advisory"] = self._read_reality_advisory()
+                self.send_json_response(response)
+                return
+
+            latest_file = max(snapshot_files)
+            with open(latest_file, 'r') as handle:
+                try:
+                    data = json.load(handle)
+                except json.JSONDecodeError:
+                    response = {
+                        "status": "error",
+                        "snapshot_path": latest_file,
+                        "data": None,
+                        "error": "invalid_json",
+                    }
+                    if include_advisory:
+                        response["advisory"] = self._read_reality_advisory()
+                    self.send_json_response(response)
+                    return
+
+            response = {
+                "status": "ok",
+                "snapshot_path": latest_file,
+                "data": data,
+            }
+
+            if include_advisory:
+                response["advisory"] = self._read_reality_advisory()
+
+            self.send_json_response(response)
+
+        except Exception as exc:
+            print(f"Error reading Reality Hooks snapshot: {exc}")
+            self.send_error(500, f"Failed to read Reality Hooks snapshot: {str(exc)}")
 
     def send_json_response(self, data):
         """Send JSON response"""

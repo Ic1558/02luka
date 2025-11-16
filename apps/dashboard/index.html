@@ -248,6 +248,128 @@
         cursor: pointer;
       }
 
+      .badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        margin-left: 0.25rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .badge-ok {
+        background: #e6ffed;
+        color: #036635;
+      }
+
+      .badge-degraded {
+        background: #fff4e5;
+        color: #7a3e00;
+      }
+
+      .badge-no_data,
+      .badge-no_snapshot {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+
+      .badge-unknown {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .badge-muted {
+        background: #e5e7eb;
+        color: #6b7280;
+      }
+
+      .reality-header {
+        margin-bottom: 1rem;
+      }
+
+      .reality-header h2 {
+        margin-bottom: 0.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+      }
+
+      .reality-subtitle {
+        margin: 0;
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 0.95rem;
+      }
+
+      .reality-meta {
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .reality-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .reality-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 18px;
+        padding: 1.25rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+      }
+
+      .reality-card h3 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+      }
+
+      .reality-text {
+        margin: 0;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.9);
+      }
+
+      .reality-pre {
+        background: rgba(15, 23, 42, 0.8);
+        border-radius: 12px;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow: auto;
+      }
+
+      .reality-card-wide {
+        grid-column: 1 / -1;
+      }
+
+      .reality-table-wrapper {
+        overflow-x: auto;
+      }
+
+      .reality-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+
+      .reality-table th,
+      .reality-table td {
+        padding: 0.4rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .reality-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
       .pill-bar {
         display: flex;
         gap: 0.5rem;
@@ -523,6 +645,7 @@
           <button id="tab-overview" type="button">Overview</button>
           <button id="tab-wos" type="button">Work Orders</button>
           <button id="tab-wo-history" type="button">WO History</button>
+          <button id="tab-reality" type="button">Reality</button>
         </nav>
 
         <!-- Existing sections -->
@@ -582,6 +705,64 @@
               <!-- filled by JS -->
             </tbody>
           </table>
+        </section>
+
+        <section id="view-reality" class="hidden">
+          <header class="reality-header">
+            <h2>
+              Reality Snapshot
+              <span id="reality-badge-deploy" class="badge badge-muted">Deployment</span>
+              <span id="reality-badge-save" class="badge badge-muted">save.sh</span>
+              <span id="reality-badge-orch" class="badge badge-muted">Orchestrator</span>
+            </h2>
+            <p class="reality-subtitle">
+              Latest Reality Hooks snapshot aggregated from deployment reports,
+              save.sh full-cycle tests, and orchestrator summaries.
+            </p>
+          </header>
+
+          <div id="reality-error" class="error-banner hidden" role="status" aria-live="polite">
+            <span>Failed to load Reality snapshot.</span>
+            <button type="button" id="reality-error-retry">Retry</button>
+          </div>
+
+          <p id="reality-meta" class="reality-meta">Loading Reality snapshot…</p>
+
+          <div class="reality-grid">
+            <article class="reality-card">
+              <h3>Deployment Report</h3>
+              <p id="reality-deployment" class="reality-text">Loading deployment data…</p>
+            </article>
+
+            <article class="reality-card reality-card-wide">
+              <h3>save.sh Full-Cycle Runs</h3>
+              <div class="reality-table-wrapper">
+                <table class="reality-table" aria-label="save.sh full-cycle runs">
+                  <thead>
+                    <tr>
+                      <th scope="col">Test</th>
+                      <th scope="col">Lane</th>
+                      <th scope="col">L1</th>
+                      <th scope="col">L2</th>
+                      <th scope="col">L3</th>
+                      <th scope="col">L4</th>
+                      <th scope="col">Git</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reality-save-body">
+                    <tr>
+                      <td colspan="7">Loading save.sh runs…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="reality-card">
+              <h3>Orchestrator Summary</h3>
+              <pre id="reality-orchestrator" class="reality-pre">Loading orchestrator summary…</pre>
+            </article>
+          </div>
         </section>
       </section>
     </main>
