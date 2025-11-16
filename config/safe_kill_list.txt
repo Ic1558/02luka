@@ -1,0 +1,26 @@
+# Safe Kill List for RAM Crisis Handler
+# Processes that can be safely killed during swap crisis (>90%)
+# Format: One process name per line (bundle identifier or process name)
+# Comments start with #
+
+# Docker (user confirmed moving to local-only setup)
+com.docker.backend
+
+# Browsers (user can reopen)
+com.apple.Safari
+com.google.Chrome
+
+# VSCode (redundant with Cursor)
+com.microsoft.VSCode
+
+# Mail/Media Apps (non-critical, user can reopen)
+com.apple.mail
+com.apple.Music
+com.apple.Photos
+com.apple.Notes
+
+# NEVER kill:
+# - com.02luka.* LaunchAgents (handled by circuit breaker separately)
+# - System processes (kernel, launchd, etc.)
+# - Critical services (backup, expense, dashboard)
+# - User's active work (Cursor, Terminal, etc.)

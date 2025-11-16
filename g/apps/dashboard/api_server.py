@@ -579,6 +579,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_get_logs(query)
         elif path == '/api/reality/snapshot':
             self.handle_reality_snapshot(query)
+        elif path == '/api/system/resources':
+            self.handle_system_resources(query)
         else:
             self.send_error(404, "Not found")
 
@@ -1237,6 +1239,70 @@ class APIHandler(BaseHTTPRequestHandler):
 
         return advisory
 
+    def handle_system_resources(self, query):
+        """Handle GET /api/system/resources - Return RAM/swap metrics"""
+        try:
+            import subprocess
+            
+            # Get swap usage
+            swap_info = subprocess.check_output(['sysctl', 'vm.swapusage'], text=True).strip()
+            # Parse: vm.swapusage = total = 24576.00M  used = 1024.00M  free = 23552.00M
+            swap_total_mb = float(re.search(r'total = ([0-9.]+)M', swap_info).group(1))
+            swap_used_mb = float(re.search(r'used = ([0-9.]+)M', swap_info).group(1))
+            swap_total_gb = round(swap_total_mb / 1024, 2)
+            swap_used_gb = round(swap_used_mb / 1024, 2)
+            swap_pct = round((swap_used_mb / swap_total_mb) * 100, 1)
+            
+            # Get load average
+            load_info = subprocess.check_output(['sysctl', 'vm.loadavg'], text=True).strip()
+            # Parse: vm.loadavg = { 1.23 2.45 3.67 }
+            load_1min = float(re.search(r'\{ ([0-9.]+) ', load_info).group(1))
+            load_5min = float(re.search(r'\{ [0-9.]+ ([0-9.]+) ', load_info).group(1))
+            load_15min = float(re.search(r'\{ [0-9.]+ [0-9.]+ ([0-9.]+) ', load_info).group(1))
+            
+            # Get top processes by memory (RSS)
+            top_processes = []
+            try:
+                ps_output = subprocess.check_output(
+                    ['ps', 'aux'], text=True
+                ).strip().split('\n')[1:11]  # Skip header, get top 10
+                
+                for line in ps_output:
+                    parts = line.split()
+                    if len(parts) >= 11:
+                        pid = parts[1]
+                        rss_kb = int(parts[5])
+                        rss_mb = round(rss_kb / 1024, 1)
+                        cmd = ' '.join(parts[10:])
+                        if rss_mb > 100:  # Only include processes >100MB
+                            top_processes.append({
+                                'pid': pid,
+                                'rss_mb': rss_mb,
+                                'command': cmd[:50]  # Truncate long commands
+                            })
+            except Exception as e:
+                # If ps fails, just return empty list
+                pass
+            
+            response = {
+                'swap': {
+                    'used_gb': swap_used_gb,
+                    'total_gb': swap_total_gb,
+                    'pct': swap_pct
+                },
+                'load_avg': {
+                    '1min': load_1min,
+                    '5min': load_5min,
+                    '15min': load_15min
+                },
+                'top_processes': top_processes,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+            
+            self.send_json_response(response)
+        except Exception as e:
+            self.send_error(500, f"Failed to get system resources: {str(e)}")
+
     def handle_reality_snapshot(self, query):
         """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
         try:
@@ -1320,6 +1386,7 @@ def run_server(port=8767):
     print(f"   - GET /api/wo-metrics - Work-order metrics overview")
     print(f"   - GET /api/mls?type=solution - Filter MLS by type")
     print(f"   - GET /api/health/logs?lines=200 - Get system logs")
+    print(f"   - GET /api/system/resources - System RAM/swap metrics")
     server.serve_forever()
 
 if __name__ == '__main__':
