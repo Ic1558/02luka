@@ -14,6 +14,11 @@ LOG_REL="${LOG_FILE#${REPO_ROOT}/}"
 MLS_STATUS="skipped"
 MLS_REQUIRED=0
 
+# Optional hooks (defaults keep legacy behavior)
+SAVE_SH_AUTOCOMMIT="${SAVE_SH_AUTOCOMMIT:-0}"
+SAVE_SH_MLS_LOG="${SAVE_SH_MLS_LOG:-0}"
+SAVE_SH_TARGET_FILE="${SAVE_SH_TARGET_FILE:-}"
+
 finish() {
   local exit_code=$?
   local end_ts
@@ -104,6 +109,43 @@ fi
 if [[ $MLS_REQUIRED -eq 1 && "$MLS_STATUS" != "recorded" ]]; then
   echo "save.sh: MLS auto-record requested but status=${MLS_STATUS}" >&2
   exit 7
+fi
+
+# Optional auto-commit hook (opt-in via SAVE_SH_AUTOCOMMIT=1)
+if [[ "$SAVE_SH_AUTOCOMMIT" == "1" ]]; then
+  if [[ -n "$SAVE_SH_TARGET_FILE" ]]; then
+    (
+      cd "$REPO_ROOT" || exit 0
+      git add -- "$SAVE_SH_TARGET_FILE" 2>/dev/null || true
+      if git -C "$REPO_ROOT" diff --cached --quiet 2>/dev/null; then
+        echo "[save.sh] no staged changes, skipping auto-commit"
+      else
+        git -C "$REPO_ROOT" commit -m "chore(save): auto-save via save.sh (${SAVE_SH_TARGET_FILE})" \
+          >/dev/null 2>&1 || true
+        echo "[save.sh] auto-commit attempted for ${SAVE_SH_TARGET_FILE}"
+      fi
+    )
+  else
+    echo "[save.sh] SAVE_SH_AUTOCOMMIT=1 set, but SAVE_SH_TARGET_FILE is empty - skipping commit"
+  fi
+fi
+
+# Optional MLS logging hook (opt-in via SAVE_SH_MLS_LOG=1)
+if [[ "$SAVE_SH_MLS_LOG" == "1" ]]; then
+  (
+    cd "$REPO_ROOT" || exit 0
+    if [[ -x "tools/mls_auto_record.zsh" ]]; then
+      mls_cmd=("tools/mls_auto_record.zsh" --source "save.sh" --event "save" \
+        --note "save.sh full-cycle hook (autocommit=${SAVE_SH_AUTOCOMMIT})")
+      if [[ -n "$SAVE_SH_TARGET_FILE" ]]; then
+        mls_cmd+=(--file "$SAVE_SH_TARGET_FILE")
+      fi
+      "${mls_cmd[@]}" || true
+      echo "[save.sh] MLS log recorded via tools/mls_auto_record.zsh"
+    else
+      echo "[save.sh] SAVE_SH_MLS_LOG=1 set but tools/mls_auto_record.zsh not found - skipping MLS log"
+    fi
+  )
 fi
 
 exit 0
