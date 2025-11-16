@@ -8,17 +8,315 @@ import glob
 import json
 import os
 import re
-from datetime import datetime
-from pathlib import Path
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
 import subprocess
+from collections import deque
+from datetime import datetime
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 # Paths
 ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+
+
+class WOHistoryBuilder:
+    """Builds a normalized timeline/history view for work orders."""
+
+    STATUS_MAP = {
+        'open': 'queued',
+        'inprogress': 'running',
+        'in_progress': 'running',
+        'running': 'running',
+        'queued': 'queued',
+        'complete': 'success',
+        'completed': 'success',
+        'success': 'success',
+        'ok': 'success',
+        'failed': 'failed',
+        'failure': 'failed',
+        'error': 'failed',
+        'cancelled': 'dropped',
+        'canceled': 'dropped',
+        'dropped': 'dropped',
+        'timeout': 'timeout',
+        'timed_out': 'timeout'
+    }
+
+    FOLLOWUP_CANDIDATES = (
+        ROOT / 'followup' / 'followup.json',
+        ROOT / 'apps' / 'dashboard' / 'data' / 'followup.json',
+        ROOT / 'g' / 'apps' / 'dashboard' / 'data' / 'followup.json',
+    )
+
+    def __init__(self, root=ROOT, logs_dir=LOGS):
+        self.root = Path(root)
+        self.state_dir = self.root / 'followup' / 'state'
+        self.logs_dir = Path(logs_dir)
+        self.mls_file = self.root / 'g' / 'knowledge' / 'mls_lessons.jsonl'
+
+    def build_history(self, collector_wos, tail_lines=50):
+        """Build a sorted history list from all available sources."""
+        entries = {}
+
+        for wo in collector_wos:
+            self._merge_entry(entries, wo, 'collector')
+
+        for state_entry in self._load_state_files():
+            self._merge_entry(entries, state_entry, 'state')
+
+        for followup_entry in self._load_followup_items():
+            self._merge_entry(entries, followup_entry, 'followup')
+
+        mls_map = self._load_mls_map()
+
+        normalized = []
+        for wo_id, entry in entries.items():
+            if mls_map.get(wo_id):
+                entry['mls_lessons'] = mls_map[wo_id]
+                tags = entry.get('mls_tags', [])
+                for lesson in mls_map[wo_id]:
+                    tags.extend(lesson.get('tags') or [])
+                entry['mls_tags'] = sorted({tag for tag in tags if tag})
+            else:
+                entry['mls_lessons'] = []
+                entry['mls_tags'] = []
+
+            entry['log_tail'] = self._ensure_log_tail(entry, tail_lines)
+            entry['status'] = self._normalize_status(entry.get('status'))
+            entry['agent'] = entry.get('agent') or entry.get('owner') or 'unknown'
+            entry['type'] = entry.get('type') or self._infer_type(entry)
+            entry['summary'] = self._infer_summary(entry)
+            entry['started_at'] = self._normalize_timestamp(
+                entry.get('started_at')
+                or entry.get('created_at')
+                or entry.get('ts_create')
+            )
+            entry['finished_at'] = self._normalize_timestamp(
+                entry.get('finished_at')
+                or entry.get('completed_at')
+                or entry.get('ts_update')
+            )
+            entry['duration_seconds'] = self._compute_duration(entry)
+            entry['timeline_segments'] = self._build_segments(entry)
+            entry['sources'] = sorted(set(entry.get('sources', [])))
+
+            normalized.append(entry)
+
+        normalized.sort(key=lambda item: self._sort_key(item), reverse=True)
+        return normalized
+
+    def _merge_entry(self, entries, data, source):
+        wo_id = (data.get('id') or data.get('wo_id') or data.get('work_order_id'))
+        if not wo_id:
+            return
+
+        wo_id = str(wo_id).strip()
+        if not wo_id:
+            return
+
+        normalized = {
+            'id': wo_id,
+            'status': data.get('status'),
+            'agent': data.get('agent') or data.get('owner'),
+            'type': data.get('type'),
+            'source': data.get('source') or source,
+            'summary': data.get('summary') or data.get('goal') or data.get('description'),
+            'started_at': data.get('started_at'),
+            'finished_at': data.get('finished_at'),
+            'created_at': data.get('created_at'),
+            'completed_at': data.get('completed_at'),
+            'ts_create': data.get('ts_create'),
+            'ts_update': data.get('ts_update'),
+            'duration_ms': data.get('duration_ms'),
+            'log_tail': data.get('log_tail') if isinstance(data.get('log_tail'), list) else None,
+            'sources': [source],
+        }
+
+        existing = entries.get(wo_id)
+        if not existing:
+            entries[wo_id] = normalized
+            return
+
+        for key, value in normalized.items():
+            if key == 'sources':
+                continue
+            if value and not existing.get(key):
+                existing[key] = value
+
+        existing.setdefault('sources', []).append(source)
+
+    def _load_state_files(self):
+        if not self.state_dir.exists():
+            return []
+
+        records = []
+        for path in sorted(self.state_dir.glob('*.json')):
+            try:
+                with open(path, 'r', encoding='utf-8') as handle:
+                    payload = json.load(handle)
+                    records.append(payload)
+            except Exception as exc:
+                print(f"Warning: unable to parse state file {path}: {exc}")
+        return records
+
+    def _load_followup_items(self):
+        for candidate in self.FOLLOWUP_CANDIDATES:
+            if candidate.exists():
+                try:
+                    with open(candidate, 'r', encoding='utf-8') as handle:
+                        payload = json.load(handle)
+                except Exception as exc:
+                    print(f"Warning: unable to read followup data {candidate}: {exc}")
+                    return []
+                items = payload.get('items') or payload.get('work_orders') or []
+                return items if isinstance(items, list) else []
+        return []
+
+    def _load_mls_map(self):
+        if not self.mls_file.exists():
+            return {}
+
+        try:
+            with open(self.mls_file, 'r', encoding='utf-8') as handle:
+                content = handle.read()
+        except Exception as exc:
+            print(f"Warning: unable to read MLS ledger: {exc}")
+            return {}
+
+        decoder = json.JSONDecoder()
+        idx = 0
+        length = len(content)
+        entries = {}
+
+        while idx < length:
+            while idx < length and content[idx].isspace():
+                idx += 1
+            if idx >= length:
+                break
+            try:
+                payload, offset = decoder.raw_decode(content, idx)
+            except json.JSONDecodeError:
+                break
+            idx = offset
+
+            wo_id = payload.get('related_wo') or payload.get('wo_id')
+            if not wo_id:
+                continue
+
+            lesson = {
+                'id': payload.get('id'),
+                'type': payload.get('type', 'note'),
+                'title': payload.get('title') or (payload.get('description') or '')[:140],
+                'tags': payload.get('tags') or [],
+                'summary': payload.get('description') or '',
+            }
+            entries.setdefault(wo_id, []).append(lesson)
+
+        return entries
+
+    def _ensure_log_tail(self, entry, limit):
+        if entry.get('log_tail'):
+            return entry['log_tail'][-limit:]
+        return self._read_log_tail(entry['id'], limit)
+
+    def _read_log_tail(self, wo_id, limit):
+        pattern = str(self.logs_dir / f"wo_execution_{wo_id}_*.log")
+        for candidate in sorted(glob.glob(pattern), reverse=True):
+            try:
+                with open(candidate, 'r', encoding='utf-8', errors='replace') as handle:
+                    buffer = deque(handle, maxlen=limit)
+                return [line.rstrip('\n') for line in buffer]
+            except OSError:
+                continue
+        return []
+
+    def _normalize_timestamp(self, value):
+        if not value:
+            return None
+        if isinstance(value, (int, float)):
+            try:
+                return datetime.fromtimestamp(value).isoformat()
+            except Exception:
+                return None
+        if isinstance(value, datetime):
+            return value.isoformat()
+        text = str(value).strip()
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S.%fZ'):
+            try:
+                return datetime.strptime(text[:len(fmt)], fmt).isoformat()
+            except Exception:
+                continue
+        try:
+            return datetime.fromisoformat(text.replace('Z', '+00:00')).isoformat()
+        except ValueError:
+            return text
+
+    def _compute_duration(self, entry):
+        if entry.get('duration_ms'):
+            try:
+                return round(entry['duration_ms'] / 1000, 2)
+            except Exception:
+                pass
+        start = self._parse_datetime(entry.get('started_at'))
+        end = self._parse_datetime(entry.get('finished_at'))
+        if start and end:
+            return round((end - start).total_seconds(), 2)
+        return None
+
+    def _parse_datetime(self, value):
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            return value
+        try:
+            return datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        except ValueError:
+            return None
+
+    def _build_segments(self, entry):
+        segments = []
+        if entry.get('started_at'):
+            segments.append({'label': 'Started', 'value': entry['started_at']})
+        if entry.get('finished_at'):
+            segments.append({'label': 'Finished', 'value': entry['finished_at']})
+        if entry.get('duration_seconds'):
+            segments.append({'label': 'Duration', 'value': f"{entry['duration_seconds']}s"})
+        return segments
+
+    def _infer_summary(self, entry):
+        for key in ('summary', 'goal', 'description', 'notes', 'title'):
+            if entry.get(key):
+                return entry[key]
+        return 'Work order'
+
+    def _infer_type(self, entry):
+        if entry.get('source'):
+            return entry['source']
+        tags = entry.get('tags') or entry.get('mls_tags') or []
+        if tags:
+            return tags[0]
+        wo_id = entry.get('id', '')
+        if isinstance(wo_id, str) and 'fix' in wo_id.lower():
+            return 'fix'
+        return 'operation'
+
+    def _normalize_status(self, status):
+        if not status:
+            return 'unknown'
+        key = str(status).lower()
+        return self.STATUS_MAP.get(key, key)
+
+    def _sort_key(self, entry):
+        return (
+            entry.get('finished_at')
+            or entry.get('started_at')
+            or entry.get('ts_update')
+            or entry.get('ts_create')
+            or entry.get('id')
+        )
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -256,6 +554,7 @@ class APIHandler(BaseHTTPRequestHandler):
     """HTTP request handler for WO API"""
 
     collector = WOCollector()
+    history_builder = WOHistoryBuilder()
 
     def do_GET(self):
         """Handle GET requests"""
@@ -268,6 +567,8 @@ class APIHandler(BaseHTTPRequestHandler):
         elif path.startswith('/api/wos/'):
             wo_id = path.split('/')[-1]
             self.handle_get_wo(wo_id, query)
+        elif path == '/api/wos/history':
+            self.handle_wo_history(query)
         elif path == '/api/services':
             self.handle_list_services(query)
         elif path == '/api/mls':
@@ -373,6 +674,44 @@ class APIHandler(BaseHTTPRequestHandler):
             self.send_json_response(wo)
         else:
             self.send_error(404, f"WO {wo_id} not found")
+
+    def handle_wo_history(self, query):
+        """Handle GET /api/wos/history - unified timeline view"""
+        self.collector.collect_all()
+
+        limit = query.get('limit', [''])
+        try:
+            limit = int(limit[0]) if limit and limit[0] else None
+        except ValueError:
+            limit = None
+
+        tail_param = query.get('tail', ['50'])
+        try:
+            tail_lines = max(5, min(500, int(tail_param[0])))
+        except (ValueError, TypeError):
+            tail_lines = 50
+
+        history = self.history_builder.build_history(self.collector.wos, tail_lines=tail_lines)
+
+        status_filter = query.get('status', [''])[0]
+        if status_filter:
+            statuses = {value.strip().lower() for value in status_filter.split(',') if value.strip()}
+            history = [entry for entry in history if entry.get('status', '').lower() in statuses]
+
+        agent_filter = query.get('agent', [''])[0]
+        if agent_filter:
+            agents = {value.strip().lower() for value in agent_filter.split(',') if value.strip()}
+            history = [entry for entry in history if entry.get('agent', '').lower() in agents]
+
+        type_filter = query.get('type', [''])[0]
+        if type_filter:
+            types = {value.strip().lower() for value in type_filter.split(',') if value.strip()}
+            history = [entry for entry in history if entry.get('type', '').lower() in types]
+
+        if limit:
+            history = history[:limit]
+
+        self.send_json_response(history)
 
     def handle_list_services(self, query):
         """Handle GET /api/services - list all 02luka LaunchAgent services"""
@@ -675,6 +1014,7 @@ def run_server(port=8767):
     print(f"🚀 Dashboard API server running on http://127.0.0.1:{port}")
     print(f"   - GET /api/wos - List all WOs")
     print(f"   - GET /api/wos/:id - Get WO details")
+    print(f"   - GET /api/wos/history - Unified timeline view")
     print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
     print(f"   - GET /api/services?status=stopped - Filter services by status")
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
