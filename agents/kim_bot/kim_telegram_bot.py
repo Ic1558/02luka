@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -105,7 +106,7 @@ async def to_nlp(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if stripped.startswith("/wo "):
         parts = stripped.split(maxsplit=1)
         wo_id = parts[1].strip() if len(parts) > 1 else ""
-        reply = handle_wo_reality(wo_id)
+        reply = await asyncio.to_thread(handle_wo_reality, wo_id)
         await update.message.reply_text(reply)
         return
 
