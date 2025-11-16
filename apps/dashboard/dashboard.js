@@ -1,11 +1,13 @@
 const SERVICES_REFRESH_MS = 30000;
 const WO_TIMELINE_REFRESH_MS = 45000;
+const SUMMARY_REFRESH_MS = 60000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
 let realityPanelInitialized = false;
 
 let servicesIntervalId;
 let woTimelineIntervalId;
+let summaryIntervalId;
 let mlsPanelInitialized = false;
 let mlsAllEntries = [];
 let mlsFilterType = '';
@@ -511,6 +513,119 @@ async function loadWos() {
   }
 }
 
+// === Summary cards ===
+
+function initSummaryCards() {
+  const wosCard = document.getElementById('summary-wos');
+  const servicesCard = document.getElementById('summary-services');
+  const mlsCard = document.getElementById('summary-mls');
+
+  if (!wosCard && !servicesCard && !mlsCard) {
+    return;
+  }
+
+  const refreshAll = () => {
+    refreshSummaryWos(wosCard);
+    refreshSummaryServices(servicesCard);
+    refreshSummaryMls(mlsCard);
+  };
+
+  refreshAll();
+
+  if (summaryIntervalId) {
+    clearInterval(summaryIntervalId);
+  }
+  summaryIntervalId = setInterval(refreshAll, SUMMARY_REFRESH_MS);
+}
+
+async function refreshSummaryWos(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setText(cardEl, '—', 'loading…');
+    const wos = await fetchJSON('/api/wos');
+
+    if (!Array.isArray(wos)) {
+      setText(cardEl, '0', 'no data');
+      return;
+    }
+
+    const total = wos.length;
+    let active = 0;
+    let failed = 0;
+
+    wos.forEach((wo) => {
+      const status = String(wo?.status || '').toLowerCase();
+      if (!status) return;
+
+      if (status === 'failed' || status === 'error') {
+        failed += 1;
+      } else if (!['done', 'completed', 'cancelled', 'canceled'].includes(status)) {
+        active += 1;
+      }
+    });
+
+    const subParts = [`active: ${active}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    setText(cardEl, String(total), subParts.join(' | '));
+  } catch (error) {
+    console.error('Failed to refresh WO summary:', error);
+    setText(cardEl, '—', 'error loading');
+  }
+}
+
+async function refreshSummaryServices(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setText(cardEl, '—', 'loading…');
+    const data = await fetchJSON('/api/services');
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const running = Number(summary.running) || 0;
+    const failed = Number(summary.failed) || 0;
+
+    const subParts = [`running: ${running}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    const mainValue = total > 0 ? `${running}/${total}` : String(running);
+    setText(cardEl, mainValue, subParts.join(' | '));
+  } catch (error) {
+    console.error('Failed to refresh services summary:', error);
+    setText(cardEl, '—', 'error loading');
+  }
+}
+
+async function refreshSummaryMls(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setText(cardEl, '—', 'loading…');
+    const data = await fetchJSON('/api/mls');
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const solutions = Number(summary.solutions) || 0;
+    const failures = Number(summary.failures) || 0;
+
+    const subParts = [`solutions: ${solutions}`];
+    if (failures > 0) {
+      subParts.push(`failures: ${failures}`);
+    }
+
+    setText(cardEl, String(total), subParts.join(' | '));
+  } catch (error) {
+    console.error('Failed to refresh MLS summary:', error);
+    setText(cardEl, '—', 'error loading');
+  }
+}
+
 function initWoStatusFilters() {
   const container = document.getElementById('wo-status-filters');
   if (!container) return;
@@ -778,6 +893,18 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function setText(el, main, sub) {
+  if (!el) return;
+  const mainEl = el.querySelector('.summary-card-main');
+  const subEl = el.querySelector('.summary-card-sub');
+  if (mainEl) {
+    mainEl.textContent = main;
+  }
+  if (subEl) {
+    subEl.textContent = sub;
+  }
 }
 
 function initWoHistoryFilters() {
@@ -1286,9 +1413,15 @@ function cleanupIntervals() {
     clearInterval(woTimelineIntervalId);
     woTimelineIntervalId = null;
   }
+
+  if (summaryIntervalId) {
+    clearInterval(summaryIntervalId);
+    summaryIntervalId = null;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initSummaryCards();
   initDashboard();
   initWoTimelinePanel();
 });
