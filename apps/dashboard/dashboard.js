@@ -21,6 +21,9 @@ let woTimelineAll = [];
 let woTimelineFilterStatus = '';
 let woTimelineSearchQuery = '';
 let woTimelineInitialized = false;
+let woTimelineAgentFilter = '';
+let woTimelineLimit = 100;
+let woTimelineSummary = null;
 let serviceData = [];
 let serviceAutoRefreshTimer = null;
 
@@ -76,12 +79,19 @@ function mlsTypeBadge(typeRaw) {
 function normalizeWoTimelineEntry(rawWo = {}) {
   const id = rawWo.id || rawWo.wo_id || 'UNKNOWN';
   const normalizedStatus = normalizeWoTimelineStatus(rawWo.status);
-  const createdAt = rawWo.created_at || rawWo.queued_at || rawWo.timestamp || '';
-  const startedAt = rawWo.started_at || '';
-  const finishedAt = rawWo.finished_at || rawWo.completed_at || '';
+  const createdAt = rawWo.created_at || rawWo.queued_at || rawWo.timestamp || rawWo.started_at || '';
+  const startedAt = rawWo.started_at || rawWo.startedAt || '';
+  const finishedAt = rawWo.finished_at || rawWo.completed_at || rawWo.finishedAt || '';
   const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
-  const title = rawWo.title || rawWo.summary || rawWo.name || '';
+  const title = rawWo.title || rawWo.summary || rawWo.name || id;
   const description = rawWo.description || rawWo.summary || rawWo.notes || '';
+  const summary = rawWo.summary || rawWo.title || rawWo.goal || rawWo.description || '';
+  const durationSec = Number.isFinite(rawWo.duration_sec) ? rawWo.duration_sec : null;
+  const agent = rawWo.agent || rawWo.owner || rawWo.runner || '';
+  const type = rawWo.type || rawWo.op || rawWo.category || 'other';
+  const tags = Array.isArray(rawWo.tags) ? rawWo.tags.map((tag) => String(tag)) : [];
+  const logTail = Array.isArray(rawWo.log_tail) ? rawWo.log_tail : [];
+  const relatedPr = rawWo.related_pr || rawWo.pr || rawWo.pull_request || '';
 
   return {
     id,
@@ -91,17 +101,24 @@ function normalizeWoTimelineEntry(rawWo = {}) {
     finishedAt,
     updatedAt,
     title,
-    description
+    description,
+    summary,
+    durationSec,
+    agent,
+    type,
+    tags,
+    logTail,
+    relatedPr
   };
 }
 
 function normalizeWoTimelineStatus(status) {
   const raw = String(status || '').toLowerCase();
   if (!raw) return 'unknown';
-  if (['pending', 'queued', 'created'].includes(raw)) return 'pending';
-  if (['running', 'in_progress', 'in-progress', 'working'].includes(raw)) return 'running';
-  if (['completed', 'done', 'success'].includes(raw)) return 'done';
-  if (['failed', 'error'].includes(raw)) return 'failed';
+  if (['success', 'completed', 'complete', 'done'].includes(raw)) return 'success';
+  if (['failed', 'error', 'cancelled'].includes(raw)) return 'failed';
+  if (['running', 'in_progress', 'in-progress', 'working', 'active'].includes(raw)) return 'running';
+  if (['queued', 'pending', 'created', 'open'].includes(raw)) return 'queued';
   return raw;
 }
 
@@ -1790,7 +1807,30 @@ function initWoTimelinePanel() {
   if (statusSelect) {
     statusSelect.addEventListener('change', () => {
       woTimelineFilterStatus = statusSelect.value || '';
-      renderWoTimelinePanel();
+      refreshWoTimeline();
+    });
+  }
+
+  const agentInput = document.getElementById('wo-filter-agent');
+  if (agentInput) {
+    const handleAgent = debounce(() => {
+      woTimelineAgentFilter = agentInput.value || '';
+      refreshWoTimeline();
+    }, 200);
+    agentInput.addEventListener('input', handleAgent);
+  }
+
+  const limitInput = document.getElementById('wo-filter-limit');
+  if (limitInput) {
+    limitInput.addEventListener('change', () => {
+      const parsed = parseInt(limitInput.value, 10);
+      if (Number.isNaN(parsed)) {
+        return;
+      }
+      const next = Math.min(1000, Math.max(10, parsed));
+      woTimelineLimit = next;
+      limitInput.value = String(next);
+      refreshWoTimeline();
     });
   }
 
@@ -1801,6 +1841,11 @@ function initWoTimelinePanel() {
       renderWoTimelinePanel();
     }, 200);
     searchInput.addEventListener('input', handleSearch);
+  }
+
+  const refreshBtn = document.getElementById('wo-timeline-refresh');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => refreshWoTimeline());
   }
 
   const listEl = document.getElementById('wo-timeline-list');
@@ -1821,38 +1866,57 @@ async function refreshWoTimeline() {
   if (!panel) return;
 
   const listEl = document.getElementById('wo-timeline-list');
+  const summaryEl = document.getElementById('wo-timeline-summary');
+
+  if (!woTimelineAll.length) {
+    if (summaryEl) {
+      summaryEl.textContent = 'Loading timeline…';
+    }
+    if (listEl) {
+      listEl.innerHTML = '<article class="wo-timeline-item"><div class="wo-timeline-summary-text">Loading timeline…</div></article>';
+    }
+  }
+
+  const params = new URLSearchParams();
+  if (woTimelineFilterStatus) {
+    params.set('status', woTimelineFilterStatus);
+  }
+  if (woTimelineAgentFilter && woTimelineAgentFilter.trim()) {
+    params.set('agent', woTimelineAgentFilter.trim());
+  }
+  if (Number.isFinite(woTimelineLimit) && woTimelineLimit > 0) {
+    params.set('limit', String(woTimelineLimit));
+  }
+  params.set('tail', '1');
 
   try {
-    const res = await fetch('/api/wos', { headers: { Accept: 'application/json' } });
+    const res = await fetch(`/api/wos/history?${params.toString()}`, {
+      headers: { Accept: 'application/json' }
+    });
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
 
     const payload = await res.json();
-    let dataset = [];
-    if (Array.isArray(payload)) {
-      dataset = payload;
-    } else if (Array.isArray(payload?.wos)) {
-      dataset = payload.wos;
-    } else if (Array.isArray(payload?.results)) {
-      dataset = payload.results;
-    }
-
+    const dataset = Array.isArray(payload?.items) ? payload.items : [];
     const entries = dataset.map((wo) => normalizeWoTimelineEntry(wo));
     entries.sort((a, b) => getTimelineSortKey(b) - getTimelineSortKey(a));
     woTimelineAll = entries;
+    woTimelineSummary = payload?.summary || null;
     renderWoTimelinePanel();
   } catch (error) {
     console.error('Failed to refresh WO timeline', error);
+    woTimelineSummary = null;
     if (listEl) {
       listEl.innerHTML = `
-        <div class="wo-timeline-item">
-          <div class="wo-timeline-row">
-            <span>Failed to load work orders.</span>
-          </div>
-          <div class="wo-timeline-when">${escapeHtml(error.message || String(error))}</div>
-        </div>
+        <article class="wo-timeline-item">
+          <div class="wo-timeline-summary-text">Failed to load work orders.</div>
+          <div class="wo-timeline-extra">${escapeHtml(error.message || String(error))}</div>
+        </article>
       `;
+    }
+    if (summaryEl) {
+      summaryEl.textContent = 'Failed to load timeline.';
     }
   }
 }
@@ -1864,24 +1928,21 @@ function renderWoTimelinePanel() {
 
   let entries = woTimelineAll;
   if (woTimelineFilterStatus) {
-    entries = entries.filter((entry) => {
-      if (woTimelineFilterStatus === 'failed') {
-        return entry.status === 'failed';
-      }
-      if (woTimelineFilterStatus === 'done') {
-        return entry.status === 'done';
-      }
-      if (woTimelineFilterStatus === 'active') {
-        return entry.status === 'pending' || entry.status === 'running';
-      }
-      return true;
-    });
+    entries = entries.filter((entry) => (entry.status || '') === woTimelineFilterStatus);
   }
 
   const normalizedSearch = woTimelineSearchQuery.trim().toLowerCase();
   if (normalizedSearch) {
     entries = entries.filter((entry) => {
-      const haystack = [entry.id, entry.title, entry.description]
+      const haystack = [
+        entry.id,
+        entry.title,
+        entry.description,
+        entry.summary,
+        entry.agent,
+        entry.type,
+        Array.isArray(entry.tags) ? entry.tags.join(' ') : ''
+      ]
         .map((value) => String(value || '').toLowerCase());
       return haystack.some((field) => field && field.includes(normalizedSearch));
     });
@@ -1893,54 +1954,101 @@ function renderWoTimelinePanel() {
     listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
   }
 
-  const counts = {
-    pending: 0,
-    running: 0,
-    done: 0,
-    failed: 0
-  };
-  woTimelineAll.forEach((entry) => {
-    if (counts[entry.status] !== undefined) {
-      counts[entry.status] += 1;
-    }
-  });
-
-  const total = woTimelineAll.length;
-  const summaryParts = [
-    `Total: ${total}`,
-    `pending: ${counts.pending}`,
-    `running: ${counts.running}`,
-    `done: ${counts.done}`,
-    `failed: ${counts.failed}`,
-    `filter: ${woTimelineFilterStatus || 'all'}`
-  ];
-
-  if (normalizedSearch) {
-    summaryParts.push(`search: "${woTimelineSearchQuery.trim()}"`);
+  const fallbackCounts = { success: 0, failed: 0, running: 0, queued: 0 };
+  let total = woTimelineAll.length;
+  if (woTimelineSummary?.total !== undefined) {
+    total = woTimelineSummary.total;
   }
 
-  summaryEl.textContent = summaryParts.join(' · ');
+  const counts = { ...fallbackCounts, ...(woTimelineSummary?.status_counts || {}) };
+  if (!woTimelineSummary) {
+    woTimelineAll.forEach((entry) => {
+      if (counts[entry.status] !== undefined) {
+        counts[entry.status] += 1;
+      }
+    });
+  }
+
+  const summaryParts = [
+    `<span><strong>Total:</strong> ${total}</span>`,
+    `<span><strong>Success:</strong> ${counts.success ?? 0}</span>`,
+    `<span><strong>Failed:</strong> ${counts.failed ?? 0}</span>`,
+    `<span><strong>Running:</strong> ${counts.running ?? 0}</span>`,
+    `<span><strong>Queued:</strong> ${counts.queued ?? 0}</span>`
+  ];
+
+  if (woTimelineFilterStatus) {
+    summaryParts.push(`<span>Filter: ${escapeHtml(woTimelineFilterStatus)}</span>`);
+  }
+
+  if (woTimelineAgentFilter) {
+    summaryParts.push(`<span>Agent: ${escapeHtml(woTimelineAgentFilter)}</span>`);
+  }
+
+  if (normalizedSearch) {
+    summaryParts.push(`<span>Search: "${escapeHtml(woTimelineSearchQuery.trim())}"</span>`);
+  }
+
+  summaryEl.innerHTML = summaryParts.join(' · ');
 }
 
 function renderWoTimelineItem(entry) {
-  const statusClass = getTimelineStatusClass(entry.status);
-  const statusLabel = (entry.status || 'unknown').toUpperCase();
-  const timelineMarkup = buildTimelineSegmentsMarkup(entry);
+  const normalizedStatus = (entry.status || 'unknown').toLowerCase();
+  const statusClassName = normalizedStatus.replace(/[^a-z0-9_-]/g, '-');
   const statusBadge = woStatusBadge(entry.status);
   if (statusBadge) {
     statusBadge.classList.add('wo-timeline-status');
   }
+
   const statusHtml = statusBadge
     ? statusBadge.outerHTML
-    : `<span class="wo-timeline-status ${statusClass}">${statusLabel}</span>`;
+    : `<span class="wo-timeline-status">${escapeHtml((entry.status || 'unknown').toUpperCase())}</span>`;
+
+  const started = formatWoTimestamp(entry.startedAt) || '—';
+  const finished = formatWoTimestamp(entry.finishedAt || entry.updatedAt) || '—';
+  const duration = formatTimelineDuration(entry.durationSec);
+  const summaryText = entry.summary || entry.description || '';
+  const summaryHtml = summaryText ? escapeHtml(summaryText) : '<em>No summary available</em>';
+
+  const extraParts = [];
+  if (entry.relatedPr) {
+    extraParts.push(`<span><strong>PR:</strong> ${escapeHtml(entry.relatedPr)}</span>`);
+  }
+  if (Array.isArray(entry.tags) && entry.tags.length) {
+    extraParts.push(`<span><strong>Tags:</strong> ${entry.tags.map((tag) => escapeHtml(tag)).join(', ')}</span>`);
+  }
+
+  let logHtml = '';
+  if (Array.isArray(entry.logTail) && entry.logTail.length) {
+    const logLines = entry.logTail.map((line) => escapeHtml(line)).join('\n');
+    logHtml = `
+      <details class="wo-timeline-log">
+        <summary>Log tail</summary>
+        <pre>${logLines}</pre>
+      </details>
+    `;
+  }
 
   return `
-    <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
-      <div class="wo-timeline-row">
-        <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
-        ${statusHtml}
+    <article class="wo-timeline-item status-${escapeHtml(statusClassName)}" data-wo-id="${escapeHtml(entry.id)}">
+      <div class="wo-timeline-card-header">
+        <div>
+          <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
+          ${statusHtml}
+        </div>
+        <div class="wo-timeline-meta">
+          <span>Type: ${escapeHtml(entry.type || '—')}</span>
+          <span>Agent: ${escapeHtml(entry.agent || '—')}</span>
+        </div>
       </div>
-      <div class="wo-timeline-when">${timelineMarkup}</div>
+      <div class="wo-timeline-times">
+        <div><strong>Started:</strong> ${escapeHtml(started)}</div>
+        <div><strong>Finished:</strong> ${escapeHtml(finished)}</div>
+        <div><strong>Duration:</strong> ${escapeHtml(duration)}</div>
+      </div>
+      <div class="wo-timeline-summary-text">${summaryHtml}</div>
+      ${extraParts.length ? `<div class="wo-timeline-extra">${extraParts.join('')}</div>` : ''}
+      ${logHtml}
       <div class="wo-timeline-actions">
         <button type="button" class="wo-timeline-view" data-wo-id="${escapeHtml(entry.id)}">View details</button>
       </div>
@@ -1948,39 +2056,23 @@ function renderWoTimelineItem(entry) {
   `;
 }
 
-function buildTimelineSegmentsMarkup(entry) {
-  const segments = [
-    { label: 'Created', value: entry.createdAt },
-    { label: 'Started', value: entry.startedAt },
-    { label: 'Finished', value: entry.finishedAt || entry.updatedAt }
-  ];
-
-  return segments
-    .map((segment) => {
-      const formatted = formatWoTimestamp(segment.value) || '—';
-      return `
-        <span class="wo-timeline-segment">
-          <span class="wo-timeline-segment-label">${segment.label}</span>
-          <span class="wo-timeline-segment-value">${escapeHtml(formatted)}</span>
-        </span>
-      `;
-    })
-    .join('<span class="wo-timeline-arrow">→</span>');
-}
-
-function getTimelineStatusClass(status) {
-  switch (status) {
-    case 'pending':
-      return 'wo-status-pill-pending';
-    case 'running':
-      return 'wo-status-pill-running';
-    case 'done':
-      return 'wo-status-pill-done';
-    case 'failed':
-      return 'wo-status-pill-failed';
-    default:
-      return 'wo-status-pill-unknown';
+function formatTimelineDuration(seconds) {
+  if (!Number.isFinite(seconds)) {
+    return '—';
   }
+  if (seconds < 120) {
+    return `${Math.round(seconds)}s`;
+  }
+  const minutes = seconds / 60;
+  if (minutes < 120) {
+    return `${Math.round(minutes)} min`;
+  }
+  const hours = minutes / 60;
+  if (hours < 48) {
+    return `${hours.toFixed(1)} hr`;
+  }
+  const days = hours / 24;
+  return `${days.toFixed(1)} d`;
 }
 
 function getTimelineSortKey(entry) {
