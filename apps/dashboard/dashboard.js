@@ -1,14 +1,47 @@
 const SERVICES_REFRESH_MS = 30000;
 const MLS_REFRESH_MS = 30000;
+const WO_TIMELINE_REFRESH_MS = 45000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
 let realityPanelInitialized = false;
 
 let servicesIntervalId;
 let mlsIntervalId;
+let woTimelineIntervalId;
 let currentMlsType = '';
 let allWos = [];
 let currentWoStatusFilter = '';
+let woTimelineAll = [];
+let woTimelineFilterStatus = '';
+let woTimelineInitialized = false;
+
+function normalizeWoTimelineEntry(rawWo = {}) {
+  const id = rawWo.id || rawWo.wo_id || 'UNKNOWN';
+  const normalizedStatus = normalizeWoTimelineStatus(rawWo.status);
+  const createdAt = rawWo.created_at || rawWo.queued_at || rawWo.timestamp || '';
+  const startedAt = rawWo.started_at || '';
+  const finishedAt = rawWo.finished_at || rawWo.completed_at || '';
+  const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
+
+  return {
+    id,
+    status: normalizedStatus,
+    createdAt,
+    startedAt,
+    finishedAt,
+    updatedAt
+  };
+}
+
+function normalizeWoTimelineStatus(status) {
+  const raw = String(status || '').toLowerCase();
+  if (!raw) return 'unknown';
+  if (['pending', 'queued', 'created'].includes(raw)) return 'pending';
+  if (['running', 'in_progress', 'in-progress', 'working'].includes(raw)) return 'running';
+  if (['completed', 'done', 'success'].includes(raw)) return 'done';
+  if (['failed', 'error'].includes(raw)) return 'failed';
+  return raw;
+}
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -1084,6 +1117,184 @@ function initRealityPanel() {
   realityPanelInitialized = true;
 }
 
+// --- WO Timeline Panel ---
+
+function initWoTimelinePanel() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel || woTimelineInitialized) {
+    return;
+  }
+
+  const filterButtons = panel.querySelectorAll('.wo-filter-btn[data-status-filter]');
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextStatus = button.getAttribute('data-status-filter') || '';
+      woTimelineFilterStatus = nextStatus;
+
+      filterButtons.forEach((btn) => btn.classList.remove('wo-filter-btn-active'));
+      button.classList.add('wo-filter-btn-active');
+
+      renderWoTimelinePanel();
+    });
+  });
+
+  const listEl = document.getElementById('wo-timeline-list');
+  listEl?.addEventListener('click', (event) => {
+    const actionBtn = event.target.closest('.wo-timeline-view');
+    if (actionBtn?.dataset.woId) {
+      openWoTimeline(actionBtn.dataset.woId);
+    }
+  });
+
+  woTimelineInitialized = true;
+  refreshWoTimeline();
+  woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
+}
+
+async function refreshWoTimeline() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel) return;
+
+  const listEl = document.getElementById('wo-timeline-list');
+
+  try {
+    const res = await fetch('/api/wos', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const payload = await res.json();
+    let dataset = [];
+    if (Array.isArray(payload)) {
+      dataset = payload;
+    } else if (Array.isArray(payload?.wos)) {
+      dataset = payload.wos;
+    } else if (Array.isArray(payload?.results)) {
+      dataset = payload.results;
+    }
+
+    const entries = dataset.map((wo) => normalizeWoTimelineEntry(wo));
+    entries.sort((a, b) => getTimelineSortKey(b) - getTimelineSortKey(a));
+    woTimelineAll = entries;
+    renderWoTimelinePanel();
+  } catch (error) {
+    console.error('Failed to refresh WO timeline', error);
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="wo-timeline-item">
+          <div class="wo-timeline-row">
+            <span>Failed to load work orders.</span>
+          </div>
+          <div class="wo-timeline-when">${escapeHtml(error.message || String(error))}</div>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderWoTimelinePanel() {
+  const listEl = document.getElementById('wo-timeline-list');
+  const summaryEl = document.getElementById('wo-timeline-summary');
+  if (!listEl || !summaryEl) return;
+
+  let entries = woTimelineAll;
+  if (woTimelineFilterStatus) {
+    entries = entries.filter((entry) => entry.status === woTimelineFilterStatus);
+  }
+
+  if (!entries.length) {
+    listEl.innerHTML = `
+      <div class="wo-timeline-item">
+        <div class="wo-timeline-row">
+          <span>No work orders found for this filter.</span>
+        </div>
+      </div>
+    `;
+  } else {
+    listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
+  }
+
+  const counts = {
+    pending: 0,
+    running: 0,
+    done: 0,
+    failed: 0
+  };
+  woTimelineAll.forEach((entry) => {
+    if (counts[entry.status] !== undefined) {
+      counts[entry.status] += 1;
+    }
+  });
+
+  const total = woTimelineAll.length;
+  summaryEl.textContent = `Total: ${total} · pending: ${counts.pending} · running: ${counts.running} · done: ${counts.done} · failed: ${counts.failed} · filter: ${
+    woTimelineFilterStatus || 'all'
+  }`;
+}
+
+function renderWoTimelineItem(entry) {
+  const statusClass = getTimelineStatusClass(entry.status);
+  const statusLabel = (entry.status || 'unknown').toUpperCase();
+  const timelineMarkup = buildTimelineSegmentsMarkup(entry);
+
+  return `
+    <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
+      <div class="wo-timeline-row">
+        <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
+        <span class="wo-timeline-status ${statusClass}">${statusLabel}</span>
+      </div>
+      <div class="wo-timeline-when">${timelineMarkup}</div>
+      <div class="wo-timeline-actions">
+        <button type="button" class="wo-timeline-view" data-wo-id="${escapeHtml(entry.id)}">View details</button>
+      </div>
+    </article>
+  `;
+}
+
+function buildTimelineSegmentsMarkup(entry) {
+  const segments = [
+    { label: 'Created', value: entry.createdAt },
+    { label: 'Started', value: entry.startedAt },
+    { label: 'Finished', value: entry.finishedAt || entry.updatedAt }
+  ];
+
+  return segments
+    .map((segment) => {
+      const formatted = formatWoTimestamp(segment.value) || '—';
+      return `
+        <span class="wo-timeline-segment">
+          <span class="wo-timeline-segment-label">${segment.label}</span>
+          <span class="wo-timeline-segment-value">${escapeHtml(formatted)}</span>
+        </span>
+      `;
+    })
+    .join('<span class="wo-timeline-arrow">→</span>');
+}
+
+function getTimelineStatusClass(status) {
+  switch (status) {
+    case 'pending':
+      return 'wo-status-pill-pending';
+    case 'running':
+      return 'wo-status-pill-running';
+    case 'done':
+      return 'wo-status-pill-done';
+    case 'failed':
+      return 'wo-status-pill-failed';
+    default:
+      return 'wo-status-pill-unknown';
+  }
+}
+
+function getTimelineSortKey(entry) {
+  const candidate = entry.updatedAt || entry.finishedAt || entry.startedAt || entry.createdAt;
+  const parsed = candidate ? Date.parse(candidate) : NaN;
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+  return parsed;
+}
+
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
@@ -1101,10 +1312,16 @@ function cleanupIntervals() {
     clearInterval(mlsIntervalId);
     mlsIntervalId = null;
   }
+
+  if (woTimelineIntervalId) {
+    clearInterval(woTimelineIntervalId);
+    woTimelineIntervalId = null;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initDashboard();
+  initWoTimelinePanel();
 });
 
 window.addEventListener('beforeunload', () => {
