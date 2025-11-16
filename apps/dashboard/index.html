@@ -640,8 +640,18 @@
         margin-bottom: 0.5rem;
       }
 
+      #wo-filters label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        font-size: 0.75rem;
+        color: rgba(226, 232, 240, 0.8);
+      }
+
       #wo-filter-status,
-      #wo-filter-search {
+      #wo-filter-search,
+      #wo-filter-agent,
+      #wo-filter-limit {
         font-size: 0.85rem;
         padding: 0.35rem 0.5rem;
         border-radius: 6px;
@@ -659,6 +669,31 @@
         min-width: 180px;
       }
 
+      #wo-filter-agent {
+        min-width: 160px;
+      }
+
+      #wo-filter-limit {
+        width: 90px;
+      }
+
+      #wo-timeline-refresh {
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        border-radius: 6px;
+        padding: 0.35rem 0.75rem;
+        background: rgba(14, 165, 233, 0.1);
+        color: #38bdf8;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      #wo-timeline-refresh:hover,
+      #wo-timeline-refresh:focus {
+        background: rgba(14, 165, 233, 0.2);
+        color: #e0f2fe;
+      }
+
       /* WO Timeline panel */
       #wo-timeline-panel {
         display: flex;
@@ -668,11 +703,19 @@
 
       .wo-timeline-summary {
         font-size: 0.85rem;
-        color: rgba(226, 232, 240, 0.75);
-        background: rgba(30, 41, 59, 0.55);
+        color: rgba(226, 232, 240, 0.85);
+        background: rgba(30, 41, 59, 0.7);
         border-radius: 12px;
         padding: 0.5rem 0.75rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+
+      .wo-timeline-summary strong {
+        color: #e2e8f0;
       }
 
       .wo-timeline-list {
@@ -693,13 +736,116 @@
       }
 
       .wo-timeline-item {
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 12px;
-        padding: 0.75rem;
-        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 14px;
+        padding: 0.85rem;
+        background: rgba(15, 23, 42, 0.8);
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
+        gap: 0.5rem;
+        border-left: 4px solid rgba(148, 163, 184, 0.4);
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.45);
+      }
+
+      .wo-timeline-item.status-success {
+        border-left-color: #22c55e;
+      }
+
+      .wo-timeline-item.status-failed {
+        border-left-color: #f87171;
+      }
+
+      .wo-timeline-item.status-running {
+        border-left-color: #fbbf24;
+      }
+
+      .wo-timeline-item.status-queued {
+        border-left-color: #38bdf8;
+      }
+
+      .wo-timeline-card-header {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      .wo-timeline-id {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .wo-timeline-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.8rem;
+        color: rgba(226, 232, 240, 0.75);
+      }
+
+      .wo-timeline-times {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: rgba(226, 232, 240, 0.75);
+      }
+
+      .wo-timeline-summary-text {
+        font-size: 0.85rem;
+        color: rgba(226, 232, 240, 0.9);
+      }
+
+      .wo-timeline-extra {
+        font-size: 0.78rem;
+        color: rgba(226, 232, 240, 0.7);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .wo-timeline-log {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 10px;
+        padding: 0.5rem;
+      }
+
+      .wo-timeline-log summary {
+        cursor: pointer;
+        color: #38bdf8;
+        font-size: 0.78rem;
+        margin-bottom: 0.4rem;
+      }
+
+      .wo-timeline-log pre {
+        margin: 0;
+        max-height: 140px;
+        overflow-y: auto;
+        font-size: 0.72rem;
+      }
+
+      .wo-timeline-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .wo-timeline-view {
+        background: rgba(14, 165, 233, 0.15);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        color: #bae6fd;
+        border-radius: 999px;
+        padding: 0.25rem 0.9rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .wo-timeline-view:hover,
+      .wo-timeline-view:focus {
+        background: rgba(14, 165, 233, 0.25);
+        color: white;
       }
 
       /* Status / type badges */
@@ -1488,18 +1634,44 @@
         <h2>WO Timeline / History</h2>
 
         <div id="wo-filters">
-          <select id="wo-filter-status">
-            <option value="">All statuses</option>
-            <option value="active">Active / running</option>
-            <option value="failed">Failed / error</option>
-            <option value="done">Done / completed</option>
-          </select>
+          <label>
+            Status:
+            <select id="wo-filter-status">
+              <option value="">All statuses</option>
+              <option value="success">Success</option>
+              <option value="failed">Failed</option>
+              <option value="running">Running</option>
+              <option value="queued">Queued</option>
+            </select>
+          </label>
+
+          <label>
+            Agent:
+            <input
+              id="wo-filter-agent"
+              type="search"
+              placeholder="Mary, CLC, Codex…"
+            />
+          </label>
+
+          <label>
+            Limit:
+            <input
+              id="wo-filter-limit"
+              type="number"
+              value="100"
+              min="10"
+              max="1000"
+            />
+          </label>
 
           <input
             id="wo-filter-search"
             type="search"
-            placeholder="Search WO by id or text…"
+            placeholder="Search summary or WO id…"
           />
+
+          <button id="wo-timeline-refresh" type="button">Refresh</button>
         </div>
 
         <div id="wo-timeline-summary" class="wo-timeline-summary">
