@@ -1,240 +1,151 @@
-#!/usr/bin/env zsh
-# CLC 3-Layer Save System with Auto-Verify
-# Layer 1: Session file → g/reports/sessions/session_TIMESTAMP.md
-# Layer 2: Updates 02luka.md "Last Session" marker
-# Layer 3: Appends to CLAUDE_MEMORY_SYSTEM.md
-# Layer 4: Verification (NEW) - runs safety checks before completion
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-# Parse arguments
-SKIP_VERIFY=false
-SESSION_SUMMARY=""
-SESSION_ACTIONS=""
-SESSION_STATUS=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LANE="${SAVE_SH_LANE:-UNSPECIFIED}"
+START_TS="$(date -Iseconds)"
+START_EPOCH="$(date +%s)"
+LOG_DIR="${REPO_ROOT}/logs/save_sh"
+mkdir -p "$LOG_DIR"
+SAFE_TS="${START_TS//[:]/-}"
+LOG_FILE="${LOG_DIR}/save_${SAFE_TS}.log"
+LOG_REL="${LOG_FILE#${REPO_ROOT}/}"
+MLS_STATUS="skipped"
+MLS_REQUIRED=0
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --skip-verify)
-      SKIP_VERIFY=true
-      echo "⚠️  WARNING: Verification will be skipped (--skip-verify flag)" >&2
-      echo "⚠️  This bypasses safety checks and may lead to incomplete or invalid saves" >&2
-      shift
-      ;;
-    --summary)
-      if [[ $# -lt 2 ]]; then
-        echo "Error: --summary requires a value" >&2
-        exit 1
-      fi
-      SESSION_SUMMARY="$2"
-      shift 2
-      ;;
-    --actions)
-      if [[ $# -lt 2 ]]; then
-        echo "Error: --actions requires a value" >&2
-        exit 1
-      fi
-      SESSION_ACTIONS="$2"
-      shift 2
-      ;;
-    --status)
-      if [[ $# -lt 2 ]]; then
-        echo "Error: --status requires a value" >&2
-        exit 1
-      fi
-      SESSION_STATUS="$2"
-      shift 2
-      ;;
-    --help|-h)
-      cat <<EOF
-Usage: tools/save.sh [OPTIONS]
+# Optional hooks (defaults keep legacy behavior)
+SAVE_SH_AUTOCOMMIT="${SAVE_SH_AUTOCOMMIT:-0}"
+SAVE_SH_MLS_LOG="${SAVE_SH_MLS_LOG:-0}"
+SAVE_SH_TARGET_FILE="${SAVE_SH_TARGET_FILE:-}"
 
-Save session to 3-layer memory system with automatic verification.
+finish() {
+  local exit_code=$?
+  local end_ts
+  local duration
+  end_ts="$(date -Iseconds)"
+  duration=$(( $(date +%s) - START_EPOCH ))
+  if [[ $exit_code -eq 0 ]]; then
+    echo "=== save.sh:end status=success code=${exit_code} lane=${LANE} duration=${duration}s ts=${end_ts} ==="
+  else
+    echo "=== save.sh:end status=failure code=${exit_code} lane=${LANE} duration=${duration}s ts=${end_ts} ===" >&2
+  fi
+}
+trap finish EXIT
 
-Options:
-  --skip-verify       Skip verification step (not recommended)
-  --summary TEXT     Session summary text
-  --actions TEXT     Actions taken during session
-  --status TEXT      Current system status
-  --help, -h         Show this help message
+echo "=== save.sh:start lane=${LANE} ts=${START_TS} ==="
 
-Examples:
-  tools/save.sh --summary "Fixed CI issues" --actions "Updated workflows"
-  tools/save.sh --skip-verify  # Not recommended - bypasses safety checks
-
-Verification:
-  By default, save.sh runs verification after saving all layers.
-  Verification ensures data integrity and system health.
-  Use --skip-verify only in exceptional circumstances.
-EOF
-      exit 0
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      echo "Use --help for usage information" >&2
-      exit 1
-      ;;
-  esac
-done
-
-# Get base directory from environment or default
-BASE_DIR="${LUKA_SOT:-$HOME/02luka}"
-REPO_DIR="$BASE_DIR"
-SESSION_DIR="$REPO_DIR/g/reports/sessions"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-SESSION_FILE="$SESSION_DIR/session_$TIMESTAMP.md"
-LUKA_MD="$REPO_DIR/02luka.md"
-MEMORY_FILE="$BASE_DIR/memory/CLAUDE_MEMORY_SYSTEM.md"
-
-# Create directories if needed
-mkdir -p "$SESSION_DIR"
-mkdir -p "$(dirname "$MEMORY_FILE")"
-
-# Default session content if not provided
-if [[ -z "$SESSION_SUMMARY" ]]; then
-  SESSION_SUMMARY="Session saved at $TIMESTAMP"
+declare -a git_cmd=(git -C "$REPO_ROOT")
+if ! "${git_cmd[@]}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "save.sh must be executed inside a git repository" >&2
+  exit 2
 fi
 
-if [[ -z "$SESSION_ACTIONS" ]]; then
-  SESSION_ACTIONS="(No actions specified)"
+BRANCH=$("${git_cmd[@]}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "detached")
+COMMIT=$("${git_cmd[@]}" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+STATUS_OUTPUT=$("${git_cmd[@]}" status --short || true)
+if [[ -z "$STATUS_OUTPUT" ]]; then
+  STATUS_OUTPUT="(clean)"
 fi
 
-if [[ -z "$SESSION_STATUS" ]]; then
-  SESSION_STATUS="(No status specified)"
+DIFFSTAT_OUTPUT=$("${git_cmd[@]}" diff --stat || true)
+if [[ -z "$DIFFSTAT_OUTPUT" ]]; then
+  DIFFSTAT_OUTPUT="(no diff)"
 fi
 
-# Layer 1: Create session file
-cat > "$SESSION_FILE" <<EOF
-# CLC Session - $TIMESTAMP
+cat > "$LOG_FILE" <<LOG
+# save.sh workspace snapshot
+timestamp: $START_TS
+lane: $LANE
+repo: $REPO_ROOT
+branch: $BRANCH
+commit: $COMMIT
 
-## Summary
-$SESSION_SUMMARY
+## git status --short
+$STATUS_OUTPUT
 
-## Actions Taken
-$SESSION_ACTIONS
+## git diff --stat
+$DIFFSTAT_OUTPUT
+LOG
 
-## Status
-$SESSION_STATUS
+cat <<INFO
+Workspace snapshot captured for lane: $LANE
+Repository : $REPO_ROOT
+Branch     : $BRANCH ($COMMIT)
+Work tree  : $( [[ "$STATUS_OUTPUT" == "(clean)" ]] && echo "clean" || echo "dirty" )
+Snapshot   : $LOG_REL
+INFO
 
-Saved: $TIMESTAMP
-EOF
+echo "NOTE: save.sh never runs 'git commit' or 'git push'. Finish your review and commit manually." 
 
-echo "✅ Layer 1: Session saved → $SESSION_FILE"
+echo "git status --short"
+printf '%s\n' "$STATUS_OUTPUT"
 
-# Layer 2: Update 02luka.md
-if [[ -f "$LUKA_MD" ]]; then
-    # Add Last Session marker (append to end of file)
-    echo "" >> "$LUKA_MD"
-    echo "<!-- Last Session: $TIMESTAMP -->" >> "$LUKA_MD"
-    echo "✅ Layer 2: Updated 02luka.md marker"
-else
-    echo "⚠️  Layer 2: 02luka.md not found at $LUKA_MD" >&2
-fi
+echo "git diff --stat"
+printf '%s\n' "$DIFFSTAT_OUTPUT"
 
-# Layer 3: Append to CLAUDE_MEMORY_SYSTEM.md
-cat >> "$MEMORY_FILE" <<EOF
-
-## Session $TIMESTAMP
-- Summary: $SESSION_SUMMARY
-- Actions: $SESSION_ACTIONS
-- Status: $SESSION_STATUS
-
-EOF
-
-echo "✅ Layer 3: Appended to CLAUDE_MEMORY_SYSTEM.md"
-
-# Layer 4: Verification (NEW)
-VERIFY_EXIT=0
-VERIFY_STATUS="SKIPPED"
-VERIFY_DURATION=0
-VERIFY_TESTS=""
-
-if [[ "$SKIP_VERIFY" != "true" ]]; then
-    echo ""
-    echo "→ Running verification..."
-    VERIFY_START=$(date +%s)
-    
-    # Try to find and run verification command
-    VERIFY_CMD=""
-    if [[ -f "$BASE_DIR/tools/ci_check.zsh" ]]; then
-        VERIFY_CMD="$BASE_DIR/tools/ci_check.zsh --view-mls"
-        VERIFY_TESTS="ci_check.zsh --view-mls"
-    elif [[ -f "$BASE_DIR/tools/auto_verify_template.sh" ]]; then
-        VERIFY_CMD="$BASE_DIR/tools/auto_verify_template.sh system_health"
-        VERIFY_TESTS="auto_verify_template.sh system_health"
-    else
-        # Lightweight verification: check if files were created
-        VERIFY_TESTS="file_existence_check"
-        if [[ ! -f "$SESSION_FILE" ]]; then
-            echo "❌ Verification failed: Session file not created" >&2
-            VERIFY_EXIT=1
-        elif [[ ! -f "$LUKA_MD" ]]; then
-            echo "⚠️  Verification warning: 02luka.md not found" >&2
-        elif [[ ! -f "$MEMORY_FILE" ]]; then
-            echo "⚠️  Verification warning: CLAUDE_MEMORY_SYSTEM.md not found" >&2
-        else
-            # Basic file checks passed
-            VERIFY_EXIT=0
-        fi
-    fi
-    
-    # Run verification command if found
-    if [[ -n "$VERIFY_CMD" ]]; then
-        if eval "$VERIFY_CMD" >/dev/null 2>&1; then
-            VERIFY_EXIT=0
-            VERIFY_STATUS="PASS"
-        else
-            VERIFY_EXIT=$?
-            VERIFY_STATUS="FAIL"
-        fi
-    else
-        # Use file existence check result
-        if [[ $VERIFY_EXIT -eq 0 ]]; then
-            VERIFY_STATUS="PASS"
-        else
-            VERIFY_STATUS="FAIL"
-        fi
-    fi
-    
-    VERIFY_DURATION=$(($(date +%s) - VERIFY_START))
-    
-    # Emit verification summary (for dashboard scraping)
-    echo ""
-    echo "=== Verification Summary ==="
-    echo "Status: $VERIFY_STATUS"
-    echo "Duration: ${VERIFY_DURATION}s"
-    echo "Tests: $VERIFY_TESTS"
-    echo "Exit Code: $VERIFY_EXIT"
-    echo "============================"
-    
-    if [[ $VERIFY_EXIT -ne 0 ]]; then
-        echo "" >&2
-        echo "❌ Verification failed - save may be incomplete or invalid" >&2
-        echo "   Use --skip-verify to bypass (not recommended)" >&2
-        exit $VERIFY_EXIT
-    fi
-    
-    echo "✅ Verification passed"
-fi
-
-# Layer 5: MLS Logging (opt-in hook, after Layer 4)
 if [[ "${LUKA_MLS_AUTO_RECORD:-0}" == "1" ]]; then
-    if [[ -f "$BASE_DIR/tools/mls_auto_record.zsh" ]]; then
-        CONTEXT_PAYLOAD="Summary: $SESSION_SUMMARY | Actions: $SESSION_ACTIONS | Status: $SESSION_STATUS | Verification: $VERIFY_STATUS | Session: $SESSION_FILE"
-        "$BASE_DIR/tools/mls_auto_record.zsh" \
-            "save_sh_full_cycle" \
-            "Session saved: $TIMESTAMP" \
-            "$CONTEXT_PAYLOAD" \
-            "save,session,auto-captured" \
-            "" 2>/dev/null || {
-            echo "⚠️  MLS logging failed (non-blocking)" >&2
-        }
+  MLS_REQUIRED=1
+  MLS_SCRIPT="$REPO_ROOT/tools/mls_auto_record.zsh"
+  MLS_HOME_OVERRIDE="${LUKA_MLS_HOME_OVERRIDE:-$(cd "${REPO_ROOT}/.." && pwd)}"
+  if [[ -x "$MLS_SCRIPT" ]]; then
+    SUMMARY="Workspace snapshot stored in $LOG_REL for branch $BRANCH ($COMMIT) on lane $LANE."
+    if HOME="$MLS_HOME_OVERRIDE" "$MLS_SCRIPT" lesson "save.sh full-cycle ($LANE)" "$SUMMARY" "save.sh,workspace,lane:$LANE" >/dev/null 2>&1; then
+      MLS_STATUS="recorded"
+      echo "::save.sh:mls status=recorded lane=${LANE}::"
+    else
+      MLS_STATUS="failed"
+      echo "::save.sh:mls status=failed lane=${LANE}::" >&2
     fi
+  else
+    MLS_STATUS="missing_hook"
+    echo "::save.sh:mls status=missing_hook lane=${LANE}::" >&2
+  fi
+else
+  echo "::save.sh:mls status=disabled lane=${LANE}::"
 fi
 
-echo ""
-echo "🎉 3-Layer save complete!"
-echo "   Session: $SESSION_FILE"
-if [[ "$VERIFY_STATUS" != "SKIPPED" ]]; then
-    echo "   Verification: $VERIFY_STATUS (${VERIFY_DURATION}s)"
+if [[ $MLS_REQUIRED -eq 1 && "$MLS_STATUS" != "recorded" ]]; then
+  echo "save.sh: MLS auto-record requested but status=${MLS_STATUS}" >&2
+  exit 7
 fi
+
+# Optional auto-commit hook (opt-in via SAVE_SH_AUTOCOMMIT=1)
+if [[ "$SAVE_SH_AUTOCOMMIT" == "1" ]]; then
+  if [[ -n "$SAVE_SH_TARGET_FILE" ]]; then
+    (
+      cd "$REPO_ROOT" || exit 0
+      git add -- "$SAVE_SH_TARGET_FILE" 2>/dev/null || true
+      if git -C "$REPO_ROOT" diff --cached --quiet 2>/dev/null; then
+        echo "[save.sh] no staged changes, skipping auto-commit"
+      else
+        git -C "$REPO_ROOT" commit -m "chore(save): auto-save via save.sh (${SAVE_SH_TARGET_FILE})" \
+          >/dev/null 2>&1 || true
+        echo "[save.sh] auto-commit attempted for ${SAVE_SH_TARGET_FILE}"
+      fi
+    )
+  else
+    echo "[save.sh] SAVE_SH_AUTOCOMMIT=1 set, but SAVE_SH_TARGET_FILE is empty - skipping commit"
+  fi
+fi
+
+# Optional MLS logging hook (opt-in via SAVE_SH_MLS_LOG=1)
+if [[ "$SAVE_SH_MLS_LOG" == "1" ]]; then
+  (
+    cd "$REPO_ROOT" || exit 0
+    if [[ -x "tools/mls_auto_record.zsh" ]]; then
+      mls_cmd=("tools/mls_auto_record.zsh" --source "save.sh" --event "save" \
+        --note "save.sh full-cycle hook (autocommit=${SAVE_SH_AUTOCOMMIT})")
+      if [[ -n "$SAVE_SH_TARGET_FILE" ]]; then
+        mls_cmd+=(--file "$SAVE_SH_TARGET_FILE")
+      fi
+      "${mls_cmd[@]}" || true
+      echo "[save.sh] MLS log recorded via tools/mls_auto_record.zsh"
+    else
+      echo "[save.sh] SAVE_SH_MLS_LOG=1 set but tools/mls_auto_record.zsh not found - skipping MLS log"
+    fi
+  )
+fi
+
+exit 0
