@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from textwrap import dedent
 from typing import Any, Dict
@@ -70,8 +71,8 @@ def format_reality_insights(data: Dict[str, Any]) -> str:
     return text
 
 
-def handle_wo_reality(wo_id: str) -> str:
-    """Fetch and render WO insights from the dashboard API."""
+async def handle_wo_reality(wo_id: str) -> str:
+    """Fetch and render WO insights from the dashboard API asynchronously."""
 
     wo_id = (wo_id or "").strip()
     if not wo_id:
@@ -79,7 +80,7 @@ def handle_wo_reality(wo_id: str) -> str:
 
     url = f"{DASHBOARD_BASE}/api/wos/{wo_id}/insights"
     try:
-        resp = requests.get(url, timeout=5)
+        resp = await asyncio.to_thread(requests.get, url, timeout=5)
     except Exception as exc:  # pragma: no cover - network defensive
         return f"❗ ดึงข้อมูล WO ไม่ได้: {exc}"
 
