@@ -425,87 +425,145 @@
         color: #f8fafc;
       }
 
-      .mls-list {
-        display: grid;
-        gap: 1rem;
+      /* MLS Lessons Panel */
+      #mls-panel {
+        margin-top: 1.5rem;
+        padding: 1rem 1.25rem;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+        background: #ffffff;
+        color: #111827;
       }
 
-      .mls-card {
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        border-radius: 18px;
-        padding: 1.25rem;
-        background: rgba(15, 23, 42, 0.65);
-        display: flex;
-        flex-direction: column;
-        gap: 0.65rem;
+      #mls-panel.panel.hidden {
+        display: none;
       }
 
-      .mls-card header {
+      #mls-panel .panel-header {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
+        justify-content: space-between;
         align-items: center;
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.75rem;
       }
 
-      .mls-card h3 {
+      #mls-panel h2 {
+        color: #111827;
         margin: 0;
-        font-size: 1.1rem;
       }
 
-      .badge {
-        padding: 0.2rem 0.65rem;
+      .mls-filters {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+      }
+
+      .mls-filter-btn {
+        border: 1px solid #d1d5db;
         border-radius: 999px;
+        padding: 0.2rem 0.7rem;
+        background: #f9fafb;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: #111827;
+      }
+
+      .mls-filter-btn-active {
+        background: #111827;
+        color: #fff;
+        border-color: #111827;
+      }
+
+      .mls-search {
+        margin-top: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .mls-search input {
+        flex: 1;
+        border-radius: 6px;
+        border: 1px solid #d1d5db;
+        padding: 0.3rem 0.5rem;
+        font-size: 0.85rem;
+      }
+
+      .mls-summary {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .mls-list {
+        max-height: 320px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+      }
+
+      .mls-item {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .mls-item:last-child {
+        border-bottom: none;
+      }
+
+      .mls-item-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      .mls-item-title {
+        font-weight: 600;
+      }
+
+      .mls-item-type {
         font-size: 0.75rem;
-        letter-spacing: 0.03em;
+        padding: 0.1rem 0.4rem;
+        border-radius: 999px;
         text-transform: uppercase;
       }
 
-      .badge-solution {
-        background: rgba(34, 197, 94, 0.15);
-        color: #86efac;
-        border: 1px solid rgba(34, 197, 94, 0.5);
+      .mls-type-solution {
+        background: #dcfce7;
+        color: #166534;
       }
 
-      .badge-failure {
-        background: rgba(248, 113, 113, 0.15);
-        color: #fecaca;
-        border: 1px solid rgba(248, 113, 113, 0.5);
+      .mls-type-failure {
+        background: #fee2e2;
+        color: #b91c1c;
       }
 
-      .badge-pattern {
-        background: rgba(248, 250, 252, 0.08);
-        color: #f8fafc;
-        border: 1px solid rgba(248, 250, 252, 0.25);
+      .mls-type-pattern {
+        background: #e0f2fe;
+        color: #1d4ed8;
       }
 
-      .badge-improvement {
-        background: rgba(14, 165, 233, 0.15);
-        color: #bae6fd;
-        border: 1px solid rgba(14, 165, 233, 0.45);
+      .mls-type-improvement {
+        background: #fef3c7;
+        color: #92400e;
       }
 
-      .mls-meta {
-        font-size: 0.9rem;
-        color: rgba(226, 232, 240, 0.75);
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+      .mls-type-other {
+        background: #e5e7eb;
+        color: #374151;
       }
 
-      .tag-chip {
-        background: rgba(148, 163, 184, 0.2);
-        border-radius: 999px;
-        padding: 0.2rem 0.65rem;
-        font-size: 0.8rem;
+      .mls-item-meta {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.2rem;
       }
 
-      .mls-footer {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-        font-size: 0.85rem;
-        color: rgba(226, 232, 240, 0.8);
+      .mls-item-tags {
+        margin-top: 0.2rem;
+        font-size: 0.75rem;
+        color: #4b5563;
       }
 
       .wo-history-header {
@@ -928,34 +986,29 @@
       </section>
 
       <section id="mls-panel" class="panel hidden">
-        <h2>MLS Lessons</h2>
-
-        <div id="mls-summary" class="summary-bar">
-          <span><strong>Total:</strong> –</span>
-          <span>Solutions: –</span>
-          <span>Failures: –</span>
-          <span>Patterns: –</span>
-          <span>Improvements: –</span>
-        </div>
-
-        <div id="mls-error" class="error-banner hidden">
-          <span>Failed to load MLS lessons.</span>
-          <button type="button" id="mls-error-retry">Retry</button>
-        </div>
-
-        <div class="filters">
-          <div class="pill-bar" id="mls-type-pills">
-            <button class="pill-button active" data-type="">All</button>
-            <button class="pill-button" data-type="solution">Solutions</button>
-            <button class="pill-button" data-type="failure">Failures</button>
-            <button class="pill-button" data-type="pattern">Patterns</button>
-            <button class="pill-button" data-type="improvement">Improvements</button>
+        <header class="panel-header">
+          <h2>MLS Lessons</h2>
+          <div class="mls-filters">
+            <span>Type:</span>
+            <button data-mls-type="" class="mls-filter-btn mls-filter-btn-active">All</button>
+            <button data-mls-type="solution" class="mls-filter-btn">Solutions</button>
+            <button data-mls-type="failure" class="mls-filter-btn">Failures</button>
+            <button data-mls-type="pattern" class="mls-filter-btn">Patterns</button>
+            <button data-mls-type="improvement" class="mls-filter-btn">Improvements</button>
           </div>
+        </header>
 
-          <button id="mls-refresh-btn" type="button">Refresh</button>
+        <div class="mls-search">
+          <input
+            id="mls-search-input"
+            type="text"
+            placeholder="Search in title, details, tags, related WO / session..."
+          />
         </div>
 
-        <div id="mls-list" class="mls-list">Loading…</div>
+        <div id="mls-summary" class="mls-summary"><!-- Filled by dashboard.js --></div>
+
+        <div id="mls-list" class="mls-list"><!-- MLS entries rendered here --></div>
       </section>
 
       <section id="reality-panel" class="panel hidden">
