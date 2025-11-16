@@ -1,0 +1,172 @@
+# Local Worker Registry v1
+# Single Source of Truth for all 02LUKA workers
+# Maintained by: CLC (governance-level)
+# Updated: 2025-11-16
+
+workers:
+  # Core Services
+  - id: auto.commit
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/auto_commit_work.zsh
+    launchagent_labels:
+      - com.02luka.auto.commit
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/auto_commit_work.zsh && /Users/icmini/02luka/tools/auto_commit_work.zsh --selftest 2>/dev/null || test -f /Users/icmini/02luka/tools/auto_commit_work.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: backup_to_gdrive
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/backup_to_gdrive.zsh
+    launchagent_labels:
+      - com.02luka.backup.gdrive
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/backup_to_gdrive.zsh && /Users/icmini/02luka/tools/backup_to_gdrive.zsh --health 2>/dev/null || test -f /Users/icmini/02luka/tools/backup_to_gdrive.zsh
+      expected: exit_code=0
+      timeout_sec: 30
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: gg_nlp_bridge
+    type: launchagent
+    criticality: critical
+    entrypoint: /Users/icmini/02luka/tools/gg_nlp_bridge.zsh
+    launchagent_labels:
+      - com.02luka.gg.nlp-bridge
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/gg_nlp_bridge.zsh && /Users/icmini/02luka/tools/gg_nlp_bridge.zsh --selftest 2>/dev/null || test -f /Users/icmini/02luka/tools/gg_nlp_bridge.zsh
+      expected: exit_code=0
+      timeout_sec: 10
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: mls_cursor_watcher
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/mls_cursor_watcher.zsh
+    launchagent_labels:
+      - com.02luka.mls.cursor
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/mls_cursor_watcher.zsh && /Users/icmini/02luka/tools/mls_cursor_watcher.zsh --test 2>/dev/null || test -f /Users/icmini/02luka/tools/mls_cursor_watcher.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: mls_status_update
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/mls_status_summary_update.zsh
+    launchagent_labels:
+      - com.02luka.mls.status.update
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/mls_status_summary_update.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: mcp_memory
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/mcp_health.zsh
+    launchagent_labels:
+      - com.02luka.mcp.memory
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/mcp_health.zsh && /Users/icmini/02luka/tools/mcp_health.zsh --selftest 2>/dev/null || test -f /Users/icmini/02luka/tools/mcp_health.zsh
+      expected: exit_code=0
+      timeout_sec: 10
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: sync_gdrive_4h
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/sync_gdrive.zsh
+    launchagent_labels:
+      - com.02luka.sync.gdrive.4h
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/sync_gdrive.zsh || test -f /Users/icmini/02luka/tools/bridge_knowledge_sync.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: nlp_dispatcher
+    type: launchagent
+    criticality: critical
+    entrypoint: /Users/icmini/02luka/tools/nlp_dispatcher.zsh
+    launchagent_labels:
+      - com.02luka.nlp-dispatcher
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/nlp_dispatcher.zsh || test -f /Users/icmini/02luka/tools/gg_nlp_bridge.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: rnd_consumer
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/rnd.zsh
+    launchagent_labels:
+      - com.02luka.rnd.consumer
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/rnd.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  - id: integration_daily
+    type: launchagent
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/integration_daily.zsh
+    launchagent_labels:
+      - com.02luka.integration.daily
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/integration_daily.zsh || find /Users/icmini/02luka/tools -name "*integration*" -type f | head -1 | xargs test -f
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
+  # CLI Tools (not LaunchAgents, but tracked)
+  - id: workerctl
+    type: cli
+    criticality: normal
+    entrypoint: /Users/icmini/02luka/tools/workerctl.zsh
+    launchagent_labels: []
+    health_check:
+      command: test -f /Users/icmini/02luka/tools/workerctl.zsh && /Users/icmini/02luka/tools/workerctl.zsh --version 2>/dev/null || test -f /Users/icmini/02luka/tools/workerctl.zsh
+      expected: exit_code=0
+      timeout_sec: 5
+    evidence:
+      last_verified: null
+      last_success: null
+      verification_level: L0
+
