@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.wo_executor.codex</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>for f in "/Users/icmini/02luka/bridge/inbox/CODEX"/WO-*.zsh; do
+      [[ -f "$f" ]] || continue;
+      "/Users/icmini/02luka/tools/codex_run_wo.zsh" "$f";
+      mv -f "$f" "/Users/icmini/02luka/bridge/outbox/CODEX/";
+    done</string>
+  </array>
+  <key>StartInterval</key><integer>120</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/logs/codex_wo_executor.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/logs/codex_wo_executor.err.log</string>
+</dict></plist>

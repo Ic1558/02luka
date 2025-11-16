@@ -1,0 +1,14 @@
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.02luka.watch.expense_slips</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/icmini/02luka/tools/watchers/expense_slips.zsh</string>
+  </array>
+  <key>WatchPaths</key>
+  <array><string>/Users/icmini/02luka/g/inbox/expense_slips</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/Users/icmini/02luka/telemetry/watch.expense_slips.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/icmini/02luka/telemetry/watch.expense_slips.err.log</string>
+</dict></plist>
