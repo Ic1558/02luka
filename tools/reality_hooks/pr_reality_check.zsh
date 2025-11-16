@@ -1,229 +1,311 @@
-#!/usr/bin/env zsh
-# Lightweight reality hooks runner for PRs.
-# Runs a small set of real-world checks and emits a machine-readable summary.
-
+#!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="${ROOT:-${0:A:h:h}}"  # default: two levels up from this script (repo root)
-REPORT_DIR="${ROOT}/g/reports/system"
-mkdir -p "${REPORT_DIR}"
+SCRIPT_DIR="$(cd -- "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
 
-GIT_SHA="${GITHUB_SHA:-$(git -C "${ROOT}" rev-parse --short HEAD 2>/dev/null || echo 'local')}"
-REPORT_FILE="${REPORT_DIR}/reality_hooks_pr_${GIT_SHA}.md"
-
-dashboard_status="skipped"
-orchestrator_status="skipped"
-telemetry_status="skipped"
+REPORT_DIR="$REPO_ROOT/g/reports/system"
+TEMPLATE_PATH="$REPORT_DIR/reality_hooks_PR_TEMPLATE.md"
+mkdir -p "$REPORT_DIR"
 
 log() {
-  print -- "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*" >&2
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"
 }
 
-# Helper: run a command, capture status, and log
-run_check() {
-  local name="$1"; shift
-  local cmd=("$@")
+pr_identifier="local"
+if [[ -n "${GITHUB_REF:-}" && "$GITHUB_REF" == refs/pull/* ]]; then
+  pr_number="${GITHUB_REF#refs/pull/}"
+  pr_number="${pr_number%%/*}"
+  pr_identifier="PR-${pr_number}"
+elif [[ -n "${GITHUB_HEAD_REF:-}" ]]; then
+  pr_identifier="$GITHUB_HEAD_REF"
+elif [[ -n "${GITHUB_REF_NAME:-}" ]]; then
+  pr_identifier="$GITHUB_REF_NAME"
+else
+  pr_identifier="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo local)"
+fi
+PR_IDENTIFIER="$pr_identifier"
 
-  log "Running reality hook: ${name}: ${cmd[@]}"
-  if "${cmd[@]}" >/tmp/reality_hook_${name}.log 2>&1; then
-    log "✅ ${name} OK"
-    echo "ok"
-  else
-    log "❌ ${name} FAILED"
-    log "---- ${name} output ----"
-    sed -n '1,80p' "/tmp/reality_hook_${name}.log" >&2 || true
-    log "------------------------"
-    echo "failed"
+commit_sha_full="${GITHUB_SHA:-$(git rev-parse HEAD 2>/dev/null || echo local)}"
+if [[ "$commit_sha_full" == local ]]; then
+  short_sha="local"
+else
+  short_sha="${commit_sha_full:0:12}"
+fi
+REPORT_FILE="$REPORT_DIR/reality_hooks_pr_${short_sha}.md"
+
+CHECK_ORDER=(dashboard_smoke orchestrator_smoke telemetry_schema)
+declare -A CHECK_LABELS
+CHECK_LABELS[dashboard_smoke]="Dashboard smoke"
+CHECK_LABELS[orchestrator_smoke]="Orchestrator summary"
+CHECK_LABELS[telemetry_schema]="Telemetry schema"
+
+declare -A CHECK_STATUS
+declare -A CHECK_DETAIL
+for key in "${CHECK_ORDER[@]}"; do
+  CHECK_STATUS[$key]="unknown"
+  CHECK_DETAIL[$key]="not run"
+done
+
+record_check() {
+  local key="$1"
+  local status="$2"
+  local detail="$3"
+  CHECK_STATUS[$key]="$status"
+  CHECK_DETAIL[$key]="$detail"
+}
+
+dashboard_smoke_check() {
+  local key="dashboard_smoke"
+  local data_file="$REPO_ROOT/g/apps/dashboard/dashboard_data.json"
+  log "▶ Checking dashboard data at $data_file"
+  if [[ ! -f "$data_file" ]]; then
+    local msg="Dashboard data file missing: $data_file"
+    log "❌ $msg"
+    record_check "$key" "fail" "$msg"
+    return 1
   fi
+
+  local output
+  if ! output=$(DASHBOARD_DATA="$data_file" node <<'EOS' 2>&1
+const fs = require('fs');
+const path = process.env.DASHBOARD_DATA;
+const payload = JSON.parse(fs.readFileSync(path, 'utf8'));
+if (!payload.roadmap || typeof payload.roadmap.overall_progress_pct !== 'number') {
+  throw new Error('roadmap.overall_progress_pct missing or invalid');
+}
+if (!payload.services || typeof payload.services.total !== 'number') {
+  throw new Error('services.total missing or invalid');
+}
+const progress = payload.roadmap.overall_progress_pct;
+const phase = payload.roadmap.current_phase_name || 'unknown';
+const services = payload.services.total;
+console.log(`Roadmap "${payload.roadmap.name}" phase "${phase}" (${progress}% complete, services=${services}).`);
+EOS
+); then
+    log "❌ Dashboard validation failed"
+    record_check "$key" "fail" "$output"
+    return 1
+  fi
+
+  log "✅ Dashboard data looks healthy"
+  record_check "$key" "ok" "$output"
   return 0
 }
 
-# 1) Dashboard smoke test ( BEST-EFFORT )
-dashboard_hook() {
-  # You may already have a dedicated dashboard health command; if not, make this
-  # a cheap static check that proves the module can be loaded / config is sane.
-  if [ ! -f "${ROOT}/apps/dashboard/wo_dashboard_server.js" ]; then
-    log "Dashboard hook: server file not found, marking as skipped."
-    echo "skipped"
-    return 0
+orchestrator_smoke_check() {
+  local key="orchestrator_smoke"
+  local orchestrator="$REPO_ROOT/tools/subagents/orchestrator.zsh"
+  local summary_a="$REPORT_DIR/subagent_orchestrator_summary.json"
+  local summary_b="$REPORT_DIR/claude_orchestrator_summary.json"
+
+  log "▶ Running orchestrator smoke test"
+  if [[ ! -x "$orchestrator" ]]; then
+    local msg="Orchestrator script missing or not executable: $orchestrator"
+    log "❌ $msg"
+    record_check "$key" "fail" "$msg"
+    return 1
   fi
 
-  if ! command -v node >/dev/null 2>&1; then
-    log "Dashboard hook: node command not available, marking as skipped."
-    echo "skipped"
-    return 0
-  fi
-
-  # Very light Node check: does the file parse?
-  run_check "dashboard_smoke" node -c "${ROOT}/apps/dashboard/wo_dashboard_server.js"
-}
-
-# 2) Orchestrator reality hook
-orchestrator_hook() {
-  if [ ! -f "${ROOT}/tools/claude_subagents/orchestrator.zsh" ]; then
-    log "Orchestrator hook: script not found, marking as skipped."
-    echo "skipped"
-    return 0
-  fi
-
-  local summary="${ROOT}/g/reports/system/claude_orchestrator_summary.json"
-  rm -f "${summary}"
-
-  # This should match the command you used in the post-deploy check.
-  local orchestrator_cmd=(env LUKA_SOT="${ROOT}" "${ROOT}/tools/claude_subagents/orchestrator.zsh" review "true" 1)
-
-  if [ "$(run_check "orchestrator_smoke" "${orchestrator_cmd[@]}")" = "ok" ]; then
-    if [ -f "${summary}" ]; then
-      # Quick JSON sanity check using node if available, else best-effort.
-      if command -v node >/dev/null 2>&1; then
-        if node -e "JSON.parse(require('fs').readFileSync('${summary}','utf8'))" 2>/dev/null; then
-          echo "ok"
-          return 0
-        else
-          log "Orchestrator summary JSON parse failed."
-          echo "failed"
-          return 0
-        fi
-      fi
-      echo "ok"
-      return 0
-    else
-      log "Orchestrator summary file not found after run."
-      echo "failed"
-      return 0
-    fi
+  rm -f "$summary_a" "$summary_b"
+  local orchestrator_stdout="/tmp/reality_orchestrator.out"
+  local orchestrator_stderr="/tmp/reality_orchestrator.err"
+  local orchestrator_shell
+  if command -v zsh >/dev/null 2>&1; then
+    orchestrator_shell="$(command -v zsh)"
   else
-    echo "failed"
-    return 0
+    orchestrator_shell="$(command -v bash)"
   fi
+
+  if ! LUKA_SOT="$REPO_ROOT" "$orchestrator_shell" "$orchestrator" compete "echo reality_hook_success" 1 >"$orchestrator_stdout" 2>"$orchestrator_stderr"; then
+    local msg="Orchestrator execution failed (see /tmp/reality_orchestrator.err)"
+    log "❌ $msg"
+    record_check "$key" "fail" "$(cat "$orchestrator_stderr" 2>/dev/null || echo "$msg")"
+    return 1
+  fi
+
+  local summary_file="$summary_a"
+  [[ -f "$summary_file" ]] || summary_file="$summary_b"
+  if [[ ! -f "$summary_file" ]]; then
+    local msg="Summary JSON not produced at $summary_a or $summary_b"
+    log "❌ $msg"
+    record_check "$key" "fail" "$msg"
+    return 1
+  fi
+
+  local output
+  if ! output=$(SUMMARY_FILE="$summary_file" node <<'EOS' 2>&1
+const fs = require('fs');
+const path = process.env.SUMMARY_FILE;
+const payload = JSON.parse(fs.readFileSync(path, 'utf8'));
+if (!Array.isArray(payload.agents) || payload.agents.length === 0) {
+  throw new Error('agents array missing or empty');
+}
+if (!payload.winner) {
+  throw new Error('winner field missing');
+}
+console.log(`Summary ${path} OK – ${payload.agents.length} agents, winner=${payload.winner}.`);
+EOS
+); then
+    log "❌ Summary validation failed"
+    record_check "$key" "fail" "$output"
+    return 1
+  fi
+
+  rm -f "$orchestrator_stdout" "$orchestrator_stderr"
+
+  log "✅ Orchestrator summary looks valid"
+  record_check "$key" "ok" "$output"
+  return 0
 }
 
-# 3) Telemetry schema vs sample (light check)
-telemetry_hook() {
-  local schema_candidates=(
-    "${ROOT}/g/schemas/telemetry_v2.schema.json"
-    "${ROOT}/schemas/telemetry_v2.schema.json"
-  )
-  local sample_candidates=(
-    "${ROOT}/g/telemetry_unified/unified.jsonl"
-    "${ROOT}/telemetry_unified/unified.jsonl"
-    "${ROOT}/telemetry/unified.jsonl"
-  )
+telemetry_schema_check() {
+  local key="telemetry_schema"
+  local schema_path="$REPO_ROOT/schemas/telemetry_v2.schema.json"
+  local sample_path="$REPO_ROOT/telemetry/sample_telemetry_v2.json"
 
-  local schema=""
-  local sample=""
-
-  for candidate in "${schema_candidates[@]}"; do
-    if [ -z "${schema}" ] && [ -f "${candidate}" ]; then
-      schema="${candidate}"
-    fi
-  done
-
-  for candidate in "${sample_candidates[@]}"; do
-    if [ -z "${sample}" ] && [ -f "${candidate}" ]; then
-      sample="${candidate}"
-    fi
-  done
-
-  if [ -z "${schema}" ] || [ -z "${sample}" ]; then
-    log "Telemetry hook: schema or sample missing, marking as skipped."
-    echo "skipped"
-    return 0
+  log "▶ Validating telemetry sample against schema"
+  if [[ ! -f "$schema_path" ]]; then
+    local msg="Telemetry schema missing: $schema_path"
+    log "❌ $msg"
+    record_check "$key" "fail" "$msg"
+    return 1
+  fi
+  if [[ ! -f "$sample_path" ]]; then
+    local msg="Telemetry sample missing: $sample_path"
+    log "❌ $msg"
+    record_check "$key" "fail" "$msg"
+    return 1
   fi
 
-  if ! command -v python3 >/dev/null 2>&1; then
-    log "Telemetry hook: python3 not available, marking as skipped."
-    echo "skipped"
-    return 0
+  local output
+  if ! output=$(TELEMETRY_SCHEMA="$schema_path" TELEMETRY_SAMPLE="$sample_path" node <<'EOS' 2>&1
+const fs = require('fs');
+const path = require('path');
+const Ajv = require('ajv');
+const addFormats = require('ajv-formats');
+
+const schemaPath = process.env.TELEMETRY_SCHEMA;
+const samplePath = process.env.TELEMETRY_SAMPLE;
+const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+const rawSample = fs.readFileSync(samplePath, 'utf8');
+const ext = path.extname(samplePath).toLowerCase();
+let payload;
+if (ext === '.jsonl' || ext === '.ndjson') {
+  const line = rawSample
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith('{'));
+  if (!line) {
+    throw new Error('Telemetry sample file contains no JSON entries');
+  }
+  payload = JSON.parse(line);
+} else {
+  payload = JSON.parse(rawSample);
+}
+const ajv = new Ajv({allErrors: true, strict: false});
+addFormats(ajv);
+const validate = ajv.compile(schema);
+if (!validate(payload)) {
+  const errors = validate.errors.map((err) => `${err.instancePath || '/'} ${err.message}`).join('; ');
+  throw new Error(`Schema validation failed: ${errors}`);
+}
+console.log(`Telemetry entry from ${path.basename(samplePath)} validates against telemetry_v2 schema.`);
+EOS
+); then
+    log "❌ Telemetry validation failed"
+    record_check "$key" "fail" "$output"
+    return 1
   fi
 
-  local script="${ROOT}/.tmp_telemetry_schema_check_${GIT_SHA}.py"
-  cat > "${script}" <<'PY'
-import json, sys, pathlib
-
-schema_path = pathlib.Path(sys.argv[1])
-sample_path = pathlib.Path(sys.argv[2])
-
-schema = json.loads(schema_path.read_text())
-required = schema.get("required", [])
-
-# Read only first line to keep it cheap
-first = None
-with sample_path.open() as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            first = json.loads(line)
-            break
-        except json.JSONDecodeError:
-            # Skip malformed lines and keep searching for the first valid JSON record
-            continue
-
-if first is None:
-    print("No telemetry records found.")
-    sys.exit(0)
-
-missing = [k for k in required if k not in first]
-if missing:
-    print("Missing required keys in sample:", ", ".join(missing))
-    sys.exit(1)
-
-print("Telemetry sample matches required keys.")
-PY
-
-  local hook_status
-  hook_status="$(run_check "telemetry_schema" python3 "${script}" "${schema}" "${sample}")"
-  rm -f "${script}" || true
-  echo "${hook_status}"
+  log "✅ Telemetry schema check passed"
+  record_check "$key" "ok" "$output"
+  return 0
 }
 
-# Run hooks
-log "=== Running PR reality hooks ==="
+overall_rc=0
+if ! dashboard_smoke_check; then
+  overall_rc=1
+fi
+if ! orchestrator_smoke_check; then
+  overall_rc=1
+fi
+if ! telemetry_schema_check; then
+  overall_rc=1
+fi
 
-dashboard_status="$(dashboard_hook)"
-orchestrator_status="$(orchestrator_hook)"
-telemetry_status="$(telemetry_hook)"
+render_detail_log() {
+  local detail=""
+  for key in "${CHECK_ORDER[@]}"; do
+    local label="${CHECK_LABELS[$key]}"
+    local info="${CHECK_DETAIL[$key]}"
+    detail+="$label:\n$info\n\n"
+  done
+  printf '%s' "$detail"
+}
 
-# Determine overall exit code
-exit_code=0
-for s in "${dashboard_status}" "${orchestrator_status}" "${telemetry_status}"; do
-  if [ "${s}" = "failed" ]; then
-    exit_code=1
-  fi
-done
+DETAIL_TEXT="$(render_detail_log)"
 
-# Generate Markdown report
-log "Writing reality hooks report to ${REPORT_FILE}"
-
-cat > "${REPORT_FILE}" <<__REPORT__
+if [[ ! -f "$TEMPLATE_PATH" ]]; then
+  cat <<'TEMPLATE' > "$TEMPLATE_PATH"
 # Reality Hooks Report
 
-- Commit: ${GIT_SHA}
+- PR: {{PR_NUMBER_OR_BRANCH}}
+- Commit: {{GIT_SHA}}
 
 ## Checks
 
-- Dashboard smoke: \`${dashboard_status}\`
-- Orchestrator summary: \`${orchestrator_status}\`
-- Telemetry schema: \`${telemetry_status}\`
+- Dashboard smoke: {{DASHBOARD_STATUS}}
+- Orchestrator summary: {{ORCHESTRATOR_STATUS}}
+- Telemetry schema check: {{TELEMETRY_STATUS}}
 
-## Notes
+## Details
 
-This report was generated by \`tools/reality_hooks/pr_reality_check.zsh\`
-during CI or local execution.
+{{DETAIL_LOG}}
 
-__REPORT__
+---
+Generated by `tools/reality_hooks/pr_reality_check.zsh`.
+TEMPLATE
+fi
 
-# Emit machine-readable summary for pr_score / other agents
-cat <<__SUMMARY__
+export TEMPLATE_PATH REPORT_FILE DETAIL_TEXT PR_IDENTIFIER
+export COMMIT_SHA="$commit_sha_full"
+export DASHBOARD_STATUS="${CHECK_STATUS[dashboard_smoke]}"
+export ORCHESTRATOR_STATUS="${CHECK_STATUS[orchestrator_smoke]}"
+export TELEMETRY_STATUS="${CHECK_STATUS[telemetry_schema]}"
 
-REALITY_HOOKS_SUMMARY_START
-dashboard_smoke=${dashboard_status}
-orchestrator_smoke=${orchestrator_status}
-telemetry_schema=${telemetry_status}
-REALITY_HOOKS_SUMMARY_END
-__SUMMARY__
+python3 - <<'PY'
+import os
+from pathlib import Path
 
-log "Reality hooks completed with status=${exit_code}"
-exit "${exit_code}"
+template_path = Path(os.environ['TEMPLATE_PATH'])
+report_path = Path(os.environ['REPORT_FILE'])
+content = template_path.read_text()
+replacements = {
+    '{{PR_NUMBER_OR_BRANCH}}': os.environ['PR_IDENTIFIER'],
+    '{{GIT_SHA}}': os.environ['COMMIT_SHA'],
+    '{{DASHBOARD_STATUS}}': os.environ['DASHBOARD_STATUS'],
+    '{{ORCHESTRATOR_STATUS}}': os.environ['ORCHESTRATOR_STATUS'],
+    '{{TELEMETRY_STATUS}}': os.environ['TELEMETRY_STATUS'],
+    '{{DETAIL_LOG}}': os.environ['DETAIL_TEXT'].rstrip() or 'n/a',
+}
+for needle, repl in replacements.items():
+    content = content.replace(needle, repl)
+report_path.write_text(content)
+print(f"📝 reality hooks report written to {report_path}")
+PY
+
+echo "REALITY_HOOKS_SUMMARY_START"
+for key in "${CHECK_ORDER[@]}"; do
+  echo "${key}=${CHECK_STATUS[$key]}"
+done
+echo "REALITY_HOOKS_SUMMARY_END"
+
+if [[ $overall_rc -ne 0 ]]; then
+  log "❌ One or more reality hooks failed"
+else
+  log "✅ All reality hooks passed"
+fi
+
+exit $overall_rc

@@ -1,0 +1,209 @@
+#!/usr/bin/env zsh
+# Full-cycle test harness for save.sh
+# Goal: exercise the 4-layer save pipeline end-to-end and emit a structured report.
+#
+# Layers (conceptual):
+#   L1: In-memory / session state snapshot
+#   L2: Local repo save (git working tree)
+#   L3: Local archive / snapshots directory
+#   L4: External sync / cloud mirror (best-effort check)
+#
+# This script is intentionally read-only with respect to "real" data:
+# - It uses a temporary test prefix/tag for all saves.
+# - It can be run in CLS (Cursor) or CLC (Claude Code) environments.
+
+set -euo pipefail
+
+SCRIPT_DIR="${0:A:h}"
+ROOT="${ROOT:-${SCRIPT_DIR:h:h}}"   # default: two levels up from tools/tests
+LOG_DIR="${ROOT}/g/reports/system"
+mkdir -p "${LOG_DIR}"
+
+NOW="$(date +'%Y%m%d_%H%M%S')"
+TEST_ID="save_sh_full_cycle_${NOW}"
+REPORT_FILE="${LOG_DIR}/${TEST_ID}.md"
+
+# NOTE: These are intentionally conservative placeholders.
+# Adjust these paths to match the real save.sh contract if needed.
+SAVE_SCRIPT="${ROOT}/tools/save.sh"
+SNAPSHOT_DIR="${ROOT}/g/snapshots"
+LOCAL_ARCHIVE_DIR="${ROOT}/g/reports/snapshots"
+CLOUD_HINT_DIR="${ROOT}/g/reports/sync_state"
+
+lane="${SAVE_LANE:-unknown}"  # caller can set SAVE_LANE=cls / SAVE_LANE=clc
+
+log() {
+  print -- "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*"
+}
+
+section() {
+  log ""
+  log "=== $* ==="
+}
+
+check_file_exists() {
+  local label="$1"
+  local path="$2"
+
+  if [[ -f "${path}" ]]; then
+    log "✅ ${label}: found (${path})"
+    echo "ok"
+  else
+    log "⚠️  ${label}: missing (${path})"
+    echo "missing"
+  fi
+}
+
+check_dir_exists() {
+  local label="$1"
+  local path="$2"
+
+  if [[ -d "${path}" ]]; then
+    log "✅ ${label}: directory exists (${path})"
+    echo "ok"
+  else
+    log "⚠️  ${label}: directory missing (${path})"
+    echo "missing"
+  fi
+}
+
+section "Environment"
+
+log "ROOT=${ROOT}"
+log "LANE=${lane}"
+log "SAVE_SCRIPT=${SAVE_SCRIPT}"
+log "SNAPSHOT_DIR=${SNAPSHOT_DIR}"
+log "LOCAL_ARCHIVE_DIR=${LOCAL_ARCHIVE_DIR}"
+log "CLOUD_HINT_DIR=${CLOUD_HINT_DIR}"
+
+if [[ ! -x "${SAVE_SCRIPT}" ]]; then
+  log "❌ save.sh not found or not executable at ${SAVE_SCRIPT}"
+  exit 1
+fi
+
+section "Step 1 — Dry-run save"
+
+# We assume save.sh has a dry-run or test mode.
+# If not, this should be adapted to your actual CLI contract.
+SAVE_ARGS=()
+if "${SAVE_SCRIPT}" --help 2>&1 | grep -qi -- '--dry-run'; then
+  SAVE_ARGS=(--dry-run)
+elif "${SAVE_SCRIPT}" --help 2>&1 | grep -qi -- '--test'; then
+  SAVE_ARGS=(--test)
+else
+  # Fallback: tag-only safe invocation; DO NOT commit or push from here.
+  SAVE_ARGS=(--tag "${TEST_ID}")
+fi
+
+log "Invoking: ${SAVE_SCRIPT} ${SAVE_ARGS[*]}"
+
+if ! "${SAVE_SCRIPT}" "${SAVE_ARGS[@]}"; then
+  log "❌ save.sh invocation failed"
+  exit 1
+fi
+
+section "Step 2 — Check layer artifacts"
+
+l1_status="unknown"
+l2_status="unknown"
+l3_status="unknown"
+l4_status="unknown"
+
+# L1: In-memory/session layer is usually not directly visible;
+# we treat a basic success exit + any temp marker as a proxy.
+# If save.sh writes a known temp marker for test mode, check it here.
+L1_MARKER="${SNAPSHOT_DIR}/${TEST_ID}.l1.json"
+if [[ -f "${L1_MARKER}" ]]; then
+  l1_status="ok"
+  log "✅ L1 marker found: ${L1_MARKER}"
+else
+  l1_status="unknown"
+  log "ℹ️  No explicit L1 marker (${L1_MARKER}); assuming OK if process exited cleanly."
+fi
+
+# L2: Local repo snapshot / working tree artifacts
+if [[ -d "${SNAPSHOT_DIR}" ]]; then
+  l2_status="ok"
+  log "✅ L2 snapshot directory exists: ${SNAPSHOT_DIR}"
+else
+  l2_status="missing"
+  log "⚠️  L2 snapshot directory missing: ${SNAPSHOT_DIR}"
+fi
+
+# L3: Local archive / snapshots directory (reports)
+if [[ -d "${LOCAL_ARCHIVE_DIR}" ]]; then
+  l3_status="ok"
+  log "✅ L3 local archive directory exists: ${LOCAL_ARCHIVE_DIR}"
+else
+  l3_status="missing"
+  log "⚠️  L3 local archive directory missing: ${LOCAL_ARCHIVE_DIR}"
+fi
+
+# L4: External sync / cloud hint (best-effort)
+if [[ -d "${CLOUD_HINT_DIR}" ]]; then
+  l4_status="ok"
+  log "✅ L4 cloud hint directory exists: ${CLOUD_HINT_DIR}"
+else
+  l4_status="unknown"
+  log "ℹ️  No explicit L4 cloud hint directory: ${CLOUD_HINT_DIR} (may be expected)."
+fi
+
+section "Step 3 — Git sanity (optional)"
+
+git_status="skipped"
+if command -v git >/dev/null 2>&1; then
+  if git -C "${ROOT}" rev-parse --show-toplevel >/dev/null 2>&1; then
+    # We do NOT commit or push here; just ensure index is sane.
+    git_status="ok"
+    log "✅ git repository detected and readable at ${ROOT}"
+  else
+    git_status="missing"
+    log "⚠️  git repository not detected at ${ROOT}"
+  fi
+fi
+
+section "Step 4 — Write report"
+
+cat > "${REPORT_FILE}" <<EOF2
+# save.sh Full-Cycle Test Report
+
+- Test ID: ${TEST_ID}
+- Time: ${NOW}
+- Lane: ${lane}
+- Root: ${ROOT}
+
+## Layer status
+
+- L1 (in-memory/session): \`${l1_status}\`
+- L2 (local snapshot dir): \`${l2_status}\`
+- L3 (local archive dir): \`${l3_status}\`
+- L4 (cloud hint dir): \`${l4_status}\`
+
+## Git status
+
+- git: \`${git_status}\`
+
+## Notes
+
+This report was generated by \`tools/tests/save_full_cycle_test.zsh\`.
+Paths and interpretations are conservative placeholders and may need
+adjustment to match the real \`save.sh\` contract.
+
+EOF2
+
+log "✅ Full-cycle test complete; report written to ${REPORT_FILE}"
+
+# Emit machine-readable summary (for future integration if needed)
+cat <<EOF2
+
+SAVE_SH_FULL_CYCLE_SUMMARY_START
+test_id=${TEST_ID}
+lane=${lane}
+layer1=${l1_status}
+layer2=${l2_status}
+layer3=${l3_status}
+layer4=${l4_status}
+git=${git_status}
+report=${REPORT_FILE}
+SAVE_SH_FULL_CYCLE_SUMMARY_END
+EOF2

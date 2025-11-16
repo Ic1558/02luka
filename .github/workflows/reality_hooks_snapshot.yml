@@ -1,0 +1,30 @@
+name: Reality Hooks Snapshot
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  reality_hooks_snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make aggregator executable
+        run: |
+          chmod +x tools/reality_hooks_aggregate.zsh
+
+      - name: Run Reality Hooks aggregator
+        run: |
+          ./tools/reality_hooks_aggregate.zsh
+
+      - name: Upload Reality Hooks snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reality_hooks_snapshot
+          path: |
+            g/reports/system/reality_hooks_snapshot_*.json
+          if-no-files-found: ignore
