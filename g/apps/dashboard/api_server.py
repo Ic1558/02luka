@@ -311,7 +311,32 @@ class APIHandler(BaseHTTPRequestHandler):
         self.send_json_response(wos_sorted)
 
     def handle_get_wo(self, wo_id, query):
-        """Handle GET /api/wos/:id - get WO details"""
+        """
+        Handle GET /api/wos/:id - get WO details
+        
+        Query Parameters:
+            tail (int): Number of log lines to include in response (optional)
+            timeline (int): Include timeline events (1 = yes, 0 or omitted = no)
+        
+        Response Format:
+            {
+                "id": "WO-123",
+                "status": "complete",
+                "started_at": "2025-11-17T10:00:00",
+                "finished_at": "2025-11-17T10:05:00",
+                "timeline": [  # Only included if timeline=1
+                    {
+                        "timestamp": "2025-11-17T10:00:00",
+                        "event": "created",
+                        "message": "Work order created"
+                    },
+                    ...
+                ],
+                "log_tail": [...]  # Only included if tail parameter provided
+            }
+        
+        Returns 404 if WO not found.
+        """
         # Refresh WO list
         self.collector.collect_all()
 
@@ -323,10 +348,86 @@ class APIHandler(BaseHTTPRequestHandler):
                 lines = int(query['tail'][0])
                 if wo.get('log_path'):
                     wo['log_tail'] = self.collector._get_log_tail(wo['log_path'], lines)
+            
+            # Add timeline if requested
+            if query.get('timeline', ['0'])[0] == '1':
+                wo['timeline'] = self._build_wo_timeline(wo)
 
             self.send_json_response(wo)
         else:
             self.send_error(404, f"WO {wo_id} not found")
+
+    def _build_wo_timeline(self, wo):
+        """
+        Build a derived timeline for a work order from metadata and log tail.
+        
+        Extracts lifecycle events (created, started, finished) and notable
+        log markers (errors, state transitions) into a chronological timeline.
+        
+        Args:
+            wo (dict): Work order dictionary with metadata and optional log_tail
+        
+        Returns:
+            list: Timeline events sorted chronologically
+        """
+        events = []
+
+        def add_event(ts, event_type, label, **extra):
+            """Helper to add timeline event with validation"""
+            if not label:
+                return
+            event = {
+                'ts': ts,
+                'type': event_type,
+                'label': label
+            }
+            # Only add non-None extra fields
+            event.update({k: v for k, v in extra.items() if v is not None})
+            events.append(event)
+
+        # Lifecycle events from metadata
+        created_at = wo.get('created_at') or wo.get('id')
+        if created_at:
+            add_event(created_at, 'created', 'WO created')
+
+        if wo.get('started_at'):
+            add_event(wo['started_at'], 'started', 'Execution started')
+
+        finished_at = wo.get('finished_at') or wo.get('completed_at')
+        if finished_at:
+            add_event(
+                finished_at,
+                'finished',
+                'Execution finished',
+                status=wo.get('status')
+            )
+
+        # Extract events from log tail (if available)
+        log_tail = wo.get('log_tail')
+        if isinstance(log_tail, list):
+            for line in log_tail:
+                if not isinstance(line, str):
+                    continue
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                
+                # Safe preview (truncate to 200 chars)
+                preview = stripped[:200]
+                
+                # Error detection (case-insensitive)
+                if 'ERROR' in stripped.upper() or 'FAILED' in stripped.upper():
+                    add_event(None, 'error', preview)
+                # State transition detection
+                elif 'STATE:' in stripped or 'STATUS:' in stripped:
+                    add_event(None, 'state', preview)
+                # Warning detection
+                elif 'WARNING' in stripped.upper() or 'WARN' in stripped.upper():
+                    add_event(None, 'warning', preview)
+
+        # Sort events: events with timestamps first (chronologically), then events without timestamps
+        events.sort(key=lambda e: (e.get('ts') is None, e.get('ts') or ''))
+        return events
 
     def handle_list_services(self, query):
         """Handle GET /api/services - list all 02luka LaunchAgent services"""
