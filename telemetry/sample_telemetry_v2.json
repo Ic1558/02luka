@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "version": "2.0.0",
+    "repository": "02luka",
+    "component": "system-telemetry-aggregator",
+    "phase": "21.4",
+    "hostname": "ci-sim",
+    "git_commit": "abcdef1"
+  },
+  "timestamp": "2025-11-15T00:00:00Z",
+  "sources": {
+    "mcp_health": {
+      "status": "ok",
+      "timestamp": "2025-11-15T00:00:00Z",
+      "services": [
+        {
+          "name": "com.02luka.mcp.fs",
+          "state": "running",
+          "pid": 1234,
+          "last_exit_code": 0,
+          "error_logs": []
+        }
+      ]
+    },
+    "delegation_watchdog": {
+      "status": "ok",
+      "timestamp": "2025-11-15T00:00:00Z",
+      "agents": [
+        {
+          "name": "com.02luka.watchdog",
+          "state": "running",
+          "pid": 2222,
+          "last_exit_code": 0
+        }
+      ]
+    },
+    "bridge_selfcheck": {
+      "status": "ok",
+      "timestamp": "2025-11-15T00:00:00Z",
+      "components": [
+        {
+          "name": "bridge-local",
+          "status": "ok",
+          "latency_ms": 12,
+          "errors": []
+        }
+      ]
+    }
+  }
+}

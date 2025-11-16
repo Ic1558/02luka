@@ -1,0 +1,31 @@
+name: Workflow Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  workflow_lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install actionlint
+        run: |
+          mkdir -p ./bin
+          curl -sSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
+            | bash -s -- latest ./bin
+          ls -l ./bin
+
+      - name: Lint GitHub workflows
+        run: |
+          # Disable shellcheck integration for now because many legacy scripts
+          # intentionally rely on unquoted expansions.
+          ./bin/actionlint -color -shellcheck ''

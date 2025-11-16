@@ -84,6 +84,297 @@
       margin-bottom: 24px;
     }
 
+    .dashboard-nav {
+      display: flex;
+      gap: 12px;
+      margin: 0 0 24px 0;
+      flex-wrap: wrap;
+    }
+
+    .dashboard-nav a {
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #4a5568;
+      text-decoration: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+    }
+
+    .dashboard-nav a:hover,
+    .dashboard-nav a:focus {
+      background: #667eea;
+      color: white;
+      transform: translateY(-1px);
+    }
+
+    .panel-subtitle {
+      font-size: 13px;
+      color: #718096;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .filter-chip {
+      background: #f7fafc;
+      color: #2d3748;
+      border: 1px solid #e2e8f0;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-chip[data-active="true"] {
+      background: #667eea;
+      border-color: #667eea;
+      color: white;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+    }
+
+    .services-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .services-summary-card {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .services-summary-card .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #718096;
+      margin-bottom: 6px;
+    }
+
+    .services-summary-card .value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .services-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .services-filters .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .service-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .service-table th,
+    .service-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #edf2f7;
+      text-align: left;
+    }
+
+    .service-table th {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+    }
+
+    .table-placeholder {
+      text-align: center;
+      padding: 24px 0;
+      color: #a0aec0;
+      font-style: italic;
+    }
+
+    .service-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-running { background: #c6f6d5; color: #22543d; }
+    .badge-stopped { background: #edf2f7; color: #4a5568; }
+    .badge-failed { background: #fed7d7; color: #742a2a; }
+    .badge-unknown { background: #e2e8f0; color: #4a5568; }
+
+    .service-type-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f7fafc;
+      color: #2d3748;
+      border: 1px solid #e2e8f0;
+      text-transform: capitalize;
+    }
+
+    .panel-placeholder {
+      padding: 20px;
+      text-align: center;
+      color: #a0aec0;
+      font-style: italic;
+      background: #f7fafc;
+      border-radius: 8px;
+    }
+
+    .mls-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .mls-panel-body {
+      display: grid;
+      grid-template-columns: minmax(260px, 40%) minmax(260px, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .mls-panel-body {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mls-list {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .mls-row {
+      display: grid;
+      grid-template-columns: 120px 110px 1fr 60px;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: white;
+      border: 1px solid #edf2f7;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mls-row-tags {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .mls-row:hover,
+    .mls-row.is-active {
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    }
+
+    .mls-row-title {
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .mls-row-time,
+    .mls-row-type,
+    .mls-row-score {
+      font-size: 12px;
+      color: #718096;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .tag-chip {
+      background: #edf2f7;
+      color: #2d3748;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-chip.muted {
+      background: #f7fafc;
+      color: #a0aec0;
+    }
+
+    .mls-detail {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid #edf2f7;
+      min-height: 260px;
+    }
+
+    .mls-detail-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .mls-detail-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2d3748;
+      margin-bottom: 4px;
+    }
+
+    .mls-detail-meta {
+      font-size: 12px;
+      color: #718096;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .mls-detail-section {
+      margin-bottom: 16px;
+    }
+
+    .mls-detail-section h4 {
+      font-size: 13px;
+      text-transform: uppercase;
+      color: #a0aec0;
+      margin-bottom: 6px;
+    }
+
+    .mls-detail-section p {
+      font-size: 14px;
+      color: #2d3748;
+      line-height: 1.5;
+    }
+
+    .mls-detail-related {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      color: #4a5568;
+    }
+
     .panel {
       background: rgba(255, 255, 255, 0.95);
       border-radius: 12px;
@@ -494,6 +785,69 @@
       font-weight: 600;
     }
 
+    .wo-timeline-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .wo-timeline-item {
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7fafc;
+      border-left: 3px solid #cbd5e0;
+    }
+
+    .wo-timeline-meta {
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+      color: #718096;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+
+    .wo-timeline-type {
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: #4c51bf;
+    }
+
+    .wo-timeline-ts {
+      opacity: 0.8;
+    }
+
+    .wo-timeline-label {
+      font-size: 14px;
+      color: #2d3748;
+      line-height: 1.4;
+    }
+
+    .wo-timeline-status {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+      padding: 2px 8px;
+      background: #edf2f7;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #4a5568;
+    }
+
+    .wo-timeline-empty {
+      padding: 12px;
+      background: #f7fafc;
+      border-radius: 8px;
+      color: #718096;
+      font-size: 13px;
+    }
+
     .wo-drawer-field {
       background: #f7fafc;
       border-radius: 8px;
@@ -627,6 +981,12 @@
       <div class="subtitle">Real-time monitoring of all local agents and services</div>
     </div>
 
+    <nav class="dashboard-nav" aria-label="Dashboard sections">
+      <a href="#services-panel">Services</a>
+      <a href="#mls-panel">MLS Lessons</a>
+      <a href="timeline.html">WO Timeline</a>
+    </nav>
+
     <!-- Refresh Bar -->
     <div class="refresh-bar">
       <div class="refresh-info">
@@ -714,40 +1074,112 @@
         <div id="wo-detail" style="margin-top: 16px;"></div>
       </div>
 
-      <!-- Current Tasks & MLS -->
-      <div class="panel">
+      <!-- MLS Lessons -->
+      <div class="panel" id="mls-panel">
         <h2>📚 Machine Learning System (MLS)</h2>
-        <div style="margin-bottom: 20px;">
-          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #48bb78;" id="mls-total">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Total Lessons</div>
-            </div>
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #4299e1;" id="mls-solutions">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Solutions</div>
-            </div>
-            <div style="flex: 1; background: #f7fafc; padding: 12px; border-radius: 8px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #f56565;" id="mls-failures">-</div>
-              <div style="font-size: 11px; color: #718096; text-transform: uppercase;">Failures</div>
-            </div>
+        <div class="panel-subtitle">Lessons streamed directly from /api/mls</div>
+        <div class="mls-summary-grid">
+          <div class="services-summary-card">
+            <div class="label">Total</div>
+            <div class="value" id="mls-summary-total">-</div>
+          </div>
+          <div class="services-summary-card">
+            <div class="label">Solutions</div>
+            <div class="value" id="mls-summary-solution">-</div>
+          </div>
+          <div class="services-summary-card">
+            <div class="label">Failures</div>
+            <div class="value" id="mls-summary-failure">-</div>
+          </div>
+          <div class="services-summary-card">
+            <div class="label">Patterns</div>
+            <div class="value" id="mls-summary-pattern">-</div>
+          </div>
+          <div class="services-summary-card">
+            <div class="label">Improvements</div>
+            <div class="value" id="mls-summary-improvement">-</div>
           </div>
         </div>
-        <h3 style="font-size: 16px; font-weight: 600; color: #2d3748; margin-bottom: 12px; margin-top: 20px;">⚙️ Services Status</h3>
-        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-          <div style="flex: 1; background: #c6f6d5; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #22543d;" id="services-running">-</div>
-            <div style="font-size: 10px; color: #22543d;">Running</div>
+        <div class="services-filters" style="justify-content: space-between;">
+          <div class="filter-group">
+            <span style="font-size: 12px; text-transform: uppercase; color: #718096; font-weight: 600;">Type:</span>
+            <button class="filter-chip" data-mls-filter="all" data-active="true">All</button>
+            <button class="filter-chip" data-mls-filter="solution">Solutions</button>
+            <button class="filter-chip" data-mls-filter="failure">Failures</button>
+            <button class="filter-chip" data-mls-filter="pattern">Patterns</button>
+            <button class="filter-chip" data-mls-filter="improvement">Improvements</button>
           </div>
-          <div style="flex: 1; background: #bee3f8; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #2c5282;" id="services-ondemand">-</div>
-            <div style="font-size: 10px; color: #2c5282;">OnDemand</div>
+          <div class="panel-subtitle" id="mls-filter-summary" style="margin-bottom: 0;">Loading lessons...</div>
+        </div>
+        <div class="mls-panel-body">
+          <div class="mls-list" id="mls-list">
+            <div class="panel-placeholder">Loading lessons...</div>
           </div>
-          <div style="flex: 1; background: #e2e8f0; padding: 8px; border-radius: 6px; text-align: center;">
-            <div style="font-size: 18px; font-weight: 700; color: #4a5568;" id="services-stopped">-</div>
-            <div style="font-size: 10px; color: #4a5568;">Stopped</div>
+          <div class="mls-detail" id="mls-detail">
+            <div class="panel-placeholder">Select a lesson to view full context.</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Services Panel -->
+    <div class="panel" id="services-panel">
+      <h2>⚙️ LaunchAgent Services</h2>
+      <div class="panel-subtitle">Realtime data from /api/services</div>
+      <div class="services-summary-grid">
+        <div class="services-summary-card">
+          <div class="label">Total</div>
+          <div class="value" id="services-summary-total">-</div>
+        </div>
+        <div class="services-summary-card">
+          <div class="label">Running</div>
+          <div class="value" id="services-summary-running">-</div>
+        </div>
+        <div class="services-summary-card">
+          <div class="label">Stopped</div>
+          <div class="value" id="services-summary-stopped">-</div>
+        </div>
+        <div class="services-summary-card">
+          <div class="label">Failed</div>
+          <div class="value" id="services-summary-failed">-</div>
+        </div>
+      </div>
+      <div class="services-filters">
+        <div class="filter-group">
+          <span style="font-size: 12px; text-transform: uppercase; color: #718096; font-weight: 600;">Status:</span>
+          <button class="filter-chip" data-service-status="all" data-active="true">All</button>
+          <button class="filter-chip" data-service-status="running">Running</button>
+          <button class="filter-chip" data-service-status="stopped">Stopped</button>
+          <button class="filter-chip" data-service-status="failed">Failed</button>
+        </div>
+        <div class="filter-group">
+          <span style="font-size: 12px; text-transform: uppercase; color: #718096; font-weight: 600;">Type:</span>
+          <button class="filter-chip" data-service-type="all" data-active="true">All</button>
+          <button class="filter-chip" data-service-type="bridge">Bridge</button>
+          <button class="filter-chip" data-service-type="worker">Worker</button>
+          <button class="filter-chip" data-service-type="monitoring">Monitoring</button>
+          <button class="filter-chip" data-service-type="automation">Automation</button>
+          <button class="filter-chip" data-service-type="other">Other</button>
+        </div>
+      </div>
+      <div class="panel-subtitle" id="services-filter-summary">Loading services...</div>
+      <div style="overflow-x: auto;">
+        <table class="service-table" aria-label="Services table">
+          <thead>
+            <tr>
+              <th scope="col">Label</th>
+              <th scope="col">Type</th>
+              <th scope="col">Status</th>
+              <th scope="col">PID</th>
+              <th scope="col">Exit Code</th>
+            </tr>
+          </thead>
+          <tbody id="services-table-body">
+            <tr>
+              <td colspan="5" class="table-placeholder">Loading services...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
