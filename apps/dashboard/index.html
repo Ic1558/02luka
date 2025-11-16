@@ -452,6 +452,129 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
+      .modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+      }
+
+      .modal.hidden {
+        display: none;
+      }
+
+      .modal:not(.hidden) {
+        display: flex;
+      }
+
+      .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+      }
+
+      .modal-content {
+        position: relative;
+        max-width: 720px;
+        width: 100%;
+        background: #0b1120;
+        color: #e5e7eb;
+        border-radius: 0.75rem;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.7);
+        padding: 1rem 1.5rem 1.25rem;
+        z-index: 51;
+      }
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+
+      .modal-close {
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        font-size: 1.25rem;
+        cursor: pointer;
+      }
+
+      .wo-timeline-meta {
+        font-size: 0.85rem;
+        color: #9ca3af;
+        margin-bottom: 0.75rem;
+      }
+
+      .wo-timeline-events {
+        list-style: none;
+        padding-left: 0;
+        margin: 0 0 0.75rem 0;
+        border-left: 1px solid #1f2937;
+      }
+
+      .wo-timeline-events li {
+        position: relative;
+        padding-left: 1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .wo-timeline-events li::before {
+        content: '';
+        position: absolute;
+        left: -0.3rem;
+        top: 0.4rem;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        background: #4ade80;
+      }
+
+      .wo-timeline-events li.wo-event-error::before {
+        background: #f97373;
+      }
+
+      .wo-timeline-events time {
+        display: block;
+        font-size: 0.75rem;
+        color: #9ca3af;
+      }
+
+      .wo-event-detail {
+        font-size: 0.8rem;
+        color: rgba(226, 232, 240, 0.9);
+        margin-top: 0.15rem;
+      }
+
+      .wo-timeline-log {
+        margin-top: 0.25rem;
+      }
+
+      .wo-timeline-log pre {
+        max-height: 260px;
+        overflow: auto;
+        background: #020617;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+      }
+
+      .wo-timeline-button {
+        padding: 0.15rem 0.5rem;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        background: #020617;
+        color: #e5e7eb;
+        cursor: pointer;
+      }
+
+      .wo-timeline-button:hover {
+        background: #111827;
+      }
+
       footer {
         padding: 2rem;
         text-align: center;
@@ -716,6 +839,7 @@
                 <th>Agent</th>
                 <th>Type</th>
                 <th>Summary</th>
+                <th>Timeline</th>
               </tr>
             </thead>
             <tbody id="wo-history-body">
@@ -725,6 +849,23 @@
         </section>
       </section>
     </main>
+    <div id="wo-timeline-modal" class="modal hidden">
+      <div class="modal-backdrop" onclick="closeWoTimeline()"></div>
+      <div class="modal-content">
+        <header class="modal-header">
+          <h2 id="wo-timeline-title">WO Timeline</h2>
+          <button type="button" class="modal-close" onclick="closeWoTimeline()">×</button>
+        </header>
+        <section class="modal-body">
+          <div id="wo-timeline-meta" class="wo-timeline-meta"></div>
+          <ol id="wo-timeline-events" class="wo-timeline-events"></ol>
+          <details class="wo-timeline-log">
+            <summary>Raw log tail</summary>
+            <pre id="wo-timeline-log-tail"></pre>
+          </details>
+        </section>
+      </div>
+    </div>
     <footer>Last updated: November 2025 · 02LUKA operations suite</footer>
     <script src="dashboard.js"></script>
   </body>
