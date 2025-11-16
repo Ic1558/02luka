@@ -20,6 +20,8 @@ let currentWoStatusFilter = '';
 let woTimelineAll = [];
 let woTimelineFilterStatus = '';
 let woTimelineInitialized = false;
+let serviceData = [];
+let serviceAutoRefreshTimer = null;
 
 function formatBadgeLabel(text) {
   return String(text || '')
@@ -990,6 +992,133 @@ function renderWoHistory(wos, limit) {
   });
 }
 
+// === Service health panel ===
+
+function serviceStatusBadge(statusRaw) {
+  const label = formatBadgeLabel(statusRaw || 'unknown') || 'unknown';
+  const badge = makeBadge(label);
+  if (!badge) return null;
+
+  const status = label.toLowerCase();
+  badge.textContent = status;
+
+  if (status === 'running') {
+    badge.classList.add('badge-service-running');
+  } else if (status === 'failed') {
+    badge.classList.add('badge-service-failed');
+  } else if (status === 'stopped') {
+    badge.classList.add('badge-service-stopped');
+  }
+
+  return badge;
+}
+
+async function refreshServices(fromUser) {
+  try {
+    const res = await fetch('/api/services', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      console.error('Failed to load services', res.status);
+      if (fromUser) {
+        alert('Failed to load services status.');
+      }
+      return;
+    }
+    const payload = await res.json();
+    serviceData = Array.isArray(payload?.services) ? payload.services : [];
+    renderServiceTable(serviceData);
+  } catch (error) {
+    console.error('Error fetching services', error);
+    if (fromUser) {
+      alert('Error fetching services.');
+    }
+  }
+}
+
+function renderServiceTable(services) {
+  const tbody = document.getElementById('service-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!Array.isArray(services) || services.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 6;
+    td.textContent = 'No 02luka services found.';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  services.forEach((svc) => {
+    const tr = document.createElement('tr');
+
+    const tdLabel = document.createElement('td');
+    tdLabel.textContent = svc?.label || '-';
+    tr.appendChild(tdLabel);
+
+    const tdStatus = document.createElement('td');
+    const badge = serviceStatusBadge(svc?.status);
+    if (badge) {
+      tdStatus.appendChild(badge);
+    } else {
+      tdStatus.textContent = svc?.status || 'unknown';
+    }
+    tr.appendChild(tdStatus);
+
+    const tdType = document.createElement('td');
+    tdType.textContent = svc?.type || '-';
+    tr.appendChild(tdType);
+
+    const tdPid = document.createElement('td');
+    tdPid.textContent = svc?.pid != null ? String(svc.pid) : '-';
+    tr.appendChild(tdPid);
+
+    const tdExit = document.createElement('td');
+    tdExit.textContent = svc?.exit_code != null ? String(svc.exit_code) : '-';
+    tr.appendChild(tdExit);
+
+    const tdAction = document.createElement('td');
+    const btnLogs = document.createElement('button');
+    btnLogs.type = 'button';
+    btnLogs.textContent = 'Logs';
+    btnLogs.style.fontSize = '0.7rem';
+    btnLogs.addEventListener('click', () => {
+      openServiceLogs();
+    });
+    tdAction.appendChild(btnLogs);
+    tr.appendChild(tdAction);
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function openServiceLogs() {
+  try {
+    const res = await fetch('/api/health/logs?lines=200', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      alert('Failed to load health logs.');
+      return;
+    }
+    const data = await res.json();
+    const lines = Array.isArray(data?.lines) ? data.lines : [];
+    const text = lines.join('\n');
+
+    const w = window.open('', 'health-logs');
+    if (w) {
+      w.document.write('<pre style="font-size:11px; white-space:pre-wrap; margin:0;">');
+      w.document.write(escapeHtml(text));
+      w.document.write('</pre>');
+      w.document.close();
+    } else {
+      alert(text.slice(0, 2000) || 'No log data available.');
+    }
+  } catch (error) {
+    console.error('Error loading health logs', error);
+    alert('Error loading health logs.');
+  }
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) {
     return '';
@@ -1646,6 +1775,11 @@ function cleanupIntervals() {
     servicesIntervalId = null;
   }
 
+  if (serviceAutoRefreshTimer) {
+    clearInterval(serviceAutoRefreshTimer);
+    serviceAutoRefreshTimer = null;
+  }
+
   if (woTimelineIntervalId) {
     clearInterval(woTimelineIntervalId);
     woTimelineIntervalId = null;
@@ -1658,6 +1792,20 @@ function cleanupIntervals() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const serviceRefreshBtn = document.getElementById('service-refresh');
+  if (serviceRefreshBtn) {
+    serviceRefreshBtn.addEventListener('click', () => {
+      refreshServices(true);
+    });
+  }
+
+  refreshServices(false);
+  if (!serviceAutoRefreshTimer) {
+    serviceAutoRefreshTimer = setInterval(() => {
+      refreshServices(false);
+    }, 60000);
+  }
+
   initSummaryCards();
   initDashboard();
   initWoTimelinePanel();
