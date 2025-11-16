@@ -9,7 +9,7 @@ workflows.
 
 ## Files
 
-- `apps/dashboard/api_server.py`
+- `g/apps/dashboard/api_server.py`
   - Adds `GET /api/reality/snapshot`:
     - Locates latest `reality_hooks_snapshot_*.json` under
       `g/reports/system/`.
@@ -18,21 +18,21 @@ workflows.
       - `status: "error"` if snapshot is invalid.
       - `status: "ok"`, `snapshot_path`, and `data` when successful.
 
-- `apps/dashboard/index.html`
-  - New `Reality` tab (`#tab-reality`).
-  - New `#view-reality` section with:
+- `apps/dashboard/index.html` **and** `g/apps/dashboard/index.html`
+  - New `Reality` tab / nav link (`#tab-reality` / `#reality-panel`).
+  - New Reality section with:
     - Metadata block: `#reality-meta`
     - Deployment panel: `#reality-deployment`
     - save.sh runs table: `#reality-save-body`
     - Orchestrator panel: `#reality-orchestrator`
 
-- `apps/dashboard/dashboard.js`
+- `apps/dashboard/dashboard.js` **and** `g/apps/dashboard/dashboard.js`
   - Adds:
     - `loadRealitySnapshot()`
-    - `renderRealitySnapshot(payload)`
-    - `renderRealityError(msg)`
+    - `renderRealitySnapshot(payload)` (plus error handling in the g/ variant)
   - Hooks:
-    - `tab-reality` → shows `view-reality` and triggers `loadRealitySnapshot()`.
+    - `tab-reality` → shows `view-reality` and triggers `loadRealitySnapshot()` in the static dashboard.
+    - `refreshAllData()` now pulls the snapshot inside the g/ dashboard to keep data current.
 
 ## Behavior
 
