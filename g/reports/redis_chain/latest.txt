@@ -1,0 +1,10 @@
+# 02LUKA Redis Chain Status  (2025-11-06 00:03:10)\n✅ Reachable · PING=PONG\n• shell: 1\n• gg:nlp: 1\n• com.02luka.gg.nlp-bridge → running\n• homebrew.mxcl.redis → running\n  "timeout_sec": 3600
+}
+gg-nlp:1762359399-26344
+ACK: intent 'backup.now' → task_id=Dispatch → shell: {
+  "task_id": "gg-nlp:1762359399-26344",
+  "type": "shell",
+  "cmd": "$HOME/02luka/tools/backup_to_gdrive.zsh --once",
+  "timeout_sec": 3600
+}
+gg-nlp:1762359399-26344\n• /Users/icmini/02luka/tools/backup_to_gdrive.zsh … OK\n• /Users/icmini/02luka/tools/gg_nlp_bridge.zsh … OK\n→ sent shell task_id=diag:1762362190-26160\n  (watch with: redis-cli --raw PSUBSCRIBE shell:response:diag:1762362190-26160)\n\nDone.

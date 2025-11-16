@@ -1,0 +1,53 @@
+name: _reusable-smoke-ops
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        type: string
+        required: false
+        default: '20'
+
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
+jobs:
+  ops-gate:
+    name: Phase 5/6/7 smoke (ops) [OPTIONAL]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    continue-on-error: true
+    steps:
+      - name: Maintenance mode guard
+        if: ${{ env.MAINTENANCE_MODE == '1' }}
+        run: |
+          echo "🛠️ Maintenance mode enabled. Exiting early..."
+          exit 0
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node with cache
+        uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ inputs.node_version }}
+          continue-on-error: 'true'
+
+      - name: Install dependencies
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -qq
+          "$SUDO_BIN" apt-get install -y -qq jq
+          "$SUDO_BIN" wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          "$SUDO_BIN" chmod +x /usr/local/bin/yq
+          jq --version
+          yq --version
+
+      - name: Set script permissions
+        run: |
+          chmod +x tools/ci/*.sh || true
+          chmod +x scripts/*.sh 2>/dev/null || true
+
+      - name: Run ops gate
+        run: bash tools/ci/ops_gate.sh

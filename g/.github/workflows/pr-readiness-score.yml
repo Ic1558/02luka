@@ -1,0 +1,109 @@
+---
+name: PR Readiness Score
+run-name: "PR Score (#${{ github.event.pull_request.number || inputs.pr_number || 'manual' }}): ${{ github.event_name }}"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+    # Note: No 'branches:' filter = scores PRs targeting ANY branch
+    # (main, develop, feature/*, release/*, hotfix/*, etc.)
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to score (for manual runs)'
+        required: false
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-score-${{ github.event.pull_request.number || inputs.pr_number || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  score:
+    name: Compute PR readiness score
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only run on PR events or workflow_dispatch with PR context
+    # Skip draft PRs - they're not ready for scoring yet
+    if: |
+      (github.event_name == 'pull_request' || 
+       github.event_name == 'pull_request_target' || 
+       github.event_name == 'workflow_dispatch') &&
+      github.event.pull_request.draft != true
+    outputs:
+      score: ${{ steps.compute.outputs.score }}
+      label: ${{ steps.compute.outputs.label }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          # Sparse checkout - only fetch what we need
+          sparse-checkout: |
+            .github/workflows
+            config
+            tools
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Check PR context
+        id: check-pr-context
+        run: |
+          # Check if we have PR context (either from event or workflow_dispatch input)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PR_NUMBER="${{ inputs.pr_number }}"
+            if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" = "null" ]; then
+              echo "⚠️  workflow_dispatch triggered without PR context (pr_number not provided)"
+              echo "ℹ️  This workflow requires PR context to compute readiness score"
+              echo "ℹ️  Exiting gracefully (not a failure)"
+              echo "has_pr_context=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            else
+              echo "✅ PR context found: PR #$PR_NUMBER"
+              echo "has_pr_context=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # pull_request or pull_request_target event - PR context is available
+            echo "✅ PR context available from event: PR #${{ github.event.pull_request.number }}"
+            echo "has_pr_context=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: |
+          steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+          !github.event.pull_request.head.repo.fork
+        run: npm ci --omit=dev --prefer-offline --no-audit
+
+      - name: Skip scoring for forked PR
+        if: |
+          steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+          github.event.pull_request.head.repo.fork
+        run: |
+          echo "::notice ::Skipping readiness scoring for forked PRs (read-only token permissions)"
+          echo "score=N/A" >> $GITHUB_OUTPUT
+          echo "label=fork" >> $GITHUB_OUTPUT
+
+      - name: Compute readiness score and comment
+        id: compute
+        if: |
+          steps.check-pr-context.outputs.has_pr_context == 'true' &&
+          (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') &&
+          !github.event.pull_request.head.repo.fork
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node tools/pr_score.mjs

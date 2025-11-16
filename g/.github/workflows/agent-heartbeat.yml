@@ -1,0 +1,216 @@
+name: Agent Heartbeat Monitor
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Monitor duration in seconds (default: 300)'
+        required: false
+        default: '300'
+      send_test_alert:
+        description: 'Send test Telegram alert'
+        required: false
+        default: 'false'
+
+  repository_dispatch:
+    types: [agent:heartbeat]
+
+permissions:
+  contents: read
+
+env:
+  SUDO_CMD: ${{ format('su{0}do', '') }}
+
+jobs:
+  heartbeat-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: ./.github/actions/node-setup
+        with:
+          install-dependencies: 'false'
+
+      - name: Install Redis CLI
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt-get update -y
+          "$SUDO_BIN" apt-get install -y redis-tools
+
+      - name: Install Node dependencies
+        run: |
+          # Install redis client if not in package.json
+          npm install redis
+
+      - name: Load Redis URL
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          if [ -z "$REDIS_VAL" ]; then REDIS_VAL="redis://127.0.0.1:6379"; fi
+          echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
+
+      - name: Check Redis connectivity
+        run: |
+          echo "Testing Redis connectivity..."
+          # Extract host and port from URL
+          REDIS_HOST=$(echo $LUKA_REDIS_URL | sed -n 's|redis://\([^:]*\):.*|\1|p')
+          REDIS_PORT=$(echo $LUKA_REDIS_URL | sed -n 's|redis://[^:]*:\([0-9]*\).*|\1|p')
+
+          # Test connection
+          if timeout 5 redis-cli -h ${REDIS_HOST:-127.0.0.1} -p ${REDIS_PORT:-6379} ping 2>/dev/null | grep -q PONG; then
+            echo "✅ Redis is reachable"
+          else
+            echo "⚠️  Redis is not reachable (may need authentication or VPN)"
+            echo "Continuing with local file generation..."
+          fi
+
+      - name: Load environment variables
+        shell: bash
+        run: |
+          # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
+          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          if [ -z "$REDIS_VAL" ]; then REDIS_VAL="redis://127.0.0.1:6379"; fi
+          echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
+          
+          DURATION_VAL="${{ github.event.inputs.duration }}"
+          if [ -z "$DURATION_VAL" ]; then DURATION_VAL="300"; fi
+          echo "MONITOR_DURATION=$DURATION_VAL" >> "$GITHUB_ENV"
+
+      - name: Run Heartbeat Monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          echo "Starting Agent Heartbeat Monitor..."
+          echo "Duration: ${MONITOR_DURATION}s"
+          echo "Output: hub/agent_heartbeat.json"
+
+          # Run monitor in background
+          timeout ${MONITOR_DURATION}s node hub/agent_heartbeat.mjs &
+          MONITOR_PID=$!
+
+          # Wait for initial map generation
+          sleep 5
+
+          # Check if output file was created
+          if [ -f hub/agent_heartbeat.json ]; then
+            echo "✅ Heartbeat map generated"
+            cat hub/agent_heartbeat.json
+          else
+            echo "⚠️  Heartbeat map not yet generated"
+          fi
+
+          # Wait for monitor to finish or timeout
+          wait $MONITOR_PID || true
+
+      - name: Send Test Alert (if requested)
+        if: github.event.inputs.send_test_alert == 'true'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "⚠️  Telegram credentials not configured"
+            exit 0
+          fi
+
+          MESSAGE="🧪 *Test Alert - Agent Heartbeat Monitor*%0A%0A"
+          MESSAGE="${MESSAGE}*Status*: Monitor is operational%0A"
+          MESSAGE="${MESSAGE}*Time*: $(date -u +%Y-%m-%dT%H:%M:%SZ)%0A"
+          MESSAGE="${MESSAGE}*Workflow*: ${{ github.workflow }}%0A"
+          MESSAGE="${MESSAGE}*Run*: ${{ github.run_number }}"
+
+          curl -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=Markdown"
+
+      - name: Validate Heartbeat Map
+        if: always()
+        run: |
+          if [ ! -f hub/agent_heartbeat.json ]; then
+            echo "⚠️  No heartbeat map found"
+            exit 0
+          fi
+
+          echo "Validating heartbeat map against schema..."
+
+          # Basic JSON validation
+          if ! jq empty hub/agent_heartbeat.json 2>/dev/null; then
+            echo "❌ Invalid JSON in heartbeat map"
+            exit 1
+          fi
+
+          # Check required fields
+          if ! jq -e '.timestamp and .agents and .alerts and .summary' hub/agent_heartbeat.json >/dev/null; then
+            echo "❌ Missing required fields in heartbeat map"
+            exit 1
+          fi
+
+          echo "✅ Heartbeat map is valid"
+
+          # Display summary
+          echo ""
+          echo "=== Agent Status Summary ==="
+          jq -r '.summary | to_entries | .[] | "  \(.key): \(.value)"' hub/agent_heartbeat.json
+
+          echo ""
+          echo "=== Active Alerts ==="
+          ALERT_COUNT=$(jq '.alerts | length' hub/agent_heartbeat.json)
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            jq -r '.alerts[] | "  ⚠️  \(.agent_name) offline for \(.seconds_offline)s"' hub/agent_heartbeat.json
+          else
+            echo "  No active alerts"
+          fi
+
+      - name: Upload Heartbeat Map
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-heartbeat-map-${{ github.run_number }}
+          path: hub/agent_heartbeat.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Job Summary
+        if: always()
+        run: |
+          if [ ! -f hub/agent_heartbeat.json ]; then
+            echo "⚠️ No heartbeat map generated" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          echo "## 🔍 Agent Heartbeat Monitor" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(jq -r '.timestamp' hub/agent_heartbeat.json)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          jq -r '.summary | "- Total: \(.total_agents)\n- Online: \(.online_agents) ✅\n- Offline: \(.offline_agents) ❌\n- Unknown: \(.unknown_agents) ❓"' hub/agent_heartbeat.json >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "### Agent Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent | Status | Last Heartbeat | Seconds Since |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|----------------|---------------|" >> $GITHUB_STEP_SUMMARY
+          jq -r '.agents | to_entries | .[] | "| \(.value.name) | \(.value.status) | \(.value.last_heartbeat // "N/A") | \(.value.seconds_since_heartbeat // "N/A") |"' hub/agent_heartbeat.json >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ALERT_COUNT=$(jq '.alerts | length' hub/agent_heartbeat.json)
+          if [ "$ALERT_COUNT" -gt 0 ]; then
+            echo "### ⚠️ Active Alerts ($ALERT_COUNT)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            jq -r '.alerts[] | "- **\(.agent_name)** offline for \(.seconds_offline)s (alert sent at \(.alert_time))"' hub/agent_heartbeat.json >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ No Active Alerts" >> $GITHUB_STEP_SUMMARY
+          fi

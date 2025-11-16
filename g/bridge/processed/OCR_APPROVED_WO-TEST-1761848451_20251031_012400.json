@@ -1,0 +1,9 @@
+{
+  "wo_id": "WO-TEST-1761848451",
+  "action": "publish",
+  "approved_by": "Boss",
+  "approved_at": "2025-10-31T01:20:51+0700",
+  "files": [
+    {"path": "/Users/icmini/02luka/tmp/doc1.txt", "sha256": "72bb504a78af4221e882ae247820700f129ee8355827788ad6b6621c6c35f420"}
+  ]
+}

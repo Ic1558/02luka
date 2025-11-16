@@ -1,0 +1,34 @@
+📊 Redis Chain Status
+══════════════════════════════════════
+
+Latest Report:
+# 02LUKA Redis Chain Status  (2025-11-06 00:03:10)
+✅ Reachable · PING=PONG
+• shell: 1
+• gg:nlp: 1
+• com.02luka.gg.nlp-bridge → running
+• homebrew.mxcl.redis → running
+  "timeout_sec": 3600
+}
+gg-nlp:1762359399-26344
+ACK: intent 'backup.now' → task_id=Dispatch → shell: {
+  "task_id": "gg-nlp:1762359399-26344",
+  "type": "shell",
+  "cmd": "$HOME/02luka/tools/backup_to_gdrive.zsh --once",
+  "timeout_sec": 3600
+}
+gg-nlp:1762359399-26344
+• /Users/icmini/02luka/tools/backup_to_gdrive.zsh … OK
+• /Users/icmini/02luka/tools/gg_nlp_bridge.zsh … OK
+→ sent shell task_id=diag:1762362190-26160
+  (watch with: redis-cli --raw PSUBSCRIBE shell:response:diag:1762362190-26160)
+
+Done.
+
+══════════════════════════════════════
+Report age: 2025-11-06 00:03:10
+
+Commands:
+  • Run check now:  ~/02luka/tools/redis_chain_status.zsh
+  • View report:    cat ~/02luka/g/reports/redis_chain/latest.txt
+  • LaunchAgent:    launchctl list | grep redis_chain

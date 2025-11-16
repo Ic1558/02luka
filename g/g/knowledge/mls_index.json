@@ -1,0 +1,10 @@
+{
+  "total": 27,
+  "by_type": {
+    "solution": 22,
+    "pattern": 1,
+    "failure": 2,
+    "improvement": 2
+  },
+  "last_updated": "2025-11-05T21:23:24+07:00"
+}

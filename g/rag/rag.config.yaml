@@ -1,0 +1,18 @@
+sources:
+  - path: ~/02luka/memory
+  - path: ~/02luka/g/reports
+  - path: ~/02luka/docs
+  - path: ~/02luka/manuals
+exclude_globs:
+  - "**/*.venv/**"
+  - "**/.git/**"
+  - "**/*.log"
+  - "**/*.tmp"
+  - "**/node_modules/**"
+index_dir: ~/02luka/g/rag/store
+db_path:   ~/02luka/g/rag/store/fts.db
+chunks:
+  size: 1200
+  overlap: 200
+reranker:  bge-reranker-v2-m3
+top_k: 8

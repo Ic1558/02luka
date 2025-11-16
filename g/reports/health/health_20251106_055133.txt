@@ -1,0 +1,43 @@
+
+=== 02luka System Health Check ===
+Time: 2025-11-06T05:51:33+0700
+
+📦 Core Services:
+Checking Scanner LaunchAgent... [0;32m✓[0m
+Checking Autopilot LaunchAgent... [0;32m✓[0m
+Checking WO Executor LaunchAgent... [0;32m✓[0m
+Checking JSON WO Processor... [0;32m✓[0m
+
+🤖 AI Services:
+Checking Ollama installed... [0;32m✓[0m
+Checking Ollama model available... [0;32m✓[0m
+Checking Ollama inference test... [0;32m✓[0m
+
+📊 Applications:
+Checking Dashboard files exist... [0;32m✓[0m
+Checking Dashboard data valid... [0;32m✓[0m
+
+🗂️ Data Integrity:
+Checking Expense ledger exists... [0;32m✓[0m
+Checking Expense ledger valid JSON... [0;32m✓[0m
+Checking MLS lessons exist... [0;32m✓[0m
+Checking Roadmap exists... [0;32m✓[0m
+
+🔧 Tools:
+Checking Categorization script... [0;32m✓[0m
+Checking Agent status tool... [0;32m✓[0m
+Checking Scanner tool... [0;32m✓[0m
+
+💾 Storage:
+Checking Main disk space >10GB... [0;32m✓[0m
+Checking Lukadata mounted... [0;32m✓[0m
+Checking Lukadata space >50GB... [0;32m✓[0m
+
+=== Summary ===
+Total checks: 19
+Passed: [0;32m19[0m
+Failed: [0;31m0[0m
+Success rate: 100%
+
+Report saved: /Users/icmini/02luka/g/reports/health/health_20251106.json
+[0;32m✅ All systems operational[0m

@@ -1,0 +1,1 @@
+/Users/icmini/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka/g/tools/missing_script_generator.sh

@@ -1,0 +1,5 @@
+title: "Cursor E2E One-Liner"
+priority: "P3"
+tags: ["cursor","cls"]
+body: |
+  End-to-end one-liner test.

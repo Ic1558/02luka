@@ -1,0 +1,14 @@
+{
+  "generated_at": "2025-11-07T20:32:06Z",
+  "created_by": "GG_Agent_02luka",
+  "source_script": "tools/generate_context_summary.zsh",
+  "revision": "bf119ef",
+  "outputs": {
+    "md": "/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.md",
+    "json": "/Users/icmini/LocalProjects/02luka-memory/GG/context/context_summary_20251107_203206Z.json"
+  },
+  "signals": {
+    "hub": "running",
+    "redis": "failed"
+  }
+}

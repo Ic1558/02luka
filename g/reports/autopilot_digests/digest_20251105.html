@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autopilot Daily Digest</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: #58a6ff; margin-bottom: 0.5rem; }
+    h2 { color: #79c0ff; margin: 2rem 0 1rem; font-size: 1.5rem; border-bottom: 1px solid #30363d; padding-bottom: 0.5rem; }
+    .meta { color: #8b949e; margin-bottom: 2rem; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 1.5rem;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #58a6ff;
+    }
+    .stat-label {
+      color: #8b949e;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+    .stat-card.approved .stat-value { color: #3fb950; }
+    .stat-card.escalated .stat-value { color: #d29922; }
+    .stat-card.errors .stat-value { color: #f85149; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #30363d;
+    }
+    th {
+      background: #0d1117;
+      color: #58a6ff;
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: #1c2128; }
+    .pending-list {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .pending-item {
+      padding: 0.5rem;
+      border-left: 3px solid #d29922;
+      margin-bottom: 0.5rem;
+      background: #1c2128;
+    }
+    .pending-item:last-child { margin-bottom: 0; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge.approved { background: #1f6f2e; color: #3fb950; }
+    .badge.escalated { background: #6c4a00; color: #d29922; }
+    .badge.error { background: #6e1e1e; color: #f85149; }
+    .footer {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid #30363d;
+      color: #8b949e;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🤖 Autopilot Daily Digest</h1>
+    <div class="meta">Generated: 2025-11-05 09:00:02</div>
+
+    <h2>📊 24-Hour Summary</h2>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value">8</div>
+        <div class="stat-label">Cycles Run</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">13</div>
+        <div class="stat-label">WOs Processed</div>
+      </div>
+      <div class="stat-card approved">
+        <div class="stat-value">2</div>
+        <div class="stat-label">Auto-Approved</div>
+      </div>
+      <div class="stat-card escalated">
+        <div class="stat-value">11</div>
+        <div class="stat-label">Escalated</div>
+      </div>
+      <div class="stat-card errors">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Errors</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">$0</div>
+        <div class="stat-label">Cost (7d)</div>
+      </div>
+    </div>
+
+    <h2>⏳ Pending Manual Review (10)</h2>
+    <div class="pending-list"><div class='pending-item'><strong>expense_slips:WO-EXPENSE_OCR-1762301325-test_slip.jpg</strong> • Op: expense_ocr • Priority: P3</div><div class='pending-item'><strong>acct_docs:WO-INVOICE_DRAFT-1762219185-quo2.txt</strong> • Op: invoice_draft • Priority: P3</div><div class='pending-item'><strong>WO-PM_ROLLUP-1762218672-foo.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>WO-PM_ROLLUP-1762218857-foo.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>WO-PM_ROLLUP-1762218857-foo2.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>WO-PM_ROLLUP-1762218986-foo2.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>WO-PM_ROLLUP-1762218986-foo3.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>notes_rollup:WO-PM_ROLLUP-1762219175-foo2.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>notes_rollup:WO-PM_ROLLUP-1762219175-foo3.md</strong> • Op: pm_rollup • Priority: P3</div><div class='pending-item'><strong>notes_rollup:WO-PM_ROLLUP-1762219185-foo4.md</strong> • Op: pm_rollup • Priority: P3</div></div>
+
+    <h2>📝 Recent Decisions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>WO ID</th>
+          <th>Decision</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>2025-11-05T08:58:12+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:58:12+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:53:59+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:53:59+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:38:58+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:38:58+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:23:58+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:23:58+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:08:57+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr><tr><td>2025-11-05T08:08:57+0700</td><td>N/A</td><td>N/A</td><td>-</td></tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <p>Autopilot Digest • Generated by 02LUKA Autonomous Systems</p>
+      <p>Manual approval: <code>~/02luka/tools/approve_wo.zsh &lt;WO-ID&gt;</code></p>
+    </div>
+  </div>
+</body>
+</html>

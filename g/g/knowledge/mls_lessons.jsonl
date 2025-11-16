@@ -1,0 +1,351 @@
+{
+  "id": "MLS-1762282996",
+  "type": "solution",
+  "title": "Two-Phase GD Sync Deployment",
+  "description": "Breaking GD sync into 2 phases (fresh sync + two-way upgrade) worked perfectly. Phase 1 establishes baseline, Phase 2 adds mobile access without risk.",
+  "context": "89GB archive + 21MB sync + conflict resolution system. Automated via CLC autopilot with comprehensive safety checks.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:03:16+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762283023",
+  "type": "pattern",
+  "title": "Archive with README Pattern",
+  "description": "When archiving large files (89GB diagnostics), always create README explaining: what they are, why so large, cleanup options (keep/compress/delete), and 60-day review reminder.",
+  "context": "Implemented in WO-251105-gdrive_fresh_start_hybrid.zsh. Creates auto-generated README with file manifest and calendar reminder.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:03:43+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762283044",
+  "type": "failure",
+  "title": "Direct Complex Merge Approach",
+  "description": "Attempted to merge 89GB local + 6.5GB GD folders with completely different structures. Too complex, high risk of data loss.",
+  "context": "Chose fresh start instead: archive old data, sync clean 21MB. Lesson: When structures diverge significantly, prefer clean slate over complex merge.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:04:04+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762283055",
+  "type": "solution",
+  "title": "Automatic Conflict Resolution Strategy",
+  "description": "Two-way sync conflicts resolved by keeping newer version (by timestamp). Both versions saved to sync_conflicts_* directory with .LOCAL and .REMOTE extensions for manual review.",
+  "context": "Handles 99% of conflicts automatically while preserving ability to manually review edge cases. Implemented in resolve_gdrive_conflicts.zsh",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:04:15+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762283240",
+  "type": "improvement",
+  "title": "Real-Time Monitoring Dashboard",
+  "description": "Created live HTML dashboard for monitoring 41 services, WO progress, activity feed, and logs. Auto-refreshes every 30s. Provides immediate visibility into system health.",
+  "context": "Running at http://127.0.0.1:8766 with beautiful gradient UI, color-coded status, and smooth animations. Complements existing CLI tools.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:07:20+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762284184",
+  "type": "failure",
+  "title": "Confusing R&D Autopilot with WO Executor",
+  "description": "R&D autopilot approves WO requests (JSON in outbox/RD), but there's no executor for WO scripts (.zsh in inbox/LLM). I kept 'delegating' to imaginary CLC autopilot that doesn't exist.",
+  "context": "6+ hours wasted. R&D autopilot ran every 15min saying 'No WOs found' while 3 WO .zsh files sat idle in LLM inbox. Need WO executor agent.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:23:04+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762284547",
+  "type": "solution",
+  "title": "Execute Directly Instead of Fake Delegation",
+  "description": "Stopped delegating to imaginary CLC autopilot. Executed WO scripts directly, verified results, fixed LaunchAgent conflicts. GD sync now operational with two-way sync every 4h.",
+  "context": "18MB synced to GD. LaunchAgent: com.02luka.sync.gdrive.4h running. Script: backup_to_gdrive.zsh with conflict resolution. No more waiting for systems that don't exist.",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:29:07+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762284678",
+  "type": "solution",
+  "title": "WO-251105-test_executor succeeded",
+  "description": "#!/usr/bin/env zsh Test WO for WO Executor Simple script to verify executor works correctly ",
+  "context": "Actions: - ✅ Test 1: Basic execution;- ✅ Test 2: Environment check;- ✅ Test 3: File operations;- ✅ Test 4: Disk space check;- Completed: 2025-11-05 02:31:17;",
+  "related_wo": "WO-251105-test_executor.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:31:18+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762284716",
+  "type": "solution",
+  "title": "WO-251105-test_auto_pickup succeeded",
+  "description": "#!/usr/bin/env zsh Test WO for automatic pickup by WO Executor LaunchAgent ",
+  "context": "Actions: - ✅ LaunchAgent successfully detected and executed this WO;- Completed: 2025-11-05 02:31:56;",
+  "related_wo": "WO-251105-test_auto_pickup.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:31:56+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762284774",
+  "type": "solution",
+  "title": "WO Executor Agent Built and Operational",
+  "description": "Created missing WO Executor to execute .zsh scripts from bridge/inbox/LLM. Tested with 2 WOs, both executed successfully. LaunchAgent auto-pickup via WatchPaths working perfectly (<1s latency).",
+  "context": "Agent: ~/02luka/agents/wo_executor/wo_executor.zsh | LaunchAgent: com.02luka.wo_executor (PID running) | Safety: disk guards, circuit breaker, timeouts | Integration: MLS auto-capture, execution logs, WO archival | Status: OPERATIONAL",
+  "related_wo": "none",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:32:54+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762285802",
+  "type": "improvement",
+  "title": "Multi-Session Progress Tracking System",
+  "description": "Created roadmap tracker, progress JSON, show_progress tool, and integrated with daily scanner. Now every session starts with 'WHERE WE ARE' context and roadmap progress is visible in daily digest.",
+  "context": "Files: g/roadmaps/ROADMAP_*.md, g/progress/current_progress.json, tools/show_progress.zsh | Integrated: CLAUDE_MEMORY_SYSTEM.md handoff section, local_truth_scan.zsh shows roadmap in TODO | Status: OPERATIONAL",
+  "related_wo": "none",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T02:50:02+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762294960",
+  "type": "solution",
+  "title": "WO-251105-gdrive_dryrun succeeded",
+  "description": "#!/usr/bin/env zsh DRY-RUN: Hybrid GD Sync Test (NO CHANGES MADE) ",
+  "context": "Actions: - ✅ Phase 1: Archive Diagnostics;- ✅ Phase 2: Rename Old GD Folder;- ✅ Phase 3: Install Backup Script;- ✅ Phase 4: Install LaunchAgent;- ✅ Phase 5: Initial Sync;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T05:22:40+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762294963",
+  "type": "solution",
+  "title": "WO-251105-gdrive_fresh_start_hybrid succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Google Drive Fresh Start Hybrid Sync REAL EXECUTION - Makes actual changes ",
+  "context": "Actions: -   ✅ Backup script created and made executable;-   ✅ LaunchAgent plist created;-   ✅ Initial sync complete;-   ✅ LaunchAgent loaded and enabled;-   ✅ Verification: LaunchAgent is running;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T05:22:43+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762294970",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (19M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_052243;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251104_083810.md",
+  "timestamp": "2025-11-05T05:22:50+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762302809",
+  "type": "solution",
+  "title": "Chain Status Monitoring Tool",
+  "description": "Created chain_status.zsh to monitor message bus workflows. Shows active chains, archived chains with duration/age, statistics, and detailed chain history. Supports watch mode for continuous monitoring.",
+  "context": "Tool location: ~/02luka/tools/chain_status.zsh | Commands: active, archived [n], detail <id>, stats, watch | Tested with real archived chain showing 1m 49s duration and 4 steps | Part of Phase 5 Week 1 implementation",
+  "related_wo": "none",
+  "related_session": "session_20251105_three_phase_completion.md",
+  "timestamp": "2025-11-05T07:33:29+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762303730",
+  "type": "solution",
+  "title": "Redis Chain Status Monitor Deployed",
+  "description": "Created redis_chain_status.zsh to monitor Redis pub/sub chains (gg:nlp, shell). Runs every 5 min via LaunchAgent. Tracks subscribers, LaunchAgent states, bridge logs, and publishes test messages. Helper tool redis_status.zsh for quick viewing.",
+  "context": "Main: ~/02luka/tools/redis_chain_status.zsh | Helper: ~/02luka/tools/redis_status.zsh | Reports: ~/02luka/g/reports/redis_chain/latest.txt | LaunchAgent: com.02luka.redis_chain_status | Verified: Redis PONG, 2 gg:nlp subscribers, critical files OK | Issue: 0 shell subscribers (Terminalhandler setup needed)",
+  "related_wo": "none",
+  "related_session": "session_20251105_phase5_week1_implementation.md",
+  "timestamp": "2025-11-05T07:48:50+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762305557",
+  "type": "solution",
+  "title": "WO-251105-rag_stack succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105-rag_stack.zsh Goal: Install LightRAG-compatible RAG Stack for 02LUKA AI agents ",
+  "context": "Actions: - Completed: 2025-11-05 08:19:17;",
+  "related_wo": "WO-251105-rag_stack.zsh",
+  "related_session": "session_20251105_phase5_week1_implementation.md",
+  "timestamp": "2025-11-05T08:19:17+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762306878",
+  "type": "solution",
+  "title": "RAG Stack All-in-One Installation",
+  "description": "Successfully deployed complete RAG (Retrieval-Augmented Generation) stack in 3 minutes. Installed FastAPI server (port 8765), sentence-transformers 3.0.1 with PyTorch 2.9.0, SQLite FTS5 indexer, and OpenAI client. Indexed 2,392 chunks from 239 files covering ~/02luka/memory, reports, docs, and manuals. Configured LaunchAgents for API service (KeepAlive) and hourly auto-refresh. Semantic search working excellently - found MLS pill-count report when searching 'browser cache refresh testing'. System ready for Kim agent integration.",
+  "context": "Work Order: ~/WO-251105_RAG_STACK.zsh | API: http://127.0.0.1:8765 | Stats: 2392 chunks, 239 files | Services: com.02luka.rag.api (PID 28658), com.02luka.rag.autosync | Report: g/reports/RAG_STACK_INSTALL_REPORT.md | Install Log: logs/rag_install_20251105_083232.log (18K) | Performance: <50ms API response, ~150MB memory | Next: Add OpenAI API key, integrate with MLS UI chat widget",
+  "related_wo": "none",
+  "related_session": "session_20251105_phase5_week1_implementation.md",
+  "timestamp": "2025-11-05T08:41:18+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762307195",
+  "type": "solution",
+  "title": "RAG Stack Configured with Moonshot AI Kimi K2",
+  "description": "Updated RAG system to use Moonshot AI Kimi K2 Free API instead of OpenAI. Configured credentials in ~/.config/02luka/rag.env with base URL https://api.moonshot.cn/v1. Restarted API service (new PID 34317), refreshed index to 2,403 chunks from 240 files. Tested semantic search successfully - query 'MLS pill count browser cache testing' correctly found MLS_PILL_COUNT_TEST_REPORT.md. System ready for Kim agent integration using Kimi models (moonshot-v1-8k, v1-32k, v1-128k).",
+  "context": "Config: ~/.config/02luka/rag.env | API: http://127.0.0.1:8765 (PID 34317) | Stats: 2403 chunks, 240 files | Base URL: https://api.moonshot.cn/v1 | Models: moonshot-v1-8k (recommended), v1-32k, v1-128k | Quick Ref: g/reports/RAG_KIMI_QUICK_REFERENCE.md | Test passed: Semantic search working | Next: Integrate with Kim agent for knowledge-augmented responses",
+  "related_wo": "none",
+  "related_session": "session_20251105_phase5_week1_implementation.md",
+  "timestamp": "2025-11-05T08:46:35+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762307901",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (19M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_085812;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_phase5_week1_implementation.md",
+  "timestamp": "2025-11-05T08:58:21+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762309376",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (35M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_092244;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T09:22:56+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762323785",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (35M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_132253;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T13:23:05+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762338194",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (56M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_172303;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T17:23:14+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762345986",
+  "type": "solution",
+  "title": "KeepAlive False Prevents Subscriber Restart",
+  "description": "Redis pub/sub subscribers need KeepAlive: true in LaunchAgent plist to stay running. If KeepAlive: false, the process exits and doesn't restart, causing 0 subscribers on channels.",
+  "context": "Fixed com.02luka.gg.nlp-bridge by changing KeepAlive from false to true. After reload, gg:nlp channel went from 0 → 1 subscriber. Same pattern applies to all long-running subscribers (shell_subscriber also has KeepAlive: true).",
+  "related_wo": "none",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T19:33:06+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762345990",
+  "type": "solution",
+  "title": "Redis Chain Status Monitoring Deployment",
+  "description": "Created automated Redis pub/sub monitoring system to track channel health (gg:nlp, shell). Runs every 5 min via LaunchAgent, checks subscribers, LaunchAgent states, bridge logs, and publishes test messages.",
+  "context": "Files: redis_chain_status.zsh (main tool), redis_status.zsh (quick viewer), com.02luka.redis_chain_status.plist (LaunchAgent). Reports saved to ~/02luka/g/reports/redis_chain/latest.txt. Provides visibility into Redis infrastructure health.",
+  "related_wo": "none",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T19:33:10+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762345995",
+  "type": "solution",
+  "title": "Shell Subscriber for Redis Pub/Sub Commands",
+  "description": "Created shell_subscriber.zsh to process commands from Redis 'shell' channel. Parses JSON messages with jq, executes commands, sends results to reply channels. Enables remote command execution via Redis pub/sub.",
+  "context": "Deployed as LaunchAgent with KeepAlive: true and ThrottleInterval: 30s. Successfully processing test messages (visible in logs). Pattern: Subscribe → Parse JSON → Execute → Publish result. Critical for multi-agent command chains.",
+  "related_wo": "none",
+  "related_session": "session_20251105_090551.md",
+  "timestamp": "2025-11-05T19:33:15+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762352604",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (77M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251105_212312;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_redis_chain_deployment_complete.md",
+  "timestamp": "2025-11-05T21:23:24+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}

@@ -1,0 +1,10 @@
+# 02LUKA Redis Chain Status  (2025-11-05 09:32:08)\n✅ Reachable · PING=PONG\n• shell: 2\n• gg:nlp: 0\n⚠️  No subscriber on 'gg:nlp' (bridge?)\n• com.02luka.gg.nlp-bridge → spawn scheduled\n• homebrew.mxcl.redis → running\nawk: illegal statement at source line 7
+awk: illegal statement at source line 7
+WARN: intent 'backup.now' not whitelisted
+WARN: intent 'backup.now' not whitelisted
+== [gg_nlp_bridge] start PID=59675 ==
+== [gg_nlp_bridge] start PID=59675 ==
+== [gg_nlp_bridge] start PID=61526 ==
+== [gg_nlp_bridge] start PID=61526 ==
+== [gg_nlp_bridge] start PID=62308 ==
+== [gg_nlp_bridge] start PID=62308 ==\n• /Users/icmini/02luka/tools/backup_to_gdrive.zsh … OK\n• /Users/icmini/02luka/tools/gg_nlp_bridge.zsh … OK\n→ sent shell task_id=diag:1762309928-3417\n  (watch with: redis-cli --raw PSUBSCRIBE shell:response:diag:1762309928-3417)\n\nDone.

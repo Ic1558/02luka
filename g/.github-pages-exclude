@@ -1,0 +1,16 @@
+# Exclude dynamic files from GitHub Pages deployment
+g/metrics/
+g/logs/
+g/telemetry/
+*.pid
+*.log
+.DS_Store
+node_modules/
+scripts/
+.vscode/
+.devcontainer/
+g/legacy_parent/
+__pycache__/
+*.pyc
+.git/
+.github/

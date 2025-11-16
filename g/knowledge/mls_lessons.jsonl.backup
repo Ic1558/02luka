@@ -1,0 +1,34 @@
+{
+  "id": "MLS-1762360771",
+  "type": "solution",
+  "title": "CLS Identity Missing in Cursor",
+  "description": "User showed GitHub screenshot with CLS folder existing (commit 'feat: CLS learning system' from last week), but Cursor didn't recognize 'you are cls' command. CLS.md file didn't exist locally because Git remote was not configured.",
+  "context": "1. Found GitHub repo: github.com/Ic1558/02luka with CLS content on main branch
+2. Checked out main in ~/dev/02luka-repo (already had SSH remote configured)
+3. Copied CLS/ folder (20 docs, templates) to ~/02luka/CLS/
+4. Created CLS.md at ~/02luka/ root with comprehensive identity documentation
+5. Created .cursor/commands/cls.md for slash command
+6. Configured Git remote for ~/02luka → git@github.com:Ic1558/02luka.git
+7. Committed all changes with descriptive message
+8. Files: CLS.md (5.9KB), CLS/ folder (142KB), .cursor/commands/cls.md (1.3KB)
+Result: Cursor can now recognize CLS identity when user types 'you are cls'",
+  "related_wo": "none",
+  "related_session": "session_20251105_redis_chain_deployment_complete.md",
+  "timestamp": "2025-11-05T23:39:31+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1762367016",
+  "type": "solution",
+  "title": "WO-251105-gdrive_twoway_sync_mobile succeeded",
+  "description": "#!/usr/bin/env zsh WO-251105: Two-Way GD Sync + Mobile Access Setup DEPENDS ON: WO-251105-gdrive_fresh_start_hybrid.zsh (must complete first) ",
+  "context": "Actions: - ✅ Initial sync found: /Users/icmini/gd/02luka_sync/current (99M);- ✅ Created: /Users/icmini/02luka/tools/resolve_gdrive_conflicts.zsh;- ✅ Backed up one-way script to: /Users/icmini/02luka/tools/backup_to_gdrive.zsh.oneway.backup.20251106_012324;- ✅ Updated backup script to two-way sync;- ✅ Created: /Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md;",
+  "related_wo": "WO-251105-gdrive_twoway_sync_mobile.zsh",
+  "related_session": "session_20251105_redis_chain_deployment_complete.md",
+  "timestamp": "2025-11-06T01:23:36+07:00",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}

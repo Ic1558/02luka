@@ -1,0 +1,111 @@
+{
+  "active_items": [
+    {
+      "id": "FOLLOWUP-001",
+      "priority": 1,
+      "title": "Dashboard API + MLS Data Fixes",
+      "status": "delegated",
+      "handler": "local_agents",
+      "date_added": "2025-11-06T05:45:00+07:00",
+      "complexity": "high",
+      "tasks": [
+        {
+          "task_id": "1.1",
+          "description": "Fix Dashboard API port 8770 conflict",
+          "status": "pending",
+          "estimated_minutes": 15,
+          "blocking": false
+        },
+        {
+          "task_id": "1.2",
+          "description": "Fix MLS JSONL format (multi-line JSON → proper JSONL)",
+          "status": "pending",
+          "estimated_minutes": 15,
+          "blocking": true,
+          "blocks": [
+            "1.3"
+          ]
+        },
+        {
+          "task_id": "1.3",
+          "description": "Re-run RAG federation after MLS fix",
+          "status": "blocked",
+          "estimated_minutes": 5,
+          "blocking": false,
+          "blocked_by": [
+            "1.2"
+          ]
+        }
+      ],
+      "related_reports": [
+        "reports/SYSTEM_STATUS_LIVE_VS_STALE_20251106.md"
+      ],
+      "success_criteria": [
+        "Dashboard API running on port 8770",
+        "Dashboard showing live data",
+        "MLS JSONL validates as proper JSONL",
+        "RAG database contains 34+ MLS entries"
+      ]
+    },
+    {
+      "id": "FOLLOWUP-002",
+      "priority": 2,
+      "title": "GitHub PR Cleanup",
+      "status": "pending",
+      "handler": "clc",
+      "date_added": "2025-11-06T05:45:00+07:00",
+      "complexity": "low",
+      "tasks": [
+        {
+          "task_id": "2.1",
+          "description": "Close old webhook PRs #123-129 (merge conflict failures)",
+          "status": "pending",
+          "estimated_minutes": 5,
+          "blocking": false
+        },
+        {
+          "task_id": "2.2",
+          "description": "Investigate PR #164 validation failure",
+          "status": "pending",
+          "estimated_minutes": 10,
+          "blocking": false
+        }
+      ],
+      "related_reports": [],
+      "success_criteria": [
+        "Old PRs closed with explanation",
+        "PR #164 fixed or documented"
+      ]
+    }
+  ],
+  "completed_items": [
+    {
+      "id": "COMPLETE-001",
+      "priority": 2,
+      "title": "Expense OCR Integration",
+      "status": "completed",
+      "handler": "clc",
+      "date_added": "2025-11-06T01:00:00+07:00",
+      "date_completed": "2025-11-06T05:30:00+07:00",
+      "completion_report": "reports/WO-251106-EXPENSE-OCR-COMPLETE.md"
+    },
+    {
+      "id": "COMPLETE-002",
+      "priority": 0,
+      "title": "Phase 14.1 RAG Federation",
+      "status": "completed",
+      "handler": "clc",
+      "date_added": "2025-11-06T00:00:00+07:00",
+      "date_completed": "2025-11-06T05:00:00+07:00",
+      "git_commit": "9554030"
+    }
+  ],
+  "metadata": {
+    "last_updated": "2025-11-06T05:47:35+0700",
+    "total_active": 2,
+    "total_completed": 2,
+    "total_tasks_pending": 4,
+    "total_tasks_blocked": 1,
+    "system_health": "85%"
+  }
+}

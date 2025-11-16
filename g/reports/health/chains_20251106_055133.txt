@@ -1,0 +1,4 @@
+[0;34m=== Active Workflow Chains ===[0m
+
+[0;32m✓ No active chains (all clear)[0m
+
