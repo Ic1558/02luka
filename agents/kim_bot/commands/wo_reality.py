@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 from textwrap import dedent
 from typing import Any, Dict
 
-import requests
+import httpx
 
 DASHBOARD_BASE = os.getenv("DASHBOARD_BASE_URL", "http://localhost:8080")
 
@@ -80,8 +79,11 @@ async def handle_wo_reality(wo_id: str) -> str:
 
     url = f"{DASHBOARD_BASE}/api/wos/{wo_id}/insights"
     try:
-        resp = await asyncio.to_thread(requests.get, url, timeout=5)
-    except Exception as exc:  # pragma: no cover - network defensive
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(url)
+    except httpx.TimeoutException as exc:  # pragma: no cover - network defensive
+        return f"❗ ดึงข้อมูล WO ไม่ได้: timeout {exc}"
+    except httpx.RequestError as exc:  # pragma: no cover - network defensive
         return f"❗ ดึงข้อมูล WO ไม่ได้: {exc}"
 
     if resp.status_code == 404:
