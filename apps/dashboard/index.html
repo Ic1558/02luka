@@ -746,6 +746,24 @@
         color: #7f1d1d;
       }
 
+      .badge-service-running {
+        background: #ecfdf3;
+        border-color: #16a34a;
+        color: #065f46;
+      }
+
+      .badge-service-stopped {
+        background: #f9fafb;
+        border-color: #9ca3af;
+        color: #4b5563;
+      }
+
+      .badge-service-failed {
+        background: #fef2f2;
+        border-color: #dc2626;
+        color: #7f1d1d;
+      }
+
       .wo-detail-section {
         margin-top: 1rem;
         border-top: 1px solid #e5e7eb;
@@ -914,6 +932,48 @@
         flex-direction: column;
         font-size: 0.875rem;
         color: rgba(226, 232, 240, 0.8);
+      }
+
+      /* Service health panel */
+      #service-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      #service-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      #service-refresh {
+        font-size: 0.75rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        background: #f9fafb;
+        cursor: pointer;
+      }
+
+      #service-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+
+      #service-table th,
+      #service-table td {
+        padding: 0.25rem 0.4rem;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      #service-table th:last-child,
+      #service-table td:last-child {
+        text-align: right;
       }
 
       .modal {
@@ -1097,6 +1157,28 @@
           <div class="summary-card-foot">Updated: —</div>
         </div>
       </div>
+
+      <!-- Agent Services / LaunchAgent health -->
+      <section class="panel" id="service-panel">
+        <div id="service-panel-header">
+          <h2>Agent Services</h2>
+          <button id="service-refresh" type="button">Refresh</button>
+        </div>
+
+        <table id="service-table">
+          <thead>
+            <tr>
+              <th>Label</th>
+              <th>Status</th>
+              <th>Type</th>
+              <th>PID</th>
+              <th>Exit</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="service-table-body"><!-- populated by dashboard.js --></tbody>
+        </table>
+      </section>
 
       <section id="overview-panel" class="panel">
         <h2>Overview</h2>
