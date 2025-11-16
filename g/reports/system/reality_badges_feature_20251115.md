@@ -29,6 +29,9 @@ behavior. They are derived from the latest
       ```
     - Advisory is read from `g/reports/system/reality_hooks_advisory_latest.md`
       if present; otherwise defaults to `"unknown"`.
+    - Snapshot + advisory lookups now target `g/reports/system/` (the
+      aggregator output directory) so the API can always find the newest
+      Reality Hooks artifacts.
 
 - `apps/dashboard/index.html`
   - Adds badges to Reality header:

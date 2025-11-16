@@ -19,6 +19,7 @@ ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+REPORTS_SYSTEM = ROOT / "g" / "reports" / "system"
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -574,7 +575,7 @@ class APIHandler(BaseHTTPRequestHandler):
             "orchestrator": {"status": "unknown"},
         }
 
-        latest = LOGS / "reality_hooks_advisory_latest.md"
+        latest = REPORTS_SYSTEM / "reality_hooks_advisory_latest.md"
         if not latest.exists():
             return advisory
 
@@ -602,7 +603,7 @@ class APIHandler(BaseHTTPRequestHandler):
         """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
         include_advisory = query.get('advisory', ['0'])[0] == '1'
         try:
-            pattern = str(LOGS.parent / "reality_hooks_snapshot_*.json")
+            pattern = str(REPORTS_SYSTEM / "reality_hooks_snapshot_*.json")
             snapshot_files = glob.glob(pattern)
 
             if not snapshot_files:
