@@ -105,6 +105,58 @@
         font-size: 1.5rem;
       }
 
+      /* Summary cards */
+      #summary-cards {
+        margin-bottom: 1.25rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.75rem;
+      }
+
+      .summary-card {
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        padding: 0.75rem 0.9rem;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .summary-card-title {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #6b7280;
+      }
+
+      .summary-card-main {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #111827;
+      }
+
+      .summary-card-sub {
+        font-size: 0.8rem;
+        color: #4b5563;
+      }
+
+      .summary-card-foot {
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #9ca3af;
+      }
+
+      .summary-card-badge {
+        display: inline-block;
+        padding: 0.1rem 0.45rem;
+        font-size: 0.7rem;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #4b5563;
+        margin-left: 0.25rem;
+      }
+
       .summary-bar {
         padding: 0.75rem 1rem;
         border-radius: 14px;
@@ -920,6 +972,24 @@
       </ul>
     </header>
     <main>
+      <div id="summary-cards">
+        <div class="summary-card" id="summary-wos">
+          <div class="summary-card-title">Work Orders</div>
+          <div class="summary-card-main">—</div>
+          <div class="summary-card-sub">loading…</div>
+        </div>
+        <div class="summary-card" id="summary-services">
+          <div class="summary-card-title">Services</div>
+          <div class="summary-card-main">—</div>
+          <div class="summary-card-sub">loading…</div>
+        </div>
+        <div class="summary-card" id="summary-mls">
+          <div class="summary-card-title">MLS Lessons</div>
+          <div class="summary-card-main">—</div>
+          <div class="summary-card-sub">loading…</div>
+        </div>
+      </div>
+
       <section id="overview-panel" class="panel">
         <h2>Overview</h2>
         <p>
