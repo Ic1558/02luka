@@ -21,6 +21,55 @@ let woTimelineAll = [];
 let woTimelineFilterStatus = '';
 let woTimelineInitialized = false;
 
+function formatBadgeLabel(text) {
+  return String(text || '')
+    .trim()
+    .replace(/_/g, ' ');
+}
+
+function makeBadge(text, extraClass = '') {
+  const label = formatBadgeLabel(text);
+  if (!label) return null;
+  const span = document.createElement('span');
+  span.className = ['badge', extraClass].filter(Boolean).join(' ').trim();
+  span.textContent = label;
+  return span;
+}
+
+function woStatusBadge(statusRaw) {
+  const raw = formatBadgeLabel(statusRaw);
+  if (!raw) return null;
+  const status = raw.toLowerCase();
+
+  if (status === 'failed' || status === 'error') {
+    return makeBadge(raw, 'badge-wo badge-wo-failed');
+  }
+
+  if (['done', 'completed', 'success'].includes(status)) {
+    return makeBadge(raw, 'badge-wo badge-wo-done');
+  }
+
+  if (['pending', 'running', 'in progress', 'in-progress', 'in_progress', 'active', 'queued'].includes(status)) {
+    return makeBadge(raw, 'badge-wo badge-wo-active');
+  }
+
+  return makeBadge(raw, 'badge-wo');
+}
+
+function mlsTypeBadge(typeRaw) {
+  const raw = formatBadgeLabel(typeRaw);
+  if (!raw) return null;
+  const type = raw.toLowerCase();
+
+  if (type === 'solution') {
+    return makeBadge('solution', 'badge-mls badge-mls-solution');
+  }
+  if (type === 'failure') {
+    return makeBadge('failure', 'badge-mls badge-mls-failure');
+  }
+  return makeBadge(raw, 'badge-mls');
+}
+
 function normalizeWoTimelineEntry(rawWo = {}) {
   const id = rawWo.id || rawWo.wo_id || 'UNKNOWN';
   const normalizedStatus = normalizeWoTimelineStatus(rawWo.status);
@@ -447,6 +496,16 @@ function renderMlsItem(entry) {
 
   const typeClass = getMlsTypeClass(type);
   const typeLabel = type.toUpperCase();
+  const typeBadge = mlsTypeBadge(type);
+  if (typeBadge) {
+    typeBadge.classList.add('mls-item-type');
+    if (typeClass) {
+      typeBadge.classList.add(typeClass);
+    }
+  }
+  const typeBadgeHtml = typeBadge
+    ? typeBadge.outerHTML
+    : `<span class="mls-item-type ${typeClass}">${escapeHtml(typeLabel)}</span>`;
 
   const metaParts = [];
   if (time) metaParts.push(`time: ${time}`);
@@ -460,7 +519,7 @@ function renderMlsItem(entry) {
     <div class="mls-item" data-mls-id="${escapeHtml(id)}">
       <div class="mls-item-header">
         <span class="mls-item-title">${escapeHtml(title)}</span>
-        <span class="mls-item-type ${typeClass}">${escapeHtml(typeLabel)}</span>
+        ${typeBadgeHtml}
       </div>
       ${metaText ? `<div class="mls-item-meta">${escapeHtml(metaText)}</div>` : ''}
       ${details ? `<div class="mls-item-meta">${escapeHtml(details)}</div>` : ''}
@@ -720,16 +779,12 @@ function renderWosTable(wos) {
     tr.appendChild(idCell);
 
     const statusCell = document.createElement('td');
-    const statusChip = document.createElement('span');
-    const norm = normalizeWoStatus(wo?.status);
-    let chipClass = 'wo-status-other';
-    if (norm === 'pending') chipClass = 'wo-status-pending';
-    else if (norm === 'running') chipClass = 'wo-status-running';
-    else if (norm === 'completed') chipClass = 'wo-status-completed';
-    else if (norm === 'failed') chipClass = 'wo-status-failed';
-    statusChip.className = `wo-status-chip ${chipClass}`;
-    statusChip.textContent = wo?.status || norm;
-    statusCell.appendChild(statusChip);
+    const statusBadge = woStatusBadge(wo?.status);
+    if (statusBadge) {
+      statusCell.appendChild(statusBadge);
+    } else {
+      statusCell.textContent = wo?.status || '—';
+    }
     tr.appendChild(statusCell);
 
     tr.appendChild(createTextCell(formatWoTimestamp(wo?.started_at || wo?.created_at)));
@@ -903,11 +958,16 @@ function renderWoHistory(wos, limit) {
     const agent = wo?.agent || wo?.worker || '';
     const type = wo?.type || '';
     const summary = wo?.summary || wo?.description || '';
+    const statusBadge = woStatusBadge(status);
+    if (statusBadge) {
+      statusBadge.classList.add('wo-history-status');
+    }
+    const statusHtml = statusBadge ? statusBadge.outerHTML : escapeHtml(status || '—');
 
     tr.innerHTML = `
       <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
       <td>${escapeHtml(started)}</td>
-      <td>${escapeHtml(status)}</td>
+      <td>${statusHtml}</td>
       <td>${escapeHtml(agent)}</td>
       <td>${escapeHtml(type)}</td>
       <td>${escapeHtml(summary)}</td>
@@ -1507,12 +1567,19 @@ function renderWoTimelineItem(entry) {
   const statusClass = getTimelineStatusClass(entry.status);
   const statusLabel = (entry.status || 'unknown').toUpperCase();
   const timelineMarkup = buildTimelineSegmentsMarkup(entry);
+  const statusBadge = woStatusBadge(entry.status);
+  if (statusBadge) {
+    statusBadge.classList.add('wo-timeline-status');
+  }
+  const statusHtml = statusBadge
+    ? statusBadge.outerHTML
+    : `<span class="wo-timeline-status ${statusClass}">${statusLabel}</span>`;
 
   return `
     <article class="wo-timeline-item" data-wo-id="${escapeHtml(entry.id)}">
       <div class="wo-timeline-row">
         <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
-        <span class="wo-timeline-status ${statusClass}">${statusLabel}</span>
+        ${statusHtml}
       </div>
       <div class="wo-timeline-when">${timelineMarkup}</div>
       <div class="wo-timeline-actions">
