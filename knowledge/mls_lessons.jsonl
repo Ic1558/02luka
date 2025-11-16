@@ -349,3 +349,12 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-OPS-LAUNCHAGENT-VALIDATE-20251117",
+  "type": "solution",
+  "title": "LaunchAgent validation pipeline deployed",
+  "description": "Added validate_launchagents.zsh to scan all com.02luka.* LaunchAgents for path, KeepAlive, and runtime status, with markdown+JSON reports under g/reports/system/launchagents.",
+  "tags": ["ops", "launchagent", "monitoring"],
+  "verified": false,
+  "usefulness_score": 8
+}
