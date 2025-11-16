@@ -191,14 +191,14 @@ cmd_list() {
     for worker_id in $(get_worker_ids); do
         local level=$(verify_worker "$worker_id")
         local entrypoint=$(get_worker_entrypoint "$worker_id")
-        local status="OK"
+        local worker_status="OK"
         local icon="✅"
         
         if [ "$level" = "L0" ]; then
-            status="BROKEN"
+            worker_status="BROKEN"
             icon="❌"
         elif [ "$level" = "L1" ]; then
-            status="BROKEN"
+            worker_status="BROKEN"
             icon="⚠️"
         fi
         
@@ -236,7 +236,7 @@ PYEOF
         
         printf "%-20s %-10s %-6s %-20s %-40s %s\n" \
             "$worker_id" \
-            "$status" \
+            "$worker_status" \
             "$level" \
             "-" \
             "${launchagent_label:-none}" \
