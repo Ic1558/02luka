@@ -60,8 +60,10 @@ jobs:
     steps:
       - name: Check for bot command
         id: check
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          COMMENT="${{ github.event.comment.body }}"
+          COMMENT="$COMMENT_BODY"
           SHOULD_RUN="false"
           MODE="report"
           ONLY_FAILING="false"

@@ -13,6 +13,11 @@ on:
         required: false
         default: '0'
         type: string
+      stuck_threshold_hours:
+        description: 'Bridge stuck threshold in hours'
+        required: false
+        default: '24'
+        type: string
 
 permissions:
   contents: write

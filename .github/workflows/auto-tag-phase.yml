@@ -26,8 +26,9 @@ jobs:
 
       - name: Extract phase number from PR title
         id: extract
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
           echo "PR Title: $PR_TITLE"
 
           # Extract phase number (e.g., "Phase 12.4" -> "12.4")
@@ -56,11 +57,12 @@ jobs:
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false'
+        env:
+          PR_NUM: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           TAG_NAME="${{ steps.extract.outputs.tag_name }}"
           PHASE_NUM="${{ steps.extract.outputs.phase_number }}"
-          PR_NUM="${{ github.event.pull_request.number }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
 
           git config user.name "github-actions[bot]"
@@ -84,15 +86,15 @@ jobs:
         if: steps.check_tag.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          MERGED_AT: ${{ github.event.pull_request.merged_at }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          REPO: ${{ github.repository }}
         run: |
           TAG_NAME="${{ steps.extract.outputs.tag_name }}"
           PHASE_NUM="${{ steps.extract.outputs.phase_number }}"
-          PR_NUM="${{ github.event.pull_request.number }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
-          MERGED_BY="${{ github.event.pull_request.merged_by.login }}"
-          MERGED_AT="${{ github.event.pull_request.merged_at }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
-          REPO="${{ github.repository }}"
 
           # Create release body with proper variable expansion
           cat > /tmp/release-body.md <<EOF
