@@ -132,23 +132,10 @@ const state = {
     fetchController: null
   },
   services: {
-    data: null,           // full payload from /api/services
-    summary: null,        // { total, running, stopped, failed }
-    list: [],             // individual services
+    data: null,           // { running, ondemand, stopped, total }
     loading: false,
     error: null,
-    fetchController: null,
-    filterStatus: 'all',  // 'all'|'running'|'stopped'|'failed'
-    filterType: 'all'     // 'all'|'bridge'|'worker'|'monitoring'|'automation'|'other'
-  },
-  mlsLessons: {
-    entries: [],          // lessons from /api/mls
-    summary: null,        // aggregate counts
-    loading: false,
-    error: null,
-    fetchController: null,
-    filter: 'all',        // 'all'|'solution'|'failure'|'pattern'|'improvement'
-    selectedId: null
+    fetchController: null
   },
   // View scope and filters (Phase 2 - Interactive KPI Cards)
   viewScope: 'wo',        // 'wo' | 'mls' | 'services'
@@ -159,15 +146,12 @@ const state = {
   logRefreshInterval: null
 };
 
-const WO_LOG_TAIL_LINES = 200;
-
 // --- TELEMETRY & METRICS ---
 const metrics = {
   wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   logs: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   roadmap: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
-  mls: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
+  services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
 };
 
 // Timed fetch wrapper with metrics tracking
@@ -228,7 +212,7 @@ function updateHealthPill() {
   const pill = document.getElementById('health-pill');
   if (!pill) return;
 
-  const sections = ['wos', 'logs', 'roadmap', 'services', 'mls'];
+  const sections = ['wos', 'logs', 'roadmap', 'services'];
   const allHealthy = sections.every(isHealthy);
   const anyDegraded = sections.some(name => metrics[name].consecutiveErrors > 0 && metrics[name].consecutiveErrors < 3);
   const anyDown = sections.some(name => metrics[name].consecutiveErrors >= 3);
@@ -435,112 +419,6 @@ function updateKPICardsUI() {
 
   // Show/hide clear filter badge
   renderFilterBadge();
-}
-
-// --- SERVICES PANEL CONTROLS ---
-function initServicePanelControls() {
-  const statusButtons = document.querySelectorAll('[data-service-status]');
-  const typeButtons = document.querySelectorAll('[data-service-type]');
-
-  statusButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const next = btn.getAttribute('data-service-status') || 'all';
-      if (state.services.filterStatus === next) return;
-      state.services.filterStatus = next;
-      renderServices();
-    });
-  });
-
-  typeButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const next = btn.getAttribute('data-service-type') || 'all';
-      if (state.services.filterType === next) return;
-      state.services.filterType = next;
-      renderServices();
-    });
-  });
-
-  updateServiceFilterUI();
-}
-
-function updateServiceFilterUI() {
-  document.querySelectorAll('[data-service-status]').forEach(btn => {
-    const isActive = btn.getAttribute('data-service-status') === state.services.filterStatus;
-    btn.setAttribute('data-active', isActive ? 'true' : 'false');
-  });
-
-  document.querySelectorAll('[data-service-type]').forEach(btn => {
-    const isActive = btn.getAttribute('data-service-type') === state.services.filterType;
-    btn.setAttribute('data-active', isActive ? 'true' : 'false');
-  });
-}
-
-function getFilteredServices() {
-  if (!Array.isArray(state.services.list)) return [];
-
-  return state.services.list.filter(service => {
-    const matchesStatus = state.services.filterStatus === 'all'
-      || service.status === state.services.filterStatus;
-    const matchesType = state.services.filterType === 'all'
-      || (service.type || 'other') === state.services.filterType;
-    return matchesStatus && matchesType;
-  });
-}
-
-function formatServiceStatus(status) {
-  const normalized = status || 'unknown';
-  const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  return `<span class="service-status badge-${normalized}">${label}</span>`;
-}
-
-function formatServiceType(type) {
-  const normalized = type || 'other';
-  const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
-  return `<span class="service-type-chip type-${normalized}">${label}</span>`;
-}
-
-// --- MLS PANEL CONTROLS ---
-function initMLSLessonsPanel() {
-  const filterButtons = document.querySelectorAll('[data-mls-filter]');
-
-  filterButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const next = btn.getAttribute('data-mls-filter') || 'all';
-      if (state.mlsLessons.filter === next) return;
-      state.mlsLessons.filter = next;
-      renderMLS();
-    });
-  });
-
-  updateMLSFilterUI();
-}
-
-function updateMLSFilterUI() {
-  document.querySelectorAll('[data-mls-filter]').forEach(btn => {
-    const isActive = btn.getAttribute('data-mls-filter') === state.mlsLessons.filter;
-    btn.setAttribute('data-active', isActive ? 'true' : 'false');
-  });
-}
-
-function formatMLSType(type) {
-  const labels = {
-    solution: 'Solution',
-    failure: 'Failure',
-    pattern: 'Pattern',
-    improvement: 'Improvement'
-  };
-  const normalized = type || 'other';
-  return labels[normalized] || normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function formatMLSTime(timestamp) {
-  if (!timestamp) return 'Unknown time';
-  try {
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  } catch (err) {
-    return timestamp;
-  }
 }
 
 // Small utility: debounce to avoid double/rapid clicks
@@ -836,7 +714,7 @@ async function openWODrawer(woId) {
 
   // Fetch and display WO details
   try {
-    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=${WO_LOG_TAIL_LINES}&timeline=1`);
+    const wo = await safeFetch(`http://127.0.0.1:8767/api/wos/${woId}?tail=100`);
 
     // Update header
     titleEl.textContent = wo.id || 'Work Order';
@@ -945,8 +823,6 @@ function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
       ` : ''}
     </div>
 
-    ${renderTimelineSection(wo.timeline)}
-
     ${(wo.script_path || wo.log_path) ? `
       <div class="wo-drawer-section">
         <h3>📁 File Paths</h3>
@@ -965,72 +841,6 @@ function renderSummaryTab(wo, statusBadgeClass, duration, exitCodeColor) {
       </div>
     ` : ''}
   `;
-}
-
-function renderTimelineSection(timelineEvents) {
-  const events = Array.isArray(timelineEvents) ? timelineEvents : [];
-
-  if (!events.length) {
-    return `
-      <div class="wo-drawer-section">
-        <h3>🧭 Timeline</h3>
-        <div class="wo-timeline-empty">No timeline data available.</div>
-      </div>
-    `;
-  }
-
-  const items = events.map((event) => {
-    const rawType = (event?.type || 'event').toString();
-    const typeLabel = rawType.charAt(0).toUpperCase() + rawType.slice(1);
-    const typeClass = rawType.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const timestamp = formatTimelineTimestamp(event?.ts);
-    const label = escapeHtml(event?.label || rawType);
-    const statusMeta = event?.status ? `<span class="wo-timeline-status">${escapeHtml(event.status)}</span>` : '';
-
-    return `
-      <li class="wo-timeline-item wo-timeline-${typeClass}">
-        <div class="wo-timeline-dot"></div>
-        <div class="wo-timeline-body">
-          <div class="wo-timeline-header">
-            <span class="wo-timeline-type">${escapeHtml(typeLabel)}</span>
-            ${timestamp ? `<span class="wo-timeline-ts">${escapeHtml(timestamp)}</span>` : ''}
-          </div>
-          <div class="wo-timeline-label">${label}</div>
-          ${statusMeta ? `<div class="wo-timeline-meta">${statusMeta}</div>` : ''}
-        </div>
-      </li>
-    `;
-  }).join('');
-
-  return `
-    <div class="wo-drawer-section">
-      <h3>🧭 Timeline</h3>
-      <ol class="wo-timeline">
-        ${items}
-      </ol>
-    </div>
-  `;
-}
-
-function formatTimelineTimestamp(value) {
-  if (value === null || value === undefined) {
-    return '';
-  }
-
-  const directDate = value instanceof Date ? value : new Date(value);
-  if (!Number.isNaN(directDate.getTime())) {
-    return directDate.toLocaleString();
-  }
-
-  const numericValue = Number(value);
-  if (!Number.isNaN(numericValue)) {
-    const numericDate = new Date(numericValue);
-    if (!Number.isNaN(numericDate.getTime())) {
-      return numericDate.toLocaleString();
-    }
-  }
-
-  return String(value);
 }
 
 // I-O Tab
@@ -1064,7 +874,7 @@ function renderLogsTab(wo) {
     const logLines = wo.log_tail.join('\n').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return `
       <div class="wo-drawer-section">
-        <h3>📜 Log Tail (last ${WO_LOG_TAIL_LINES} lines)</h3>
+        <h3>📜 Log Tail (last 100 lines)</h3>
         <div class="wo-drawer-code">${logLines}</div>
       </div>
     `;
@@ -1848,7 +1658,7 @@ async function loadServices() {
 
   try {
     await timed('services', async () => {
-      const res = await fetch('http://127.0.0.1:8767/api/services', {
+      const res = await fetch('./dashboard_data.json', {
         signal: ctrl.signal,
         headers: { 'Accept': 'application/json' }
       });
@@ -1856,10 +1666,8 @@ async function loadServices() {
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
       const data = await res.json();
-      state.services.data = data;
-      state.services.summary = data.summary || null;
-      state.services.list = Array.isArray(data.services) ? data.services : [];
-      return data;
+      state.services.data = data.services || null;
+      return data.services;
     });
 
   } catch (err) {
@@ -1870,7 +1678,6 @@ async function loadServices() {
       state.services.fetchController = null;
       state.services.loading = false;
       renderServices();
-      updateHealthPill();
     }
   }
 }
@@ -1878,310 +1685,66 @@ async function loadServices() {
 // Render services with skeleton, error, and data states
 function renderServices() {
   const runningCountEl = document.getElementById('running-count');
-  const summaryTotalEl = document.getElementById('services-summary-total');
-  const summaryRunningEl = document.getElementById('services-summary-running');
-  const summaryStoppedEl = document.getElementById('services-summary-stopped');
-  const summaryFailedEl = document.getElementById('services-summary-failed');
-  const tableBody = document.getElementById('services-table-body');
-  const filterSummaryEl = document.getElementById('services-filter-summary');
+  const servicesRunningEl = document.getElementById('services-running');
+  const servicesOndemandEl = document.getElementById('services-ondemand');
+  const servicesStoppedEl = document.getElementById('services-stopped');
+  const mlsTotalEl = document.getElementById('mls-total');
+  const mlsSolutionsEl = document.getElementById('mls-solutions');
+  const mlsFailuresEl = document.getElementById('mls-failures');
 
-  const setSummaryValues = (total, running, stopped, failed) => {
-    if (summaryTotalEl) summaryTotalEl.textContent = total;
-    if (summaryRunningEl) summaryRunningEl.textContent = running;
-    if (summaryStoppedEl) summaryStoppedEl.textContent = stopped;
-    if (summaryFailedEl) summaryFailedEl.textContent = failed;
-  };
-
-  const setTablePlaceholder = (message) => {
-    if (!tableBody) return;
-    tableBody.innerHTML = `
-      <tr>
-        <td colspan="5" class="table-placeholder">${escapeHtml(message)}</td>
-      </tr>
-    `;
-  };
-
+  // Loading skeleton
   if (state.services.loading) {
-    setSummaryValues('...', '...', '...', '...');
     if (runningCountEl) runningCountEl.textContent = '...';
-    if (filterSummaryEl) filterSummaryEl.textContent = 'Loading services...';
-    setTablePlaceholder('Loading services...');
-    updateServiceFilterUI();
+    if (servicesRunningEl) servicesRunningEl.textContent = '...';
+    if (servicesOndemandEl) servicesOndemandEl.textContent = '...';
+    if (servicesStoppedEl) servicesStoppedEl.textContent = '...';
+    if (mlsTotalEl) mlsTotalEl.textContent = '...';
+    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '...';
+    if (mlsFailuresEl) mlsFailuresEl.textContent = '...';
     return;
   }
 
+  // Error state
   if (state.services.error) {
-    setSummaryValues('⚠️', '⚠️', '⚠️', '⚠️');
     if (runningCountEl) runningCountEl.textContent = '⚠️';
-    if (filterSummaryEl) filterSummaryEl.textContent = 'Unable to load services';
-    setTablePlaceholder(state.services.error);
-    updateServiceFilterUI();
+    if (servicesRunningEl) servicesRunningEl.textContent = '⚠️';
+    if (servicesOndemandEl) servicesOndemandEl.textContent = '⚠️';
+    if (servicesStoppedEl) servicesStoppedEl.textContent = '⚠️';
+    if (mlsTotalEl) mlsTotalEl.textContent = '⚠️';
+    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '⚠️';
+    if (mlsFailuresEl) mlsFailuresEl.textContent = '⚠️';
     return;
   }
 
-  if (!state.services.list || state.services.list.length === 0) {
-    setSummaryValues(0, 0, 0, 0);
-    if (runningCountEl) runningCountEl.textContent = '0';
-    if (filterSummaryEl) filterSummaryEl.textContent = 'No services detected';
-    setTablePlaceholder('No services detected.');
-    updateServiceFilterUI();
+  // Empty/no data state
+  if (!state.services.data) {
+    if (runningCountEl) runningCountEl.textContent = '-';
+    if (servicesRunningEl) servicesRunningEl.textContent = '-';
+    if (servicesOndemandEl) servicesOndemandEl.textContent = '-';
+    if (servicesStoppedEl) servicesStoppedEl.textContent = '-';
+    if (mlsTotalEl) mlsTotalEl.textContent = '-';
+    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '-';
+    if (mlsFailuresEl) mlsFailuresEl.textContent = '-';
     return;
   }
 
-  const summary = state.services.summary || {
-    total: state.services.list.length,
-    running: state.services.list.filter(s => s.status === 'running').length,
-    stopped: state.services.list.filter(s => s.status === 'stopped').length,
-    failed: state.services.list.filter(s => s.status === 'failed').length
-  };
+  // Render data
+  const svc = state.services.data;
+  if (runningCountEl) runningCountEl.textContent = svc.running || 0;
+  if (servicesRunningEl) servicesRunningEl.textContent = svc.running || 0;
+  if (servicesOndemandEl) servicesOndemandEl.textContent = svc.ondemand || 0;
+  if (servicesStoppedEl) servicesStoppedEl.textContent = svc.stopped || 0;
 
-  setSummaryValues(
-    summary.total ?? '-',
-    summary.running ?? '-',
-    summary.stopped ?? '-',
-    summary.failed ?? '-'
-  );
-
-  if (runningCountEl) runningCountEl.textContent = summary.running ?? '-';
-
-  const filtered = getFilteredServices();
-  if (filterSummaryEl) {
-    const noun = filtered.length === 1 ? 'service' : 'services';
-    filterSummaryEl.textContent = `${filtered.length} ${noun} shown`;
+  // MLS data (if available in services)
+  if (svc.mls) {
+    if (mlsTotalEl) mlsTotalEl.textContent = svc.mls.total || 0;
+    if (mlsSolutionsEl) mlsSolutionsEl.textContent = svc.mls.solutions || 0;
+    if (mlsFailuresEl) mlsFailuresEl.textContent = svc.mls.failures || 0;
+  } else {
+    if (mlsTotalEl) mlsTotalEl.textContent = '-';
+    if (mlsSolutionsEl) mlsSolutionsEl.textContent = '-';
+    if (mlsFailuresEl) mlsFailuresEl.textContent = '-';
   }
-
-  if (!tableBody) {
-    updateServiceFilterUI();
-    return;
-  }
-
-  if (filtered.length === 0) {
-    setTablePlaceholder('No services match the selected filters.');
-    updateServiceFilterUI();
-    return;
-  }
-
-  const rows = filtered.map(service => `
-    <tr>
-      <td>${escapeHtml(service.label || 'Unnamed service')}</td>
-      <td>${formatServiceType(service.type)}</td>
-      <td>${formatServiceStatus(service.status)}</td>
-      <td>${service.pid ?? '—'}</td>
-      <td>${service.exit_code ?? '—'}</td>
-    </tr>
-  `).join('');
-
-  tableBody.innerHTML = rows;
-  updateServiceFilterUI();
-}
-
-function getDefaultMLSSummary() {
-  return {
-    total: 0,
-    solutions: 0,
-    failures: 0,
-    patterns: 0,
-    improvements: 0
-  };
-}
-
-async function loadMLS() {
-  if (state.mlsLessons.fetchController) {
-    try { state.mlsLessons.fetchController.abort(); } catch {}
-  }
-
-  const ctrl = new AbortController();
-  state.mlsLessons.fetchController = ctrl;
-
-  state.mlsLessons.loading = true;
-  state.mlsLessons.error = null;
-  renderMLS();
-
-  try {
-    await timed('mls', async () => {
-      const res = await fetch('http://127.0.0.1:8767/api/mls', {
-        signal: ctrl.signal,
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-
-      const data = await res.json();
-      state.mlsLessons.entries = Array.isArray(data.entries) ? data.entries : [];
-      state.mlsLessons.summary = data.summary || getDefaultMLSSummary();
-      return data;
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') return;
-    state.mlsLessons.error = String(err);
-  } finally {
-    if (state.mlsLessons.fetchController === ctrl) {
-      state.mlsLessons.fetchController = null;
-      state.mlsLessons.loading = false;
-      renderMLS();
-      updateHealthPill();
-    }
-  }
-}
-
-function renderMLS() {
-  const summary = state.mlsLessons.summary || getDefaultMLSSummary();
-  const totalEl = document.getElementById('mls-summary-total');
-  const solutionEl = document.getElementById('mls-summary-solution');
-  const failureEl = document.getElementById('mls-summary-failure');
-  const patternEl = document.getElementById('mls-summary-pattern');
-  const improvementEl = document.getElementById('mls-summary-improvement');
-  const listEl = document.getElementById('mls-list');
-  const filterSummaryEl = document.getElementById('mls-filter-summary');
-
-  const setSummary = (total, solutions, failures, patterns, improvements) => {
-    if (totalEl) totalEl.textContent = total;
-    if (solutionEl) solutionEl.textContent = solutions;
-    if (failureEl) failureEl.textContent = failures;
-    if (patternEl) patternEl.textContent = patterns;
-    if (improvementEl) improvementEl.textContent = improvements;
-  };
-
-  if (state.mlsLessons.loading) {
-    setSummary('...', '...', '...', '...', '...');
-    if (filterSummaryEl) filterSummaryEl.textContent = 'Loading lessons...';
-    if (listEl) {
-      listEl.innerHTML = '<div class="panel-placeholder">Loading lessons...</div>';
-    }
-    renderMLSLessonDetail();
-    updateMLSFilterUI();
-    return;
-  }
-
-  if (state.mlsLessons.error) {
-    setSummary('⚠️', '⚠️', '⚠️', '⚠️', '⚠️');
-    if (filterSummaryEl) filterSummaryEl.textContent = 'Unable to load lessons';
-    if (listEl) {
-      listEl.innerHTML = `<div class="panel-placeholder">${escapeHtml(state.mlsLessons.error)}</div>`;
-    }
-    renderMLSLessonDetail();
-    updateMLSFilterUI();
-    return;
-  }
-
-  setSummary(
-    summary.total ?? 0,
-    summary.solutions ?? 0,
-    summary.failures ?? 0,
-    summary.patterns ?? 0,
-    summary.improvements ?? 0
-  );
-
-  const entries = Array.isArray(state.mlsLessons.entries) ? state.mlsLessons.entries : [];
-  const filter = state.mlsLessons.filter || 'all';
-  const filtered = filter === 'all'
-    ? entries
-    : entries.filter(entry => (entry.type || 'other') === filter);
-
-  if (filterSummaryEl) {
-    const noun = filtered.length === 1 ? 'lesson' : 'lessons';
-    filterSummaryEl.textContent = `${filtered.length} ${noun}`;
-  }
-
-  if (!listEl) {
-    renderMLSLessonDetail();
-    updateMLSFilterUI();
-    return;
-  }
-
-  if (filtered.length === 0) {
-    listEl.innerHTML = '<div class="panel-placeholder">No lessons match the selected filter.</div>';
-    state.mlsLessons.selectedId = null;
-    renderMLSLessonDetail();
-    updateMLSFilterUI();
-    return;
-  }
-
-  if (!state.mlsLessons.selectedId || !filtered.some(e => e.id === state.mlsLessons.selectedId)) {
-    state.mlsLessons.selectedId = filtered[0].id;
-  }
-
-  const rows = filtered.map(entry => {
-    const tags = (entry.tags || []).slice(0, 3)
-      .map(tag => `<span class="tag-chip">${escapeHtml(tag)}</span>`)
-      .join('');
-    const score = typeof entry.score === 'number' ? entry.score.toFixed(1) : (entry.score ?? '—');
-    const isActive = entry.id === state.mlsLessons.selectedId;
-    return `
-      <div class="mls-row${isActive ? ' is-active' : ''}" data-mls-id="${escapeHtml(entry.id || '')}">
-        <div class="mls-row-time">${escapeHtml(formatMLSTime(entry.time))}</div>
-        <div class="mls-row-type">${escapeHtml(formatMLSType(entry.type))}</div>
-        <div class="mls-row-title">${escapeHtml(entry.title || 'Untitled lesson')}</div>
-        <div class="mls-row-score">${score}</div>
-        <div class="mls-row-tags">${tags || '<span class="tag-chip muted">No tags</span>'}</div>
-      </div>
-    `;
-  }).join('');
-
-  listEl.innerHTML = rows;
-  listEl.querySelectorAll('[data-mls-id]').forEach(row => {
-    row.addEventListener('click', () => {
-      const nextId = row.getAttribute('data-mls-id');
-      if (!nextId) return;
-      state.mlsLessons.selectedId = nextId;
-      renderMLS();
-    });
-  });
-
-  renderMLSLessonDetail();
-  updateMLSFilterUI();
-}
-
-function renderMLSLessonDetail() {
-  const detailEl = document.getElementById('mls-detail');
-  if (!detailEl) return;
-
-  const selectedId = state.mlsLessons.selectedId;
-  if (!selectedId) {
-    detailEl.innerHTML = '<div class="panel-placeholder">Select a lesson to view full context.</div>';
-    return;
-  }
-
-  const entry = (state.mlsLessons.entries || []).find(e => e.id === selectedId);
-  if (!entry) {
-    detailEl.innerHTML = '<div class="panel-placeholder">Lesson not found in current data.</div>';
-    return;
-  }
-
-  const tags = (entry.tags || []).map(tag => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join('')
-    || '<span class="tag-chip muted">No tags</span>';
-
-  const relatedItems = [];
-  if (entry.related_wo) {
-    relatedItems.push(`<div>Work Order: <code>${escapeHtml(entry.related_wo)}</code></div>`);
-  }
-  if (entry.related_session) {
-    relatedItems.push(`<div>Session: <code>${escapeHtml(entry.related_session)}</code></div>`);
-  }
-
-  detailEl.innerHTML = `
-    <div class="mls-detail-header">
-      <div>
-        <div class="mls-detail-title">${escapeHtml(entry.title || 'Untitled lesson')}</div>
-        <div class="mls-detail-meta">${escapeHtml(formatMLSType(entry.type))} • ${escapeHtml(formatMLSTime(entry.time))} • Score ${entry.score ?? '—'}</div>
-      </div>
-      <div class="mls-detail-tags">${tags}</div>
-    </div>
-    <div class="mls-detail-section">
-      <h4>Context</h4>
-      <p>${entry.context ? escapeHtml(entry.context) : '<em>No context provided</em>'}</p>
-    </div>
-    <div class="mls-detail-section">
-      <h4>Lesson</h4>
-      <p>${entry.details ? escapeHtml(entry.details) : '<em>No lesson details recorded</em>'}</p>
-    </div>
-    <div class="mls-detail-section">
-      <h4>Related</h4>
-      <div class="mls-detail-related">
-        ${relatedItems.length ? relatedItems.join('') : '<div class="muted">No related WO or session metadata</div>'}
-      </div>
-    </div>
-  `;
 }
 
 // Refresh all dashboard data
@@ -2196,8 +1759,7 @@ async function refreshAllData() {
   await Promise.all([
     loadRoadmap(),
     loadServices(),
-    loadWOs(),
-    loadMLS()
+    loadWOs()
   ]);
 
   // Update health indicator
@@ -2414,10 +1976,6 @@ async function initDashboard() {
   // Initialize service drawer (v2.2.0)
   initServiceDrawer();
 
-  // Initialize Services + MLS panels
-  initServicePanelControls();
-  initMLSLessonsPanel();
-
   // Initial load
   await refreshAllData();
 
@@ -2444,8 +2002,6 @@ window.loadWOs = loadWOs;
 window.triggerLoadWOs = triggerLoadWOs;
 window.loadLogs = loadLogs;
 window.refreshAllData = refreshAllData;
-window.loadServices = loadServices;
-window.loadMLS = loadMLS;
 window.openWODrawer = openWODrawer;
 window.closeWODrawer = closeWODrawer;
 window.loadWODetail = loadWODetail;

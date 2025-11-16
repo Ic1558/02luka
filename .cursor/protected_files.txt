@@ -1,0 +1,68 @@
+# Protected Files List - 02LUKA System
+# Files listed here are protected from accidental deletion
+# Updated: 2025-11-17
+
+# Governance & Contracts
+docs/GG_ORCHESTRATOR_CONTRACT.md
+g/docs/WORKER_REGISTRY.yaml
+
+# AP/IO v3.1 Protocol Files
+schemas/ap_io_v31.schema.json
+schemas/ap_io_v31_ledger.schema.json
+tools/ap_io_v31/writer.zsh
+tools/ap_io_v31/reader.zsh
+tools/ap_io_v31/validator.zsh
+tools/ap_io_v31/correlation_id.zsh
+tools/ap_io_v31/router.zsh
+tools/ap_io_v31/pretty_print.zsh
+docs/AP_IO_V31_PROTOCOL.md
+docs/AP_IO_V31_INTEGRATION_GUIDE.md
+docs/AP_IO_V31_ROUTING_GUIDE.md
+docs/AP_IO_V31_MIGRATION.md
+
+# AP/IO v3.1 Agent Integrations
+agents/cls/ap_io_v31_integration.zsh
+agents/andy/ap_io_v31_integration.zsh
+agents/hybrid/ap_io_v31_integration.zsh
+agents/liam/ap_io_v31_integration.zsh
+agents/gg/ap_io_v31_integration.zsh
+
+# AP/IO v3.1 Tests
+tests/ap_io_v31/cls_testcases.zsh
+tests/ap_io_v31/test_protocol_validation.zsh
+tests/ap_io_v31/test_routing.zsh
+tests/ap_io_v31/test_correlation.zsh
+tests/ap_io_v31/test_backward_compat.zsh
+tools/run_ap_io_v31_tests.zsh
+
+# AP/IO v3.1 Specs & Plans
+g/reports/feature_ap_io_v31_ledger_SPEC.md
+g/reports/feature_ap_io_v31_ledger_PLAN.md
+g/reports/feature_ap_io_v31_ledger_PR_CONTRACT.md
+
+# Worker Verification System
+tools/workerctl.zsh
+tools/scan_launchagents.py
+g/reports/feature_local_worker_verification_SPEC.md
+g/reports/system/LOCAL_WORKER_VERIFICATION_PROBLEM_ANALYSIS.md
+
+# Trading CLI (New)
+tools/trading_cli.zsh
+tools/lib/trading_cli.py
+g/manuals/trading_data_sources.md
+g/manuals/trading_snapshot_manual.md
+g/config/prometheus/rules/trading.rules.yml
+
+# Code Review Documents
+g/reports/system/CODE_REVIEW_PR_300.md
+g/reports/system/CODE_REVIEW_PR_306.md
+g/reports/system/CODE_REVIEW_PR_310.md
+g/reports/system/GOVERNANCE_PR_REVIEW_310.md
+
+# Agent Ledger System
+g/reports/feature_agent_ledger_SPEC.md
+g/reports/feature_agent_ledger_PLAN.md
+
+# Liam Local Orchestrator
+g/reports/feature_liam_local_orchestrator_SPEC.md
+g/reports/feature_liam_local_orchestrator_PLAN.md

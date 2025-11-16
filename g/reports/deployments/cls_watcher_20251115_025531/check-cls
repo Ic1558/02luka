@@ -1,3 +1,0 @@
-#!/usr/bin/env zsh
-# Thin wrapper → เผื่ออนาคตเพิ่มโหมดพิเศษ/flag
-exec "$HOME/02luka/tools/watch_cls_alive.zsh" "$@"
