@@ -16,6 +16,7 @@ let mlsSearchQuery = '';
 let currentWoId = null;
 let cachedMlsEntries = null;
 let allWos = [];
+let serviceData = [];
 let currentWoStatusFilter = '';
 let woTimelineAll = [];
 let woTimelineFilterStatus = '';
@@ -248,6 +249,7 @@ async function loadServices() {
 
   const statusFilter = document.getElementById('services-status-filter')?.value || '';
   const typeFilter = document.getElementById('services-type-filter')?.value || '';
+  const hasFilters = Boolean(statusFilter || typeFilter);
 
   try {
     const params = new URLSearchParams();
@@ -255,7 +257,8 @@ async function loadServices() {
     const query = params.toString();
 
     const data = await fetchJSON(`/api/services${query ? `?${query}` : ''}`);
-    let services = Array.isArray(data?.services) ? data.services : [];
+    const allServices = Array.isArray(data?.services) ? data.services : [];
+    let services = allServices;
 
     if (typeFilter) {
       services = services.filter((svc) => {
@@ -267,8 +270,13 @@ async function loadServices() {
       });
     }
 
+    if (!hasFilters) {
+      serviceData = allServices.slice();
+    }
+
     renderServicesSummary(data?.summary);
     renderServicesTable(services);
+    updateSystemHealthBar();
   } catch (error) {
     console.error('Failed to load services', error);
     showErrorBanner('services-error', 'Failed to load services.');
@@ -590,6 +598,7 @@ async function loadWos() {
     }
     renderWosTable(allWos);
     renderWoSummary(allWos);
+    updateSystemHealthBar();
   } catch (error) {
     console.error('Error loading WOs', error);
   }
@@ -704,6 +713,11 @@ async function refreshSummaryServices(cardEl) {
   try {
     setSummaryLoading(cardEl);
     const data = await fetchJSON('/api/services');
+
+    if (Array.isArray(data?.services)) {
+      serviceData = data.services.slice();
+      updateSystemHealthBar();
+    }
 
     const summary = data?.summary ?? {};
     const total = Number(summary.total) || 0;
@@ -1439,6 +1453,66 @@ function cssEscapeAttr(value) {
   return stringValue.replace(/"/g, '\\"');
 }
 
+// === Global system health (WO + Services) ===
+
+function updateSystemHealthBar() {
+  const bar = document.getElementById('system-health-bar');
+  const messageEl = document.getElementById('system-health-message');
+  const woCountsEl = document.getElementById('health-wo-counts');
+  const svcCountsEl = document.getElementById('health-svc-counts');
+
+  if (!bar || !messageEl || !woCountsEl || !svcCountsEl) {
+    return;
+  }
+
+  const normalizedWos = Array.isArray(allWos) ? allWos : [];
+  const normalizedServices = Array.isArray(serviceData) ? serviceData : [];
+  const normalizeStatus = (value) => String(value || '').toLowerCase();
+
+  const totalWos = normalizedWos.length;
+  const woFailed = normalizedWos.filter((wo) => {
+    const status = normalizeStatus(wo?.status);
+    return status === 'failed' || status === 'error';
+  }).length;
+  const woDone = normalizedWos.filter((wo) => {
+    const status = normalizeStatus(wo?.status);
+    return ['done', 'completed', 'success'].includes(status);
+  }).length;
+  const woActive = Math.max(0, totalWos - woFailed - woDone);
+
+  woCountsEl.textContent = `${totalWos} total · ${woActive} active · ${woFailed} failed`;
+
+  const totalSvc = normalizedServices.length;
+  const svcRunning = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'running').length;
+  const svcFailed = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'failed').length;
+  const svcStopped = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'stopped').length;
+
+  svcCountsEl.textContent = `${totalSvc} total · ${svcRunning} running · ${svcFailed} failed`;
+
+  bar.classList.remove('health-ok', 'health-warn', 'health-bad');
+
+  const anyFailed = woFailed > 0 || svcFailed > 0;
+  const anyStopped = svcStopped > 0;
+  const hasData = totalWos > 0 || totalSvc > 0;
+
+  let message = 'All monitored work orders and services look healthy.';
+  let nextClass = 'health-ok';
+
+  if (!hasData) {
+    nextClass = 'health-warn';
+    message = 'Awaiting work order and service data…';
+  } else if (anyFailed) {
+    nextClass = 'health-bad';
+    message = 'Some work orders or services are failing – please check details.';
+  } else if (anyStopped) {
+    nextClass = 'health-warn';
+    message = 'System is running with some services stopped.';
+  }
+
+  bar.classList.add(nextClass);
+  messageEl.textContent = message;
+}
+
 document.addEventListener('click', (event) => {
   const baseTarget = event.target;
   if (!(baseTarget instanceof Element)) {
@@ -1705,6 +1779,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSummaryCards();
   initDashboard();
   initWoTimelinePanel();
+  updateSystemHealthBar();
 
   window.addEventListener('wo:select', (event) => {
     const detail = event?.detail;

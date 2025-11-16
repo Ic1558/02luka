@@ -1009,6 +1009,56 @@
         font-size: 0.875rem;
       }
 
+      /* Global system health header */
+      #system-health-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+        border: 1px solid transparent;
+      }
+
+      #system-health-bar strong {
+        font-size: 0.9rem;
+      }
+
+      .health-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+      }
+
+      .health-pill-label {
+        color: #6b7280;
+      }
+
+      .health-pill-value {
+        font-weight: 600;
+      }
+
+      .health-ok {
+        background: #ecfdf3;
+        border-color: #16a34a;
+      }
+
+      .health-warn {
+        background: #fffbeb;
+        border-color: #facc15;
+      }
+
+      .health-bad {
+        background: #fef2f2;
+        border-color: #dc2626;
+      }
+
       @media (max-width: 600px) {
         header {
           padding: 1.5rem 1.25rem;
@@ -1039,6 +1089,24 @@
       </ul>
     </header>
     <main>
+      <!-- Global system health summary -->
+      <section id="system-health-bar" class="health-ok">
+        <div>
+          <strong>System Health</strong>
+          <span id="system-health-message"></span>
+        </div>
+
+        <div class="health-pill" id="health-pill-wo">
+          <span class="health-pill-label">WO</span>
+          <span class="health-pill-value" id="health-wo-counts">–</span>
+        </div>
+
+        <div class="health-pill" id="health-pill-svc">
+          <span class="health-pill-label">Services</span>
+          <span class="health-pill-value" id="health-svc-counts">–</span>
+        </div>
+      </section>
+
       <!-- Summary cards -->
       <div id="summary-cards">
         <div class="summary-card" id="summary-wos">
