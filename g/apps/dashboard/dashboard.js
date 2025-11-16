@@ -159,6 +159,21 @@ const state = {
   logRefreshInterval: null
 };
 
+const timelineRefs = {
+  navButton: document.getElementById('nav-timeline'),
+  view: document.getElementById('wo-timeline-view'),
+  container: document.getElementById('wo-timeline-container'),
+  summary: document.getElementById('wo-timeline-summary'),
+  filterStatus: document.getElementById('timeline-filter-status'),
+  filterAgent: document.getElementById('timeline-filter-agent'),
+  limit: document.getElementById('timeline-limit'),
+  refreshBtn: document.getElementById('timeline-refresh')
+};
+
+const timelineState = {
+  initialized: false
+};
+
 // --- TELEMETRY & METRICS ---
 const metrics = {
   wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
@@ -2353,6 +2368,174 @@ function renderFilterBadge() {
   `;
 }
 
+// ===============================
+// WO Timeline / History View
+// ===============================
+
+function initTimelineView() {
+  const { navButton, view, container, summary, filterStatus, filterAgent, limit, refreshBtn } = timelineRefs;
+  if (!navButton || !view || !container || !summary) {
+    console.warn('WO timeline elements not found; skipping timeline init.');
+    return;
+  }
+
+  timelineState.initialized = true;
+
+  navButton.addEventListener('click', () => {
+    showTimelineView(view);
+    if (!view.dataset.initialized) {
+      view.dataset.initialized = '1';
+      fetchWoTimeline();
+    }
+    view.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => fetchWoTimeline());
+  }
+
+  if (filterStatus) {
+    filterStatus.addEventListener('change', () => fetchWoTimeline());
+  }
+
+  if (filterAgent) {
+    filterAgent.addEventListener('change', () => fetchWoTimeline());
+  }
+
+  if (limit) {
+    limit.addEventListener('change', () => fetchWoTimeline());
+  }
+}
+
+function showTimelineView(target) {
+  document.querySelectorAll('.view').forEach((section) => {
+    section.classList.add('hidden');
+  });
+  if (target) {
+    target.classList.remove('hidden');
+  }
+}
+
+async function fetchWoTimeline() {
+  const { container, summary, filterStatus, filterAgent, limit } = timelineRefs;
+  if (!container || !summary) return;
+
+  const params = new URLSearchParams();
+  const status = (filterStatus && filterStatus.value.trim()) || '';
+  const agent = (filterAgent && filterAgent.value.trim()) || '';
+  const limitValue = limit && limit.value ? parseInt(limit.value, 10) : 100;
+
+  if (status) params.set('status', status);
+  if (agent) params.set('agent', agent);
+  if (limitValue) params.set('limit', String(limitValue));
+  params.set('tail', '1');
+
+  container.innerHTML = '<p>Loading timeline…</p>';
+  summary.textContent = '';
+
+  try {
+    const response = await fetch(`/api/wos/history?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    renderWoTimeline(data);
+  } catch (error) {
+    console.error('Failed to load WO timeline', error);
+    container.innerHTML = `<p class="error">Failed to load timeline: ${escapeHtml(error.message || 'Unknown error')}</p>`;
+  }
+}
+
+function renderWoTimeline(data) {
+  const { container, summary } = timelineRefs;
+  if (!container || !summary) return;
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  const stats = data.summary || {};
+
+  if (items.length === 0) {
+    container.innerHTML = '<p>No work-orders found for the selected filters.</p>';
+  } else {
+    container.innerHTML = items.map(renderTimelineCard).join('\n');
+  }
+
+  const counts = stats.status_counts || {};
+  const total = stats.total ?? items.length;
+  summary.innerHTML = `
+    <div>
+      <strong>Total:</strong> ${total}
+      &nbsp;&nbsp;
+      <strong>Success:</strong> ${counts.success ?? 0}
+      &nbsp;&nbsp;
+      <strong>Failed:</strong> ${counts.failed ?? 0}
+      &nbsp;&nbsp;
+      <strong>Running:</strong> ${counts.running ?? 0}
+      &nbsp;&nbsp;
+      <strong>Queued:</strong> ${counts.queued ?? 0}
+    </div>
+  `;
+}
+
+function renderTimelineCard(item) {
+  const id = escapeHtml(item.id || '(unknown)');
+  const status = escapeHtml(item.status || 'unknown');
+  const type = escapeHtml(item.type || 'other');
+  const agent = escapeHtml(item.agent || '—');
+  const started = escapeHtml(item.started_at || '—');
+  const finished = escapeHtml(item.finished_at || '—');
+  const summary = item.summary ? escapeHtml(item.summary) : '<em>No summary</em>';
+  const relatedPr = item.related_pr ? `<div><strong>PR:</strong> ${escapeHtml(item.related_pr)}</div>` : '';
+  const tags = Array.isArray(item.tags) && item.tags.length
+    ? `<div><strong>Tags:</strong> ${item.tags.map((tag) => escapeHtml(tag)).join(', ')}</div>`
+    : '';
+  const durationSec = Number.isFinite(item.duration_sec) ? Math.round(item.duration_sec) : null;
+  const statusClass = `status-${(item.status || 'unknown').toLowerCase()}`;
+
+  let durationText = '—';
+  if (durationSec != null) {
+    durationText = durationSec < 120
+      ? `${durationSec}s`
+      : `${Math.round(durationSec / 60)} min`;
+  }
+
+  let logSection = '';
+  if (Array.isArray(item.log_tail) && item.log_tail.length) {
+    const tail = item.log_tail.map((line) => escapeHtml(line)).join('\n');
+    logSection = `
+      <details class="wo-log">
+        <summary>Log tail</summary>
+        <pre>${tail}</pre>
+      </details>
+    `;
+  }
+
+  return `
+    <article class="wo-timeline-card ${statusClass}">
+      <header class="wo-timeline-card-header">
+        <div>
+          <span class="wo-id">${id}</span>
+          <span class="wo-status badge">${status}</span>
+        </div>
+        <div class="wo-meta">
+          <span class="wo-type">${type}</span>
+          <span class="wo-agent">Agent: ${agent}</span>
+        </div>
+      </header>
+      <div class="wo-times">
+        <div><strong>Started:</strong> ${started}</div>
+        <div><strong>Finished:</strong> ${finished}</div>
+        <div><strong>Duration:</strong> ${durationText}</div>
+      </div>
+      <div class="wo-summary">${summary}</div>
+      <div class="wo-extra">
+        ${relatedPr}
+        ${tags}
+      </div>
+      ${logSection}
+    </article>
+  `;
+}
+
 // Initialize dashboard
 async function initDashboard() {
   console.log('🚀 Initializing dashboard v2.0.1...');
@@ -2397,6 +2580,7 @@ async function initDashboard() {
   // Initialize Services + MLS panels
   initServicePanelControls();
   initMLSLessonsPanel();
+  initTimelineView();
 
   // Initial load
   await refreshAllData();
