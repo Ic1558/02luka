@@ -17,6 +17,13 @@ let woAutorefreshIntervalMs = 30000;
 let currentWoSearch = '';
 let currentWoSortKey = 'started_at';
 let currentWoSortDir = 'desc';
+const WO_STATUS_SORT_ORDER = {
+  running: 4,
+  pending: 3,
+  completed: 2,
+  failed: 1,
+  unknown: 0
+};
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -150,6 +157,10 @@ function initWoFilters() {
 function initWoSearch() {
   const input = document.getElementById('wo-search-input');
   if (!input) return;
+
+  if (currentWoSearch) {
+    input.value = currentWoSearch;
+  }
 
   input.addEventListener('input', () => {
     currentWoSearch = input.value.trim().toLowerCase();
@@ -288,15 +299,7 @@ function applyWoFilter() {
 
   if (currentWoSearch) {
     const q = currentWoSearch;
-    filtered = filtered.filter((wo) => {
-      const haystacks = [];
-      if (wo.id) haystacks.push(String(wo.id));
-      if (wo.title) haystacks.push(String(wo.title));
-      if (wo.context) haystacks.push(String(wo.context));
-      if (Array.isArray(wo.tags)) haystacks.push(wo.tags.join(' '));
-      const combined = haystacks.join(' ').toLowerCase();
-      return combined.includes(q);
-    });
+    filtered = filtered.filter((wo) => buildWoSearchHaystack(wo).includes(q));
   }
 
   filtered.sort((a, b) => compareWos(a, b, currentWoSortKey, currentWoSortDir));
@@ -387,39 +390,100 @@ function normalizeWoStatus(status) {
 
 function compareWos(a, b, sortKey, sortDir) {
   const dir = sortDir === 'asc' ? 1 : -1;
-  let va;
-  let vb;
 
-  switch (sortKey) {
-    case 'id':
-      va = String(a?.id ?? '');
-      vb = String(b?.id ?? '');
-      break;
-    case 'status':
-      va = normalizeWoStatus(a?.status);
-      vb = normalizeWoStatus(b?.status);
-      break;
-    case 'started_at':
-      va = normalizeWoTimestamp(a?.started_at || a?.startedAt);
-      vb = normalizeWoTimestamp(b?.started_at || b?.startedAt);
-      break;
-    case 'finished_at':
-      va = normalizeWoTimestamp(a?.finished_at || a?.finishedAt);
-      vb = normalizeWoTimestamp(b?.finished_at || b?.finishedAt);
-      break;
-    case 'updated_at':
-      va = normalizeWoTimestamp(a?.updated_at || a?.updatedAt || a?.last_update || a?.lastUpdate);
-      vb = normalizeWoTimestamp(b?.updated_at || b?.updatedAt || b?.last_update || b?.lastUpdate);
-      break;
-    default:
-      va = 0;
-      vb = 0;
-      break;
+  if (sortKey === 'id') {
+    return compareWoIds(a?.id, b?.id) * dir;
   }
+
+  if (sortKey === 'status') {
+    const va = getStatusSortValue(a?.status);
+    const vb = getStatusSortValue(b?.status);
+    if (va !== vb) {
+      return (va - vb) * dir;
+    }
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  const va = getWoSortValue(a, sortKey);
+  const vb = getWoSortValue(b, sortKey);
 
   if (va < vb) return -1 * dir;
   if (va > vb) return 1 * dir;
+  return compareWoIds(a?.id, b?.id) * dir;
+}
+
+function getWoSortValue(wo, sortKey) {
+  switch (sortKey) {
+    case 'started_at':
+      return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
+    case 'finished_at':
+      return normalizeWoTimestamp(wo?.finished_at || wo?.finishedAt);
+    case 'updated_at':
+      return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
+    default:
+      return 0;
+  }
+}
+
+function getStatusSortValue(status) {
+  const normalized = normalizeWoStatus(status);
+  if (Object.prototype.hasOwnProperty.call(WO_STATUS_SORT_ORDER, normalized)) {
+    return WO_STATUS_SORT_ORDER[normalized];
+  }
   return 0;
+}
+
+function compareWoIds(aId, bId) {
+  const aInfo = normalizeWoId(aId);
+  const bInfo = normalizeWoId(bId);
+
+  if (aInfo.numeric !== null && bInfo.numeric !== null && aInfo.numeric !== bInfo.numeric) {
+    return aInfo.numeric - bInfo.numeric;
+  }
+
+  if (aInfo.numeric !== null && bInfo.numeric === null) {
+    return -1;
+  }
+  if (aInfo.numeric === null && bInfo.numeric !== null) {
+    return 1;
+  }
+
+  if (aInfo.text < bInfo.text) return -1;
+  if (aInfo.text > bInfo.text) return 1;
+  return 0;
+}
+
+function normalizeWoId(value) {
+  if (value === undefined || value === null) {
+    return { numeric: null, text: '' };
+  }
+  const text = String(value).toLowerCase();
+  const match = text.match(/(\d+)/);
+  const numeric = match ? Number(match[1]) : null;
+  return { numeric: Number.isNaN(numeric) ? null : numeric, text };
+}
+
+function buildWoSearchHaystack(wo) {
+  const haystacks = [];
+  if (wo.id) haystacks.push(String(wo.id));
+  if (wo.title) haystacks.push(String(wo.title));
+  if (wo.context) haystacks.push(String(wo.context));
+  if (wo.summary) haystacks.push(String(wo.summary));
+  if (wo.description) haystacks.push(String(wo.description));
+  if (wo.agent) haystacks.push(String(wo.agent));
+  if (wo.worker) haystacks.push(String(wo.worker));
+  if (wo.type) haystacks.push(String(wo.type));
+  if (wo.action) haystacks.push(String(wo.action));
+  if (Array.isArray(wo.actions) && wo.actions.length) {
+    haystacks.push(wo.actions.join(' '));
+  }
+  if (Array.isArray(wo.tags) && wo.tags.length) {
+    haystacks.push(wo.tags.join(' '));
+  }
+  if (wo.contextual_data) {
+    haystacks.push(String(wo.contextual_data));
+  }
+  return haystacks.join(' ').toLowerCase();
 }
 
 function normalizeWoTimestamp(value) {
