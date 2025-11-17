@@ -7,7 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+# Note: Using npm install instead of npm ci since package-lock.json may not exist
+# This Dockerfile is legacy/fallback - see DOCKER_TO_NATIVE_MIGRATION.md
+# The project primarily runs native on macOS via LaunchAgents
+RUN npm install
 
 # Copy source code
 COPY . .
