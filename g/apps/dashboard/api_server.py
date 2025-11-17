@@ -20,6 +20,7 @@ ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+SYSTEM_REPORTS = ROOT / "g" / "reports" / "system"
 
 
 class WOHistoryBuilder:
@@ -575,10 +576,10 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_list_mls(query)
         elif path == '/api/wo-metrics':
             self.handle_wo_metrics(query)
-        elif path == '/api/health/logs':
-            self.handle_get_logs(query)
         elif path == '/api/reality/snapshot':
             self.handle_reality_snapshot(query)
+        elif path == '/api/health/logs':
+            self.handle_get_logs(query)
         else:
             self.send_error(404, "Not found")
 
@@ -1319,6 +1320,7 @@ def run_server(port=8767):
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
     print(f"   - GET /api/wo-metrics - Work-order metrics overview")
     print(f"   - GET /api/mls?type=solution - Filter MLS by type")
+    print(f"   - GET /api/reality/snapshot - Get latest Reality Hooks snapshot")
     print(f"   - GET /api/health/logs?lines=200 - Get system logs")
     server.serve_forever()
 
