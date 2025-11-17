@@ -1,0 +1,171 @@
+diff --git a/g/apps/dashboard/dashboard.js b/g/apps/dashboard/dashboard.js
+index 9bbaa7e96..5843265d2 100644
+--- a/g/apps/dashboard/dashboard.js
++++ b/g/apps/dashboard/dashboard.js
+@@ -165,6 +165,21 @@ const metrics = {
+   logs: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
+   roadmap: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
+   services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
++  // WO Pipeline Metrics
++  pipeline: {
++    throughput: 0,           // WOs per hour (calculated from last 24h)
++    avgProcessingTime: 0,    // Average duration in seconds
++    queueDepth: 0,           // Number of pending/queued WOs
++    stageDistribution: {     // Count by stage
++      queued: 0,
++      running: 0,
++      success: 0,
++      failed: 0,
++      pending: 0
++    },
++    successRate: 0,          // Percentage (0-100)
++    lastUpdated: null        // Timestamp of last calculation
++  },
+   mls: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
+ };
+ 
+@@ -207,6 +222,122 @@ function isHealthy(name) {
+   return m.consecutiveErrors < 3 && (m.ok > 0 || m.err === 0);
+ }
+ 
++// --- WO PIPELINE METRICS CALCULATION ---
++function calculatePipelineMetrics() {
++  const wos = state.wos.data || [];
++  if (!wos.length) {
++    // Reset metrics if no data
++    metrics.pipeline.throughput = 0;
++    metrics.pipeline.avgProcessingTime = 0;
++    metrics.pipeline.queueDepth = 0;
++    metrics.pipeline.stageDistribution = { queued: 0, running: 0, success: 0, failed: 0, pending: 0 };
++    metrics.pipeline.successRate = 0;
++    metrics.pipeline.lastUpdated = new Date().toISOString();
++    return;
++  }
++
++  // Calculate stage distribution
++  const distribution = {
++    queued: 0,
++    running: 0,
++    success: 0,
++    failed: 0,
++    pending: 0
++  };
++
++  wos.forEach(wo => {
++    const status = wo.status || 'pending';
++    if (distribution.hasOwnProperty(status)) {
++      distribution[status]++;
++    } else if (status === 'blocked') {
++      distribution.failed++;
++    }
++  });
++
++  metrics.pipeline.stageDistribution = distribution;
++  metrics.pipeline.queueDepth = distribution.queued + distribution.pending;
++
++  // Calculate average processing time (from completed WOs)
++  const completedWOs = wos.filter(w => w.status === 'success' || w.status === 'failed');
++  if (completedWOs.length > 0) {
++    const totalDuration = completedWOs.reduce((sum, wo) => {
++      return sum + (wo.duration_ms || 0);
++    }, 0);
++    metrics.pipeline.avgProcessingTime = Math.round(totalDuration / completedWOs.length / 1000); // Convert to seconds
++  } else {
++    metrics.pipeline.avgProcessingTime = 0;
++  }
++
++  // Calculate throughput (WOs per hour from last 24 hours)
++  const now = Date.now();
++  const oneDayAgo = now - (24 * 60 * 60 * 1000);
++  
++  const recentWOs = wos.filter(wo => {
++    if (!wo.started_at && !wo.completed_at) return false;
++    const woTime = wo.completed_at ? new Date(wo.completed_at).getTime() : new Date(wo.started_at).getTime();
++    return woTime >= oneDayAgo;
++  });
++
++  // Count completed WOs in last 24h
++  const completedIn24h = recentWOs.filter(w => w.status === 'success' || w.status === 'failed').length;
++  metrics.pipeline.throughput = Math.round(completedIn24h / 24); // WOs per hour
++
++  // Calculate success rate
++  const totalCompleted = completedWOs.length;
++  const successful = completedWOs.filter(w => w.status === 'success').length;
++  metrics.pipeline.successRate = totalCompleted > 0 
++    ? Math.round((successful / totalCompleted) * 100) 
++    : 0;
++
++  metrics.pipeline.lastUpdated = new Date().toISOString();
++}
++
++// Update pipeline metrics UI
++function updatePipelineMetricsUI() {
++  const p = metrics.pipeline;
++
++  // Update throughput display
++  const throughputEl = document.getElementById('pipeline-throughput');
++  if (throughputEl) {
++    throughputEl.textContent = `${p.throughput} WO/hr`;
++  }
++
++  // Update average processing time
++  const avgTimeEl = document.getElementById('pipeline-avg-time');
++  if (avgTimeEl) {
++    avgTimeEl.textContent = p.avgProcessingTime > 0 ? `${p.avgProcessingTime}s` : '-';
++  }
++
++  // Update queue depth
++  const queueEl = document.getElementById('pipeline-queue');
++  if (queueEl) {
++    queueEl.textContent = p.queueDepth;
++  }
++
++  // Update success rate
++  const successRateEl = document.getElementById('pipeline-success-rate');
++  if (successRateEl) {
++    successRateEl.textContent = `${p.successRate}%`;
++    // Color code based on success rate
++    if (p.successRate >= 90) {
++      successRateEl.style.color = '#48bb78';
++    } else if (p.successRate >= 70) {
++      successRateEl.style.color = '#ed8936';
++    } else {
++      successRateEl.style.color = '#f56565';
++    }
++  }
++
++  // Update stage distribution
++  const stages = ['queued', 'running', 'success', 'failed', 'pending'];
++  stages.forEach(stage => {
++    const el = document.getElementById(`pipeline-${stage}`);
++    if (el) {
++      el.textContent = p.stageDistribution[stage] || 0;
++    }
++  });
++}
++
+ // --- RETRY BACKOFF WITH JITTER ---
+ function getNextDelay(currentBackoff) {
+   // Exponential backoff: 5s → 8s → 13s → 21s → 34s → max 60s
+@@ -754,6 +885,10 @@ function renderWOs() {
+   const completedCount = state.wos.data.filter(w => w.status === 'success').length;
+   const completedEl = document.getElementById('completed-wos');
+   if (completedEl) completedEl.textContent = completedCount;
++
++  // Calculate and update pipeline metrics
++  calculatePipelineMetrics();
++  updatePipelineMetricsUI();
+ }
+ 
+ // Keep old function name for compatibility
+@@ -2182,6 +2317,10 @@ async function refreshAllData() {
+ 
+   // Update health indicator
+   updateHealthPill();
++  
++  // Update pipeline metrics (calculated from WO data)
++  calculatePipelineMetrics();
++  updatePipelineMetricsUI();
+ }
+ 
+ // Setup auto-refresh (for dashboard data)
