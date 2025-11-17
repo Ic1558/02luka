@@ -517,6 +517,18 @@ function setRealityLoading() {
   const saveBody = document.getElementById('reality-save-body');
   const orchEl = document.getElementById('reality-orchestrator');
 
+  if (meta) meta.textContent = 'Loading Reality snapshot…';
+  if (deployEl) deployEl.textContent = 'Loading deployment data…';
+  if (orchEl) orchEl.textContent = 'Loading orchestrator summary…';
+  if (saveBody) {
+    saveBody.innerHTML = '<tr><td colspan="7">Loading save.sh runs…</td></tr>';
+  }
+
+  updateRealityBadge(document.getElementById('reality-badge-deploy'), 'Deployment', null);
+  updateRealityBadge(document.getElementById('reality-badge-save'), 'save.sh', null);
+  updateRealityBadge(document.getElementById('reality-badge-orch'), 'Orchestrator', null);
+}
+
 async function loadRealitySnapshot() {
   const meta = document.getElementById('reality-meta');
   if (!meta) {
@@ -661,7 +673,7 @@ function updateRealityBadge(el, label, status) {
     return;
   }
 
-  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
+  const normalized = String(status).toLowerCase().trim().replace(/\s+/g, '_');
   el.className = `reality-badge reality-badge-${normalized}`;
   el.textContent = `${label}: ${status}`;
 }
