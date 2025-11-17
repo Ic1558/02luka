@@ -2,29 +2,24 @@
 
 Date: 2025-11-15
 
-## Overview
-This update adds two operator-facing panels to the Work Orchestration dashboard so you can observe the runtime agents exposed by `/api/services` and `/api/mls` without leaving the browser. Both panels refresh every 30 seconds (alongside the manual Refresh button) so operators always see the latest health signals.
+This update introduces two operator-focused panels to the Work Orchestration dashboard so you can observe runtime agents and learning signals without leaving the browser.
 
 ## Services Panel
 - **Source:** `/api/services`
-- **Summary metrics:** Cards call out total, running, stopped, and failed LaunchAgent services so regressions surface immediately.
+- **Summary metrics:** Cards display total, running, stopped, and failed LaunchAgent services.
 - **Filters:**
-  - Status: `running`, `stopped`, `failed`, plus an `all` view
-  - Type: `bridge`, `worker`, `automation`, `monitoring`, `other`
-- **Table view:** Real-time table showing `label`, `type`, `status`, `PID`, and `exit_code`, with inline empty/error states.
-- **Accessibility:** Filter chips remain keyboard-focusable and inherit the dashboard’s focus styles.
-- **Usage:** Quickly spot stuck or failing agents without cracking open logs.
+  - Status chips: `all`, `running`, `stopped`, `failed`
+  - Type chips: `bridge`, `worker`, `automation`, `monitoring`, `other`
+- **Table view:** Real-time table with `label`, `type`, `status`, `PID`, and `exit_code`. Empty/error states are handled inline, and the section auto-refreshes every 30 seconds (plus manual refresh button).
+- **Use cases:** Quickly spot stuck or failing agents, confirm PID/exit codes, and verify LaunchAgent coverage per service type.
 
-## MLS Panel
+## MLS Lessons Panel
 - **Source:** `/api/mls`
-- **Aggregated counters:** Totals across all lessons plus per-type counts (solutions, failures, patterns, improvements).
-- **Filters:**
-  - Type chips (`solution`, `failure`, `pattern`, `improvement`)
-  - Checkbox: `Verified only`
-- **Detail view:** Clicking a lesson row reveals context, related WO/session, score, tags, and verification state.
-- **Auto-refresh:** Matches the dashboard cadence so new lessons show up without a reload.
+- **Aggregated counters:** Totals for all lessons plus per-type counts (solutions, failures, patterns, improvements) sourced from the API payload.
+- **Filters:** Type pills let you slice client-side; a "Verified only" checkbox keeps focus on trusted learnings.
+- **Detail view:** Clicking a lesson row reveals time, title, score, tags, verification state, related work order, and related session context.
+- **Auto-refresh:** Polls every 30 seconds so new lessons appear alongside the latest services data.
+- **Accessibility:** Filter chips are focusable buttons and list rows advertise active selection to match the dashboard’s existing interaction patterns.
 
 ## Navigation
-A quick nav under the header links directly to `#services-panel` and `#mls-panel`, letting operators jump straight to the data they care about.
-
-These additions are UI-only. The Node API server and security layers are unchanged, so risk stays low while observability improves.
+A quick nav under the dashboard header links directly to `#services-panel` and `#mls-panel`, making it easy for operators to jump to the data they care about. These enhancements are front-end only—the API server and security layers remain unchanged.
