@@ -18,16 +18,19 @@ ops:
 ```
 
 ### Fields
+
 - `meta` (object): optional metadata for logging.
 - `ops` (array, required): ordered list of patch operations.
 
 ### Supported modes
+
 - `append` (default): append `content` to the file, ensuring a trailing newline; skipped if content already exists verbatim.
 - `replace_block`: replace the first occurrence of `match` with `content`.
 - `insert_before`: insert `content` immediately before the first occurrence of `match`.
 - `insert_after`: insert `content` immediately after the first occurrence of `match`.
 
 ### Common keys per op
+
 - `path` (string, required): repository-relative path. Must stay inside allowed roots (g, core, LaunchAgents, tools, etc.). Absolute paths or `..` are rejected.
 - `mode` (string, optional): one of the supported modes; defaults to `append`.
 - `content` (string, optional): text to write.
@@ -36,6 +39,7 @@ ops:
 ## Examples
 
 ### Append text to a scratch file
+
 ```yaml
 meta:
   id: "LPE-20251117-001"
@@ -49,6 +53,7 @@ ops:
 ```
 
 ### Replace a block inside a plist
+
 ```yaml
 ops:
   - path: "LaunchAgents/com.02luka.mcp.search.plist"
@@ -63,6 +68,7 @@ ops:
 ```
 
 ### Insert before a sentinel comment
+
 ```yaml
 ops:
   - path: "core/context/router.py"
