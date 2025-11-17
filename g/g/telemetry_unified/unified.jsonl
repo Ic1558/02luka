@@ -42,3 +42,7 @@
 {"event":"rag.ctx.hit","ts":"2025-11-17T04:03:17.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","latency_ms:84","cache_used:true"}
 {"event":"rag.ctx.answer","ts":"2025-11-17T04:03:17.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","hit_count:0","cache_used:1"}
 {"event":"rag.ctx.end","ts":"2025-11-17T04:03:17.3NZ","__source":"rag_query","__normalized":true,"latency_ms:84","cache_used:1"}
+{"event":"rag.ctx.start","ts":"2025-11-17T04:33:18.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","top_k:24"}
+{"event":"rag.ctx.hit","ts":"2025-11-17T04:33:18.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","latency_ms:83","cache_used:true"}
+{"event":"rag.ctx.answer","ts":"2025-11-17T04:33:18.3NZ","__source":"rag_query","__normalized":true,"query:"system probe: phase14.4 healthcheck"","hit_count:0","cache_used:1"}
+{"event":"rag.ctx.end","ts":"2025-11-17T04:33:18.3NZ","__source":"rag_query","__normalized":true,"latency_ms:83","cache_used:1"}
