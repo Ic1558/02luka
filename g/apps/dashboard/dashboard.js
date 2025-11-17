@@ -904,10 +904,6 @@ function renderWOs() {
   // Calculate and update pipeline metrics
   calculatePipelineMetrics();
   updatePipelineMetricsUI();
-
-  // Calculate and update pipeline metrics
-  calculatePipelineMetrics();
-  updatePipelineMetricsUI();
 }
 
 // Keep old function name for compatibility
