@@ -1,109 +1,68 @@
-<<<<<<< HEAD
-# Multi-Agent PR Review CLI
-
-## Overview
-`tools/multi_agent_pr_review.zsh` collects GitHub PR context, builds a contract-aware review payload, and fan-outs the task to multiple agents through `tools/claude_subagents/orchestrator.zsh`. The orchestrator summary is converted into Markdown/JSON reports under `g/reports/system/` with the required classification footer.
-
-## Requirements
-- `gh` authenticated against the repository.
-- `jq` for JSON parsing.
-- Executable `tools/claude_subagents/orchestrator.zsh` and whatever agent command you want to run (defaults to `cat`).
-
-## Usage
-From the repo root or `~/02luka/g`:
-```bash
-# Basic two-agent review
-tools/multi_agent_pr_review.zsh 289
-
-# Competing three-agent review with custom runner
-MULTI_AGENT_REVIEW_CMD='cls_shell_request.zsh "codex_cli review --task {TASK_FILE}"' \
-  tools/multi_agent_pr_review.zsh 289 --agents 3 --mode compete
-
-# Explicit agent command template (placeholder {TASK_FILE} will be replaced)
-tools/multi_agent_pr_review.zsh 289 --agent-command 'codex_cli --mode pr-review --input {TASK_FILE}'
-```
-
-### Modes
-- `review` – cooperative default.
-- `compete` – pit agents against each other.
-- `collab` – alias for orchestrator `collaborate` mode.
-
-### Agent command resolution
-`--agent-command` (or the `MULTI_AGENT_REVIEW_CMD` environment variable) accepts a template string. The literal token `{TASK_FILE}` will be replaced with the generated payload path before invoking the orchestrator. If the placeholder is omitted it is appended automatically.
-
-## Outputs
-Each run writes:
-- Markdown: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.md`
-- JSON mirror: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.json`
-- Payload scratch file: `g/tmp/multi_agent_pr_review.*.md` (removed after execution)
-
-The Markdown report includes:
-1. PR snapshot metadata
-2. Raw agent outputs (from `claude_orchestrator_summary.json`)
-3. Strategy summary
-4. Mandatory classification block:
-   ```yaml
-   classification:
-     task_type: PR_FIX | PR_FEAT | PR_DOCS
-     primary_tool: codex_cli
-     needs_pr: true
-     security_sensitive: true|false
-     reason: "Why the classification was selected"
-   ```
-
-Use the JSON mirror when you need to ingest results programmatically or archive the orchestrator summary alongside the rendered report.
-=======
 # Multi-Agent PR Review CLI Manual
 
 ## Overview
-`tools/multi_agent_pr_review.zsh` wraps the Claude subagent orchestrator so a single command can fetch a PR, generate a contract-aware payload, run multi-agent reviewers, and persist their output under `g/reports/system/`.
+`tools/multi_agent_pr_review.zsh` collects GitHub PR context, inlines the governance contract, and fan-outs review tasks to multiple agents through `tools/claude_subagents/orchestrator.zsh`. Each execution emits Markdown/JSON reports under `g/reports/system/` with the required classification footer so governance evidence stays consistent.
 
-The CLI expects to run from `~/02luka/g` with both `gh` and `jq` installed. It also requires the governance contract located at `../docs/MULTI_AGENT_PR_CONTRACT.md`.
+## Requirements
+- Run from the repo root (`~/02luka` or `~/02luka/g`).
+- Authenticated `gh` CLI for fetching PR metadata/diffs.
+- `jq` for JSON parsing.
+- Executable `tools/claude_subagents/orchestrator.zsh` plus whatever agent runner you want (defaults to `cat`).
+- Governance contract at `docs/MULTI_AGENT_PR_CONTRACT.md` (referenced in payloads).
 
 ## Usage
 ```bash
 cd ~/02luka/g
-# Default run (2 agents, review mode)
-tools/multi_agent_pr_review.zsh 288
+# Basic two-agent cooperative review
+tools/multi_agent_pr_review.zsh 289
 
-# Increase coverage + switch strategy
-tools/multi_agent_pr_review.zsh 288 --agents 3 --mode compete
+# Competing review with custom runner template
+MULTI_AGENT_REVIEW_CMD='cls_shell_request.zsh "codex_cli review --task {TASK_FILE}"' \
+  tools/multi_agent_pr_review.zsh 289 --agents 3 --mode compete
 
-# Collaborate mode alias
-tools/multi_agent_pr_review.zsh 288 --mode collab
+# Collaborate alias
+tools/multi_agent_pr_review.zsh 289 --mode collab
+
+# Explicit agent command template (auto-appends {TASK_FILE} if omitted)
+tools/multi_agent_pr_review.zsh 289 --agent-command 'codex_cli --mode pr-review --input {TASK_FILE}'
 ```
 
-### Arguments
-- `PR_NUMBER` (required): GitHub pull request number to review.
-- `--agents N`: Number of reviewers (1-10, default 2).
-- `--mode MODE`: Orchestrator strategy. Supports `review`, `compete`, and `collab` (mapped to `collaborate`).
+### Arguments & Modes
+- `PR_NUMBER` (required): Target GitHub PR.
+- `--agents N` (default 2, max 10): number of reviewers.
+- `--mode review|compete|collab`: maps directly to orchestrator strategies (collab ⇒ `collaborate`).
+- `--agent-command TEMPLATE`: overrides the runner; `{TASK_FILE}` placeholder is replaced with the generated payload path. The `MULTI_AGENT_REVIEW_CMD` env var offers the same capability.
 
-## How it works
-1. Fetch metadata and diffs via `gh pr view` + `gh pr diff`.
-2. Inline the multi-agent contract text to remind reviewers of governance constraints.
+## How it Works
+1. Fetch metadata and diffs via `gh pr view` / `gh pr diff`.
+2. Inline `docs/MULTI_AGENT_PR_CONTRACT.md` to remind reviewers of governance rules.
 3. Build a JSON payload with metadata, files, diff, and contract pointer.
-4. Launch the orchestrator: `zsh tools/claude_subagents/orchestrator.zsh <mode> <task> <agents>`.
+4. Launch the orchestrator: `zsh tools/claude_subagents/orchestrator.zsh <mode> <task> <agents>` (with `{TASK_FILE}` passed through your runner).
 5. Parse `g/reports/system/claude_orchestrator_summary.json` for agent stdout/stderr.
-6. Emit two artifacts under `g/reports/system/`:
-   - `code_review_pr<PR>_<timestamp>.md`
-   - `code_review_pr<PR>_<timestamp>.json`
+6. Convert the summary into Markdown + JSON reports and drop them in `g/reports/system/`.
 
-Each Markdown report ends with the required block:
-```
+## Outputs
+- Markdown: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.md`
+- JSON mirror: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.json`
+- Scratch payloads under `g/tmp/multi_agent_pr_review.*.md` (cleaned up automatically)
+
+Every Markdown report ends with:
+```yaml
 classification:
-  task_type: PR_FEAT
+  task_type: PR_FIX | PR_FEAT | PR_DOCS
   primary_tool: codex_cli
   needs_pr: true
-  security_sensitive: false
-  reason: "Multi-agent CLI to automate PR reviews using existing orchestrator and governance contract."
+  security_sensitive: true|false
+  reason: "Why the classification was selected"
 ```
+Use the JSON mirror when ingesting the results programmatically or archiving the orchestrator summary alongside the rendered report.
 
-## Failure modes
-- Missing prerequisites (`gh`, `jq`, contract file, orchestrator) ⇒ CLI exits with a clear error.
-- Invalid PR number / GH lookup failure ⇒ aborts before orchestrator runs.
-- Orchestrator non-zero exit ⇒ CLI logs the failure but still collates whatever output exists.
+## Failure Modes
+- Missing prerequisites (`gh`, `jq`, contract, orchestrator) ⇒ exits early with actionable messaging.
+- Invalid PR number / GitHub lookup failure ⇒ aborts before starting agents.
+- Orchestrator non-zero exit ⇒ still collates whatever output exists so you can inspect partial results.
 
 ## Tips
-- Reports inherit UTC timestamps in their filenames; keep them alongside other governance evidence.
-- Use `--mode compete` plus higher agent counts for contentious changes; switch back to `review` for light-touch audits.
->>>>>>> origin/main
+- Reports use UTC timestamps—handy for governance timelines.
+- Increase `--agents` or switch to `--mode compete` for contentious changes; keep `review` for quick audits.
+- Pair the CLI with `tools/reality_hooks/pr_reality_check.zsh` if you want orchestration evidence captured alongside runtime reality hooks.

@@ -1,20 +1,33 @@
 const SERVICES_REFRESH_MS = 30000;
 const MLS_REFRESH_MS = 30000;
+const WO_AUTOREFRESH_MS = 60000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
-
-let realityPanelInitialized = false;
 
 let servicesIntervalId;
 let mlsIntervalId;
+let woAutorefreshIntervalId;
 let currentMlsType = '';
+let realityLoading = false;
+
 let allWos = [];
 let visibleWos = [];
+let currentWos = [];
 let currentWoFilter = 'all';
 let woAutorefreshTimer = null;
 let woAutorefreshEnabled = false;
 let woAutorefreshIntervalMs = 30000;
-let woRefreshAbortController = null;
-let woRefreshRequestId = 0;
+let currentWoSearch = '';
+let currentWoStatusFilter = '';
+let currentWoSortKey = 'started_at';
+let currentWoSortDir = 'desc';
+let currentTimelineWoId = null;
+const WO_STATUS_SORT_ORDER = {
+  running: 4,
+  pending: 3,
+  completed: 2,
+  failed: 1,
+  unknown: 0
+};
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -54,8 +67,6 @@ function initTabs() {
       initServicesPanel();
     } else if (targetId === 'mls-panel') {
       initMLSPanel();
-    } else if (targetId === 'reality-panel') {
-      initRealityPanel();
     }
   }
 
@@ -74,42 +85,41 @@ function initTabs() {
   const tabOverview = document.getElementById('tab-overview');
   const tabWos = document.getElementById('tab-wos');
   const tabWoHistory = document.getElementById('tab-wo-history');
+  const tabReality = document.getElementById('tab-reality');
 
   const viewOverview = document.getElementById('view-overview');
   const viewWos = document.getElementById('view-wos');
   const viewWoHistory = document.getElementById('view-wo-history');
+  const viewReality = document.getElementById('view-reality');
 
-  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
-    const buttons = [tabOverview, tabWos, tabWoHistory];
-    const views = [viewOverview, viewWos, viewWoHistory];
+  const tabConfigs = [
+    { button: tabOverview, view: viewOverview },
+    { button: tabWos, view: viewWos },
+    { button: tabWoHistory, view: viewWoHistory, onShow: loadWoHistory },
+  ];
 
-    function setActiveButton(target) {
-      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
-    }
+  if (tabReality && viewReality) {
+    tabConfigs.push({ button: tabReality, view: viewReality, onShow: loadRealitySnapshot });
+  }
 
-    function show(view) {
-      views.forEach((v) => v.classList.add('hidden'));
-      view.classList.remove('hidden');
-    }
+  const validConfigs = tabConfigs.filter((cfg) => cfg.button && cfg.view);
 
-    tabOverview.addEventListener('click', () => {
-      setActiveButton(tabOverview);
-      show(viewOverview);
+  if (validConfigs.length) {
+    const activate = (targetCfg) => {
+      validConfigs.forEach((cfg) => {
+        cfg.button.classList.toggle('active', cfg === targetCfg);
+        cfg.view.classList.toggle('hidden', cfg !== targetCfg);
+      });
+      if (typeof targetCfg.onShow === 'function') {
+        targetCfg.onShow();
+      }
+    };
+
+    validConfigs.forEach((cfg) => {
+      cfg.button.addEventListener('click', () => activate(cfg));
     });
 
-    tabWos.addEventListener('click', () => {
-      setActiveButton(tabWos);
-      show(viewWos);
-    });
-
-    tabWoHistory.addEventListener('click', () => {
-      setActiveButton(tabWoHistory);
-      show(viewWoHistory);
-      loadWoHistory();
-    });
-
-    setActiveButton(tabOverview);
-    show(viewOverview);
+    activate(validConfigs[0]);
   }
 }
 
@@ -131,170 +141,130 @@ function hideErrorBanner(id) {
 // --- Work Orders ---
 
 function initWoFilters() {
-  const buttons = document.querySelectorAll('.wo-filter-button');
-  if (!buttons.length) {
-    return;
-  }
+  const filterGroup = document.getElementById('wo-status-filters');
+  if (!filterGroup) return;
 
+  const buttons = filterGroup.querySelectorAll('button[data-filter]');
   buttons.forEach((button) => {
     button.addEventListener('click', () => {
-      buttons.forEach((btn) => btn.classList.remove('active'));
-      button.classList.add('active');
-      currentWoFilter = button.dataset.status || 'all';
+      const filter = button.dataset.filter || 'all';
+      currentWoFilter = filter;
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === button));
+      applyWoFilter();
+    });
+  });
+}
+
+function initWoSearch() {
+  const input = document.getElementById('wo-search-input');
+  if (!input) return;
+
+  if (currentWoSearch) {
+    input.value = currentWoSearch;
+  }
+
+  input.addEventListener('input', () => {
+    currentWoSearch = input.value.trim().toLowerCase();
+    applyWoFilter();
+  });
+}
+
+function initWoSorting() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  if (!headerCells.length) return;
+
+  headerCells.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (!key) return;
+
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = key === 'id' ? 'asc' : 'desc';
+      }
+
+      updateWoSortHeaderStyles();
       applyWoFilter();
     });
   });
 
-  const initiallyActive = Array.from(buttons).find((btn) => btn.classList.contains('active'));
-  if (initiallyActive?.dataset?.status) {
-    currentWoFilter = initiallyActive.dataset.status;
-  }
+  updateWoSortHeaderStyles();
 }
 
-function applyWoFilter() {
-  if (!Array.isArray(allWos)) {
-    allWos = [];
-  }
-
-  if (currentWoFilter === 'all') {
-    visibleWos = [...allWos];
-  } else {
-    const filter = (currentWoFilter || '').toLowerCase();
-    visibleWos = allWos.filter((wo) => (wo?.status || '').toLowerCase() === filter);
-  }
-
-  renderWoSummary(allWos);
-  renderWosTable(visibleWos);
-}
-
-function renderWoSummary(wos) {
-  const el = document.getElementById('wos-summary');
-  if (!el) return;
-
-  if (!Array.isArray(wos) || !wos.length) {
-    el.innerHTML = '<span>No work orders found.</span>';
-    return;
-  }
-
-  const counts = wos.reduce(
-    (acc, wo) => {
-      const status = (wo?.status || 'unknown').toLowerCase();
-      acc.total += 1;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    },
-    { total: 0 }
-  );
-
-  const running = counts.running || 0;
-  const pending = counts.pending || 0;
-  const completed = counts.completed || 0;
-  const failed = counts.failed || 0;
-
-  el.innerHTML = `
-    <span><strong>Total:</strong> ${counts.total}</span>
-    <span><span class="summary-dot running"></span>Running: ${running}</span>
-    <span><span class="summary-dot stopped"></span>Pending: ${pending}</span>
-    <span><span class="summary-dot failed"></span>Failed: ${failed}</span>
-    <span><span class="summary-dot running"></span>Completed: ${completed}</span>
-  `;
-}
-
-function renderWosTable(wos) {
-  const tbody = document.getElementById('wos-table-body');
-  if (!tbody) return;
-
-  if (!Array.isArray(wos) || !wos.length) {
-    tbody.innerHTML = '<tr><td colspan="7">No work orders match this filter.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = '';
-
-  wos.forEach((wo) => {
-    const tr = document.createElement('tr');
-
-    const idCell = document.createElement('td');
-    idCell.innerHTML = `<code>${escapeHtml(wo?.id ?? '')}</code>`;
-
-    const statusCell = document.createElement('td');
-    statusCell.appendChild(createStatusChip((wo?.status || 'unknown').toLowerCase()));
-
-    const startedCell = document.createElement('td');
-    startedCell.textContent = formatWoDate(wo?.started_at || wo?.created_at);
-
-    const finishedCell = document.createElement('td');
-    finishedCell.textContent = formatWoDate(wo?.finished_at || wo?.completed_at);
-
-    const updatedCell = document.createElement('td');
-    updatedCell.textContent = formatWoDate(wo?.updated_at || wo?.last_update);
-
-    const actionsCell = document.createElement('td');
-    actionsCell.textContent = formatWoActions(wo);
-
-    const timelineCell = document.createElement('td');
-    timelineCell.textContent = formatWoTimeline(wo);
-
-    tr.append(idCell, statusCell, startedCell, finishedCell, updatedCell, actionsCell, timelineCell);
-    tbody.appendChild(tr);
+function updateWoSortHeaderStyles() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  headerCells.forEach((th) => {
+    const key = th.getAttribute('data-sort-key');
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (key === currentWoSortKey) {
+      th.classList.add(currentWoSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
   });
 }
 
-function formatWoDate(value) {
-  if (!value) return '—';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
-}
+function initWoAutorefreshControls() {
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+  const retryBtn = document.getElementById('wos-error-retry');
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const intervalInput = document.getElementById('wo-autorefresh-interval');
 
-function formatWoActions(wo) {
-  if (Array.isArray(wo?.actions) && wo.actions.length) {
-    return wo.actions.join(', ');
-  }
-  if (typeof wo?.action === 'string' && wo.action.trim()) {
-    return wo.action;
-  }
-  if (typeof wo?.summary === 'string' && wo.summary.trim()) {
-    return wo.summary;
-  }
-  return '—';
-}
+  refreshBtn?.addEventListener('click', () => loadWos());
+  retryBtn?.addEventListener('click', () => loadWos());
 
-function formatWoTimeline(wo) {
-  if (typeof wo?.timeline_url === 'string' && wo.timeline_url) {
-    return wo.timeline_url;
-  }
-  if (Array.isArray(wo?.timeline) && wo.timeline.length) {
-    return `${wo.timeline.length} events`;
-  }
-  if (typeof wo?.last_event === 'string' && wo.last_event.trim()) {
-    return wo.last_event;
-  }
-  return '—';
-}
-
-async function refreshWos() {
-  const requestId = ++woRefreshRequestId;
-
-  if (woRefreshAbortController) {
-    try {
-      woRefreshAbortController.abort();
-    } catch (abortErr) {
-      console.warn('Failed to abort previous WO refresh', abortErr);
+  toggle?.addEventListener('change', () => {
+    woAutorefreshEnabled = Boolean(toggle.checked);
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    } else {
+      stopWoAutorefresh();
     }
-  }
+  });
 
-  const controller = new AbortController();
-  woRefreshAbortController = controller;
+  intervalInput?.addEventListener('change', () => {
+    const seconds = Number(intervalInput.value);
+    if (!Number.isFinite(seconds) || seconds < 5) {
+      return;
+    }
+    woAutorefreshIntervalMs = seconds * 1000;
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    }
+  });
+}
+
+function startWoAutorefresh() {
+  stopWoAutorefresh();
+  woAutorefreshTimer = setInterval(() => loadWos(), woAutorefreshIntervalMs);
+}
+
+function stopWoAutorefresh() {
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
+}
+
+function setWosLoading(message) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7">${message}</td></tr>`;
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  setWosLoading('Loading work orders…');
+  hideErrorBanner('wos-error');
 
   try {
-    const res = await fetch('/api/wos', { signal: controller.signal });
+    const res = await fetch('/api/wos', {
+      headers: { Accept: 'application/json' }
+    });
     if (!res.ok) {
-      console.error('Failed to fetch WOs', res.status);
-      updateWoLastRefreshLabel(false);
-      return;
+      throw new Error(`HTTP ${res.status}`);
     }
     const data = await res.json();
     let wos = [];
@@ -305,107 +275,237 @@ async function refreshWos() {
     } else if (Array.isArray(data?.results)) {
       wos = data.results;
     }
-    allWos = Array.isArray(wos) ? wos : [];
+
+    allWos = wos;
     applyWoFilter();
-    if (requestId === woRefreshRequestId) {
-      updateWoLastRefreshLabel(true);
+
+    const ts = new Date().toLocaleTimeString();
+    const refreshLabel = document.getElementById('wo-last-refresh');
+    if (refreshLabel) {
+      refreshLabel.textContent = `Last refresh: ${ts}`;
     }
-  } catch (err) {
-    if (err?.name === 'AbortError') {
-      return;
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    showErrorBanner('wos-error', 'Failed to load work orders.');
+    setWosLoading('Failed to load work orders.');
+  }
+}
+
+function applyWoFilter() {
+  let filtered = allWos.slice();
+
+  if (currentWoFilter !== 'all') {
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status || wo.state) === currentWoFilter);
+  }
+
+  if (currentWoSearch) {
+    const q = currentWoSearch;
+    filtered = filtered.filter((wo) => buildWoSearchHaystack(wo).includes(q));
+  }
+
+  filtered.sort((a, b) => compareWos(a, b, currentWoSortKey, currentWoSortDir));
+
+  visibleWos = filtered;
+  renderWosTable(filtered);
+  renderWoSummary(filtered);
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match the current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const status = normalizeWoStatus(wo.status || wo.state);
+    const started = formatWoTimestamp(wo.started_at || wo.startedAt);
+    const finished = formatWoTimestamp(getWoCompletedTime(wo));
+    const updated = formatWoTimestamp(wo.updated_at || wo.updatedAt || wo.last_update || wo.lastUpdate);
+    const actions = Array.isArray(wo.actions) ? wo.actions.join(', ') : wo.action || '—';
+    const timeline = Array.isArray(wo.timeline) ? `${wo.timeline.length} events` : '—';
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(started)}</td>
+      <td>${escapeHtml(finished)}</td>
+      <td>${escapeHtml(updated)}</td>
+      <td>${escapeHtml(actions || '—')}</td>
+      <td>${escapeHtml(timeline)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderWoSummary(wos) {
+  const summary = document.getElementById('wos-summary');
+  if (!summary) return;
+
+  const totals = {
+    running: 0,
+    pending: 0,
+    completed: 0,
+    failed: 0
+  };
+
+  wos.forEach((wo) => {
+    const status = normalizeWoStatus(wo.status || wo.state);
+    if (status in totals) {
+      totals[status] += 1;
     }
-    console.error('Error loading WOs', err);
-    if (requestId === woRefreshRequestId) {
-      updateWoLastRefreshLabel(false);
+  });
+
+  summary.innerHTML = `
+    <span><strong>Total:</strong> ${allWos.length}</span>
+    <span><strong>Visible:</strong> ${wos.length}</span>
+    <span><span class="summary-dot running"></span>Running: ${totals.running}</span>
+    <span><span class="summary-dot stopped"></span>Pending: ${totals.pending}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${totals.failed}</span>
+    <span><span class="summary-dot completed"></span>Completed: ${totals.completed}</span>
+  `;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return 'unknown';
+  const normalized = String(status).toLowerCase();
+  if (['success', 'completed', 'complete', 'done'].includes(normalized)) {
+    return 'completed';
+  }
+  if (['failed', 'failure', 'error', 'blocked', 'cancelled'].includes(normalized)) {
+    return 'failed';
+  }
+  if (['running', 'in_progress', 'in-progress', 'active'].includes(normalized)) {
+    return 'running';
+  }
+  if (['pending', 'queued', 'waiting'].includes(normalized)) {
+    return 'pending';
+  }
+  return normalized;
+}
+
+function compareWos(a, b, sortKey, sortDir) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+
+  if (sortKey === 'id') {
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  if (sortKey === 'status') {
+    const va = getStatusSortValue(a?.status);
+    const vb = getStatusSortValue(b?.status);
+    if (va !== vb) {
+      return (va - vb) * dir;
     }
-  } finally {
-    if (woRefreshAbortController === controller) {
-      woRefreshAbortController = null;
-    }
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  const va = getWoSortValue(a, sortKey);
+  const vb = getWoSortValue(b, sortKey);
+
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return compareWoIds(a?.id, b?.id) * dir;
+}
+
+function getWoSortValue(wo, sortKey) {
+  switch (sortKey) {
+    case 'started_at':
+      return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
+    case 'finished_at':
+      return normalizeWoTimestamp(getWoCompletedTime(wo));
+    case 'updated_at':
+      return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
+    default:
+      return 0;
   }
 }
 
-function loadWos() {
-  refreshWos();
+function getStatusSortValue(status) {
+  const normalized = normalizeWoStatus(status);
+  if (Object.prototype.hasOwnProperty.call(WO_STATUS_SORT_ORDER, normalized)) {
+    return WO_STATUS_SORT_ORDER[normalized];
+  }
+  return 0;
 }
 
-function updateWoLastRefreshLabel(success) {
-  const el = document.getElementById('wos-last-refresh');
-  if (!el) return;
+function compareWoIds(aId, bId) {
+  const aInfo = normalizeWoId(aId);
+  const bInfo = normalizeWoId(bId);
 
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const ss = String(now.getSeconds()).padStart(2, '0');
-
-  if (success) {
-    el.textContent = `Last refresh: ${hh}:${mm}:${ss}`;
-  } else {
-    el.textContent = `Last refresh: error at ${hh}:${mm}:${ss}`;
+  if (aInfo.numeric !== null && bInfo.numeric !== null && aInfo.numeric !== bInfo.numeric) {
+    return aInfo.numeric - bInfo.numeric;
   }
+
+  if (aInfo.numeric !== null && bInfo.numeric === null) {
+    return -1;
+  }
+  if (aInfo.numeric === null && bInfo.numeric !== null) {
+    return 1;
+  }
+
+  if (aInfo.text < bInfo.text) return -1;
+  if (aInfo.text > bInfo.text) return 1;
+  return 0;
 }
 
-function initWoAutorefreshControls() {
-  const toggle = document.getElementById('wo-autorefresh-toggle');
-  const intervalSelect = document.getElementById('wo-autorefresh-interval');
-  const refreshNowBtn = document.getElementById('wo-refresh-now');
-
-  if (intervalSelect) {
-    const initial = parseInt(intervalSelect.value, 10);
-    if (!Number.isNaN(initial)) {
-      woAutorefreshIntervalMs = initial;
-    }
-    intervalSelect.addEventListener('change', () => {
-      const ms = parseInt(intervalSelect.value, 10);
-      if (!Number.isNaN(ms)) {
-        woAutorefreshIntervalMs = ms;
-        restartWoAutorefreshIfNeeded();
-      }
-    });
+function normalizeWoId(value) {
+  if (value === undefined || value === null) {
+    return { numeric: null, text: '' };
   }
-
-  if (toggle) {
-    woAutorefreshEnabled = Boolean(toggle.checked);
-    toggle.addEventListener('change', () => {
-      woAutorefreshEnabled = !!toggle.checked;
-      if (woAutorefreshEnabled) {
-        startWoAutorefresh();
-      } else {
-        stopWoAutorefresh();
-      }
-    });
-  }
-
-  if (refreshNowBtn) {
-    refreshNowBtn.addEventListener('click', () => {
-      refreshWos();
-    });
-  }
-
-  if (woAutorefreshEnabled) {
-    startWoAutorefresh();
-  }
+  const text = String(value).toLowerCase();
+  const match = text.match(/(\d+)/);
+  const numeric = match ? Number(match[1]) : null;
+  return { numeric: Number.isNaN(numeric) ? null : numeric, text };
 }
 
-function startWoAutorefresh() {
-  stopWoAutorefresh();
-  woAutorefreshTimer = setInterval(() => {
-    refreshWos();
-  }, woAutorefreshIntervalMs);
-  refreshWos();
+function buildWoSearchHaystack(wo) {
+  const haystacks = [];
+  if (wo.id) haystacks.push(String(wo.id));
+  if (wo.title) haystacks.push(String(wo.title));
+  if (wo.context) haystacks.push(String(wo.context));
+  if (wo.summary) haystacks.push(String(wo.summary));
+  if (wo.description) haystacks.push(String(wo.description));
+  if (wo.agent) haystacks.push(String(wo.agent));
+  if (wo.worker) haystacks.push(String(wo.worker));
+  if (wo.type) haystacks.push(String(wo.type));
+  if (wo.action) haystacks.push(String(wo.action));
+  if (Array.isArray(wo.actions) && wo.actions.length) {
+    haystacks.push(wo.actions.join(' '));
+  }
+  if (Array.isArray(wo.tags) && wo.tags.length) {
+    haystacks.push(wo.tags.join(' '));
+  }
+  if (wo.contextual_data) {
+    haystacks.push(String(wo.contextual_data));
+  }
+  return haystacks.join(' ').toLowerCase();
 }
 
-function stopWoAutorefresh() {
-  if (woAutorefreshTimer !== null) {
-    clearInterval(woAutorefreshTimer);
-    woAutorefreshTimer = null;
-  }
+function normalizeWoTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return 0;
+  return parsed;
 }
 
-function restartWoAutorefreshIfNeeded() {
-  if (woAutorefreshEnabled) {
-    startWoAutorefresh();
-  }
+function formatWoTimestamp(value) {
+  const ts = normalizeWoTimestamp(value);
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
+}
+
+// Helper to get completion time (checks completed_at first, then finished_at)
+function getWoCompletedTime(wo) {
+  return wo?.completed_at || wo?.finished_at || wo?.finishedAt || '';
 }
 
 // --- Services ---
@@ -781,6 +881,465 @@ function renderWoHistory(wos, limit) {
   });
 }
 
+// --- Work Orders (table + timeline) ---
+
+function initWoFilters() {
+  const statusSelect = document.getElementById('wo-status-filter');
+  if (!statusSelect) return;
+
+  currentWoStatusFilter = statusSelect.value || '';
+  statusSelect.addEventListener('change', () => {
+    currentWoStatusFilter = statusSelect.value || '';
+    loadWos();
+  });
+}
+
+function initWoSearch() {
+  const searchInput = document.getElementById('wo-search-input');
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', () => {
+    currentWoSearch = searchInput.value.trim().toLowerCase();
+    renderWosTable(currentWos);
+  });
+}
+
+function initWoSorting() {
+  const headers = document.querySelectorAll('#wos-table thead th[data-sort-key]');
+  headers.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortKey;
+      if (!key) return;
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = 'desc';
+      }
+      renderWosTable(currentWos);
+    });
+  });
+}
+
+function initWoAutorefreshControls() {
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+
+  const updateAutorefresh = () => {
+    if (woAutorefreshIntervalId) {
+      clearInterval(woAutorefreshIntervalId);
+      woAutorefreshIntervalId = null;
+    }
+    if (toggle?.checked) {
+      woAutorefreshIntervalId = setInterval(() => loadWos(), WO_AUTOREFRESH_MS);
+    }
+  };
+
+  toggle?.addEventListener('change', updateAutorefresh);
+  updateAutorefresh();
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+
+  const params = new URLSearchParams();
+  if (currentWoStatusFilter) params.set('status', currentWoStatusFilter);
+  params.set('limit', '200');
+  const query = params.toString();
+
+  try {
+    const res = await fetch(`/api/wos${query ? `?${query}` : ''}`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch work orders: ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    currentWos = wos;
+    renderWosTable(currentWos);
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    tbody.innerHTML = '<tr><td colspan="7">Failed to load work orders.</td></tr>';
+  }
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    highlightActiveTimelineRow();
+    return;
+  }
+
+  const searchTerm = currentWoSearch.trim().toLowerCase();
+
+  const filtered = wos.filter((wo) => {
+    if (currentWoStatusFilter) {
+      const status = normalizeWoStatus(wo?.status || '').toLowerCase();
+      if (status !== currentWoStatusFilter.toLowerCase()) {
+        return false;
+      }
+    }
+    if (!searchTerm) return true;
+    return getWoSearchableText(wo).includes(searchTerm);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match your filters.</td></tr>';
+    highlightActiveTimelineRow();
+    return;
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const aVal = getWoSortValue(a, currentWoSortKey);
+    const bVal = getWoSortValue(b, currentWoSortKey);
+    if (aVal === bVal) return 0;
+    if (aVal > bVal) return currentWoSortDir === 'asc' ? 1 : -1;
+    return currentWoSortDir === 'asc' ? -1 : 1;
+  });
+
+  tbody.innerHTML = '';
+
+  sorted.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const woId = wo?.id ? String(wo.id) : '';
+    tr.dataset.woId = woId;
+
+    const idTd = document.createElement('td');
+    const idCode = document.createElement('code');
+    idCode.textContent = wo?.id ?? '';
+    idTd.appendChild(idCode);
+
+    const statusTd = document.createElement('td');
+    statusTd.textContent = normalizeWoStatus(wo?.status || '');
+
+    const startedTd = document.createElement('td');
+    startedTd.textContent = formatWoTime(wo?.started_at || wo?.startedAt || '');
+
+    const finishedTd = document.createElement('td');
+    finishedTd.textContent = formatWoTime(getWoCompletedTime(wo) || '');
+
+    const updatedTd = document.createElement('td');
+    updatedTd.textContent = formatWoTime(
+      wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate || ''
+    );
+
+    const actionsTd = document.createElement('td');
+    actionsTd.textContent = '—';
+
+    const timelineTd = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Timeline';
+    btn.className = 'wo-timeline-button';
+    btn.dataset.woId = woId;
+    btn.setAttribute('aria-pressed', currentTimelineWoId && woId === currentTimelineWoId ? 'true' : 'false');
+    btn.setAttribute('aria-label', woId ? `Open timeline for work order ${woId}` : 'Open work order timeline');
+    btn.addEventListener('click', () => {
+      const woId = wo?.id;
+      if (!woId) return;
+      openWoTimeline(woId);
+    });
+    timelineTd.appendChild(btn);
+
+    tr.appendChild(idTd);
+    tr.appendChild(statusTd);
+    tr.appendChild(startedTd);
+    tr.appendChild(finishedTd);
+    tr.appendChild(updatedTd);
+    tr.appendChild(actionsTd);
+    tr.appendChild(timelineTd);
+
+    if (currentTimelineWoId && woId === currentTimelineWoId) {
+      tr.classList.add('wo-timeline-active-row');
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  highlightActiveTimelineRow();
+}
+
+function getWoSearchableText(wo) {
+  return [
+    wo?.id,
+    wo?.status,
+    wo?.agent,
+    wo?.worker,
+    wo?.type,
+    wo?.summary,
+    wo?.description
+  ]
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ');
+}
+
+function getWoSortValue(wo, key) {
+  if (!wo || !key) return '';
+  const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const value = wo[key] ?? wo[camelKey];
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (/_at$/i.test(key) || /At$/.test(key)) {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  return value;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return '';
+  const str = String(status).trim();
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatWoTime(value) {
+  if (!value) return '';
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return String(value);
+  }
+  const date = new Date(timestamp);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function initWoTimeline() {
+  const closeBtn = document.getElementById('wo-timeline-close');
+  const section = document.getElementById('wo-timeline-section');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!closeBtn || !section) return;
+
+  closeBtn.addEventListener('click', () => {
+    section.classList.add('hidden');
+    currentTimelineWoId = null;
+    if (titleEl) {
+      titleEl.textContent = 'WO Timeline';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = 'Select a work order from the table to see its history.';
+    }
+    if (contentEl) {
+      contentEl.innerHTML = '';
+    }
+    highlightActiveTimelineRow();
+  });
+}
+
+async function openWoTimeline(woId) {
+  const section = document.getElementById('wo-timeline-section');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const contentEl = document.getElementById('wo-timeline-content');
+
+  if (!section || !titleEl || !subtitleEl || !contentEl) return;
+
+  currentTimelineWoId = woId;
+  highlightActiveTimelineRow();
+
+  titleEl.textContent = `WO Timeline — ${woId}`;
+  subtitleEl.textContent = 'Loading timeline and log tail…';
+  section.classList.remove('hidden');
+  contentEl.innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      subtitleEl.textContent = `Failed to load WO ${woId} (status ${res.status})`;
+      return;
+    }
+    const wo = await res.json();
+    if (currentTimelineWoId !== woId) {
+      return;
+    }
+    subtitleEl.textContent = buildTimelineSubtitle(wo);
+    renderWoTimelineContent(wo);
+  } catch (error) {
+    console.error('Error loading WO timeline', error);
+    subtitleEl.textContent = `Error loading timeline for WO ${woId}`;
+  }
+}
+
+function buildTimelineSubtitle(wo) {
+  const status = normalizeWoStatus(wo?.status || 'unknown');
+  const started = formatWoTime(wo?.started_at || wo?.startedAt);
+  const finished = formatWoTime(getWoCompletedTime(wo));
+  const updated = formatWoTime(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate
+  );
+
+  const parts = [`Status: ${status || 'Unknown'}`];
+  if (started) parts.push(`Started: ${started}`);
+  if (finished) parts.push(`Finished: ${finished}`);
+  if (updated) parts.push(`Last update: ${updated}`);
+
+  return parts.join(' • ');
+}
+
+function renderWoTimelineContent(wo) {
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!contentEl) return;
+
+  const eventsColumn = document.createElement('div');
+  eventsColumn.className = 'wo-timeline-events';
+  const eventsTitle = document.createElement('h4');
+  eventsTitle.textContent = 'Key Events';
+  eventsColumn.appendChild(eventsTitle);
+
+  const eventsList = document.createElement('ul');
+  eventsList.className = 'wo-timeline-list';
+
+  const events = buildWoEventsList(wo);
+  if (!events.length) {
+    const emptyItem = document.createElement('li');
+    emptyItem.className = 'wo-timeline-item';
+    emptyItem.textContent = 'No timeline events available.';
+    eventsList.appendChild(emptyItem);
+  } else {
+    events.forEach((event) => {
+      const item = document.createElement('li');
+      item.className = 'wo-timeline-item';
+
+      const timeEl = document.createElement('div');
+      timeEl.className = 'wo-timeline-item-time';
+      timeEl.textContent = event.time || '';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'wo-timeline-item-label';
+      labelEl.textContent = event.label;
+
+      item.appendChild(timeEl);
+      item.appendChild(labelEl);
+
+      if (event.meta) {
+        const metaEl = document.createElement('div');
+        metaEl.className = 'wo-timeline-item-meta';
+        metaEl.textContent = event.meta;
+        item.appendChild(metaEl);
+      }
+
+      eventsList.appendChild(item);
+    });
+  }
+
+  eventsColumn.appendChild(eventsList);
+
+  const logsColumn = document.createElement('div');
+  logsColumn.className = 'wo-timeline-logs';
+  const logsTitle = document.createElement('h4');
+  logsTitle.textContent = 'Log Tail';
+  logsColumn.appendChild(logsTitle);
+
+  const logContainer = document.createElement('div');
+  let logLines = null;
+  if (Array.isArray(wo?.log_tail)) {
+    logLines = wo.log_tail;
+  } else if (Array.isArray(wo?.logTail)) {
+    logLines = wo.logTail;
+  } else if (typeof wo?.log_tail === 'string') {
+    logLines = wo.log_tail.split('\n');
+  }
+
+  if (logLines && logLines.length) {
+    const pre = document.createElement('pre');
+    pre.className = 'wo-log-lines';
+    pre.textContent = logLines.join('\n');
+    logContainer.appendChild(pre);
+  } else {
+    const emptyLog = document.createElement('div');
+    emptyLog.className = 'wo-log-empty';
+    emptyLog.textContent = 'No log tail available for this work order.';
+    logContainer.appendChild(emptyLog);
+  }
+
+  logsColumn.appendChild(logContainer);
+
+  contentEl.innerHTML = '';
+  contentEl.appendChild(eventsColumn);
+  contentEl.appendChild(logsColumn);
+}
+
+function highlightActiveTimelineRow() {
+  const rows = document.querySelectorAll('#wos-table-body tr');
+  const activeId = currentTimelineWoId ? String(currentTimelineWoId) : '';
+  rows.forEach((row) => {
+    const rowId = row.dataset.woId || '';
+    const isActive = Boolean(activeId && rowId === activeId);
+    row.classList.toggle('wo-timeline-active-row', isActive);
+    const button = row.querySelector('.wo-timeline-button');
+    if (button) {
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+  });
+}
+
+function buildWoEventsList(wo) {
+  const events = [];
+
+  const addEvent = (timeValue, label, meta) => {
+    if (!timeValue) return;
+    events.push({
+      rawTime: timeValue,
+      time: formatWoTime(timeValue),
+      label,
+      meta: meta ? String(meta) : ''
+    });
+  };
+
+  addEvent(wo?.created_at || wo?.createdAt, 'Created', wo?.created_by || wo?.createdBy);
+  addEvent(wo?.started_at || wo?.startedAt, 'Started', wo?.worker || wo?.agent);
+  addEvent(getWoCompletedTime(wo), 'Finished', wo?.result || wo?.outcome);
+  addEvent(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate,
+    'Last updated',
+    wo?.status ? normalizeWoStatus(wo.status) : ''
+  );
+
+  if (Array.isArray(wo?.events)) {
+    wo.events.forEach((event) => {
+      addEvent(event?.time || event?.timestamp, event?.label || event?.type || 'Event', event?.details || event?.message);
+    });
+  }
+
+  events.sort((a, b) => {
+    const aTime = Date.parse(a.rawTime || '') || 0;
+    const bTime = Date.parse(b.rawTime || '') || 0;
+    return aTime - bTime;
+  });
+
+  return events;
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) {
     return '';
@@ -799,6 +1358,175 @@ function initWoHistoryFilters() {
 
   statusFilter?.addEventListener('change', () => loadWoHistory());
   limitSelect?.addEventListener('change', () => loadWoHistory());
+}
+
+// --- Reality Snapshot ---
+
+function setRealityLoading() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (meta) meta.textContent = 'Loading Reality snapshot…';
+  if (deployEl) deployEl.textContent = 'Loading deployment data…';
+  if (orchEl) orchEl.textContent = 'Loading orchestrator summary…';
+  if (saveBody) {
+    saveBody.innerHTML = '<tr><td colspan="7">Loading save.sh runs…</td></tr>';
+  }
+
+  updateRealityBadge(document.getElementById('reality-badge-deploy'), 'Deployment', null);
+  updateRealityBadge(document.getElementById('reality-badge-save'), 'save.sh', null);
+  updateRealityBadge(document.getElementById('reality-badge-orch'), 'Orchestrator', null);
+}
+
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  if (!meta) {
+    return;
+  }
+  if (realityLoading) {
+    return;
+  }
+
+  setRealityLoading();
+  hideErrorBanner('reality-error');
+  realityLoading = true;
+
+  try {
+    const res = await fetch('/api/reality/snapshot?advisory=1');
+    if (!res.ok) {
+      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
+      renderRealityError(`HTTP ${res.status}`);
+      return;
+    }
+
+    const payload = await res.json();
+    renderRealitySnapshot(payload);
+  } catch (error) {
+    console.error('Error loading Reality snapshot', error);
+    renderRealityError('Failed to load Reality snapshot.');
+  } finally {
+    realityLoading = false;
+  }
+}
+
+function renderRealitySnapshot(payload) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  const badgeDeploy = document.getElementById('reality-badge-deploy');
+  const badgeSave = document.getElementById('reality-badge-save');
+  const badgeOrch = document.getElementById('reality-badge-orch');
+
+  if (!meta || !deployEl || !saveBody || !orchEl) {
+    return;
+  }
+
+  hideErrorBanner('reality-error');
+  updateRealityBadge(badgeDeploy, 'Deployment', null);
+  updateRealityBadge(badgeSave, 'save.sh', null);
+  updateRealityBadge(badgeOrch, 'Orchestrator', null);
+
+  if (!payload || payload.status === 'no_snapshot') {
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow first.';
+    deployEl.textContent = '';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs recorded.</td></tr>';
+    orchEl.textContent = '';
+
+    if (payload?.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  if (payload.status === 'error') {
+    renderRealityError(payload.error || 'Invalid Reality snapshot.');
+    if (payload.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || '';
+  const deployment = data.deployment_report || null;
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
+
+  if (deployment && deployment.path) {
+    deployEl.textContent = `Report: ${deployment.path}`;
+  } else {
+    deployEl.textContent = 'No deployment report in snapshot.';
+  }
+
+  saveBody.innerHTML = '';
+  if (!saveRuns.length) {
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs captured.</td></tr>';
+  } else {
+    saveRuns.forEach((run) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
+        <td>${escapeHtml(run?.lane || '')}</td>
+        <td>${escapeHtml(run?.layer1 || '')}</td>
+        <td>${escapeHtml(run?.layer2 || '')}</td>
+        <td>${escapeHtml(run?.layer3 || '')}</td>
+        <td>${escapeHtml(run?.layer4 || '')}</td>
+        <td>${escapeHtml(run?.git || '')}</td>
+      `;
+      saveBody.appendChild(tr);
+    });
+  }
+
+  if (orchestrator) {
+    try {
+      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+    } catch (err) {
+      orchEl.textContent = String(orchestrator);
+    }
+  } else {
+    orchEl.textContent = 'No orchestrator summary in snapshot.';
+  }
+
+  if (payload.advisory) {
+    const adv = payload.advisory;
+    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+  }
+}
+
+function renderRealityError(message) {
+  const msg = message || 'Failed to load Reality snapshot.';
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = msg;
+  }
+  showErrorBanner('reality-error', msg);
+}
+
+function updateRealityBadge(el, label, status) {
+  if (!el) return;
+  el.className = 'reality-badge reality-badge-muted';
+  el.textContent = label;
+
+  if (!status) {
+    return;
+  }
+
+  const normalized = String(status).toLowerCase().trim().replace(/\s+/g, '_');
+  el.className = `reality-badge reality-badge-${normalized}`;
+  el.textContent = `${label}: ${status}`;
 }
 
 function formatRelativeTime(isoString) {
@@ -856,169 +1584,16 @@ function initMLSPanel() {
   mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
-// --- Reality Snapshot ---
-
-async function loadRealitySnapshot() {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Loading Reality snapshot…';
-  }
-  hideErrorBanner('reality-error');
-
-  try {
-    const res = await fetch('/api/reality/snapshot?advisory=1');
-    if (!res.ok) {
-      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
-      renderRealityError(`HTTP ${res.status}`);
-      return;
-    }
-    const payload = await res.json();
-    renderRealitySnapshot(payload);
-  } catch (error) {
-    console.error('Error loading Reality snapshot', error);
-    renderRealityError(String(error));
-  }
-}
-
-function renderRealitySnapshot(payload) {
-  const meta = document.getElementById('reality-meta');
-  const deployEl = document.getElementById('reality-deployment');
-  const saveBody = document.getElementById('reality-save-body');
-  const orchEl = document.getElementById('reality-orchestrator');
-  const badgeDeploy = document.getElementById('reality-badge-deploy');
-  const badgeSave = document.getElementById('reality-badge-save');
-  const badgeOrch = document.getElementById('reality-badge-orch');
-
-  if (!meta || !deployEl || !saveBody || !orchEl) {
-    return;
-  }
-
-  updateRealityBadge(badgeDeploy, 'Deployment', null);
-  updateRealityBadge(badgeSave, 'save.sh', null);
-  updateRealityBadge(badgeOrch, 'Orchestrator', null);
-
-  if (!payload || payload.status === 'no_snapshot') {
-    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
-    deployEl.textContent = '';
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs in snapshot.</td></tr>';
-    orchEl.textContent = '';
-
-    if (payload?.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-
-    return;
-  }
-
-  if (payload.status === 'error') {
-    renderRealityError(payload.error || 'invalid snapshot');
-    if (payload.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-    return;
-  }
-
-  const data = payload.data || {};
-  const timestamp = data.timestamp || '';
-  const deployment = data.deployment_report || null;
-  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
-  const orchestrator = data.orchestrator_summary || null;
-
-  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
-
-  if (deployment && deployment.path) {
-    deployEl.textContent = `Report: ${deployment.path}`;
-  } else {
-    deployEl.textContent = 'No deployment report in snapshot.';
-  }
-
-  saveBody.innerHTML = '';
-  if (!saveRuns.length) {
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh full-cycle runs in snapshot.</td></tr>';
-  } else {
-    saveRuns.forEach((run) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
-        <td>${escapeHtml(run?.lane || '')}</td>
-        <td>${escapeHtml(run?.layer1 || '')}</td>
-        <td>${escapeHtml(run?.layer2 || '')}</td>
-        <td>${escapeHtml(run?.layer3 || '')}</td>
-        <td>${escapeHtml(run?.layer4 || '')}</td>
-        <td>${escapeHtml(run?.git || '')}</td>
-      `;
-      saveBody.appendChild(tr);
-    });
-  }
-
-  if (orchestrator) {
-    try {
-      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
-    } catch (error) {
-      console.error('Failed to stringify orchestrator summary', error);
-      orchEl.textContent = String(orchestrator);
-    }
-  } else {
-    orchEl.textContent = 'No orchestrator summary in snapshot.';
-  }
-
-  if (payload.advisory) {
-    const adv = payload.advisory;
-    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-  }
-}
-
-function renderRealityError(message) {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Reality snapshot unavailable.';
-  }
-  showErrorBanner('reality-error', message || 'Failed to load Reality snapshot.');
-}
-
-function updateRealityBadge(el, label, status) {
-  if (!el) return;
-  el.className = 'badge badge-muted';
-
-  if (!status) {
-    el.textContent = label;
-    return;
-  }
-
-  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
-  el.className = `badge badge-${normalized}`;
-  el.textContent = `${label}: ${status}`;
-}
-
-function initRealityPanel() {
-  if (realityPanelInitialized) {
-    return;
-  }
-
-  const refreshBtn = document.getElementById('reality-refresh-btn');
-  const retryBtn = document.getElementById('reality-error-retry');
-
-  refreshBtn?.addEventListener('click', () => loadRealitySnapshot());
-  retryBtn?.addEventListener('click', () => loadRealitySnapshot());
-
-  loadRealitySnapshot();
-  realityPanelInitialized = true;
-}
-
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
   initWoFilters();
+  initWoSearch();
+  initWoSorting();
   initWoAutorefreshControls();
+  initWoTimeline();
   loadWos();
+  document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
 
 function cleanupIntervals() {
@@ -1032,7 +1607,14 @@ function cleanupIntervals() {
     mlsIntervalId = null;
   }
 
-  stopWoAutorefresh();
+  if (woAutorefreshIntervalId) {
+    clearInterval(woAutorefreshIntervalId);
+    woAutorefreshIntervalId = null;
+  }
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
