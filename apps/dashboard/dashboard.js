@@ -17,6 +17,7 @@ let woAutorefreshTimer = null;
 let woAutorefreshEnabled = false;
 let woAutorefreshIntervalMs = 30000;
 let currentWoSearch = '';
+let serviceData = [];
 let currentWoStatusFilter = '';
 let currentWoSortKey = 'started_at';
 let currentWoSortDir = 'desc';
@@ -531,6 +532,7 @@ async function loadServices() {
 
   const statusFilter = document.getElementById('services-status-filter')?.value || '';
   const typeFilter = document.getElementById('services-type-filter')?.value || '';
+  const hasFilters = Boolean(statusFilter || typeFilter);
 
   try {
     const params = new URLSearchParams();
@@ -538,7 +540,8 @@ async function loadServices() {
     const query = params.toString();
 
     const data = await fetchJSON(`/api/services${query ? `?${query}` : ''}`);
-    let services = Array.isArray(data?.services) ? data.services : [];
+    const allServices = Array.isArray(data?.services) ? data.services : [];
+    let services = allServices;
 
     if (typeFilter) {
       services = services.filter((svc) => {
@@ -550,8 +553,13 @@ async function loadServices() {
       });
     }
 
+    if (!hasFilters) {
+      serviceData = allServices.slice();
+    }
+
     renderServicesSummary(data?.summary);
     renderServicesTable(services);
+    updateSystemHealthBar();
   } catch (error) {
     console.error('Failed to load services', error);
     showErrorBanner('services-error', 'Failed to load services.');
@@ -709,6 +717,127 @@ function renderMLSList(entries) {
 
   entries.forEach((entry) => {
     list.appendChild(createMLSCard(entry));
+  });
+}
+
+async function refreshSummaryWos(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const payload = await fetchJSON('/api/wos');
+    const wos = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.wos)
+        ? payload.wos
+        : Array.isArray(payload?.results)
+          ? payload.results
+          : null;
+
+    if (!Array.isArray(wos)) {
+      setSummaryText(cardEl, '0', 'no data');
+      return;
+    }
+
+    allWos = wos.slice();
+    updateSystemHealthBar();
+
+    const total = wos.length;
+    let active = 0;
+    let failed = 0;
+
+    wos.forEach((wo) => {
+      const status = String(wo?.status || '').toLowerCase();
+      if (!status) return;
+
+      if (status === 'failed' || status === 'error') {
+        failed += 1;
+      } else if (!['done', 'completed', 'cancelled', 'canceled'].includes(status)) {
+        active += 1;
+      }
+    });
+
+    const subParts = [`active: ${active}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh WO summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+async function refreshSummaryServices(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const data = await fetchJSON('/api/services');
+
+    if (Array.isArray(data?.services)) {
+      serviceData = data.services.slice();
+      updateSystemHealthBar();
+    }
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const running = Number(summary.running) || 0;
+    const failed = Number(summary.failed) || 0;
+
+    const subParts = [`running: ${running}`];
+    if (failed > 0) {
+      subParts.push(`failed: ${failed}`);
+    }
+
+    const mainValue = total > 0 ? `${running}/${total}` : String(running);
+    setSummaryText(cardEl, mainValue, subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh services summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+async function refreshSummaryMls(cardEl) {
+  if (!cardEl) return;
+
+  try {
+    setSummaryLoading(cardEl);
+    const data = await fetchJSON('/api/mls');
+
+    const summary = data?.summary ?? {};
+    const total = Number(summary.total) || 0;
+    const solutions = Number(summary.solutions) || 0;
+    const failures = Number(summary.failures) || 0;
+
+    const subParts = [`solutions: ${solutions}`];
+    if (failures > 0) {
+      subParts.push(`failures: ${failures}`);
+    }
+
+    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
+  } catch (error) {
+    console.error('Failed to refresh MLS summary:', error);
+    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
+  }
+}
+
+function initWoStatusFilters() {
+  const container = document.getElementById('wo-status-filters');
+  if (!container) return;
+
+  const chips = Array.from(container.querySelectorAll('.wo-status-chip'));
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const newStatus = chip.dataset.status || '';
+      currentWoStatusFilter = newStatus;
+
+      chips.forEach((c) => c.classList.remove('wo-status-chip--active'));
+      chip.classList.add('wo-status-chip--active');
+
+      loadWos();
+    });
   });
 }
 
@@ -1560,6 +1689,351 @@ function formatRelativeTime(isoString) {
   return `${rtf.format(Math.round(value), unit)} · ${date.toLocaleString()}`;
 }
 
+function onWorkOrderSelected(woId) {
+  if (!woId) {
+    currentWoId = null;
+  } else {
+    currentWoId = String(woId);
+  }
+  refreshWoDetailMls();
+}
+
+async function refreshWoDetailMls() {
+  const emptyEl = document.getElementById('wo-detail-mls-empty');
+  const listEl = document.getElementById('wo-detail-mls-list');
+
+  if (!listEl) {
+    return;
+  }
+
+  const defaultMessage = emptyEl?.dataset?.defaultMessage || 'No MLS lessons linked to this work order yet.';
+
+  if (!currentWoId) {
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = defaultMessage;
+    }
+    return;
+  }
+
+  try {
+    if (!Array.isArray(cachedMlsEntries)) {
+      const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const payload = await res.json();
+      cachedMlsEntries = Array.isArray(payload.entries) ? payload.entries : [];
+    }
+
+    const related = cachedMlsEntries.filter((entry) => {
+      if (!entry || entry.related_wo === undefined || entry.related_wo === null) {
+        return false;
+      }
+      return String(entry.related_wo) === String(currentWoId);
+    });
+
+    listEl.innerHTML = '';
+
+    if (!related.length) {
+      if (emptyEl) {
+        emptyEl.style.display = '';
+        emptyEl.textContent = defaultMessage;
+      }
+      return;
+    }
+
+    if (emptyEl) {
+      emptyEl.style.display = 'none';
+      emptyEl.textContent = defaultMessage;
+    }
+
+    related.forEach((entry) => {
+      const li = document.createElement('li');
+      li.className = 'wo-detail-mls-item';
+      const entryId = entry.id || entry.mls_id || 'MLS-UNKNOWN';
+      li.dataset.mlsId = entryId;
+      li.textContent = entry.title || entryId || 'MLS lesson';
+      listEl.appendChild(li);
+    });
+  } catch (error) {
+    console.error('Failed to load related MLS lessons for WO', currentWoId, error);
+    cachedMlsEntries = null;
+    listEl.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = '';
+      emptyEl.textContent = 'Error loading MLS lessons for this work order.';
+    }
+  }
+}
+
+function focusMlsCardById(mlsId) {
+  const list = document.getElementById('mls-list');
+  if (!list || !mlsId) {
+    return;
+  }
+
+  const safeId = cssEscapeAttr(mlsId);
+  if (!safeId) {
+    return;
+  }
+
+  const card = list.querySelector(`[data-mls-id="${safeId}"]`);
+  if (card && typeof card.scrollIntoView === 'function') {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('mls-card-highlight');
+    setTimeout(() => card.classList.remove('mls-card-highlight'), 1500);
+  }
+}
+
+function cssEscapeAttr(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+  const stringValue = String(value);
+  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
+    return window.CSS.escape(stringValue);
+  }
+  return stringValue.replace(/"/g, '\\"');
+}
+
+// === Global system health (WO + Services) ===
+
+function updateSystemHealthBar() {
+  const bar = document.getElementById('system-health-bar');
+  const messageEl = document.getElementById('system-health-message');
+  const woCountsEl = document.getElementById('health-wo-counts');
+  const svcCountsEl = document.getElementById('health-svc-counts');
+
+  if (!bar || !messageEl || !woCountsEl || !svcCountsEl) {
+    return;
+  }
+
+  const normalizedWos = Array.isArray(allWos) ? allWos : [];
+  const normalizedServices = Array.isArray(serviceData) ? serviceData : [];
+  const normalizeStatus = (value) => String(value || '').toLowerCase();
+
+  const totalWos = normalizedWos.length;
+  const woFailed = normalizedWos.filter((wo) => {
+    const status = normalizeStatus(wo?.status);
+    return status === 'failed' || status === 'error';
+  }).length;
+  const woDone = normalizedWos.filter((wo) => {
+    const status = normalizeStatus(wo?.status);
+    return ['done', 'completed', 'success'].includes(status);
+  }).length;
+  const woActive = Math.max(0, totalWos - woFailed - woDone);
+
+  woCountsEl.textContent = `${totalWos} total · ${woActive} active · ${woFailed} failed`;
+
+  const totalSvc = normalizedServices.length;
+  const svcRunning = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'running').length;
+  const svcFailed = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'failed').length;
+  const svcStopped = normalizedServices.filter((svc) => normalizeStatus(svc?.status) === 'stopped').length;
+
+  svcCountsEl.textContent = `${totalSvc} total · ${svcRunning} running · ${svcFailed} failed`;
+
+  bar.classList.remove('health-ok', 'health-warn', 'health-bad');
+
+  const anyFailed = woFailed > 0 || svcFailed > 0;
+  const anyStopped = svcStopped > 0;
+  const hasData = totalWos > 0 || totalSvc > 0;
+
+  let message = 'All monitored work orders and services look healthy.';
+  let nextClass = 'health-ok';
+
+  if (!hasData) {
+    nextClass = 'health-warn';
+    message = 'Awaiting work order and service data…';
+  } else if (anyFailed) {
+    nextClass = 'health-bad';
+    message = 'Some work orders or services are failing – please check details.';
+  } else if (anyStopped) {
+    nextClass = 'health-warn';
+    message = 'System is running with some services stopped.';
+  }
+
+  bar.classList.add(nextClass);
+  messageEl.textContent = message;
+}
+
+document.addEventListener('click', (event) => {
+  const baseTarget = event.target;
+  if (!(baseTarget instanceof Element)) {
+    return;
+  }
+
+  const target = baseTarget.closest('.wo-detail-mls-item');
+  if (!target) {
+    return;
+  }
+
+  const mlsId = target.dataset?.mlsId;
+  if (!mlsId) {
+    return;
+  }
+
+  if (typeof window.selectMlsLesson === 'function') {
+    window.selectMlsLesson(mlsId);
+    return;
+  }
+
+  focusMlsCardById(mlsId);
+});
+
+// --- WO Timeline Panel ---
+
+function initWoTimelinePanel() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel || woTimelineInitialized) {
+    return;
+  }
+
+  const statusSelect = document.getElementById('wo-filter-status');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', () => {
+      woTimelineFilterStatus = statusSelect.value || '';
+      renderWoTimelinePanel();
+    });
+  }
+
+  const searchInput = document.getElementById('wo-filter-search');
+  if (searchInput) {
+    const handleSearch = debounce(() => {
+      woTimelineSearchQuery = searchInput.value || '';
+      renderWoTimelinePanel();
+    }, 200);
+    searchInput.addEventListener('input', handleSearch);
+  }
+
+  const listEl = document.getElementById('wo-timeline-list');
+  listEl?.addEventListener('click', (event) => {
+    const actionBtn = event.target.closest('.wo-timeline-view');
+    if (actionBtn?.dataset.woId) {
+      openWoTimeline(actionBtn.dataset.woId);
+    }
+  });
+
+  woTimelineInitialized = true;
+  refreshWoTimeline();
+  woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
+}
+
+async function refreshWoTimeline() {
+  const panel = document.getElementById('wo-timeline-panel');
+  if (!panel) return;
+
+  const listEl = document.getElementById('wo-timeline-list');
+
+  try {
+    const res = await fetch('/api/wos', { headers: { Accept: 'application/json' } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const payload = await res.json();
+    let dataset = [];
+    if (Array.isArray(payload)) {
+      dataset = payload;
+    } else if (Array.isArray(payload?.wos)) {
+      dataset = payload.wos;
+    } else if (Array.isArray(payload?.results)) {
+      dataset = payload.results;
+    }
+
+    const entries = dataset.map((wo) => normalizeWoTimelineEntry(wo));
+    entries.sort((a, b) => getTimelineSortKey(b) - getTimelineSortKey(a));
+    woTimelineAll = entries;
+    renderWoTimelinePanel();
+  } catch (error) {
+    console.error('Failed to refresh WO timeline', error);
+    if (listEl) {
+      listEl.innerHTML = `
+        <div class="wo-timeline-item">
+          <div class="wo-timeline-row">
+            <span>Failed to load work orders.</span>
+          </div>
+          <div class="wo-timeline-when">${escapeHtml(error.message || String(error))}</div>
+        </div>
+      `;
+    }
+  }
+}
+
+function renderWoTimelinePanel() {
+  const listEl = document.getElementById('wo-timeline-list');
+  const summaryEl = document.getElementById('wo-timeline-summary');
+  if (!listEl || !summaryEl) return;
+
+  let entries = woTimelineAll;
+  if (woTimelineFilterStatus) {
+    entries = entries.filter((entry) => {
+      if (woTimelineFilterStatus === 'failed') {
+        return entry.status === 'failed';
+      }
+      if (woTimelineFilterStatus === 'done') {
+        return entry.status === 'done';
+      }
+      if (woTimelineFilterStatus === 'active') {
+        return entry.status === 'pending' || entry.status === 'running';
+      }
+      return true;
+    });
+  }
+
+  const normalizedSearch = woTimelineSearchQuery.trim().toLowerCase();
+  if (normalizedSearch) {
+    entries = entries.filter((entry) => {
+      const haystack = [entry.id, entry.title, entry.description]
+        .map((value) => String(value || '').toLowerCase());
+      return haystack.some((field) => field && field.includes(normalizedSearch));
+    });
+  }
+
+  if (!entries.length) {
+    listEl.innerHTML = '<div class="wo-timeline-empty">No work orders match the current filters.</div>';
+  } else {
+    listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
+  }
+
+  const counts = {
+    pending: 0,
+    running: 0,
+    done: 0,
+    failed: 0
+  };
+  woTimelineAll.forEach((entry) => {
+    if (counts[entry.status] !== undefined) {
+      counts[entry.status] += 1;
+    }
+  });
+
+  const total = woTimelineAll.length;
+  const summaryParts = [
+    `Total: ${total}`,
+    `pending: ${counts.pending}`,
+    `running: ${counts.running}`,
+    `done: ${counts.done}`,
+    `failed: ${counts.failed}`,
+    `filter: ${woTimelineFilterStatus || 'all'}`
+  ];
+
+  let unit = 'second';
+  let value = diffMs / 1000;
+
+  for (const threshold of thresholds) {
+    if (absDiffMs >= threshold.value) {
+      unit = threshold.unit;
+      value = diffMs / threshold.value;
+      break;
+    }
+  }
+
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  return `${rtf.format(Math.round(value), unit)} · ${date.toLocaleString()}`;
+}
+
 function initMLSPanel() {
   if (mlsIntervalId) {
     return;
@@ -1619,6 +2093,24 @@ function cleanupIntervals() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initDashboard();
+  initWoTimelinePanel();
+  updateSystemHealthBar();
+
+  window.addEventListener('wo:select', (event) => {
+    const detail = event?.detail;
+    let woId = null;
+    if (detail && typeof detail === 'object') {
+      woId = detail.id || detail.woId || detail.wo_id || detail.value;
+    } else if (detail) {
+      woId = detail;
+    }
+
+    if (woId) {
+      onWorkOrderSelected(woId);
+    }
+  });
+
+  refreshWoDetailMls();
 });
 
 window.addEventListener('beforeunload', () => {
