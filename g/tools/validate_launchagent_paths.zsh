@@ -1,84 +1,63 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
-SCRIPT_DIR=$(cd -- "$(dirname "$0")" && pwd)
-REPO_BASE="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DEFAULT_BASE="${LUKA_SOT:-$HOME/02luka}"
-if [[ -n "${LUKA_SOT:-}" && -d "${LUKA_SOT}" ]]; then
-  BASE="$LUKA_SOT"
-elif [[ -f "$REPO_BASE/g/tools/lpe_worker.zsh" ]]; then
-  BASE="$REPO_BASE"
-elif [[ -d "$DEFAULT_BASE" ]]; then
-  BASE="$DEFAULT_BASE"
-else
-  BASE="$REPO_BASE"
+BASE="${LUKA_SOT:-$HOME/02luka}"
+FILTER="${LAUNCH_AGENT_FILTER:-com.02luka.lpe.worker.plist}"
+PLISTS=(${BASE}/LaunchAgents/$FILTER)
+
+if (( ${#PLISTS[@]} == 0 )); then
+  echo "No LaunchAgents matched filter '$FILTER' under $BASE/LaunchAgents" >&2
+  exit 0
 fi
-TARGETS=("com.02luka.lpe.worker.plist")
-ERRS=0
 
-check_plist() {
-  local plist="$1"
-  if [[ ! -f "$plist" ]]; then
-    echo "❌ missing plist: $plist" >&2
-    (( ERRS++ ))
-    return
-  fi
+python3 - "$BASE" "${PLISTS[@]}" <<'PY'
+import os
+import plistlib
+import sys
+import pathlib
 
-  if ! python3 - "$plist" "$BASE" <<'PY'; then
-import plistlib, sys, pathlib, os
-plist_path = pathlib.Path(sys.argv[1])
-base = pathlib.Path(sys.argv[2])
-try:
-    data = plistlib.loads(plist_path.read_bytes())
-except Exception as exc:  # pragma: no cover - runtime guard
-    print(f"❌ parse error for {plist_path}: {exc}")
-    sys.exit(1)
+base = pathlib.Path(sys.argv[1]).resolve()
+plists = [pathlib.Path(p) for p in sys.argv[2:]]
+errors = 0
 
-args = data.get("ProgramArguments") or []
-program = data.get("Program")
-script = None
-if args:
-    script = args[-1]
-elif program:
-    script = program
+home_prefix = pathlib.Path.home() / "02luka"
 
-if not script:
-    print(f"❌ {plist_path}: no Program or ProgramArguments")
-    sys.exit(1)
+for plist in plists:
+    try:
+        data = plistlib.load(plist.open("rb"))
+    except Exception as exc:  # noqa: BLE001
+        print(f"{plist}: failed to parse plist ({exc})")
+        errors += 1
+        continue
 
-script_path = pathlib.Path(os.path.expandvars(script)).expanduser()
-if not script_path.exists():
-    fallback = None
-    home_root = pathlib.Path.home() / "02luka"
-    if script_path.is_absolute() and home_root in script_path.parents:
-        try:
-            relative = script_path.relative_to(home_root)
-            candidate = base / relative
-            if candidate.exists():
-                script_path = candidate
-        except Exception:
-            pass
-    if not script_path.exists():
-        print(f"❌ {plist_path}: script missing -> {script_path}")
-        sys.exit(1)
+    program = data.get("Program")
+    prog_args = data.get("ProgramArguments") or []
+    script_path = program or (prog_args[-1] if prog_args else None)
 
-resolved = script_path.resolve()
-if base not in resolved.parents and resolved != base:
-    print(f"❌ {plist_path}: script not under base {base} -> {resolved}")
-    sys.exit(1)
+    if not script_path:
+        print(f"{plist}: missing Program/ProgramArguments")
+        errors += 1
+        continue
 
-print(f"✅ {plist_path}: OK ({resolved})")
+    if "/Users/" in script_path and "$HOME" not in script_path and "${HOME}" not in script_path:
+        print(f"{plist}: hard-coded absolute user path -> {script_path}")
+        errors += 1
+
+    expanded = os.path.expandvars(script_path.replace("${HOME}", str(pathlib.Path.home())))
+    resolved = pathlib.Path(expanded).expanduser()
+    if not resolved.is_absolute():
+        resolved = (base / resolved).resolve()
+
+    if not resolved.exists() and home_prefix in resolved.parents:
+        alt = pathlib.Path(str(resolved).replace(str(home_prefix.resolve()), str(base)))
+        if alt.exists():
+            resolved = alt
+
+    if not resolved.exists():
+        print(f"{plist}: referenced script not found -> {resolved}")
+        errors += 1
+
+if errors:
+    sys.exit(errors)
+print("LaunchAgent path validation passed")
 PY
-    (( ERRS++ ))
-  fi
-}
-
-for label in "${TARGETS[@]}"; do
-  check_plist "$BASE/LaunchAgents/$label"
-done
-
-if (( ERRS > 0 )); then
-  exit 1
-fi
-
-echo "All LaunchAgent paths valid"

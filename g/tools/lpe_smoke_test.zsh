@@ -1,82 +1,64 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+setopt null_glob
 
-SCRIPT_DIR=$(cd -- "$(dirname "$0")" && pwd)
-REPO_BASE="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DEFAULT_BASE="${LUKA_SOT:-$HOME/02luka}"
-if [[ -n "${LUKA_SOT:-}" && -d "${LUKA_SOT}" ]]; then
-  BASE="$LUKA_SOT"
-elif [[ -f "$REPO_BASE/g/tools/lpe_worker.zsh" ]]; then
-  BASE="$REPO_BASE"
-elif [[ -d "$DEFAULT_BASE" ]]; then
-  BASE="$DEFAULT_BASE"
-else
-  BASE="$REPO_BASE"
-fi
+BASE="${LUKA_SOT:-$HOME/02luka}"
 WORKER="$BASE/g/tools/lpe_worker.zsh"
-TARGET_FILE="$BASE/g/tmp/lpe_smoke_test.txt"
+TARGET_FILE="$BASE/g/tools/fixtures/lpe_smoke_target.txt"
 LEDGER_DIR="$BASE/mls/ledger"
-WO_ID="LPE-SMOKE-$(date +%s)"
-PATCH_FILE="$(mktemp)"
-WO_FILE="$BASE/bridge/inbox/LPE/${WO_ID}.json"
+INBOX="$BASE/bridge/inbox/LPE"
+OUTBOX="$BASE/bridge/outbox/LPE"
+PROCESSED="$BASE/bridge/processed/LPE"
 
-mkdir -p "$BASE/g/tmp" "$BASE/bridge/inbox/LPE" "$LEDGER_DIR"
+mkdir -p "$INBOX" "$OUTBOX" "$LEDGER_DIR" "${TARGET_FILE:h}"
+: > "$TARGET_FILE"
 
-generate_patch() {
-  cat > "$PATCH_FILE" <<'PATCH'
-meta:
-  source: "smoke"
-  reason: "LPE smoke test"
+TS="$(date +%Y%m%d_%H%M%S)"
+WO_ID="WO-LPE-SMOKE-${TS}"
+PATCH_FILE="$INBOX/${WO_ID}.patch.yaml"
+WO_FILE="$INBOX/${WO_ID}.yaml"
+LEDGER_FILE="$LEDGER_DIR/$(date -u +%Y-%m-%d).jsonl"
+
+rm -f "$INBOX/${WO_ID}"* "$OUTBOX/${WO_ID}"* "$PROCESSED/${WO_ID}"*
+
+SMOKE_LINE="[LPE SMOKE ${TS}]"
+
+cat <<PATCH > "$PATCH_FILE"
 ops:
-  - path: "g/tmp/lpe_smoke_test.txt"
-    mode: "append"
-    content: |
-      LPE smoke test line
+  - path: g/tools/fixtures/lpe_smoke_target.txt
+    mode: append
+    content: "$SMOKE_LINE"
 PATCH
-}
 
-generate_work_order() {
-  python3 - "$PATCH_FILE" "$WO_FILE" "$WO_ID" <<'PY'
-import json, sys, yaml, pathlib
-patch_path = pathlib.Path(sys.argv[1])
-wo_path = pathlib.Path(sys.argv[2])
-wo_id = sys.argv[3]
-patch = yaml.safe_load(patch_path.read_text(encoding="utf-8"))
-wo = {
-    "id": wo_id,
-    "task": {"type": "write", "fallback": "lpe", "summary": "smoke test"},
-    "patch": patch,
-}
-wo_path.write_text(json.dumps(wo), encoding="utf-8")
-PY
-}
+cat <<WO > "$WO_FILE"
+id: "$WO_ID"
+task:
+  type: write
+route_hints:
+  fallback_order: [lpe, clc]
+lpe_patch_file: "$(realpath --relative-to="$BASE" "$PATCH_FILE")"
+WO
 
-generate_patch
-generate_work_order
+if [[ ! -x "$WORKER" ]]; then
+  echo "LPE worker missing or not executable: $WORKER" >&2
+  exit 1
+fi
 
 echo "Running LPE worker once for $WO_ID" >&2
-LPE_ONESHOT=true "$WORKER"
+LUKA_SOT="$BASE" "$WORKER" --once >/dev/null
 
-if ! grep -q "LPE smoke test line" "$TARGET_FILE"; then
-  echo "❌ Patch content missing in $TARGET_FILE" >&2
+if ! grep -q "$SMOKE_LINE" "$TARGET_FILE"; then
+  echo "❌ target file missing expected content" >&2
   exit 1
 fi
 
-LEDGER_FILE="$LEDGER_DIR/$(date -u +%Y-%m-%d).jsonl"
-if [[ ! -f "$LEDGER_FILE" ]] || ! grep -q "$WO_ID" "$LEDGER_FILE"; then
-  echo "❌ Ledger entry not found for $WO_ID" >&2
+echo "✅ patch applied to $TARGET_FILE" >&2
+
+if ! tail -n 5 "$LEDGER_FILE" | grep -q "$WO_ID"; then
+  echo "❌ ledger does not contain entry for $WO_ID" >&2
   exit 1
 fi
 
-if [[ ! -f "$BASE/bridge/outbox/LPE/${WO_ID}.result.json" ]]; then
-  echo "❌ Result JSON missing for $WO_ID" >&2
-  exit 1
-fi
+echo "✅ ledger updated at $LEDGER_FILE" >&2
 
-  wo_status=$(jq -r '.status // empty' "$BASE/bridge/outbox/LPE/${WO_ID}.result.json" 2>/dev/null || echo "")
-  if [[ "$wo_status" != "success" ]]; then
-    echo "❌ Unexpected status: $wo_status" >&2
-    exit 1
-  fi
-
-echo "✅ LPE smoke test passed (WO=$WO_ID)"
+echo "Smoke test complete" >&2

@@ -1,10 +1,17 @@
-# Context: Local Patch Engine wiring (global)
+# Context Engineering (Global) — LPE readiness update
 
-Status: **IMPLEMENTED** (LPE worker + LaunchAgent)
+## Local Patch Engine status
+- ✅ LPE worker operational via `g/tools/lpe_worker.zsh`.
+- ✅ LaunchAgent `com.02luka.lpe.worker` installed under `~/02luka/LaunchAgents` (RunAtLoad + KeepAlive).
+- ✅ Mary dispatcher now routes write-type WOs with `fallback_order` containing `lpe` into the LPE queue.
+- ✅ Every LPE patch append logs into `mls/ledger/<date>.jsonl` via `g/tools/append_mls_ledger.py`.
+- ✅ Smoke validation available via `g/tools/lpe_smoke_test.zsh`.
 
-- LPE worker (`g/tools/lpe_worker.zsh`) now executes patches via the Luka CLI SIP handler and logs every attempt to the MLS ledger.
-- LaunchAgent `com.02luka.lpe.worker` can be loaded via `launchctl load ~/02luka/LaunchAgents/com.02luka.lpe.worker.plist` and will keep the worker alive.
-- Mary dispatcher routes write-type work orders with `fallback: lpe` into `bridge/inbox/LPE`, which the worker consumes.
-- Routing rules are captured in `g/config/orchestrator/routing_rules.yaml` (v0) so orchestration code has a single reference point.
-- Ledger entries are appended under `mls/ledger/YYYY-MM-DD.jsonl` with patch metadata for auditability.
-- A smoke test script is available at `g/tools/lpe_smoke_test.zsh` to verify end-to-end patching and ledger logging.
+## How to run
+1. `launchctl load ~/02luka/LaunchAgents/com.02luka.lpe.worker.plist` — worker starts polling `bridge/inbox/LPE`.
+2. Drop a WO in `bridge/inbox/ENTRY` with `task.type: write` and `route_hints.fallback_order` including `lpe`; Mary will route it automatically.
+3. Confirm patches + ledger entries with `g/tools/lpe_smoke_test.zsh`.
+
+## Notes
+- Patch application is delegated to the Luka CLI (`tools/luka_cli.zsh lpe-apply`).
+- Patch files referenced in WOs must stay within the repo root; the worker rejects paths that escape `${HOME}/02luka`.

@@ -1,21 +1,25 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
+# Local Patch Engine worker: consumes WO YAML from bridge/inbox/LPE and applies patches via Luka CLI
 set -euo pipefail
 
-PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+setopt extended_glob
+
 BASE="${LUKA_SOT:-$HOME/02luka}"
 INBOX="$BASE/bridge/inbox/LPE"
 PROCESSED="$BASE/bridge/processed/LPE"
 OUTBOX="$BASE/bridge/outbox/LPE"
 LOG_FILE="$BASE/logs/lpe_worker.out.log"
-REPORT_DIR="$BASE/g/reports/system/lpe"
-MLS_LEDGER_DIR="$BASE/mls/ledger"
-LESSONS_FILE="$BASE/g/knowledge/mls_lessons.jsonl"
 LUKA_CLI="$BASE/tools/luka_cli.zsh"
 LEDGER_HELPER="$BASE/g/tools/append_mls_ledger.py"
-POLL_INTERVAL=${LPE_POLL_INTERVAL:-5}
-ONESHOOT="${LPE_ONESHOT:-false}"
 
-mkdir -p "$INBOX" "$PROCESSED" "$OUTBOX" "$REPORT_DIR" "$MLS_LEDGER_DIR" "$BASE/logs"
+POLL_INTERVAL=${LPE_POLL_INTERVAL:-5}
+RUN_ONCE=false
+
+if [[ "${1:-}" == "--once" ]]; then
+  RUN_ONCE=true
+fi
+
+mkdir -p "$INBOX" "$PROCESSED" "$OUTBOX" "${LOG_FILE:h}" "$BASE/mls/ledger"
 
 log() {
   local ts
@@ -23,189 +27,169 @@ log() {
   echo "[$ts] $*" | tee -a "$LOG_FILE" >/dev/null
 }
 
-write_result() {
-  local wo_id="$1" wo_status="$2" files_json="$3" errors_json="$4" sip_result="$5" ledger_id="$6"
+parse_work_order() {
+  local wo_path="$1"
+  python3 - "$wo_path" "$BASE" <<'PY'
+import json
+import pathlib
+import sys
+import yaml
+
+wo_file = pathlib.Path(sys.argv[1]).resolve()
+base = pathlib.Path(sys.argv[2]).resolve()
+
+def normalize_patch_path(path_str: str) -> str:
+    raw = pathlib.Path(path_str)
+    resolved = (base / raw).resolve() if not raw.is_absolute() else raw.resolve()
+    try:
+        resolved.relative_to(base)
+    except ValueError:
+        raise ValueError(f"patch path escapes repo: {resolved}")
+    return str(resolved)
+
+with wo_file.open("r", encoding="utf-8") as handle:
+    data = yaml.safe_load(handle) or {}
+
+wo_id = data.get("id") or wo_file.stem
+if not isinstance(wo_id, str) or not wo_id.strip():
+    raise SystemExit("missing work order id")
+
+patch_path = None
+cleanup = False
+source = ""
+patch_spec = data.get("lpe_patch") or {}
+
+candidates = [
+    data.get("lpe_patch_file"),
+    patch_spec.get("file"),
+    data.get("patch_file"),
+]
+inline = data.get("lpe_patch_inline") or patch_spec.get("inline")
+ops = data.get("lpe_patch_ops") or patch_spec.get("ops") or data.get("patch", {}).get("ops")
+
+if candidates:
+    for candidate in candidates:
+        if candidate:
+            patch_path = normalize_patch_path(candidate)
+            source = "file"
+            break
+
+if patch_path is None and inline:
+    tmp = pathlib.Path("/tmp") / f"lpe_patch_inline_{wo_id}.yaml"
+    tmp.write_text(str(inline), encoding="utf-8")
+    patch_path = str(tmp)
+    cleanup = True
+    source = "inline"
+
+if patch_path is None and ops:
+    tmp = pathlib.Path("/tmp") / f"lpe_patch_ops_{wo_id}.yaml"
+    tmp.write_text(yaml.safe_dump({"ops": ops}), encoding="utf-8")
+    patch_path = str(tmp)
+    cleanup = True
+    source = "ops"
+
+if patch_path is None:
+    raise SystemExit("no LPE patch provided (use lpe_patch_file or lpe_patch_inline or lpe_patch_ops)")
+
+task_type = None
+task = data.get("task") or {}
+if isinstance(task, dict):
+    task_type = task.get("type")
+
+fallback = []
+route_hints = data.get("route_hints") or {}
+if isinstance(route_hints, dict):
+    fallback_raw = route_hints.get("fallback_order") or []
+    if isinstance(fallback_raw, list):
+        fallback = [str(item).lower() for item in fallback_raw]
+
+print(json.dumps({
+    "wo_id": wo_id,
+    "patch_path": patch_path,
+    "cleanup": cleanup,
+    "task_type": task_type,
+    "fallback": fallback,
+    "source": source,
+}, ensure_ascii=False))
+PY
+}
+
+append_result() {
+  local wo_id="$1" result_status="$2" patch_path="$3" ledger_id="$4" message="$5"
   local out_file="$OUTBOX/${wo_id}.result.json"
   jq -n \
     --arg id "$wo_id" \
-    --arg status "$wo_status" \
-    --arg sip_result "$sip_result" \
-    --arg mls_event_id "$ledger_id" \
-    --argjson files_touched "${files_json:-[]}" \
-    --argjson errors "${errors_json:-[]}" \
-    '{id:$id,status:$status,files_touched:$files_touched,sip_result:$sip_result,errors:$errors,mls_event_id:$mls_event_id}' \
+    --arg status "$result_status" \
+    --arg patch "$patch_path" \
+    --arg ledger_id "$ledger_id" \
+    --arg message "$message" \
+    '{id:$id,status:$status,patch:$patch,ledger_id:$ledger_id,message:$message}' \
     > "$out_file"
-  log "📤 wrote result → $out_file (status=$wo_status, sip=$sip_result, ledger=$ledger_id)"
-}
-
-append_mls_lesson() {
-  local wo_id="$1" wo_status="$2" summary="$3"
-  local ts lesson_id
-  ts="$(TZ=Asia/Bangkok date +%Y-%m-%dT%H:%M:%S%z)"
-  lesson_id="MLS-LPE-${ts//[^0-9]/}"
-  mkdir -p "$(dirname "$LESSONS_FILE")"
-  jq -n \
-    --arg id "$lesson_id" \
-    --arg type "solution" \
-    --arg title "LPE processed $wo_id" \
-    --arg description "$summary" \
-    --arg context "LPE worker" \
-    --arg wo "$wo_id" \
-    --arg ts "$ts" \
-    '{id:$id,type:$type,title:$title,description:$description,context:$context,related_wo:$wo,related_session:null,timestamp:$ts,tags:["lpe","sip"],verified:false,usefulness_score:0}' \
-    >> "$LESSONS_FILE"
-}
-
-append_mls_event() {
-  local wo_id="$1" wo_status="$2" files="$3" errors="$4" patch_file="$5" ledger_id=""
-  if ledger_id=$(python3 "$LEDGER_HELPER" --wo-id "$wo_id" --status "$wo_status" --files "$files" --errors "$errors" --patch-file "$patch_file" 2>>"$LOG_FILE"); then
-    echo "$ledger_id"
-  else
-    echo ""
-  fi
-}
-
-materialize_patch_file() {
-  local patch_json="$1" tmp_patch
-  tmp_patch="$(mktemp)"
-  PATCH_JSON="$patch_json" python3 - "$tmp_patch" <<'PY'
-import json, sys, yaml, pathlib, os
-patch = json.loads(os.environ.get("PATCH_JSON", "{}"))
-target = pathlib.Path(sys.argv[1])
-target.write_text(yaml.safe_dump(patch, allow_unicode=True), encoding="utf-8")
-PY
-  echo "$tmp_patch"
-}
-
-normalize_work_order() {
-  local wo_file="$1" tmp_json
-  tmp_json="$(mktemp)"
-  case "$wo_file" in
-    *.yaml|*.yml)
-      python3 - "$wo_file" "$tmp_json" <<'PY'
-import sys, yaml, json, pathlib
-source = pathlib.Path(sys.argv[1])
-target = pathlib.Path(sys.argv[2])
-with source.open("r", encoding="utf-8") as handle:
-    data = yaml.safe_load(handle) or {}
-target.write_text(json.dumps(data), encoding="utf-8")
-PY
-      ;;
-    *)
-      cp "$wo_file" "$tmp_json"
-      ;;
-  esac
-  echo "$tmp_json"
+  log "📤 wrote result → $out_file (status=$result_status ledger=$ledger_id)"
 }
 
 process_work_order() {
-  local wo_file="$1" tmp_json wo_id wo_status="success" sip_result="applied" ledger_id="" patch_file="" errors_json files_json
-  local errors=() files_touched=() patch_json
+  local wo_file="$1" parsed wo_id patch_path cleanup result_status ledger_id message
 
-  tmp_json="$(normalize_work_order "$wo_file")"
-
-  if ! jq empty "$tmp_json" 2>/tmp/lpe_jq_err.$$; then
+  if ! parsed=$(parse_work_order "$wo_file" 2>/tmp/lpe_parse_err.$$); then
     local err_msg
-    err_msg="invalid JSON: $(cat /tmp/lpe_jq_err.$$)"
-    log "❌ $(basename "$wo_file") invalid JSON"
-    write_result "$(basename "$wo_file" .json)" "invalid_wo" "[]" "[\"$err_msg\"]" "skipped" ""
+    err_msg="$(cat /tmp/lpe_parse_err.$$)"
+    rm -f /tmp/lpe_parse_err.$$
+    log "❌ $(basename "$wo_file") invalid: $err_msg"
+    append_result "$(basename "$wo_file" .yaml)" "invalid" "" "" "$err_msg"
     mv "$wo_file" "$PROCESSED/$(basename "$wo_file")"
-    rm -f /tmp/lpe_jq_err.$$ "$tmp_json"
     return
   fi
-  rm -f /tmp/lpe_jq_err.$$
+  rm -f /tmp/lpe_parse_err.$$
 
-  wo_id="$(jq -r '.id // .wo_id // ""' "$tmp_json")"
-  [[ -n "$wo_id" ]] || wo_id="$(basename "$wo_file" | sed 's/\.[^.]*$//')"
+  wo_id="$(echo "$parsed" | jq -r '.wo_id')"
+  patch_path="$(echo "$parsed" | jq -r '.patch_path')"
+  cleanup="$(echo "$parsed" | jq -r '.cleanup')"
 
-  local task_type fallback
-  task_type="$(jq -r '.task.type // ""' "$tmp_json")"
-  fallback="$(jq -r '.task.fallback // ""' "$tmp_json")"
+  log "📥 $wo_id using patch $patch_path"
 
-  patch_json="$(jq -c '.patch // {}' "$tmp_json")"
-
-  if [[ "$task_type" != "write" || "$fallback" != "lpe" ]]; then
-    errors+=("unsupported task route (type=$task_type fallback=$fallback)")
-    wo_status="invalid_wo"
-    sip_result="skipped"
-  elif [[ "$patch_json" == "{}" || -z "$patch_json" ]]; then
-    errors+=("missing patch payload")
-    wo_status="invalid_wo"
-    sip_result="skipped"
-  elif ! jq -e '.ops | length > 0' <<<"$patch_json" >/dev/null 2>&1; then
-    errors+=("patch.ops must include at least one entry")
-    wo_status="invalid_wo"
-    sip_result="skipped"
-  fi
-
-  while IFS= read -r path; do
-    [[ -n "$path" ]] && files_touched+=("$path")
-  done < <(jq -r '.patch.ops[]?.path // empty' "$tmp_json")
-
-  files_json=$(printf '%s\n' "${files_touched[@]:-}" | jq -R . | jq -s .)
-
-  if [[ "$wo_status" != "success" ]]; then
-    errors_json=$(printf '%s\n' "${errors[@]:-}" | jq -R . | jq -s .)
-    write_result "$wo_id" "$wo_status" "$files_json" "$errors_json" "$sip_result" ""
-    mv "$wo_file" "$PROCESSED/$(basename "$wo_file")"
-    rm -f "$tmp_json"
-    return
-  fi
-
-  patch_file="$(materialize_patch_file "$patch_json")"
-  cp "$patch_file" "$REPORT_DIR/last_patch.yaml"
-
-  if "$LUKA_CLI" lpe-apply --file "$patch_file" >>"$LOG_FILE" 2>&1; then
-    wo_status="success"
-    sip_result="applied"
-    log "✅ $wo_id applied patch via Luka CLI"
+  if ! [[ -x "$LUKA_CLI" ]]; then
+    message="luka_cli.zsh not executable at $LUKA_CLI"
+    result_status="error"
   else
-    wo_status="error"
-    sip_result="failed"
-    errors+=("Luka CLI patch apply failed")
-    log "⚠️ $wo_id Luka CLI failed (see log)"
+    if "$LUKA_CLI" lpe-apply --file "$patch_path" >>"$LOG_FILE" 2>&1; then
+      result_status="success"
+      message="patch applied"
+    else
+      result_status="error"
+      message="luka_cli failed"
+    fi
   fi
 
-  errors_json=$(printf '%s\n' "${errors[@]:-}" | jq -R . | jq -s .)
-  ledger_id="$(append_mls_event "$wo_id" "$wo_status" "$files_json" "$errors_json" "$patch_file")"
-  append_mls_lesson "$wo_id" "$wo_status" "status=$wo_status sip=$sip_result files=$files_json"
+  ledger_id="$(python3 "$LEDGER_HELPER" --wo-id "$wo_id" --status "$result_status" --patch-file "$patch_path" --message "$message" --source "lpe_worker")"
+  append_result "$wo_id" "$result_status" "$patch_path" "$ledger_id" "$message"
 
-  local report
-  report="$REPORT_DIR/LPE_RUN_$(date +%Y%m%d_%H%M%S).md"
-  {
-    echo "# LPE Run Report"
-    echo "- WO: $wo_id"
-    echo "- Status: $wo_status"
-    echo "- SIP result: $sip_result"
-    echo "- Files: $files_json"
-    echo "- Errors: $errors_json"
-    echo "- Ledger: ${ledger_id:-none}"
-    echo "- Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  } > "$report"
-
-  write_result "$wo_id" "$wo_status" "$files_json" "$errors_json" "$sip_result" "$ledger_id"
   mv "$wo_file" "$PROCESSED/$(basename "$wo_file")"
-  rm -f "$tmp_json" "$patch_file"
+  if [[ "$cleanup" == "true" || "$patch_path" == "$INBOX"* ]]; then
+    rm -f "$patch_path"
+  fi
 }
 
-log "🚀 LPE worker starting (poll every ${POLL_INTERVAL}s, oneshot=$ONESHOOT)"
+log "🚀 LPE worker starting (poll every ${POLL_INTERVAL}s; run_once=${RUN_ONCE})"
 
 while true; do
-  next_file="$(find "$INBOX" -type f \( -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) | sort | head -n 1)"
+  next_file=""
+  next_file="$(find "$INBOX" -type f -name '*.yaml' ! -name '*.patch.yaml' | sort | head -n 1)"
   if [[ -z "$next_file" ]]; then
+    if $RUN_ONCE; then
+      log "✅ run_once completed with no pending work"
+      break
+    fi
     sleep "$POLL_INTERVAL"
     continue
   fi
 
-  log "📥 processing $(basename "$next_file")"
   process_work_order "$next_file" || log "⚠️ processing error for $next_file"
 
-  if [[ "$ONESHOOT" == "true" ]]; then
-    log "🛑 oneshot complete"
-    exit 0
+  if $RUN_ONCE; then
+    log "✅ run_once completed"
+    break
   fi
-
-  sleep 1
-  log "⏳ waiting $POLL_INTERVAL s"
   sleep "$POLL_INTERVAL"
+
 done

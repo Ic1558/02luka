@@ -8,6 +8,7 @@ INBOX="$ROOT/bridge/inbox/ENTRY"
 OUTBOX="$ROOT/bridge/outbox/ENTRY"
 LOG_DIR="$ROOT/logs"
 LOG_FILE="$LOG_DIR/mary_dispatcher.log"
+ROUTING_RULES="$ROOT/g/config/wo_routing_rules.yaml"
 LPE_INBOX="$ROOT/bridge/inbox/LPE"
 
 mkdir -p "$INBOX" "$OUTBOX" "$LOG_DIR" "$LPE_INBOX" "$ROOT/bridge/outbox/LPE" "$ROOT/bridge/processed/ENTRY"
@@ -26,22 +27,77 @@ normalize_id() {
   fi
 }
 
-determine_target() {
+resolve_destination() {
   local file="$1"
-  local dest="CLC"
-  local fallback task_type
-  if python3 -c "import sys,yaml,json; data=yaml.safe_load(open(sys.argv[1])) or {};\
-from pathlib import Path;\
-print(json.dumps({'task_type': data.get('task',{}).get('type',''), 'fallback': data.get('task',{}).get('fallback','')}))" "$file" 2>/dev/null | jq -e '.task_type=="write" and .fallback=="lpe"' >/dev/null 2>&1; then
-    dest="LPE"
-  elif grep -q '^strict_target: *true' "$file" 2>/dev/null; then
-    if grep -q 'target_candidates: *\[ *shell *\]' "$file" 2>/dev/null; then
-      dest="shell"
-    else
-      dest="CLC"
-    fi
-  fi
-  echo "$dest"
+  python3 - "$file" "$ROUTING_RULES" <<'PY'
+import sys
+import yaml
+from pathlib import Path
+
+wo_path = Path(sys.argv[1])
+rules_path = Path(sys.argv[2])
+
+VALID_TARGETS = {"CLC", "LPE", "shell", "Andy", "CLS"}
+
+def load_yaml(path: Path):
+    if not path.exists():
+        return {}
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle) or {}
+    except Exception as e:
+        print(f"Error loading YAML from {path}: {e}", file=sys.stderr)
+        return {}
+
+try:
+    with wo_path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+except Exception as e:
+    print(f"Error loading WO from {wo_path}: {e}", file=sys.stderr)
+    data = {}
+
+rules = load_yaml(rules_path).get("routes", [])
+
+strict_target = data.get("strict_target")
+target_candidates = data.get("target_candidates") or []
+route_hints = data.get("route_hints") or {}
+fallback_order = route_hints.get("fallback_order") or []
+task_type = (data.get("task") or {}).get("type")
+
+# Match rules: check if fallback_contains is a substring of any fallback_order element
+for rule in rules:
+    match = rule.get("match") or {}
+    rule_task_type = match.get("task_type")
+    fallback_contains = match.get("fallback_contains")
+    
+    # Check task_type match
+    if rule_task_type and rule_task_type != task_type:
+        continue
+    
+    # Check fallback_contains: substring matching (case-insensitive)
+    if fallback_contains:
+        fallback_contains_lower = str(fallback_contains).lower()
+        fallback_matches = any(
+            fallback_contains_lower in str(x).lower()
+            for x in fallback_order
+        )
+        if not fallback_matches:
+            continue
+    
+    # Rule matched - validate target before returning
+    target = rule.get("target", "CLC")
+    if target in VALID_TARGETS:
+        print(target)
+        sys.exit(0)
+    else:
+        print(f"Invalid target '{target}' in rule '{rule.get('name', 'unnamed')}', using default CLC", file=sys.stderr)
+
+# Fallback: check strict_target for shell
+if strict_target and any(str(c).lower() == "shell" for c in target_candidates):
+    print("shell")
+else:
+    print("CLC")
+PY
 }
 
 convert_to_lpe_json() {
@@ -65,7 +121,7 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
   [[ -f "$file" ]] || continue
   id="$(normalize_id "$file")"
 
-  dest="$(determine_target "$file")"
+  dest="$(resolve_destination "$file")"
   case "$dest" in
     LPE)
       mkdir -p "$LPE_INBOX"
@@ -88,5 +144,4 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
       log "unknown route for $file (dest=$dest)"
       ;;
   esac
-
 done

@@ -24,6 +24,10 @@ const REDIS_URL = process.env.REDIS_URL || `redis://:${REDIS_PASSWORD}@127.0.0.1
 
 const STATE_DIR = path.join(BASE, 'followup/state');
 const FOLLOWUP_DATA = path.join(BASE, 'g/apps/dashboard/data/followup.json');
+const LOGS_DIR = path.join(BASE, 'logs');
+const SYSTEM_REPORTS_DIR = path.join(BASE, 'g', 'reports', 'system');
+const FALLBACK_REPORTS_DIR = path.join(BASE, 'reports', 'system');
+const SNAPSHOT_FILE_REGEX = /^reality_hooks_snapshot_.*\.json$/;
 
 let redisClient = null;
 
@@ -170,6 +174,41 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === 'GET' && pathname === '/api/reality/snapshot') {
+    try {
+      const snapshotPath = await findLatestRealitySnapshotPath();
+      if (!snapshotPath) {
+        return sendJSON(res, 200, {
+          status: 'no_snapshot',
+          snapshot_path: null,
+          data: null
+        });
+      }
+
+      try {
+        const contents = await fs.readFile(snapshotPath, 'utf8');
+        const data = JSON.parse(contents);
+        return sendJSON(res, 200, {
+          status: 'ok',
+          snapshot_path: snapshotPath,
+          data
+        });
+      } catch (err) {
+        if (err.name === 'SyntaxError') {
+          return sendJSON(res, 200, {
+            status: 'error',
+            snapshot_path: snapshotPath,
+            error: 'invalid_json'
+          });
+        }
+        throw err;
+      }
+    } catch (err) {
+      console.error('Error reading Reality Hooks snapshot:', err);
+      return sendError(res, 500, 'Failed to read Reality Hooks snapshot.');
+    }
+  }
+
   if (req.method === 'GET' && pathname === '/api/wos') {
     try {
       const files = await fs.readdir(STATE_DIR);
@@ -301,6 +340,55 @@ const server = http.createServer(async (req, res) => {
 
   sendError(res, 404, 'Not found');
 });
+
+async function findLatestRealitySnapshotPath() {
+  const searchDirs = [
+    SYSTEM_REPORTS_DIR,
+    FALLBACK_REPORTS_DIR,
+    path.dirname(LOGS_DIR)
+  ];
+
+  let latest = null;
+
+  for (const dir of searchDirs) {
+    if (!dir) continue;
+
+    try {
+      const stats = await fs.stat(dir);
+      if (!stats.isDirectory()) {
+        continue;
+      }
+    } catch {
+      continue;
+    }
+
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (err) {
+      console.warn('Unable to read Reality snapshot directory:', dir, err.message);
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !SNAPSHOT_FILE_REGEX.test(entry.name)) {
+        continue;
+      }
+
+      const filePath = path.join(dir, entry.name);
+      try {
+        const fileStats = await fs.stat(filePath);
+        if (!latest || fileStats.mtimeMs > latest.mtimeMs) {
+          latest = { path: filePath, mtimeMs: fileStats.mtimeMs };
+        }
+      } catch (err) {
+        console.warn('Unable to stat Reality snapshot file:', filePath, err.message);
+      }
+    }
+  }
+
+  return latest ? latest.path : null;
+}
 
 async function start() {
   await initRedis();
