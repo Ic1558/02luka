@@ -105,6 +105,11 @@
         font-size: 1.5rem;
       }
 
+      .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+      }
+
       /* Summary cards */
       #summary-cards {
         margin-bottom: 1.25rem;
@@ -155,6 +160,7 @@
         background: #f3f4f6;
         color: #4b5563;
         margin-left: 0.25rem;
+>>>>>>> origin/main
       }
 
       .summary-bar {
@@ -175,6 +181,86 @@
         gap: 0.4rem;
       }
 
+      .wos-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .wos-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+
+      .wo-filter-button {
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        padding: 0.25rem 0.85rem;
+        font-size: 0.85rem;
+        background: transparent;
+        color: #e2e8f0;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .wo-filter-button.active,
+      .wo-filter-button:hover {
+        background: rgba(148, 163, 184, 0.2);
+        color: #f8fafc;
+      }
+
+      .wos-summary {
+        min-height: 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        font-size: 0.85rem;
+        color: #cbd5f5;
+      }
+
+      .wos-refresh-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+
+      .wos-refresh-toggle input[type='checkbox'] {
+        margin-right: 0.25rem;
+      }
+
+      .wos-refresh-interval select {
+        margin-left: 0.15rem;
+        background: #020617;
+        color: #e5e7eb;
+        border-radius: 0.25rem;
+        border: 1px solid #1f2937;
+        font-size: 0.8rem;
+        padding: 0.05rem 0.25rem;
+      }
+
+      .wos-last-refresh {
+        opacity: 0.9;
+      }
+
+      .wo-refresh-now-button {
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.75rem;
+        background: #020617;
+        color: #e5e7eb;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .wo-refresh-now-button:hover {
+        background: #111827;
+      }
+
       .summary-dot {
         width: 0.65rem;
         height: 0.65rem;
@@ -192,6 +278,10 @@
 
       .summary-dot.failed {
         background: #f87171;
+      }
+
+      .summary-dot.completed {
+        background: #38bdf8;
       }
 
       .reality-header {
@@ -230,6 +320,147 @@
 
       .reality-card h3 {
         margin-top: 0;
+      }
+
+      .wos-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .wos-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .wos-filters button {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 999px;
+        color: #bae6fd;
+        padding: 0.35rem 0.85rem;
+        cursor: pointer;
+        font: inherit;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .wos-filters button.active,
+      .wos-filters button:focus,
+      .wos-filters button:hover {
+        background: rgba(56, 189, 248, 0.35);
+        color: #f8fafc;
+      }
+
+      .wos-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      .wos-summary span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .wos-search-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+
+      .wos-search-label {
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .wos-search-input {
+        flex: 1 1 200px;
+        max-width: 320px;
+        background: #020617;
+        color: #e5e7eb;
+        border-radius: 0.25rem;
+        border: 1px solid #1f2937;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.45rem;
+      }
+
+      .wos-search-input::placeholder {
+        color: #6b7280;
+      }
+
+      .wos-search-hint {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+      .wos-refresh-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: #94a3b8;
+      }
+
+      .wos-refresh-row label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .wos-refresh-row input[type='number'] {
+        width: 4rem;
+        background: #020617;
+        color: #e5e7eb;
+        border: 1px solid #1f2937;
+        border-radius: 0.25rem;
+        padding: 0.15rem 0.35rem;
+      }
+
+      #wos-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+
+      #wos-table th,
+      #wos-table td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        text-align: left;
+      }
+
+      #wos-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+      }
+
+      #wos-table tbody tr:hover {
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      #wos-table th[data-sort-key] {
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      #wos-table th[data-sort-key].sort-asc::after {
+        content: " ▲";
+        font-size: 0.7rem;
+      }
+
+      #wos-table th[data-sort-key].sort-desc::after {
+        content: " ▼";
+        font-size: 0.7rem;
       }
 
       .badge {
@@ -378,6 +609,63 @@
         cursor: pointer;
       }
 
+      .reality-header {
+        margin-bottom: 1.5rem;
+      }
+
+      .reality-subtitle {
+        margin-top: 0.25rem;
+        color: rgba(226, 232, 240, 0.7);
+        max-width: 60ch;
+      }
+
+      .reality-meta {
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.5);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        margin-bottom: 1.5rem;
+      }
+
+      .reality-panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .reality-panel {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 18px;
+        padding: 1.25rem;
+      }
+
+      .reality-panel h3 {
+        margin-top: 0;
+      }
+
+      .reality-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(15, 23, 42, 0.65);
+        border-radius: 12px;
+        padding: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        min-height: 120px;
+      }
+
+      .reality-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .reality-table th,
+      .reality-table td {
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        font-size: 0.85rem;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -430,6 +718,14 @@
         color: #f87171;
       }
 
+      .status-pending {
+        color: #fbbf24;
+      }
+
+      .status-completed {
+        color: #38bdf8;
+      }
+
       .error-banner {
         padding: 0.65rem 1rem;
         border-radius: 12px;
@@ -453,6 +749,128 @@
         color: #f8fafc;
         padding: 0.35rem 0.9rem;
         cursor: pointer;
+      }
+
+      .reality-badge {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        margin-left: 0.25rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        vertical-align: middle;
+      }
+
+      .reality-badge-ok {
+        background: #e6ffed;
+        color: #036635;
+      }
+
+      .reality-badge-degraded {
+        background: #fff4e5;
+        color: #7a3e00;
+      }
+
+      .reality-badge-no_data,
+      .reality-badge-no_snapshot {
+        background: #f3f4f6;
+        color: #4b5563;
+      }
+
+      .reality-badge-unknown {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .reality-badge-muted {
+        background: #e5e7eb;
+        color: #6b7280;
+      }
+
+      .reality-header {
+        margin-bottom: 1rem;
+      }
+
+      .reality-header h2 {
+        margin-bottom: 0.4rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        align-items: center;
+      }
+
+      .reality-subtitle {
+        margin: 0;
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 0.95rem;
+      }
+
+      .reality-meta {
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .reality-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .reality-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 18px;
+        padding: 1.25rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.35);
+      }
+
+      .reality-card h3 {
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+      }
+
+      .reality-text {
+        margin: 0;
+        font-size: 0.95rem;
+        color: rgba(226, 232, 240, 0.9);
+      }
+
+      .reality-pre {
+        background: rgba(15, 23, 42, 0.8);
+        border-radius: 12px;
+        padding: 0.75rem;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow: auto;
+      }
+
+      .reality-card-wide {
+        grid-column: 1 / -1;
+      }
+
+      .reality-table-wrapper {
+        overflow-x: auto;
+      }
+
+      .reality-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+
+      .reality-table th,
+      .reality-table td {
+        padding: 0.4rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .reality-table th {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(148, 163, 184, 0.9);
       }
 
       .pill-bar {
@@ -977,6 +1395,45 @@
         color: rgba(226, 232, 240, 0.8);
       }
 
+      .wo-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        border-radius: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      #wos-table th[data-sort-key] {
+        cursor: pointer;
+      }
+
+      #wos-table-body tr {
+        transition: background-color 0.2s ease, color 0.2s ease;
+      }
+
+      #wos-table-body tr.wo-timeline-active-row {
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      #wos-table-body tr.wo-timeline-active-row code {
+        color: #bae6fd;
+      }
+
+      #wos-table-body tr.wo-timeline-active-row .wo-timeline-button {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.6);
+        color: #e0f2fe;
+      }
+
+      .wo-timeline-button {
+        border-radius: 999px;
+        border: 1px solid #1f2937;
+        padding: 0.15rem 0.5rem;
+        font-size: 0.75rem;
+        background: #020617;
+        color: #e5e7eb;
+        cursor: pointer;
+      }
+
       /* Service health panel */
       #service-panel {
         display: flex;
@@ -1128,20 +1585,134 @@
         font-size: 0.75rem;
       }
 
-      .wo-timeline-button {
-        padding: 0.15rem 0.5rem;
+      .wo-timeline-button:hover {
+        background: #111827;
+      }
+
+      .wo-timeline-section {
+        margin-top: 1.5rem;
+        padding: 1rem 1.25rem;
+        border-radius: 0.75rem;
+        border: 1px solid #1f2937;
+        background: #020617;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: 360px;
+        overflow: hidden;
+      }
+
+      .wo-timeline-section.hidden {
+        display: none;
+      }
+
+      .wo-timeline-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+      }
+
+      .wo-timeline-header h3 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0;
+      }
+
+      .wo-timeline-subtitle {
+        margin: 0.1rem 0 0;
         font-size: 0.75rem;
+        color: #9ca3af;
+      }
+
+      .wo-timeline-close {
         border-radius: 999px;
         border: 1px solid #1f2937;
+        padding: 0.15rem 0.7rem;
+        font-size: 0.75rem;
         background: #020617;
         color: #e5e7eb;
         cursor: pointer;
       }
 
-      .wo-timeline-button:hover {
+      .wo-timeline-close:hover {
         background: #111827;
       }
 
+      .wo-timeline-content {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        gap: 1rem;
+        overflow: hidden;
+      }
+
+      .wo-timeline-events,
+      .wo-timeline-logs {
+        border-radius: 0.5rem;
+        border: 1px solid #111827;
+        background: #020617;
+        padding: 0.6rem 0.75rem;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .wo-timeline-events h4,
+      .wo-timeline-logs h4 {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #e5e7eb;
+        margin: 0 0 0.35rem;
+      }
+
+      .wo-timeline-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        font-size: 0.75rem;
+      }
+
+      .wo-timeline-item {
+        padding: 0.3rem 0;
+        border-bottom: 1px solid #0f172a;
+      }
+
+      .wo-timeline-item:last-child {
+        border-bottom: none;
+      }
+
+      .wo-timeline-item-time {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: #9ca3af;
+      }
+
+      .wo-timeline-item-label {
+        color: #e5e7eb;
+      }
+
+      .wo-timeline-item-meta {
+        color: #9ca3af;
+        font-size: 0.7rem;
+      }
+
+      .wo-log-lines {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.7rem;
+        color: #e5e7eb;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+
+      .wo-log-empty {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+=======
+>>>>>>> origin/main
       footer {
         padding: 2rem;
         text-align: center;
@@ -1173,7 +1744,8 @@
         <li><a href="#overview-panel" class="tab active" data-panel="overview-panel">Overview</a></li>
         <li><a href="#services-panel" class="tab" data-panel="services-panel">Services</a></li>
         <li><a href="#mls-panel" class="tab" data-panel="mls-panel">MLS Lessons</a></li>
-        <li><a href="#reality-panel" class="tab" data-panel="reality-panel">Reality</a></li>
+        <li><a href="#view-reality" id="tab-reality" class="tab" data-panel="view-reality">Reality</a></li>
+        <li><a href="#reality-panel" class="tab" data-panel="reality-panel">Reality Alt</a></li>
         <li><a href="#work-orders-panel" class="tab" data-panel="work-orders-panel">Work Orders</a></li>
         <li><a href="followup.html">Follow-Up Tracker</a></li>
       </ul>
@@ -1392,6 +1964,7 @@
           <button id="tab-overview" type="button">Overview</button>
           <button id="tab-wos" type="button">Work Orders</button>
           <button id="tab-wo-history" type="button">WO History</button>
+          <button id="tab-reality" type="button">Reality</button>
         </nav>
 
         <!-- Existing sections -->
@@ -1403,48 +1976,88 @@
         </section>
 
         <section id="view-wos" class="hidden">
-          <section class="wo-section">
-            <header class="wo-header">
-              <h2>Work Orders</h2>
-            </header>
+          <header class="wos-header">
+            <h2>Work Orders</h2>
 
-            <div id="wo-status-filters" class="wo-status-filters">
-              <button type="button" data-status="" class="wo-status-chip wo-status-chip--active">
-                All
-              </button>
-              <button type="button" data-status="pending,running" class="wo-status-chip">
-                Active
-              </button>
-              <button type="button" data-status="pending" class="wo-status-chip">
-                Pending
-              </button>
-              <button type="button" data-status="running" class="wo-status-chip">
-                Running
-              </button>
-              <button type="button" data-status="completed" class="wo-status-chip">
-                Completed
-              </button>
-              <button type="button" data-status="failed,error" class="wo-status-chip">
-                Failed
-              </button>
+            <div id="wo-status-filters" class="wos-filters">
+              <button type="button" class="active" data-filter="all">All</button>
+              <button type="button" data-filter="running">Running</button>
+              <button type="button" data-filter="pending">Pending</button>
+              <button type="button" data-filter="completed">Completed</button>
+              <button type="button" data-filter="failed">Failed</button>
             </div>
 
-            <div id="wos-summary" class="wos-summary"><!-- Filled by JS --></div>
+            <div id="wos-summary" class="wos-summary">
+              <span>Loading work order summary…</span>
+            </div>
 
+            <div class="wos-search-row">
+              <label for="wo-search-input" class="wos-search-label">Search:</label>
+              <input
+                type="text"
+                id="wo-search-input"
+                class="wos-search-input"
+                placeholder="Filter by ID, title, tags, or context..."
+              />
+              <span class="wos-search-hint">(live filter; combines with status filters)</span>
+            </div>
+
+            <div class="wos-refresh-row">
+              <button type="button" id="wo-refresh-btn">Refresh</button>
+              <label>
+                <input type="checkbox" id="wo-autorefresh-toggle" /> Auto-refresh
+              </label>
+              <label>
+                Interval
+                <input type="number" id="wo-autorefresh-interval" min="10" step="5" value="30" />
+                sec
+              </label>
+              <span id="wo-last-refresh">Last refresh: never</span>
+            </div>
+          </header>
+
+          <div id="wos-error" class="error-banner hidden">
+            <span>Failed to load work orders.</span>
+            <button type="button" id="wos-error-retry">Retry</button>
+          </div>
+
+          <div class="table-wrapper">
             <table id="wos-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>Finished</th>
-                  <th>Last Update</th>
+                  <th data-sort-key="id">ID</th>
+                  <th data-sort-key="status">Status</th>
+                  <th data-sort-key="started_at">Started</th>
+                  <th data-sort-key="finished_at">Finished</th>
+                  <th data-sort-key="updated_at">Last Update</th>
                   <th>Actions</th>
                   <th>Timeline</th>
                 </tr>
               </thead>
-              <tbody id="wos-table-body"><!-- JS populated --></tbody>
+              <tbody id="wos-table-body">
+                <tr>
+                  <td colspan="7">Loading work orders…</td>
+                </tr>
+              </tbody>
             </table>
+          </div>
+
+          <section id="wo-timeline-section" class="wo-timeline-section hidden">
+            <header class="wo-timeline-header">
+              <div>
+                <h3 id="wo-timeline-title">WO Timeline</h3>
+                <p id="wo-timeline-subtitle" class="wo-timeline-subtitle">
+                  Select a work order from the table to see its history.
+                </p>
+              </div>
+              <button type="button" id="wo-timeline-close" class="wo-timeline-close">
+                Close
+              </button>
+            </header>
+
+            <div id="wo-timeline-content" class="wo-timeline-content">
+              <!-- Filled by JS -->
+            </div>
           </section>
         </section>
 
@@ -1491,6 +2104,64 @@
               <!-- filled by JS -->
             </tbody>
           </table>
+        </section>
+
+        <section id="view-reality" class="hidden">
+          <header class="reality-header">
+            <h2>
+              Reality Snapshot
+              <span id="reality-badge-deploy" class="reality-badge reality-badge-muted">Deployment</span>
+              <span id="reality-badge-save" class="reality-badge reality-badge-muted">save.sh</span>
+              <span id="reality-badge-orch" class="reality-badge reality-badge-muted">Orchestrator</span>
+            </h2>
+            <p class="reality-subtitle">
+              Latest Reality Hooks snapshot aggregated from deployment reports,
+              save.sh full-cycle tests, and orchestrator summaries.
+            </p>
+          </header>
+
+          <div id="reality-error" class="error-banner hidden" role="status" aria-live="polite">
+            <span>Failed to load Reality snapshot.</span>
+            <button type="button" id="reality-error-retry">Retry</button>
+          </div>
+
+          <p id="reality-meta" class="reality-meta">Loading Reality snapshot…</p>
+
+          <div class="reality-grid">
+            <article class="reality-card">
+              <h3>Deployment Report</h3>
+              <p id="reality-deployment" class="reality-text">Loading deployment data…</p>
+            </article>
+
+            <article class="reality-card reality-card-wide">
+              <h3>save.sh Full-Cycle Runs</h3>
+              <div class="reality-table-wrapper">
+                <table class="reality-table" aria-label="save.sh full-cycle runs">
+                  <thead>
+                    <tr>
+                      <th scope="col">Test</th>
+                      <th scope="col">Lane</th>
+                      <th scope="col">L1</th>
+                      <th scope="col">L2</th>
+                      <th scope="col">L3</th>
+                      <th scope="col">L4</th>
+                      <th scope="col">Git</th>
+                    </tr>
+                  </thead>
+                  <tbody id="reality-save-body">
+                    <tr>
+                      <td colspan="7">Loading save.sh runs…</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="reality-card">
+              <h3>Orchestrator Summary</h3>
+              <pre id="reality-orchestrator" class="reality-pre">Loading orchestrator summary…</pre>
+            </article>
+          </div>
         </section>
       </section>
 
@@ -1563,6 +2234,48 @@
 
         <div id="wo-timeline-list" class="wo-timeline-list">
           <!-- Timeline entries rendered via dashboard.js -->
+        </div>
+      </section>
+
+      <section id="view-reality" class="panel hidden" aria-labelledby="tab-reality">
+        <header class="reality-header">
+          <h2>Reality Snapshot</h2>
+          <p class="reality-subtitle">
+            Latest Reality Hooks snapshot aggregated from deployment reports,
+            save.sh full-cycle tests, and orchestrator summaries.
+          </p>
+        </header>
+
+        <div id="reality-meta" class="reality-meta">Loading Reality snapshot…</div>
+
+        <div class="reality-panels">
+          <section class="reality-panel">
+            <h3>Deployment</h3>
+            <pre id="reality-deployment" class="reality-pre"></pre>
+          </section>
+
+          <section class="reality-panel">
+            <h3>save.sh Full-Cycle Tests</h3>
+            <table class="reality-table">
+              <thead>
+                <tr>
+                  <th>Test ID</th>
+                  <th>Lane</th>
+                  <th>Layer1</th>
+                  <th>Layer2</th>
+                  <th>Layer3</th>
+                  <th>Layer4</th>
+                  <th>Git</th>
+                </tr>
+              </thead>
+              <tbody id="reality-save-body"></tbody>
+            </table>
+          </section>
+
+          <section class="reality-panel">
+            <h3>Orchestrator Summary</h3>
+            <pre id="reality-orchestrator" class="reality-pre"></pre>
+          </section>
         </div>
       </section>
     </main>
