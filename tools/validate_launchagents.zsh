@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+setopt null_glob
 
 BASE="${HOME}/02luka"
 
