@@ -1,5 +1,5 @@
-# Context Engineering Protocol v3.0
-**Version:** 3.0.0
+# Context Engineering Protocol v3.1-REV
+**Version:** 3.1.0-REV
 **Status:** PROTOCOL (Single Source of Truth)
 **Last Updated:** 2025-11-17
 **Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
@@ -124,22 +124,32 @@ Layer 6: Kim (API Gateway)
 - **CAN** explore codebase
 
 **Writing Capability:**
-- **MUST NOT** write to SOT repositories
-- **MUST NOT** commit to git
-- **MUST** delegate all writes to CLC or LPE
-- **CAN ONLY** create ephemeral suggestions
+- **SHOULD NOT** write to SOT repositories หรือสร้าง commits ในกรณีปกติ
+- **MAY** เขียนลง SOT และสร้าง commits เมื่อ:
+  - Boss ให้คำสั่ง override ชัดเจนใน session ปัจจุบัน (ดู 2.3)
+  - หรือ task ถูก tag ว่าเป็น `REVISION-PROTOCOL` / `LOCAL-ONLY` และทำงานอยู่ภายใต้ `$SOT`
+- **MUST** สรุปรายการไฟล์ที่แก้ไขให้ Boss หลังจบ task
+- **SHOULD** แนบ context สำหรับ MLS ถ้ามี (เหตุผล, scope, hash คร่าว ๆ)
 
 **Constraint:**
-- **CANNOT** push to git (no commit permissions)
-- **CANNOT** modify SOT files directly
-- **MUST** be read-only for all SOT operations
+- ในโหมดปกติ (ไม่มี Boss override):
+  - Codex / Liam / Andy **MUST** ถือว่า read-only ต่อ SOT
+  - **MUST** delegate medium/large changes ให้ CLC
+- ในโหมด Boss override:
+  - ข้อจำกัด read-only ถูกยกเลิกเฉพาะ scope ของ task ที่ Boss สั่ง
+  - Codex / Liam / Andy **MAY**:
+    - ใช้ CLI tools มาตรฐาน (grep, sed, ls, npm, node, python ฯลฯ)
+    - แก้ไขไฟล์โค้ด / docs ภายใต้ `$SOT`
+    - รัน `git add`, `git commit`, `git status` ภายใน `$SOT/g`
+  - การเปลี่ยนแปลงทั้งหมด **SHOULD** ถูกบันทึกใน MLS ใน session ถัดไปของ CLC หรือ LPE
 
 **Enforcement:**
-- Git pre-commit hook **MUST** reject commits with author="Codex"
-- MLS **MUST** log any Codex suggestion that becomes implementation
+- Git pre-commit hook **MUST NOT** hard-block commits ที่ระบุว่าเป็น Codex/Liam/Andy อีกต่อไป
+- ระบบ monitoring / MLS **SHOULD** tag commits ที่มาจาก Codex/Liam/Andy เพื่อการ audit (เช่น `producer: "Codex-override"`)
+- Codex / Liam / Andy **SHOULD** แจ้ง Boss เสมอเมื่อกำลังทำงานในโหมด override
 
 **Example Decision:**
-> "This function looks like it handles authentication..."
+> "Boss explicitly asked me to apply this patch in Cursor; I'll edit the files under `$SOT` and summarize what changed."
 
 ---
 
@@ -192,6 +202,47 @@ Layer 6: Kim (API Gateway)
 
 ---
 
+### 2.3 Boss Override & Cursor/Liam Mode
+
+**Purpose:**
+กำหนดกฎพิเศษเมื่อ Boss สั่งตรง ว่า Codex / Liam / Andy สามารถทำงานแบบ "ลงมือเขียนจริง" ได้ แม้ปกติจะเป็น read-only
+
+**2.3.1 Trigger (เงื่อนไขเริ่มใช้ Override)**
+
+Boss ถือสิทธิ์ override เต็มรูปแบบ:
+
+- **WHEN** Boss พูดหรือพิมพ์คำสั่งชัดเจน เช่น:
+  - `"Use Cursor to apply this patch now."`
+  - `"REVISION-PROTOCOL > I run or use Liam do"`
+  - หรือข้อความที่ระบุชัดว่าให้ Liam/Andy แก้ไฟล์ใน SOT
+- **THEN** ข้อจำกัด read-only ของ Codex-family tools (Cursor, Liam, Andy)
+  **ถูกยกเลิกชั่วคราว** สำหรับ task นั้น ๆ
+
+**2.3.2 Capabilities under Boss Override**
+
+ในช่วงที่ Boss override มีผล:
+
+- Codex / Liam / Andy **MAY**:
+  - แก้ไขไฟล์ใด ๆ ภายใน `$SOT` และ subdirectories (ยกเว้น zone อันตรายที่ AI:OP-001 ห้าม)
+  - เรียกใช้คำสั่ง dev พื้นฐาน:
+    - `grep`, `rg`, `sed`, `ls`, `cat`, `npm`, `node`, `python`, ฯลฯ
+  - รัน `git add`, `git commit`, และ `git status` ภายใต้ repo `$SOT/g`
+- พวกเขา **SHOULD**:
+  - สรุปรายการไฟล์ที่แตะ + เหตุผลให้ Boss ทุกครั้ง
+  - ถ้า MLS ใช้งานได้ ให้แนบข้อความว่า:
+    - `"producer": "Codex-override"` หรือ `"producer": "Liam-override"`
+
+**2.3.3 Scope & Safety**
+
+- Boss override **ไม่ยกเลิก** ข้อห้ามระดับระบบใน AI:OP-001 (เช่น การลบ data zone ผิดที่)
+- Override นี้ออกแบบมาเพื่อ:
+  - ลดการพึ่งพา CLC เมื่อ token ใกล้หมด
+  - ให้ Cursor/Liam ทำ "local dev work" ได้เต็มที่
+- เมื่อ task เสร็จ:
+  - Liam / Andy **SHOULD** กลับไปเคารพ capability table ปกติ
+
+---
+
 ## 3. Capability Matrix (Reference Table)
 
 | Agent | Think | Write SOT | Scope | Approval | Token Limit |
@@ -199,7 +250,7 @@ Layer 6: Kim (API Gateway)
 | **GG** | ✅ MUST (strategic) | ✅ CAN (governance only) | Governance docs, policy | Self (Boss oversight) | N/A |
 | **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Operational code | Self-approved | 200K/session |
-| **Codex** | ✅ CAN (analysis) | ❌ MUST NOT | Code suggestions (ephemeral) | N/A | N/A |
+| **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override/local-only) | Code suggestions + local edits | Boss override for writes | N/A |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
 
@@ -309,6 +360,48 @@ Layer 6: Kim (API Gateway)
 - Codex **MUST NOT** write to SOT directly
 - Codex **MUST** inform Boss: "I cannot write to git. Please use CLC or LPE."
 - Git hook **MUST** reject any commits with author="Codex"
+
+---
+
+### 4.5 Emergency Codex/Liam Write Mode (CLC Outage)
+
+**Trigger Conditions:**
+- CLC session is unavailable or out of tokens
+- Boss issues an explicit command such as:
+  - "REVISION-PROTOCOL → Liam do"
+  - "Use Cursor to apply this patch now"
+- Scope is **limited** to:
+  - Protocol/documentation updates
+  - Small, localized code/script fixes
+  - Non-destructive config changes
+
+**Decision Rule:**
+
+- **IF** CLC is unavailable AND Boss explicitly authorizes Codex/Liam:
+  - **THEN** Codex/Liam **MAY**:
+    - run CLI commands inside the SOT workspace
+    - edit protocol/docs files (e.g. `CONTEXT_ENGINEERING_PROTOCOL_v3.md`)
+    - apply small, reviewed patches to tools/scripts
+  - All such edits **MUST** be:
+    - clearly marked as **EMERGENCY_LIAM_WRITE** in commit messages
+    - logged to MLS as an emergency write with:
+      - `producer: "Liam"` or `"Andy"`
+      - `reason: "CLC unavailable / out of tokens"`
+      - `approval: "Boss <timestamp or message id>"`
+
+**Limits:**
+
+- Codex/Liam **MUST NOT**:
+  - perform large-scale refactors
+  - delete SOT directories or core protocols
+  - modify AI:OP-001 content without an explicit Boss-written spec
+- When CLC becomes available again:
+  - CLC **MUST** review all `EMERGENCY_LIAM_WRITE` commits
+  - CLC **MUST** validate correctness and update protocols if needed
+
+> **Note:**  
+> Running CLI commands for diagnostics (e.g. `grep`, `ls`, `npm test`, `pytest`, `launchctl list`, `curl localhost:...`) is considered **read-only with respect to SOT**, even if it produces temporary files (`logs/`, `.cache/`, `node_modules/`, `dist/`).  
+> Such commands are **allowed** for Codex/Liam under normal operation.
 
 ---
 
@@ -454,11 +547,10 @@ Kim → External caller: "Task complete with governance approval"
 #!/bin/bash
 # .git/hooks/pre-commit
 
-# Check 1: Prevent Codex commits
-if [[ $COMMITTER == "Codex" ]]; then
-  echo "❌ PROTOCOL VIOLATION: Codex cannot commit to SOT"
-  echo "Use CLC or LPE as fallback writer"
-  exit 1
+# Check 1: Tag Codex/Liam/Andy commits (no hard block; Boss override allowed)
+if git log -1 --pretty='%an' | grep -Ei 'codex|liam|andy' >/dev/null 2>&1; then
+  echo "⚠️  NOTICE: Codex/Liam/Andy-authored commit detected."
+  echo "    → Ensure this commit was done under Boss override or local-only work."
 fi
 
 # Check 2: Validate LaunchAgent scripts exist
@@ -769,7 +861,7 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 
 ## 12. Protocol Status
 
-**Version:** 3.0.0
+**Version:** 3.1.0-REV
 **Status:** PROTOCOL (Effective immediately)
 **Approved by:** Boss
 **Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT

@@ -1,6 +1,6 @@
 # Claude Code Context for 02luka
 
-**Version:** 3.0.0
+**Version:** 3.1.0
 **Status:** ⚠️ MIGRATED TO FORMAL PROTOCOLS
 **Last Updated:** 2025-11-17
 **Previous Version:** v2.0.2 (archived below)
@@ -21,7 +21,7 @@ All context information (agent capabilities, paths, tools) is now defined in aut
 
 | Protocol | Purpose | Path |
 |----------|---------|------|
-| **Context Engineering Protocol v3** | Agent capabilities, fallback procedures, MLS integration | `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
+| **Context Engineering Protocol v3.1-REV** | Agent capabilities, Boss override mode, fallback procedures, MLS integration | `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
 | **Path and Tool Protocol** | Path usage rules ($SOT variable), tool registry, validation | `g/docs/PATH_AND_TOOL_PROTOCOL.md` |
 | **Multi-Agent PR Contract** | PR routing types, agent impact, governance alignment | `g/docs/MULTI_AGENT_PR_CONTRACT.md` |
 | **LaunchAgent Registry** | Complete agent inventory, health status, maintenance protocols | `g/docs/LAUNCHAGENT_REGISTRY.md` |
