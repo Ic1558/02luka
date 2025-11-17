@@ -264,11 +264,21 @@ class APIHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        if path == '/api/wos':
+        if path.rstrip('/') == '/api/wos':
             self.handle_list_wos(query)
         elif path.startswith('/api/wos/'):
-            wo_id = path.split('/')[-1]
-            self.handle_get_wo(wo_id, query)
+            segments = [segment for segment in path.split('/') if segment]
+            # Expected shapes: api/wos/<id> or api/wos/<id>/insights
+            if len(segments) >= 3 and segments[0] == 'api' and segments[1] == 'wos':
+                wo_id = segments[2]
+                if len(segments) == 3:
+                    self.handle_get_wo(wo_id, query)
+                elif len(segments) == 4 and segments[-1] == 'insights':
+                    self.handle_get_wo_insights(wo_id, query)
+                else:
+                    self.send_error(404, "Not found")
+            else:
+                self.send_error(404, "Not found")
         elif path == '/api/services':
             self.handle_list_services(query)
         elif path == '/api/mls':
@@ -375,6 +385,110 @@ class APIHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, f"WO {wo_id} not found")
 
+    def handle_get_wo_insights(self, wo_id, query):
+        """Handle GET /api/wos/:id/insights - combined WO + MLS snapshot."""
+        self.collector.collect_all()
+        wo = self.collector.get_wo_by_id(wo_id)
+
+        if not wo:
+            self.send_error(404, f"WO {wo_id} not found")
+            return
+
+        started_at = wo.get('started_at')
+        finished_at = wo.get('finished_at') or wo.get('completed_at')
+        status = wo.get('status')
+        agent = wo.get('agent') or wo.get('runner')
+        summary = wo.get('summary') or wo.get('title')
+
+        duration = None
+        if started_at and finished_at:
+            try:
+                def parse_ts(ts):
+                    if not ts:
+                        return None
+                    normalized = ts.replace('Z', '+00:00')
+                    return datetime.fromisoformat(normalized)
+
+                started_dt = parse_ts(started_at)
+                finished_dt = parse_ts(finished_at)
+                if started_dt and finished_dt:
+                    duration = (finished_dt - started_dt).total_seconds()
+            except Exception:
+                duration = None
+
+        mls_summary = None
+        try:
+            mls_entries = self._load_mls_entries()
+            related = [e for e in mls_entries if (e.get('related_wo') or '') == wo_id]
+            if related:
+                mls_summary = {
+                    'total': len(related),
+                    'solutions': len([e for e in related if e.get('type') == 'solution']),
+                    'failures': len([e for e in related if e.get('type') == 'failure']),
+                    'patterns': len([e for e in related if e.get('type') == 'pattern']),
+                    'improvements': len([e for e in related if e.get('type') == 'improvement']),
+                }
+        except Exception as exc:
+            print(f"Warning: failed to build MLS summary for {wo_id}: {exc}")
+
+        recommendation = self._build_wo_recommendation(status, mls_summary)
+
+        payload = {
+            'id': wo_id,
+            'status': status,
+            'type': wo.get('type'),
+            'agent': agent,
+            'started_at': started_at,
+            'finished_at': finished_at,
+            'duration_sec': duration,
+            'summary': summary,
+            'related_pr': wo.get('related_pr'),
+            'tags': wo.get('tags', []),
+            'mls_summary': mls_summary,
+            'recommendation': recommendation,
+        }
+
+        self.send_json_response(payload)
+
+    def _build_wo_recommendation(self, status, mls_summary):
+        """Simple deterministic recommendations for WO + MLS state."""
+        rec = {
+            'level': 'info',
+            'code': 'none',
+            'title': 'No immediate action required',
+            'details': 'WO is not marked as failed and has no MLS failures recorded.',
+        }
+
+        if not status:
+            return rec
+
+        if status == 'failed':
+            rec['level'] = 'high'
+            rec['code'] = 'wo_failed'
+            rec['title'] = 'Work-order failed'
+            rec['details'] = 'WO status is failed. Check logs and MLS entries, then decide whether to re-run or escalate.'
+        elif status in ('running', 'queued'):
+            rec['level'] = 'info'
+            rec['code'] = 'wo_in_progress'
+            rec['title'] = 'Work-order still in progress'
+            rec['details'] = 'WO is not finished yet. Wait for completion before applying follow-up actions.'
+
+        if mls_summary:
+            failures = mls_summary.get('failures', 0)
+            solutions = mls_summary.get('solutions', 0)
+            if failures and not solutions:
+                rec['level'] = 'high'
+                rec['code'] = 'mls_failures_no_solution'
+                rec['title'] = 'MLS records failures without solutions'
+                rec['details'] = 'This WO has MLS failure entries but no solution logged. Consider creating or linking a solution lesson.'
+            elif failures and solutions:
+                rec['level'] = 'medium'
+                rec['code'] = 'mls_failures_with_solutions'
+                rec['title'] = 'Failures with solutions available'
+                rec['details'] = 'Failures were recorded in MLS, but solutions exist. Ensure the solution is applied and marked as verified.'
+
+        return rec
+
     def handle_list_services(self, query):
         """Handle GET /api/services - list all 02luka LaunchAgent services"""
         try:
@@ -468,53 +582,7 @@ class APIHandler(BaseHTTPRequestHandler):
     def handle_list_mls(self, query):
         """Handle GET /api/mls - list all MLS lessons"""
         try:
-            mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
-
-            if not mls_file.exists():
-                # Return empty response if file doesn't exist
-                self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
-                return
-
-            # Read multi-line JSONL file (pretty-printed JSON objects separated by newlines)
-            entries = []
-            with open(mls_file, 'r') as f:
-                content = f.read().strip()
-
-            # Split by "}\n{" to separate pretty-printed JSON objects
-            json_objects = []
-            if content:
-                # Add back the braces that were removed by split
-                parts = content.split('}\n{')
-                for i, part in enumerate(parts):
-                    if i == 0:
-                        json_str = part + '}'
-                    elif i == len(parts) - 1:
-                        json_str = '{' + part
-                    else:
-                        json_str = '{' + part + '}'
-                    json_objects.append(json_str)
-
-            # Parse each JSON object
-            for json_str in json_objects:
-                try:
-                    entry = json.loads(json_str)
-                    # Normalize the entry for frontend
-                    entries.append({
-                        'id': entry.get('id', 'MLS-UNKNOWN'),
-                        'type': entry.get('type', 'other'),
-                        'title': entry.get('title', 'Untitled'),
-                        'details': entry.get('description', ''),
-                        'context': entry.get('context', ''),
-                        'time': entry.get('timestamp', ''),
-                        'related_wo': entry.get('related_wo'),
-                        'related_session': entry.get('related_session'),
-                        'tags': entry.get('tags', []),
-                        'verified': entry.get('verified', False),
-                        'score': entry.get('usefulness_score', 0)
-                    })
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {e}")
-                    continue
+            entries = self._load_mls_entries()
 
             # Filter by type if requested
             type_filter = query.get('type', [''])[0]
@@ -541,9 +609,46 @@ class APIHandler(BaseHTTPRequestHandler):
 
             self.send_json_response(response)
 
+        except FileNotFoundError:
+            self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
         except Exception as e:
             print(f"Error reading MLS lessons: {e}")
             self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
+
+    def _load_mls_entries(self):
+        """Load MLS lessons from the JSONL file."""
+        mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
+        if not mls_file.exists():
+            raise FileNotFoundError("MLS lessons file not found")
+
+        entries = []
+        with open(mls_file, 'r', encoding='utf-8') as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {exc}")
+                    continue
+
+                entries.append({
+                    'id': entry.get('id', 'MLS-UNKNOWN'),
+                    'type': entry.get('type', 'other'),
+                    'title': entry.get('title', 'Untitled'),
+                    'details': entry.get('description', ''),
+                    'context': entry.get('context', ''),
+                    'time': entry.get('timestamp', ''),
+                    'related_wo': entry.get('related_wo'),
+                    'related_session': entry.get('related_session'),
+                    'tags': entry.get('tags', []),
+                    'verified': entry.get('verified', False),
+                    'score': entry.get('usefulness_score', 0)
+                })
+
+        return entries
 
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""
@@ -666,6 +771,7 @@ def run_server(port=8767):
     print(f"🚀 Dashboard API server running on http://127.0.0.1:{port}")
     print(f"   - GET /api/wos - List all WOs")
     print(f"   - GET /api/wos/:id - Get WO details")
+    print(f"   - GET /api/wos/:id/insights - WO + MLS insights snapshot")
     print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
     print(f"   - GET /api/services?status=stopped - Filter services by status")
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")
