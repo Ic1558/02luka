@@ -21,7 +21,7 @@
 | **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Privileged/locked zones | Self-approved | Configurable Budget |
 | **Gemini** | ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
-| **Codex/Liam/Andy** | ✅ CAN (analysis) | ⚠️ MAY (override) | Code suggestions, small fixes | Boss override for writes | N/A |
+| **Cursor AI (Liam/Andy/CLS)** | ✅ CAN (analysis) | ⚠️ MAY (override) | Code suggestions, small fixes | Boss override for writes | N/A |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
 
@@ -78,7 +78,7 @@
     └──────────────────────────┘
 ```
 
-### Emergency Override (Codex/Liam/Andy)
+### Emergency Override (CursorAI/Codex)
 
 **Trigger:**
 
@@ -164,7 +164,7 @@ GG validates governance compliance
 
 - **Location:** `.git/hooks/pre-commit`
 - **Checks:**
-  - Tag Codex/Liam/Andy commits (warning, not hard block)
+  - Tag CursorAI/Codex commits (warning, not hard block)
   - Validate LaunchAgent scripts exist
   - Verify MLS logging (optional)
 
@@ -199,7 +199,7 @@ node ~/02luka/knowledge/index.cjs --hybrid "query"
 
 ### Scenario 1: Which Agent Can Write to `/tools`?
 
-**Answer:** Gemini (primary), CLC (if locked zone), Codex/Liam (with Boss override)
+**Answer:** Gemini (primary), CLC (if locked zone), CursorAI/Codex (with Boss override)
 
 ### Scenario 2: Codex Suggests Fix, Gemini Unavailable
 
@@ -214,7 +214,7 @@ node ~/02luka/knowledge/index.cjs --hybrid "query"
 **Answer:**
 
 - Normal: Gemini (via patch, Safety-Belt Mode)
-- Emergency: Codex/Liam (with Boss override, tag `EMERGENCY_LIAM_WRITE`)
+- Emergency: CursorAI/Codex (with Boss override, tag `EMERGENCY_LIAM_WRITE`)
 - Locked: CLC only
 
 ### Scenario 4: Large Refactor Across Multiple Files
@@ -229,7 +229,8 @@ node ~/02luka/knowledge/index.cjs --hybrid "query"
 
 ## 📖 Agent Naming Clarification
 
-- **Codex** = **Liam** = **Andy** = Cursor AI (Layer 4)
+- **Cursor AI** = Liam / Andy / CLS running in the Cursor AI pane (Layer 4, analysis; backed by Claude 3.5 Haiku).
+- **Codex IDE** = OpenAI Codex extension inside Cursor (separate from Cursor AI). Used mainly for big refactors / generation; produces patches that CLC/Gemini/LPE apply.
 - **Gemini** = Gemini Code Assist (Layer 4.5, primary operational writer)
 - **CLC** = Privileged Writer (Layer 3, locked zones)
 - **LPE** = Local Prompt Executor (Layer 5, fallback only)
