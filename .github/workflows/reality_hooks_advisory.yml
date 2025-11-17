@@ -1,0 +1,31 @@
+name: Reality Hooks Advisory
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  reality_hooks_advisory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make advisory script executable
+        run: |
+          chmod +x tools/reality_hooks_advisory_check.zsh
+
+      - name: Run Reality Hooks advisory check
+        run: |
+          ./tools/reality_hooks_advisory_check.zsh
+
+      - name: Upload advisory reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reality_hooks_advisory_reports
+          path: |
+            g/reports/system/reality_hooks_advisory_*.md
+            g/reports/system/reality_hooks_advisory_latest.md
+          if-no-files-found: ignore
