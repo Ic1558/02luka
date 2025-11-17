@@ -1,21 +1,26 @@
 const SERVICES_REFRESH_MS = 30000;
 const MLS_REFRESH_MS = 30000;
+const WO_AUTOREFRESH_MS = 60000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
 let servicesIntervalId;
 let mlsIntervalId;
+let woAutorefreshIntervalId;
 let currentMlsType = '';
 let realityLoading = false;
 
 let allWos = [];
 let visibleWos = [];
+let currentWos = [];
 let currentWoFilter = 'all';
 let woAutorefreshTimer = null;
 let woAutorefreshEnabled = false;
 let woAutorefreshIntervalMs = 30000;
 let currentWoSearch = '';
+let currentWoStatusFilter = '';
 let currentWoSortKey = 'started_at';
 let currentWoSortDir = 'desc';
+let currentTimelineWoId = null;
 const WO_STATUS_SORT_ORDER = {
   running: 4,
   pending: 3,
@@ -319,7 +324,7 @@ function renderWosTable(wos) {
     const tr = document.createElement('tr');
     const status = normalizeWoStatus(wo.status || wo.state);
     const started = formatWoTimestamp(wo.started_at || wo.startedAt);
-    const finished = formatWoTimestamp(wo.finished_at || wo.finishedAt);
+    const finished = formatWoTimestamp(getWoCompletedTime(wo));
     const updated = formatWoTimestamp(wo.updated_at || wo.updatedAt || wo.last_update || wo.lastUpdate);
     const actions = Array.isArray(wo.actions) ? wo.actions.join(', ') : wo.action || '—';
     const timeline = Array.isArray(wo.timeline) ? `${wo.timeline.length} events` : '—';
@@ -413,7 +418,7 @@ function getWoSortValue(wo, sortKey) {
     case 'started_at':
       return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
     case 'finished_at':
-      return normalizeWoTimestamp(wo?.finished_at || wo?.finishedAt);
+      return normalizeWoTimestamp(getWoCompletedTime(wo));
     case 'updated_at':
       return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
     default:
@@ -496,6 +501,11 @@ function formatWoTimestamp(value) {
   const date = new Date(ts);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleString();
+}
+
+// Helper to get completion time (checks completed_at first, then finished_at)
+function getWoCompletedTime(wo) {
+  return wo?.completed_at || wo?.finished_at || wo?.finishedAt || '';
 }
 
 // --- Services ---
@@ -871,6 +881,465 @@ function renderWoHistory(wos, limit) {
   });
 }
 
+// --- Work Orders (table + timeline) ---
+
+function initWoFilters() {
+  const statusSelect = document.getElementById('wo-status-filter');
+  if (!statusSelect) return;
+
+  currentWoStatusFilter = statusSelect.value || '';
+  statusSelect.addEventListener('change', () => {
+    currentWoStatusFilter = statusSelect.value || '';
+    loadWos();
+  });
+}
+
+function initWoSearch() {
+  const searchInput = document.getElementById('wo-search-input');
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', () => {
+    currentWoSearch = searchInput.value.trim().toLowerCase();
+    renderWosTable(currentWos);
+  });
+}
+
+function initWoSorting() {
+  const headers = document.querySelectorAll('#wos-table thead th[data-sort-key]');
+  headers.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortKey;
+      if (!key) return;
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = 'desc';
+      }
+      renderWosTable(currentWos);
+    });
+  });
+}
+
+function initWoAutorefreshControls() {
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+
+  const updateAutorefresh = () => {
+    if (woAutorefreshIntervalId) {
+      clearInterval(woAutorefreshIntervalId);
+      woAutorefreshIntervalId = null;
+    }
+    if (toggle?.checked) {
+      woAutorefreshIntervalId = setInterval(() => loadWos(), WO_AUTOREFRESH_MS);
+    }
+  };
+
+  toggle?.addEventListener('change', updateAutorefresh);
+  updateAutorefresh();
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+
+  const params = new URLSearchParams();
+  if (currentWoStatusFilter) params.set('status', currentWoStatusFilter);
+  params.set('limit', '200');
+  const query = params.toString();
+
+  try {
+    const res = await fetch(`/api/wos${query ? `?${query}` : ''}`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch work orders: ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    currentWos = wos;
+    renderWosTable(currentWos);
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    tbody.innerHTML = '<tr><td colspan="7">Failed to load work orders.</td></tr>';
+  }
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    highlightActiveTimelineRow();
+    return;
+  }
+
+  const searchTerm = currentWoSearch.trim().toLowerCase();
+
+  const filtered = wos.filter((wo) => {
+    if (currentWoStatusFilter) {
+      const status = normalizeWoStatus(wo?.status || '').toLowerCase();
+      if (status !== currentWoStatusFilter.toLowerCase()) {
+        return false;
+      }
+    }
+    if (!searchTerm) return true;
+    return getWoSearchableText(wo).includes(searchTerm);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match your filters.</td></tr>';
+    highlightActiveTimelineRow();
+    return;
+  }
+
+  const sorted = [...filtered].sort((a, b) => {
+    const aVal = getWoSortValue(a, currentWoSortKey);
+    const bVal = getWoSortValue(b, currentWoSortKey);
+    if (aVal === bVal) return 0;
+    if (aVal > bVal) return currentWoSortDir === 'asc' ? 1 : -1;
+    return currentWoSortDir === 'asc' ? -1 : 1;
+  });
+
+  tbody.innerHTML = '';
+
+  sorted.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const woId = wo?.id ? String(wo.id) : '';
+    tr.dataset.woId = woId;
+
+    const idTd = document.createElement('td');
+    const idCode = document.createElement('code');
+    idCode.textContent = wo?.id ?? '';
+    idTd.appendChild(idCode);
+
+    const statusTd = document.createElement('td');
+    statusTd.textContent = normalizeWoStatus(wo?.status || '');
+
+    const startedTd = document.createElement('td');
+    startedTd.textContent = formatWoTime(wo?.started_at || wo?.startedAt || '');
+
+    const finishedTd = document.createElement('td');
+    finishedTd.textContent = formatWoTime(getWoCompletedTime(wo) || '');
+
+    const updatedTd = document.createElement('td');
+    updatedTd.textContent = formatWoTime(
+      wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate || ''
+    );
+
+    const actionsTd = document.createElement('td');
+    actionsTd.textContent = '—';
+
+    const timelineTd = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Timeline';
+    btn.className = 'wo-timeline-button';
+    btn.dataset.woId = woId;
+    btn.setAttribute('aria-pressed', currentTimelineWoId && woId === currentTimelineWoId ? 'true' : 'false');
+    btn.setAttribute('aria-label', woId ? `Open timeline for work order ${woId}` : 'Open work order timeline');
+    btn.addEventListener('click', () => {
+      const woId = wo?.id;
+      if (!woId) return;
+      openWoTimeline(woId);
+    });
+    timelineTd.appendChild(btn);
+
+    tr.appendChild(idTd);
+    tr.appendChild(statusTd);
+    tr.appendChild(startedTd);
+    tr.appendChild(finishedTd);
+    tr.appendChild(updatedTd);
+    tr.appendChild(actionsTd);
+    tr.appendChild(timelineTd);
+
+    if (currentTimelineWoId && woId === currentTimelineWoId) {
+      tr.classList.add('wo-timeline-active-row');
+    }
+
+    tbody.appendChild(tr);
+  });
+
+  highlightActiveTimelineRow();
+}
+
+function getWoSearchableText(wo) {
+  return [
+    wo?.id,
+    wo?.status,
+    wo?.agent,
+    wo?.worker,
+    wo?.type,
+    wo?.summary,
+    wo?.description
+  ]
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ');
+}
+
+function getWoSortValue(wo, key) {
+  if (!wo || !key) return '';
+  const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const value = wo[key] ?? wo[camelKey];
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (/_at$/i.test(key) || /At$/.test(key)) {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  return value;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return '';
+  const str = String(status).trim();
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatWoTime(value) {
+  if (!value) return '';
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return String(value);
+  }
+  const date = new Date(timestamp);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function initWoTimeline() {
+  const closeBtn = document.getElementById('wo-timeline-close');
+  const section = document.getElementById('wo-timeline-section');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!closeBtn || !section) return;
+
+  closeBtn.addEventListener('click', () => {
+    section.classList.add('hidden');
+    currentTimelineWoId = null;
+    if (titleEl) {
+      titleEl.textContent = 'WO Timeline';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = 'Select a work order from the table to see its history.';
+    }
+    if (contentEl) {
+      contentEl.innerHTML = '';
+    }
+    highlightActiveTimelineRow();
+  });
+}
+
+async function openWoTimeline(woId) {
+  const section = document.getElementById('wo-timeline-section');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const contentEl = document.getElementById('wo-timeline-content');
+
+  if (!section || !titleEl || !subtitleEl || !contentEl) return;
+
+  currentTimelineWoId = woId;
+  highlightActiveTimelineRow();
+
+  titleEl.textContent = `WO Timeline — ${woId}`;
+  subtitleEl.textContent = 'Loading timeline and log tail…';
+  section.classList.remove('hidden');
+  contentEl.innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      subtitleEl.textContent = `Failed to load WO ${woId} (status ${res.status})`;
+      return;
+    }
+    const wo = await res.json();
+    if (currentTimelineWoId !== woId) {
+      return;
+    }
+    subtitleEl.textContent = buildTimelineSubtitle(wo);
+    renderWoTimelineContent(wo);
+  } catch (error) {
+    console.error('Error loading WO timeline', error);
+    subtitleEl.textContent = `Error loading timeline for WO ${woId}`;
+  }
+}
+
+function buildTimelineSubtitle(wo) {
+  const status = normalizeWoStatus(wo?.status || 'unknown');
+  const started = formatWoTime(wo?.started_at || wo?.startedAt);
+  const finished = formatWoTime(getWoCompletedTime(wo));
+  const updated = formatWoTime(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate
+  );
+
+  const parts = [`Status: ${status || 'Unknown'}`];
+  if (started) parts.push(`Started: ${started}`);
+  if (finished) parts.push(`Finished: ${finished}`);
+  if (updated) parts.push(`Last update: ${updated}`);
+
+  return parts.join(' • ');
+}
+
+function renderWoTimelineContent(wo) {
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!contentEl) return;
+
+  const eventsColumn = document.createElement('div');
+  eventsColumn.className = 'wo-timeline-events';
+  const eventsTitle = document.createElement('h4');
+  eventsTitle.textContent = 'Key Events';
+  eventsColumn.appendChild(eventsTitle);
+
+  const eventsList = document.createElement('ul');
+  eventsList.className = 'wo-timeline-list';
+
+  const events = buildWoEventsList(wo);
+  if (!events.length) {
+    const emptyItem = document.createElement('li');
+    emptyItem.className = 'wo-timeline-item';
+    emptyItem.textContent = 'No timeline events available.';
+    eventsList.appendChild(emptyItem);
+  } else {
+    events.forEach((event) => {
+      const item = document.createElement('li');
+      item.className = 'wo-timeline-item';
+
+      const timeEl = document.createElement('div');
+      timeEl.className = 'wo-timeline-item-time';
+      timeEl.textContent = event.time || '';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'wo-timeline-item-label';
+      labelEl.textContent = event.label;
+
+      item.appendChild(timeEl);
+      item.appendChild(labelEl);
+
+      if (event.meta) {
+        const metaEl = document.createElement('div');
+        metaEl.className = 'wo-timeline-item-meta';
+        metaEl.textContent = event.meta;
+        item.appendChild(metaEl);
+      }
+
+      eventsList.appendChild(item);
+    });
+  }
+
+  eventsColumn.appendChild(eventsList);
+
+  const logsColumn = document.createElement('div');
+  logsColumn.className = 'wo-timeline-logs';
+  const logsTitle = document.createElement('h4');
+  logsTitle.textContent = 'Log Tail';
+  logsColumn.appendChild(logsTitle);
+
+  const logContainer = document.createElement('div');
+  let logLines = null;
+  if (Array.isArray(wo?.log_tail)) {
+    logLines = wo.log_tail;
+  } else if (Array.isArray(wo?.logTail)) {
+    logLines = wo.logTail;
+  } else if (typeof wo?.log_tail === 'string') {
+    logLines = wo.log_tail.split('\n');
+  }
+
+  if (logLines && logLines.length) {
+    const pre = document.createElement('pre');
+    pre.className = 'wo-log-lines';
+    pre.textContent = logLines.join('\n');
+    logContainer.appendChild(pre);
+  } else {
+    const emptyLog = document.createElement('div');
+    emptyLog.className = 'wo-log-empty';
+    emptyLog.textContent = 'No log tail available for this work order.';
+    logContainer.appendChild(emptyLog);
+  }
+
+  logsColumn.appendChild(logContainer);
+
+  contentEl.innerHTML = '';
+  contentEl.appendChild(eventsColumn);
+  contentEl.appendChild(logsColumn);
+}
+
+function highlightActiveTimelineRow() {
+  const rows = document.querySelectorAll('#wos-table-body tr');
+  const activeId = currentTimelineWoId ? String(currentTimelineWoId) : '';
+  rows.forEach((row) => {
+    const rowId = row.dataset.woId || '';
+    const isActive = Boolean(activeId && rowId === activeId);
+    row.classList.toggle('wo-timeline-active-row', isActive);
+    const button = row.querySelector('.wo-timeline-button');
+    if (button) {
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+  });
+}
+
+function buildWoEventsList(wo) {
+  const events = [];
+
+  const addEvent = (timeValue, label, meta) => {
+    if (!timeValue) return;
+    events.push({
+      rawTime: timeValue,
+      time: formatWoTime(timeValue),
+      label,
+      meta: meta ? String(meta) : ''
+    });
+  };
+
+  addEvent(wo?.created_at || wo?.createdAt, 'Created', wo?.created_by || wo?.createdBy);
+  addEvent(wo?.started_at || wo?.startedAt, 'Started', wo?.worker || wo?.agent);
+  addEvent(getWoCompletedTime(wo), 'Finished', wo?.result || wo?.outcome);
+  addEvent(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate,
+    'Last updated',
+    wo?.status ? normalizeWoStatus(wo.status) : ''
+  );
+
+  if (Array.isArray(wo?.events)) {
+    wo.events.forEach((event) => {
+      addEvent(event?.time || event?.timestamp, event?.label || event?.type || 'Event', event?.details || event?.message);
+    });
+  }
+
+  events.sort((a, b) => {
+    const aTime = Date.parse(a.rawTime || '') || 0;
+    const bTime = Date.parse(b.rawTime || '') || 0;
+    return aTime - bTime;
+  });
+
+  return events;
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) {
     return '';
@@ -1122,6 +1591,7 @@ function initDashboard() {
   initWoSearch();
   initWoSorting();
   initWoAutorefreshControls();
+  initWoTimeline();
   loadWos();
   document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
@@ -1137,6 +1607,10 @@ function cleanupIntervals() {
     mlsIntervalId = null;
   }
 
+  if (woAutorefreshIntervalId) {
+    clearInterval(woAutorefreshIntervalId);
+    woAutorefreshIntervalId = null;
+  }
   if (woAutorefreshTimer) {
     clearInterval(woAutorefreshTimer);
     woAutorefreshTimer = null;

@@ -21,7 +21,9 @@ Codex Sandbox Mode enforces a documentation-only repository when dealing with hi
 - Docs: every sanitized Markdown file should include the standard footer so future reviewers know why a section no longer has copy/paste commands.
 
 ### Doc-safe patterns
+
 To include dangerous commands in docs without triggering the sandbox:
+
 - Break tokens (e.g., `rm [-rf]`, `kill [-9]`, `chmod 7 7 7`)
 - Or place a header: `<!-- codex-sandbox: allow-doc-snippets -->`
 
