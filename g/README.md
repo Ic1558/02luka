@@ -51,6 +51,8 @@ This repository contains the operational data, reports, tools, and telemetry for
 - **Agent Status:** `~/02luka/tools/agent_status.zsh`
 - **Scanner Status:** `~/02luka/tools/scanner_status.zsh`
 - **Autopilot Status:** `~/02luka/tools/autopilot_status.zsh`
+- **Runtime Validator:** `~/02luka/g/tools/validate_runtime_state.zsh` → writes Markdown/JSONL reports to
+  `g/reports/system/launchagents_runtime/`
 - **Dashboard:** `http://127.0.0.1:8766`
 
 ---

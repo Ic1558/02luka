@@ -4,7 +4,7 @@
 
 Adds a **timeline panel** to the Work Orders dashboard so operators can:
 
-- Inspect key lifecycle events for a WO (created, started, finished, last
+- Inspect key lifecycle events for a WO (created, started, finished/completed, last
   updated, optional custom events), and
 - See the **log tail** (up to N lines) without leaving the UI.
 
@@ -47,9 +47,12 @@ This is a **front-end only** feature that uses the existing
         - Log tail (`.wo-timeline-logs`)
     - `buildWoEventsList(wo)`:
       - Builds a sorted list of key events from:
-        - `created_at`, `started_at`, `finished_at`,
+        - `created_at`, `started_at`, `completed_at` (or `finished_at`),
           `updated_at`/`last_update`
         - Optional `wo.events[]`.
+    - `getWoCompletedTime(wo)`:
+      - Helper function that checks `completed_at` first, then falls back to `finished_at`/`finishedAt`.
+      - This addresses the Codex review comment about completed timestamps not being rendered.
     - `highlightActiveTimelineRow()` keeps the WO table button state (`aria-pressed`) and background in sync with the panel, and `initWoTimeline()` now resets the panel text/content when closing.
 
 - `g/reports/system/wo_timeline_feature_20251115.md`
@@ -69,6 +72,14 @@ This is a **front-end only** feature that uses the existing
 - If there is no log tail:
   - Shows "No log tail available for this work order."
 
+## Data Source
+
+- Uses `GET /api/wos/:id?tail=200` provided by `apps/dashboard/api_server.py`.
+- Expects:
+  - `id`, `status`
+  - Optional: `created_at`, `started_at`, `completed_at`, `finished_at`, `updated_at` /
+    `last_update`, `worker`, `result`, `last_error`, `log_tail[]`.
+
 ## Risk
 
 - API usage:
@@ -78,5 +89,6 @@ This is a **front-end only** feature that uses the existing
   - Server code (`api_server.py`, `wo_dashboard_server.js`).
   - Security or signature verification.
   - CI workflows.
+- If fields are missing, timeline gracefully degrades.
 
 Risk level: **Low**.
