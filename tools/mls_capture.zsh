@@ -3,8 +3,11 @@
 # Auto-triggered after system improvements, solutions, or failures
 set -euo pipefail
 
-MLS_DB="$HOME/02luka/g/knowledge/mls_lessons.jsonl"
-MLS_INDEX="$HOME/02luka/g/knowledge/mls_index.json"
+# SOT variable (PATH protocol compliance)
+SOT="${SOT:-$HOME/02luka}"
+
+MLS_DB="$SOT/g/knowledge/mls_lessons.jsonl"
+MLS_INDEX="$SOT/g/knowledge/mls_index.json"
 mkdir -p "$(dirname "$MLS_DB")"
 
 # Usage: mls_capture.zsh <type> <title> <description> [context]
@@ -42,8 +45,8 @@ TIMESTAMP=$(date +%s)
 LESSON_ID="MLS-${TIMESTAMP}"
 
 # Capture current context
-CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/CLC/WO-*.zsh 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
-CURRENT_SESSION=$(ls -t ~/02luka/g/reports/sessions/*.md 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
+CURRENT_WO=$(ls -t "$SOT/bridge/inbox/CLC/WO-*.zsh" 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
+CURRENT_SESSION=$(ls -t "$SOT/g/reports/sessions/*.md" 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
 
 # Create lesson entry
 LESSON=$(jq -n \
@@ -100,8 +103,8 @@ echo "$NEW_INDEX" | jq -r '
 '
 
 # Trigger R&D autopilot notification
-if [[ -d "$HOME/02luka/bridge/inbox/RD" ]]; then
-  RD_NOTIFICATION="$HOME/02luka/bridge/inbox/RD/MLS-notification-${TIMESTAMP}.json"
+if [[ -d "$SOT/bridge/inbox/RD" ]]; then
+  RD_NOTIFICATION="$SOT/bridge/inbox/RD/MLS-notification-${TIMESTAMP}.json"
   jq -n \
     --arg lesson_id "$LESSON_ID" \
     --arg type "$TYPE" \
@@ -123,4 +126,4 @@ echo "📚 View all lessons:"
 echo "   cat $MLS_DB | jq"
 echo ""
 echo "🔍 Search lessons:"
-echo "   ~/02luka/tools/mls_search.zsh <keyword>"
+echo "   \$SOT/tools/mls_search.zsh <keyword>"
