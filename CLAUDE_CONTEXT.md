@@ -1,6 +1,6 @@
 # Claude Code Context for 02luka
 
-**Version:** 3.0.0
+**Version:** 3.1.0
 **Status:** ⚠️ MIGRATED TO FORMAL PROTOCOLS
 **Last Updated:** 2025-11-17
 **Previous Version:** v2.0.2 (archived below)
@@ -21,7 +21,7 @@ All context information (agent capabilities, paths, tools) is now defined in aut
 
 | Protocol | Purpose | Path |
 |----------|---------|------|
-| **Context Engineering Protocol v3** | Agent capabilities, fallback procedures, MLS integration | `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
+| **Context Engineering Protocol v3.1-REV** | Agent capabilities, Boss override mode, fallback procedures, MLS integration | `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
 | **Path and Tool Protocol** | Path usage rules ($SOT variable), tool registry, validation | `g/docs/PATH_AND_TOOL_PROTOCOL.md` |
 | **Multi-Agent PR Contract** | PR routing types, agent impact, governance alignment | `g/docs/MULTI_AGENT_PR_CONTRACT.md` |
 | **LaunchAgent Registry** | Complete agent inventory, health status, maintenance protocols | `g/docs/LAUNCHAGENT_REGISTRY.md` |
@@ -122,7 +122,7 @@ KNOWLEDGE_PATH="$SOT/g/knowledge"  # MLS & knowledge base
 | **GG** | ✅ Yes | ✅ Yes | Governance | N/A |
 | **GC** | ✅ Yes | ✅ Yes | Specs, PRPs | N/A |
 | **CLC** | ✅ Yes | ✅ Yes | Code, configs | 200K/session |
-| **Codex** | ✅ Yes | ❌ NO | Code suggestions | N/A |
+| **Codex** | ✅ Yes | ⚠️ MAY (Boss override) | Code suggestions + local edits | N/A |
 | **LPE** | ❌ NO | ✅ Yes (Boss-approved) | Emergency writes | N/A |
 | **Kim** | ✅ Yes | ❌ NO | Orchestration | N/A |
 
@@ -169,7 +169,7 @@ GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
    ```
 
 3. **Check protocols when needed:**
-   - Agent capabilities → `CONTEXT_ENGINEERING_PROTOCOL_v3.md`
+   - Agent capabilities & Boss override → `CONTEXT_ENGINEERING_PROTOCOL_v3.md` (Section 2.3)
    - Path/tool usage → `PATH_AND_TOOL_PROTOCOL.md`
    - PR workflow → `MULTI_AGENT_PR_CONTRACT.md`
 
@@ -198,7 +198,7 @@ GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
 - Hardcode `~/02luka` or `/Users/*/02luka` paths
 - Create symlinks in SOT directories
 - Bypass MLS tools (write directly to mls_lessons.jsonl)
-- Commit to SOT if you're Codex (use CLC instead)
+- Commit to SOT as Codex **without Boss override** (use CLC instead, or wait for Boss authorization)
 - Skip validation before file writes
 
 ### SHOULD (Recommended)
