@@ -1,107 +1,29 @@
-# Dashboard — Services & MLS Panels
+# Dashboard Services & MLS Panels
 
-## Overview
-
-The Ops Dashboard now exposes two additional observability panels:
-
-- **Services (LaunchAgents)** — current status of 02luka services discovered via `/api/services`.
-
-- **MLS Lessons** — consolidated machine learning system lessons from `/api/mls`.
-
-These panels are read-only and do not change system state.
-
----
+The dashboard now exposes two read-only observability views that consume the existing backend APIs:
 
 ## Services Panel
 
-**Endpoint:** `GET /api/services`
+* **Source:** `GET /api/services`
+* **Data shown:** label, status, PID, exit code, LaunchAgent type.
+* **Summary metrics:** total, running, stopped, failed counts (color-coded chips).
+* **Filters:**
+  * Status (`All`, `running`, `stopped`, `failed`) mapped directly to the backend `status` query parameter.
+  * Type filter (bridge, worker, automation, monitoring, other) is applied client-side for quick pivots without additional API calls.
+* **Refresh cadence:** auto-refreshes every 30 seconds, with a manual **Refresh** button.
+* **Error handling:** failures render an inline banner with a retry action so the rest of the dashboard stays usable.
 
-The backend returns:
-
-- `services`: array of service objects:
-
-  - `label`: LaunchAgent label (e.g. `com.02luka.mary`)
-
-  - `pid`: current PID (or `null` if not running)
-
-  - `status`: `running`, `stopped`, or `failed`
-
-  - `exit_code`: numeric exit code when failed
-
-  - `type`: inferred type: `bridge`, `worker`, `automation`, `monitoring`, or `other`
-
-- `summary`: aggregate counts:
-
-  - `total`, `running`, `stopped`, `failed`
-
-The UI shows:
-
-- A summary bar with total / running / stopped / failed.
-
-- A table listing each service with:
-
-  - Label
-
-  - Type
-
-  - Status (color badge)
-
-  - PID
-
-  - Exit code
-
-Controls:
-
-- Status filter: All / Running / Stopped / Failed.
-
-Refresh interval:
-
-- ~30 seconds. The panel automatically refreshes in the background.
-
----
+Use this view to confirm LaunchAgents are healthy during deploys or when triaging WO escalations. Service rows are read-only and mirror the LaunchAgent state reported by the backend.
 
 ## MLS Lessons Panel
 
-**Endpoint:** `GET /api/mls`
+* **Source:** `GET /api/mls` with optional `?type=solution|failure|pattern|improvement`.
+* **Summary metrics:** total entries and per-type counts from the response `summary` object.
+* **Filters:** pill bar drives the `type` query parameter for server-side filtering. The **Refresh** button re-issues the most recent query, and the panel auto-refreshes every 30 seconds.
+* **Presentation:** each entry renders as a card with:
+  * Type badge, title, and relative timestamp.
+  * Score, tags, and truncated context/details with an optional “Show more” toggle.
+  * Related Work Order / session chips and verification state.
+* **Error handling:** same inline retry banner pattern as Services.
 
-The backend returns:
-
-- `entries`: array of MLS entries:
-
-  - `id`, `type`, `title`, `details`, `context`
-
-  - `time`, `related_wo`, `related_session`
-
-  - `tags[]`, `verified`, `score`
-
-- `summary`: aggregate counts:
-
-  - `total`, `solutions`, `failures`, `patterns`, `improvements`
-
-The UI shows:
-
-- A summary bar with total + breakdown by type.
-
-- A table of MLS entries with:
-
-  - Type (badge)
-
-  - Title
-
-  - Time
-
-  - Verified flag
-
-  - Score
-
-Interaction:
-
-- Click any row to see details, context, tags, and related WO/session.
-
-- Filter by type (All / solution / failure / pattern / improvement).
-
-- Free-text search across title, details, context, and tags.
-
-Refresh interval:
-
-- ~60 seconds. The panel periodically refetches MLS data while the dashboard is open.
+Use MLS cards during incident/postmortem reviews to surface patterns, known fixes, or failure write-ups without leaving the dashboard. Entries remain immutable here—any edits still flow through the MLS ingestion pipeline.
