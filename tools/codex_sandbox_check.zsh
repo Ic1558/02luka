@@ -140,6 +140,10 @@ function search_pattern_in_files() {
     if [[ "$pattern_id" == "superuser_exec" ]] && [[ "$file_path" == .github/workflows/* ]]; then
       continue
     fi
+    # Exempt the sandbox check script itself (contains explanatory comments)
+    if [[ "$file_path" == tools/codex_sandbox_check.zsh ]]; then
+      continue
+    fi
     chunk+=("$file_path")
     if (( ${#chunk[@]} == chunk_size )); then
       chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${chunk[@]}" || true)"
@@ -152,11 +156,11 @@ function search_pattern_in_files() {
   done
 
   if (( ${#chunk[@]} )); then
-    # Filter out workflow files for superuser_exec pattern before searching
+    # Filter out workflow files and sandbox check script for superuser_exec pattern before searching
     local -a filtered_chunk=()
     if [[ "$pattern_id" == "superuser_exec" ]]; then
       for file_path in "${chunk[@]}"; do
-        if [[ "$file_path" != .github/workflows/* ]]; then
+        if [[ "$file_path" != .github/workflows/* ]] && [[ "$file_path" != tools/codex_sandbox_check.zsh ]]; then
           filtered_chunk+=("$file_path")
         fi
       done
