@@ -294,7 +294,7 @@ function applyWoFilter() {
   let filtered = allWos.slice();
 
   if (currentWoFilter !== 'all') {
-    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status) === currentWoFilter);
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status || wo.state) === currentWoFilter);
   }
 
   if (currentWoSearch) {
@@ -354,7 +354,7 @@ function renderWoSummary(wos) {
   };
 
   wos.forEach((wo) => {
-    const status = normalizeWoStatus(wo.status);
+    const status = normalizeWoStatus(wo.status || wo.state);
     if (status in totals) {
       totals[status] += 1;
     }
