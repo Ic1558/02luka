@@ -1,12 +1,41 @@
 # Context Engineering Global Specification
 **Version:** 1.0.0-DRAFT
-**Status:** SOT (Single Source of Truth)
+**Status:** ⚠️ SUPERSEDED - Refer to v3 Protocol
 **Last Updated:** 2025-11-17
 **Maintainer:** Boss (ittipong.c@gmail.com)
 
 ---
 
-## Purpose
+## ⚠️ DEPRECATION NOTICE
+
+**This document has been superseded by formal RFC-style protocols:**
+
+| Protocol | Purpose | Path |
+|----------|---------|------|
+| **Context Engineering Protocol v3** | Agent capabilities, fallback procedures, enforcement | `CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
+| **Path and Tool Protocol** | Path usage rules, tool registry, validation gates | `PATH_AND_TOOL_PROTOCOL.md` |
+| **Multi-Agent PR Contract** | PR routing, governance, agent coordination | `MULTI_AGENT_PR_CONTRACT.md` |
+
+**Migration Status:**
+- ✅ RFC-style protocols created (MUST/SHALL/MAY language)
+- ✅ Enforcement mechanisms defined (git hooks, validation gates)
+- ✅ Formal capability matrices established
+- ⚠️ This document retained for REFERENCE ONLY
+
+**When to use this document:**
+- Quick overview of context architecture (diagrams, tables)
+- FAQ-style questions about agent behavior
+- Understanding layer model and flow patterns
+
+**When to use v3 protocols:**
+- Authoritative rules for agent capabilities
+- Enforcement and validation requirements
+- Compliance checking and pre-commit hooks
+- Making architectural decisions
+
+---
+
+## Purpose (Original)
 
 This document defines the **global context engineering architecture** for the 02luka system. It answers:
 

@@ -1,96 +1,264 @@
 # Claude Code Context for 02luka
 
-**Last Updated:** 2025-11-05 06:30 ICT
-**Version:** 2.0.2
-**Status:** 70% Roadmap Complete
+**Version:** 3.0.0
+**Status:** ⚠️ MIGRATED TO FORMAL PROTOCOLS
+**Last Updated:** 2025-11-17
+**Previous Version:** v2.0.2 (archived below)
 
 ---
 
-## 📍 Source of Truth Paths
+## ⚠️ MIGRATION NOTICE
 
-### Desktop (Primary Development)
-```bash
-REPO_PATH="~/02luka/g"
-SYSTEM_PATH="~/02luka"
-TOOLS_PATH="~/02luka/tools"
-AGENTS_PATH="~/02luka/agents"
-BRIDGE_PATH="~/02luka/bridge"
-TELEMETRY_PATH="~/02luka/telemetry"
-```
+**This document has been replaced by formal RFC-style protocols.**
 
-### Mobile (Read-Only Access)
-```bash
-# Via Google Drive Stream
-GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
-
-# This repo syncs to:
-GD_REPO="$GD_PATH/g"
-```
+All context information (agent capabilities, paths, tools) is now defined in authoritative protocol documents with enforced rules (MUST/SHALL/MAY language).
 
 ---
 
-## 🎯 Current State (2025-11-05)
+## 📋 Protocol Reference (Authoritative Sources)
 
-### Roadmap Progress: 70%
-- ✅ Phase 1: Local Truth Scanner (100%)
-- ✅ Phase 2: R&D Autopilot (100%)
-- 🟡 Phase 3: Local AI Integration (50%)
-- 🟡 Phase 4: Application Slices (25%)
-- ⏳ Phase 5: Agent Communication (0%)
+### Core Protocols
 
-### Active Issues
-None - system stable after roadmap acceleration
+| Protocol | Purpose | Path |
+|----------|---------|------|
+| **Context Engineering Protocol v3** | Agent capabilities, fallback procedures, MLS integration | `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md` |
+| **Path and Tool Protocol** | Path usage rules ($SOT variable), tool registry, validation | `g/docs/PATH_AND_TOOL_PROTOCOL.md` |
+| **Multi-Agent PR Contract** | PR routing types, agent impact, governance alignment | `g/docs/MULTI_AGENT_PR_CONTRACT.md` |
+| **LaunchAgent Registry** | Complete agent inventory, health status, maintenance protocols | `g/docs/LAUNCHAGENT_REGISTRY.md` |
 
-### Recent Work
-- Dashboard v2.0.2 deployed with WO detail drawer
-- Ollama + qwen2.5:0.5b installed (397 MB)
-- Agent thrashing fixed (90x reduction)
-- 4 WOs executed successfully (100% success rate)
+### Status & History
+
+| Document | Purpose | Path |
+|----------|---------|------|
+| **System Status** | Current state, architecture, operational commands | `02luka.md` |
+| **Changelog** | Historical updates (reverse chronological) | `g/docs/CHANGELOG.md` |
+| **MLS Database** | Learning & memory system | `g/knowledge/mls_lessons.jsonl` |
+| **System Health** | Real-time health dashboard | `g/run/health_dashboard.cjs` |
 
 ---
 
-## 🔧 Key Tools & Commands
+## 🚀 Quick Start (Essential Commands)
 
 ### System Health
+
 ```bash
-# Check all agents
-~/02luka/tools/agent_status.zsh
+# Check LaunchAgent health
+bash "$SOT/g/tools/validate_runtime_state.zsh"
 
-# Check autopilot
-~/02luka/tools/autopilot_status.zsh
+# View health dashboard
+open "http://127.0.0.1:8766"
 
-# Check scanner
-~/02luka/tools/scanner_status.zsh
-
-# View dashboard
-open http://127.0.0.1:8766
+# Check all agent status
+launchctl list | grep com.02luka
 ```
 
-### Progress Tracking
-```bash
-# Current progress
-~/02luka/tools/show_progress.zsh
+### MLS & Knowledge Base
 
-# Latest roadmap
-cat ~/02luka/g/roadmaps/ROADMAP_2025-11-04_autonomous_systems.md
+```bash
+# Search knowledge base (hybrid semantic + keyword)
+node "$SOT/knowledge/index.cjs" --hybrid "your query"
+
+# Capture MLS lesson
+bash "$SOT/tools/mls_capture.zsh" \
+  --type solution \
+  --context "description" \
+  --producer "CLC"
+
+# Save CLC session
+bash "$SOT/tools/session_save.zsh"
 ```
 
 ### Git Workflow
+
 ```bash
-# This repo (operational data only)
-cd ~/02luka/g
+# Work in g/ submodule (operational data)
+cd "$SOT/g"
 git status
 git pull origin master
 git add -A
 git commit -m "Update operational data"
 git push origin master
+
+# Update parent repo reference
+cd "$SOT"
+git add g  # Updates submodule pointer
+git commit -m "Update g/ submodule"
+git push origin main
 ```
 
 ---
 
-## 📊 System Architecture
+## 📍 Path Rules (MANDATORY)
 
-### Agent Types
+**⚠️ ALL paths MUST use `$SOT` variable (NEVER hardcode ~/02luka)**
+
+### Environment Setup
+
+```bash
+# In ~/.zshrc or ~/.bashrc
+export SOT="${HOME}/02luka"
+```
+
+### Standard Paths
+
+```bash
+# System paths (use $SOT variable)
+REPO_PATH="$SOT/g"              # Governance submodule
+TOOLS_PATH="$SOT/tools"         # User tools
+AGENTS_PATH="$SOT/agents"       # Work order agents
+KNOWLEDGE_PATH="$SOT/g/knowledge"  # MLS & knowledge base
+```
+
+**For complete path rules, see:** `g/docs/PATH_AND_TOOL_PROTOCOL.md`
+
+---
+
+## 🔧 Context Engineering Rules (Summary)
+
+### Agent Capabilities
+
+| Agent | Think | Write SOT | Scope | Token Limit |
+|-------|-------|-----------|-------|-------------|
+| **GG** | ✅ Yes | ✅ Yes | Governance | N/A |
+| **GC** | ✅ Yes | ✅ Yes | Specs, PRPs | N/A |
+| **CLC** | ✅ Yes | ✅ Yes | Code, configs | 200K/session |
+| **Codex** | ✅ Yes | ❌ NO | Code suggestions | N/A |
+| **LPE** | ❌ NO | ✅ Yes (Boss-approved) | Emergency writes | N/A |
+| **Kim** | ✅ Yes | ❌ NO | Orchestration | N/A |
+
+### Fallback Ladder
+
+```
+CLC unavailable → Boss decides:
+  Option A: Use LPE (log to MLS)
+  Option B: Wait for new CLC session
+```
+
+**For complete rules, see:** `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md`
+
+---
+
+## 📱 Mobile Access
+
+**Desktop (Primary):**
+```bash
+$SOT  # Points to ~/02luka
+```
+
+**Mobile (Google Drive Stream):**
+```bash
+GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka"
+```
+
+**Note:** Mobile access is read-only. Use CLC on desktop for SOT writes.
+
+---
+
+## 🎯 For New Claude Code Sessions
+
+**Start every session by:**
+
+1. **Read system status:**
+   ```bash
+   cat "$SOT/02luka.md"  # Current state
+   ```
+
+2. **Search knowledge base first:**
+   ```bash
+   node "$SOT/knowledge/index.cjs" --hybrid "your question"
+   ```
+
+3. **Check protocols when needed:**
+   - Agent capabilities → `CONTEXT_ENGINEERING_PROTOCOL_v3.md`
+   - Path/tool usage → `PATH_AND_TOOL_PROTOCOL.md`
+   - PR workflow → `MULTI_AGENT_PR_CONTRACT.md`
+
+4. **Follow path protocol:**
+   - ✅ Use `$SOT` variable
+   - ❌ Never hardcode `~/02luka`
+   - ✅ Validate paths before write
+
+5. **Log to MLS when done:**
+   ```bash
+   bash "$SOT/tools/session_save.zsh"
+   ```
+
+---
+
+## 🚨 Critical Rules
+
+### MUST (Mandatory)
+- Use `$SOT` variable for all paths
+- Read protocols before making architectural decisions
+- Log all SOT writes to MLS (automatic via tools)
+- Follow git pre-commit hooks (no hardcoded paths)
+- Validate LaunchAgent scripts exist before commit
+
+### MUST NOT (Forbidden)
+- Hardcode `~/02luka` or `/Users/*/02luka` paths
+- Create symlinks in SOT directories
+- Bypass MLS tools (write directly to mls_lessons.jsonl)
+- Commit to SOT if you're Codex (use CLC instead)
+- Skip validation before file writes
+
+### SHOULD (Recommended)
+- Search knowledge base before asking questions (saves tokens)
+- Use specialized tools over bash commands
+- Capture learnings to MLS after solving problems
+- Check health dashboard before system changes
+
+**For enforcement mechanisms, see:** `PATH_AND_TOOL_PROTOCOL.md` Section 4
+
+---
+
+## 📚 Documentation Hierarchy
+
+**When you need:**
+
+| Information Type | Primary Source | Secondary |
+|------------------|----------------|-----------|
+| **Current system state** | `02luka.md` | Health dashboard |
+| **Historical updates** | `g/docs/CHANGELOG.md` | MLS sessions |
+| **Agent capabilities** | `CONTEXT_ENGINEERING_PROTOCOL_v3.md` | GLOBAL spec (ref only) |
+| **Path/tool rules** | `PATH_AND_TOOL_PROTOCOL.md` | LaunchAgent Registry |
+| **PR workflow** | `MULTI_AGENT_PR_CONTRACT.md` | PR template |
+| **Past learnings** | MLS hybrid search | Session summaries |
+| **LaunchAgent info** | `LAUNCHAGENT_REGISTRY.md` | Health dashboard |
+
+---
+
+## 🔄 Migration from v2.0.2
+
+**What changed:**
+- ❌ Removed: Hardcoded paths (~/02luka) → Use $SOT
+- ❌ Removed: Roadmap progress (outdated) → See 02luka.md
+- ❌ Removed: System architecture (narrative) → See protocols
+- ✅ Added: Protocol references (authoritative)
+- ✅ Added: RFC-style rules (MUST/SHALL/MAY)
+- ✅ Added: Enforcement mechanisms
+
+**Old content archived below for reference.**
+
+---
+
+---
+
+## 📦 ARCHIVED CONTENT (v2.0.2 - 2025-11-05)
+
+**⚠️ WARNING: Content below is OUTDATED and for reference only**
+
+**Known issues with archived content:**
+- Uses hardcoded paths (violates PATH protocol)
+- Roadmap progress is stale
+- No enforcement mechanisms
+- Missing MLS integration
+- Lacks RFC-style rules
+
+---
+
+### Original System Architecture (Archived)
+
+#### Agent Types
 1. **Execution Agents**
    - WO Executor (`agents/wo_executor/wo_executor.zsh`)
    - JSON WO Processor (`agents/json_wo_processor/json_wo_processor.zsh`)
@@ -105,95 +273,25 @@ git push origin master
    - Dashboard API (http://127.0.0.1:8767)
    - Ollama (local AI on port 11434)
 
-### Data Flow
+#### Data Flow (Archived)
 ```
 Scanner → WO Generation → Autopilot Approval → Executor → Telemetry → Dashboard
 ```
 
 ---
 
-## 🚨 Important Configuration
+### Original Roadmap Progress (Archived - Stale)
+- ✅ Phase 1: Local Truth Scanner (100%)
+- ✅ Phase 2: R&D Autopilot (100%)
+- 🟡 Phase 3: Local AI Integration (50%)
+- 🟡 Phase 4: Application Slices (25%)
+- ⏳ Phase 5: Agent Communication (0%)
 
-### LaunchAgents Location
-```bash
-~/Library/LaunchAgents/com.02luka.*.plist
-```
-
-### ThrottleInterval Fix
-All file-watching agents have 30-second throttle to prevent feedback loops.
-
-### Dashboard Data Source
-```bash
-~/02luka/g/apps/dashboard/dashboard_data.json
-```
-This file is manually updated when roadmap changes.
+**Note:** Roadmap status is stale. Current priorities defined in `02luka.md` and protocols.
 
 ---
 
-## 📱 Mobile Access Setup
-
-### 1. Google Drive Sync (Already Configured)
-- Desktop: `~/02luka/` → Google Drive
-- Mobile: Access via Google Drive app
-- Sync: Two-way, every 4 hours
-
-### 2. Claude Code Mobile Context
-When using Claude Code on mobile:
-1. Open this file: `CLAUDE_CONTEXT.md`
-2. Reference paths as `$GD_PATH/...` instead of `~/02luka/...`
-3. Read-only mode (no file edits on mobile)
-
-### 3. Quick Status Check (Mobile)
-```bash
-# View latest roadmap
-cat "$GD_PATH/g/roadmaps/ROADMAP_*.md" | tail -50
-
-# View latest report
-cat "$GD_PATH/g/reports/ROADMAP_ACCELERATION_*.md"
-
-# View dashboard data
-cat "$GD_PATH/g/apps/dashboard/dashboard_data.json"
-```
-
----
-
-## 🎓 Learning & Memory
-
-### MLS (Memory & Learning System)
-- Location: `~/02luka/g/knowledge/mls_lessons.jsonl`
-- 15+ lessons captured (solutions, failures, patterns)
-- Auto-captured by WO Executor
-
-### Knowledge Base
-- Location: `~/02luka/g/knowledge/`
-- Hybrid vector search operational (7-8ms avg)
-- 4,002 chunks from 258 documents
-
----
-
-## 🔐 Security & Credentials
-
-### No Secrets in Git
-- `.gitignore` excludes: `.env`, `*.key`, `*.pem`, `credentials.json`
-- All secrets in: `~/.config/02luka/` (not in repo)
-
-### SSH Keys
-```bash
-# GitHub access
-~/.ssh/id_ed25519  # For github.com:lc1558/02luka.git
-```
-
----
-
-## 📞 Support & Troubleshooting
-
-### If Something Breaks
-1. Check agent status: `~/02luka/tools/agent_status.zsh`
-2. Check logs: `~/02luka/logs/`
-3. Check telemetry: `~/02luka/telemetry/`
-4. View latest session: `~/02luka/g/reports/sessions/session_*.md`
-
-### Common Issues
+### Original Troubleshooting (Archived)
 
 **Dashboard not loading?**
 ```bash
@@ -217,39 +315,6 @@ ollama run qwen2.5:0.5b "test"
 
 ---
 
-## 🎯 Next Steps (Phase 3 & 4)
+**END OF ARCHIVED CONTENT**
 
-### Phase 3: Complete Local AI Integration
-- Integrate Ollama with expense OCR workflow
-- Build keyword extraction pipeline
-- Performance tuning
-
-### Phase 4: Build 2nd Application
-- Expense Tracker (if slips accumulate)
-- OR Project Rollup (if project activity increases)
-- Based on scanner recommendations
-
----
-
-## 📚 Key Documentation
-
-### Roadmaps
-- `/Users/icmini/02luka/g/roadmaps/ROADMAP_2025-11-04_autonomous_systems.md`
-
-### Reports
-- `/Users/icmini/02luka/g/reports/ROADMAP_ACCELERATION_20251105.md`
-- `/Users/icmini/02luka/g/reports/AGENT_IMPROVEMENTS_20251105.md`
-
-### Manuals
-- `/Users/icmini/02luka/g/manuals/MOBILE_ACCESS_GUIDE.md`
-- `/Users/icmini/02luka/g/manuals/SYSTEM_DASHBOARD_GUIDE.md`
-
----
-
-**For Claude Code Mobile Users:**
-This file contains everything you need to understand the current state of 02luka. All paths are relative to either `~/02luka/` (desktop) or `$GD_PATH/` (mobile via Google Drive).
-
-**Version History:**
-- v2.0.2 (2025-11-05): Roadmap acceleration to 70%, Ollama integration, Dashboard v2.0.2
-- v2.0.1 (2025-11-04): Agent thrashing fix, unified monitoring
-- v2.0.0 (2025-11-04): Initial autonomous systems deployment
+For current information, always refer to the protocols and `02luka.md` above.
