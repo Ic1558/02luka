@@ -1,0 +1,321 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Context Engineering Protocol v3.2 - Machine Readable Schema",
+  "version": "3.2.0",
+  "description": "Machine-readable schema for agent capabilities, zones, and fallback rules. Use this for programmatic queries instead of parsing markdown.",
+  "last_updated": "2025-11-17",
+  "maintainer": "Gemini (as Protocol Maintainer)",
+  "source_of_truth": "g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md",
+  
+  "agents": [
+    {
+      "name": "GG",
+      "aliases": ["Governance Gate"],
+      "layer": 1,
+      "can_think": true,
+      "thinking_scope": "strategic",
+      "can_write_sot": true,
+      "write_scope": ["governance_docs", "policy"],
+      "write_restrictions": ["MUST NOT write operational code"],
+      "approval_required": "self",
+      "approval_override": "Boss approval for system-wide policy changes",
+      "token_limit": null,
+      "primary_users": ["GG", "GC"],
+      "usage_frequency": "every_classification"
+    },
+    {
+      "name": "GC",
+      "aliases": ["Governance Copilot"],
+      "layer": 2,
+      "can_think": true,
+      "thinking_scope": "tactical",
+      "can_write_sot": true,
+      "write_scope": ["specs", "PRPs", "governance_docs"],
+      "write_restrictions": ["MUST NOT write operational code without GG approval"],
+      "approval_required": "GG approval for governance decisions",
+      "approval_override": "Self-approved for tactical specs",
+      "token_limit": null,
+      "primary_users": ["GG", "GC"],
+      "usage_frequency": "validation_and_review"
+    },
+    {
+      "name": "CLC",
+      "aliases": ["Privileged Writer"],
+      "layer": 3,
+      "can_think": true,
+      "thinking_scope": "operational",
+      "can_write_sot": true,
+      "write_scope": ["code", "configs", "scripts"],
+      "write_zones": ["locked_zones", "privileged_zones"],
+      "write_restrictions": ["MUST validate via pre-commit hooks", "MUST log all SOT writes to MLS"],
+      "approval_required": "self",
+      "approval_override": "Boss approval for architecture changes",
+      "token_limit": {
+        "max": "configurable (e.g., 200K)",
+        "warning_threshold": ">95% of budget",
+        "monitoring": "required"
+      },
+      "primary_users": ["CLC"],
+      "usage_frequency": "sip_patches_and_governance_changes"
+    },
+    {
+      "name": "Gemini",
+      "aliases": ["Gemini Code Assist", "Operational Writer", "Split-Mode Compute Agent"],
+      "layer": 4.5,
+      "can_think": true,
+      "thinking_scope": "operational",
+      "can_write_sot": true,
+      "write_method": "patch/diff output",
+      "write_scope": ["operational_code", "configs", "docs", "tests"],
+      "write_zones": ["non_locked_zones"],
+      "write_restrictions": [
+        "MUST operate in Safety-Belt Mode",
+        "MUST NOT write locked zones without Boss override",
+        "MUST use section-scoped patches for long files"
+      ],
+      "approval_required": "self",
+      "approval_override": "Boss override for emergency (except locked zones)",
+      "token_limit": {
+        "type": "subscription_quota",
+        "daily_limit": "~1500 requests/user/day",
+        "rate_limit": "120/minute"
+      },
+      "primary_users": ["Gemini", "Andy", "Liam"],
+      "usage_frequency": "primary_operational_writer"
+    },
+    {
+      "name": "Codex",
+      "aliases": ["Liam", "Andy", "Cursor AI", "Consultative Assistant"],
+      "layer": 4,
+      "can_think": true,
+      "thinking_scope": "analysis",
+      "can_write_sot": false,
+      "write_mode_normal": "read-only",
+      "write_mode_override": "Boss Override Mode (Section 2.3, 4.5)",
+      "write_scope_override": [
+        "protocol/documentation updates",
+        "small localized code/script fixes",
+        "non-destructive config changes"
+      ],
+      "write_restrictions": [
+        "MUST NOT write to SOT in normal mode",
+        "MUST delegate writes to Gemini/CLC/LPE",
+        "MUST inform Boss: 'I cannot write to git. Please use CLC or LPE.'"
+      ],
+      "approval_required": "Boss override for writes",
+      "token_limit": null,
+      "primary_users": ["Liam", "Andy"],
+      "usage_frequency": "routing_and_planning"
+    },
+    {
+      "name": "LPE",
+      "aliases": ["Local Prompt Executor", "Dumb Fallback Writer"],
+      "layer": 5,
+      "can_think": false,
+      "thinking_scope": null,
+      "can_write_sot": true,
+      "write_mode": "fallback_only",
+      "write_scope": ["Boss-dictated writes"],
+      "write_restrictions": [
+        "MUST execute Boss instructions exactly",
+        "MUST NOT make decisions autonomously",
+        "MUST log all writes to MLS"
+      ],
+      "approval_required": "Boss approval REQUIRED for every write",
+      "trigger_conditions": [
+        "CLC/Gemini unavailable",
+        "CLC out of tokens",
+        "Boss requires urgent change"
+      ],
+      "token_limit": null,
+      "primary_users": [],
+      "usage_frequency": "emergency_fallback_only"
+    },
+    {
+      "name": "Kim",
+      "aliases": ["API Gateway", "Orchestrator"],
+      "layer": 6,
+      "can_think": true,
+      "thinking_scope": "routing",
+      "can_write_sot": false,
+      "write_restrictions": ["MUST NOT write to SOT", "MUST delegate all writes to authorized writers"],
+      "approval_required": null,
+      "token_limit": null,
+      "primary_users": ["Kim"],
+      "usage_frequency": "task_coordination"
+    }
+  ],
+  
+  "zones": {
+    "allowed_zones": [
+      "apps/**",
+      "server/**",
+      "schemas/**",
+      "scripts/**",
+      "tools/**",
+      "tests/**",
+      "docs/** (non-governance)",
+      "agents/** (documentation/definitions only)",
+      "reports/**",
+      "g/reports/** (non-SOT, dev reports only)"
+    ],
+    "locked_zones": [
+      "/CLC/**",
+      "/CLS/** (core protocols)",
+      "/core/governance/**",
+      "memory_center/**",
+      "memory/** (SOT)",
+      "launchd/** (system LaunchAgents SOT)",
+      "bridge/** (production bridges & pipelines)",
+      "wo_pipeline_core/**"
+    ],
+    "governance_docs": [
+      "CONTEXT_ENGINEERING_PROTOCOL_v3.md",
+      "AI:OP-001",
+      "MULTI_AGENT_PR_CONTRACT.md",
+      "LAUNCHAGENT_REGISTRY.md"
+    ]
+  },
+  
+  "fallback_ladder": {
+    "primary_writer": "Gemini",
+    "fallback_chain": [
+      {
+        "agent": "Gemini",
+        "condition": "available",
+        "method": "patch/diff output"
+      },
+      {
+        "agent": "CLC",
+        "condition": "Gemini unavailable OR locked zone required",
+        "method": "direct write"
+      },
+      {
+        "agent": "LPE",
+        "condition": "CLC/Gemini unavailable OR out of tokens",
+        "method": "Boss-dictated write",
+        "requires_approval": true
+      }
+    ],
+    "emergency_override": {
+      "agent": "Codex/Liam/Andy",
+      "condition": "CLC unavailable AND Boss explicit authorization",
+      "scope": [
+        "protocol/documentation updates",
+        "small localized fixes",
+        "non-destructive config changes"
+      ],
+      "commit_tag": "EMERGENCY_LIAM_WRITE"
+    }
+  },
+  
+  "enforcement": {
+    "git_pre_commit_hook": {
+      "location": ".git/hooks/pre-commit",
+      "checks": [
+        "Tag Codex/Liam/Andy commits (warning, not hard block)",
+        "Validate LaunchAgent scripts exist",
+        "Verify MLS logging for SOT writes (optional)"
+      ]
+    },
+    "token_monitoring": {
+      "agents": ["CLC"],
+      "thresholds": [
+        {
+          "tokens": "< 150K",
+          "action": "normal operation",
+          "rule": "CLC MAY continue"
+        },
+        {
+          "tokens": "150K - 180K",
+          "action": "warning",
+          "rule": "CLC SHOULD warn Boss"
+        },
+        {
+          "tokens": "180K - 190K",
+          "action": "alert",
+          "rule": "CLC MUST alert Boss"
+        },
+        {
+          "tokens": "190K+",
+          "action": "fallback trigger",
+          "rule": "CLC MUST prepare LPE fallback"
+        }
+      ]
+    },
+    "mls_audit_trail": {
+      "required": true,
+      "required_fields": [
+        "who (agent)",
+        "when (ISO 8601 timestamp)",
+        "what (file path + content hash)",
+        "why (reason/context)",
+        "approval (Boss approval if LPE)"
+      ],
+      "query_interface": "node ~/02luka/knowledge/index.cjs --hybrid"
+    }
+  },
+  
+  "quick_queries": {
+    "which_agent_can_write_zone": {
+      "description": "Query which agent can write to a specific zone",
+      "example": "which agent can modify /tools? → Gemini, CLC (if locked)"
+    },
+    "which_agent_can_write_sot": {
+      "description": "Query which agents can write to SOT without override",
+      "answer": ["GG", "GC", "CLC", "Gemini", "LPE (with Boss approval)"]
+    },
+    "which_zones_are_locked": {
+      "description": "Query which zones require CLC or Boss override",
+      "answer": "See zones.locked_zones"
+    },
+    "fallback_when_unavailable": {
+      "description": "Query fallback chain when primary writer unavailable",
+      "answer": "See fallback_ladder.fallback_chain"
+    }
+  },
+  
+  "usage_patterns": {
+    "primary_users": {
+      "GG": {
+        "reads": "100% of document",
+        "frequency": "every classification/routing",
+        "sections": ["all"]
+      },
+      "GC": {
+        "reads": "sections 2, 3, 4, 6",
+        "frequency": "validation and double-check",
+        "sections": ["2", "3", "4", "6"]
+      },
+      "CLC": {
+        "reads": "multiple sections, not full file always",
+        "frequency": "SIP patches, governance changes",
+        "sections": ["2.2", "3", "4", "6", "8"]
+      }
+    },
+    "secondary_users": {
+      "Liam": {
+        "reads": "agent rules + matrix + fallback",
+        "frequency": "routing decisions",
+        "sections": ["2.2", "3", "4"]
+      },
+      "Andy": {
+        "reads": "allowed zones + Gemini/Andy relationship",
+        "frequency": "zone validation",
+        "sections": ["2.2 (Codex)", "2.2 (Gemini)", "zones"]
+      },
+      "Gemini": {
+        "reads": "capability table + safety-belt mode (~20% of file)",
+        "frequency": "operational writes",
+        "sections": ["2.2 (Gemini)", "3", "zones"]
+      }
+    },
+    "non_users": {
+      "LPE_Worker": {
+        "reads": "none",
+        "reason": "bash/zsh script, no LLM reasoning",
+        "logic": "path validation, patch apply, normalize metadata"
+      }
+    }
+  }
+}
