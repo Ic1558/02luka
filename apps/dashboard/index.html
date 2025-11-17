@@ -105,6 +105,11 @@
         font-size: 1.5rem;
       }
 
+      .table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+      }
+
       /* Summary cards */
       #summary-cards {
         margin-bottom: 1.25rem;
@@ -155,6 +160,7 @@
         background: #f3f4f6;
         color: #4b5563;
         margin-left: 0.25rem;
+>>>>>>> origin/main
       }
 
       .summary-bar {
@@ -274,6 +280,10 @@
         background: #f87171;
       }
 
+      .summary-dot.completed {
+        background: #38bdf8;
+      }
+
       .reality-header {
         margin-bottom: 1rem;
       }
@@ -310,6 +320,147 @@
 
       .reality-card h3 {
         margin-top: 0;
+      }
+
+      .wos-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .wos-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .wos-filters button {
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 999px;
+        color: #bae6fd;
+        padding: 0.35rem 0.85rem;
+        cursor: pointer;
+        font: inherit;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .wos-filters button.active,
+      .wos-filters button:focus,
+      .wos-filters button:hover {
+        background: rgba(56, 189, 248, 0.35);
+        color: #f8fafc;
+      }
+
+      .wos-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+      }
+
+      .wos-summary span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+
+      .wos-search-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+
+      .wos-search-label {
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .wos-search-input {
+        flex: 1 1 200px;
+        max-width: 320px;
+        background: #020617;
+        color: #e5e7eb;
+        border-radius: 0.25rem;
+        border: 1px solid #1f2937;
+        font-size: 0.8rem;
+        padding: 0.2rem 0.45rem;
+      }
+
+      .wos-search-input::placeholder {
+        color: #6b7280;
+      }
+
+      .wos-search-hint {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+
+      .wos-refresh-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: #94a3b8;
+      }
+
+      .wos-refresh-row label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+
+      .wos-refresh-row input[type='number'] {
+        width: 4rem;
+        background: #020617;
+        color: #e5e7eb;
+        border: 1px solid #1f2937;
+        border-radius: 0.25rem;
+        padding: 0.15rem 0.35rem;
+      }
+
+      #wos-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+
+      #wos-table th,
+      #wos-table td {
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        text-align: left;
+      }
+
+      #wos-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #94a3b8;
+      }
+
+      #wos-table tbody tr:hover {
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      #wos-table th[data-sort-key] {
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      #wos-table th[data-sort-key].sort-asc::after {
+        content: " ▲";
+        font-size: 0.7rem;
+      }
+
+      #wos-table th[data-sort-key].sort-desc::after {
+        content: " ▼";
+        font-size: 0.7rem;
       }
 
       .badge {
@@ -1672,66 +1823,71 @@
         </section>
 
         <section id="view-wos" class="hidden">
-          <section class="wo-section">
-            <header class="wo-header">
-              <h2>Work Orders</h2>
-            </header>
+          <header class="wos-header">
+            <h2>Work Orders</h2>
 
-            <div id="wo-status-filters" class="wo-status-filters">
-              <button type="button" data-status="" class="wo-status-chip wo-status-chip--active">
-                All
-              </button>
-              <button type="button" data-status="pending,running" class="wo-status-chip">
-                Active
-              </button>
-              <button type="button" data-status="pending" class="wo-status-chip">
-                Pending
-              </button>
-              <button type="button" data-status="running" class="wo-status-chip">
-                Running
-              </button>
-              <button type="button" data-status="completed" class="wo-status-chip">
-                Completed
-              </button>
-              <button type="button" data-status="failed,error" class="wo-status-chip">
-                Failed
-              </button>
+            <div id="wo-status-filters" class="wos-filters">
+              <button type="button" class="active" data-filter="all">All</button>
+              <button type="button" data-filter="running">Running</button>
+              <button type="button" data-filter="pending">Pending</button>
+              <button type="button" data-filter="completed">Completed</button>
+              <button type="button" data-filter="failed">Failed</button>
             </div>
 
-            <div id="wos-summary" class="wos-summary"><!-- Filled by JS --></div>
+            <div id="wos-summary" class="wos-summary">
+              <span>Loading work order summary…</span>
+            </div>
+
+            <div class="wos-search-row">
+              <label for="wo-search-input" class="wos-search-label">Search:</label>
+              <input
+                type="text"
+                id="wo-search-input"
+                class="wos-search-input"
+                placeholder="Filter by ID, title, tags, or context..."
+              />
+              <span class="wos-search-hint">(live filter; combines with status filters)</span>
+            </div>
 
             <div class="wos-refresh-row">
-              <label class="wos-refresh-toggle">
-                <input type="checkbox" id="wo-autorefresh-toggle" />
-                <span>Auto-refresh</span>
+              <button type="button" id="wo-refresh-btn">Refresh</button>
+              <label>
+                <input type="checkbox" id="wo-autorefresh-toggle" /> Auto-refresh
               </label>
-              <label class="wos-refresh-interval">
-                Interval:
-                <select id="wo-autorefresh-interval">
-                  <option value="10000">10s</option>
-                  <option value="30000" selected>30s</option>
-                  <option value="60000">60s</option>
-                </select>
+              <label>
+                Interval
+                <input type="number" id="wo-autorefresh-interval" min="10" step="5" value="30" />
+                sec
               </label>
-              <span id="wos-last-refresh" class="wos-last-refresh">Last refresh: not yet</span>
-              <button type="button" id="wo-refresh-now" class="wo-refresh-now-button">Refresh now</button>
+              <span id="wo-last-refresh">Last refresh: never</span>
             </div>
+          </header>
 
+          <div id="wos-error" class="error-banner hidden">
+            <span>Failed to load work orders.</span>
+            <button type="button" id="wos-error-retry">Retry</button>
+          </div>
+
+          <div class="table-wrapper">
             <table id="wos-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>Finished</th>
-                  <th>Last Update</th>
+                  <th data-sort-key="id">ID</th>
+                  <th data-sort-key="status">Status</th>
+                  <th data-sort-key="started_at">Started</th>
+                  <th data-sort-key="finished_at">Finished</th>
+                  <th data-sort-key="updated_at">Last Update</th>
                   <th>Actions</th>
                   <th>Timeline</th>
                 </tr>
               </thead>
-              <tbody id="wos-table-body"><!-- JS populated --></tbody>
+              <tbody id="wos-table-body">
+                <tr>
+                  <td colspan="7">Loading work orders…</td>
+                </tr>
+              </tbody>
             </table>
-          </section>
+          </div>
         </section>
 
         <!-- NEW: Global WO History view -->
