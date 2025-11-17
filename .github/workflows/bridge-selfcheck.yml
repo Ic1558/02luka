@@ -2,6 +2,12 @@
 name: Bridge Self-Check
 run-name: "Bridge Self-Check (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
+# Governance: Aligned with Context Engineering Protocol v3.2
+# - Critical issues → Mary/GC route to CLC (locked) or Gemini (non-locked)
+# - Warnings → Mary/GC review, optional escalation
+# - MLS logging follows Protocol v3.2 (tags include context-protocol-v3.2)
+# Reference: g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md
+
 on:
   pull_request:
   schedule:
@@ -261,18 +267,25 @@ jobs:
 
           if [[ "$STATUS" == "critical" || "$CRIT" != "0" ]]; then
             {
-              echo "NEEDS ELEVATION → CLC (privileged)"
-              echo "เหตุผล: พบ critical issues ใน bridge/self-check"
-              echo "การดำเนินการ: ใช้ CLC เพื่อแก้ไฟล์/สิทธิ์/ระบบที่ต้องการ privileged write"
+              echo "NEEDS ELEVATION → Mary/GC → (route to CLC/Gemini)"
+              echo "เหตุผล: พบ critical issues ใน bridge/self-check ตาม Context Protocol v3.2"
+              echo "การดำเนินการ:"
+              echo "  1) ให้ Mary/GC ตรวจ zone (locked vs non-locked)"
+              echo "  2) ถ้า locked → ส่ง CLC (privileged writer)"
+              echo "  3) ถ้า non-locked → ส่ง Gemini (patch mode, primary operational writer)"
+              echo ""
+              echo "Reference: g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md Section 2.2, 4"
               echo ""
               echo "Run URL: $RUN_URL"
               echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
             } > "$prompt_file"
           elif [[ "$STATUS" == "warning" || "$WARN" != "0" ]]; then
             {
-              echo "ATTENTION → Mary/GC"
-              echo "เหตุผล: พบ warnings ใน bridge/self-check"
-              echo "การดำเนินการ: ตรวจสอบและตัดสินใจว่าจะ escalate ไป CLC หรือรอรอบถัดไป"
+              echo "ATTENTION → Mary/GC (for review)"
+              echo "เหตุผล: พบ warnings ใน bridge/self-check (ไม่ถึง critical) ตาม Context Protocol v3.2"
+              echo "การดำเนินการ: Mary/GC ตัดสินใจว่าจะ escalate ไป CLC/Gemini หรือรอรอบถัดไป"
+              echo ""
+              echo "Reference: g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md Section 2.2, 4"
               echo ""
               echo "Run URL: $RUN_URL"
               echo "Status: $STATUS, warnings=$WARN, critical=$CRIT"
@@ -351,7 +364,7 @@ jobs:
                 artifact_path: $artifact_path
               },
               links: { followup_id: null, wo_id: null },
-              tags: ["bridge","strict","artifact","healthy"],
+              tags: ["bridge","strict","artifact","healthy","context-protocol-v3.2"],
               author: $author,
               confidence: $confidence
             }
