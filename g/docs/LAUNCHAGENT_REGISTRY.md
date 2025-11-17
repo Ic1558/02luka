@@ -6,7 +6,7 @@
 
 **Status:** Active Registry
 
-**Auto-generated:** No (manual)
+**Auto-generated:** No (manual, with future generator stub)
 
 This registry tracks LaunchAgents used inside the `~/02luka` workspace.
 
@@ -34,6 +34,8 @@ This registry tracks LaunchAgents used inside the `~/02luka` workspace.
 | **MLS Cursor Watcher**       | `com.02luka.mls.cursor.watcher`   | `tools/mls_cursor_watcher.zsh`              | YES      | Monitors Cursor IDE for prompts and records them to MLS.            | |
 | **Hub Auto-Index**           | `com.02luka.hub-autoindex`        | `tools/hub_index_now.zsh`                   | NO       | Periodically runs the hub auto-index and memory sync.               | |
 | **Phase15 Health Check**     | `com.02luka.phase15.quickhealth`  | `tools/phase15_quick_health.zsh`            | NO       | Runs a quick health check for Phase 15 components.                  | |
+| **Gemini Bridge (Planned)**  | `com.02luka.gemini.bridge`        | `g/tools/gemini_bridge_worker.zsh`          | NO       | Planned Gemini work-order / task handler (not yet deployed)        | Planned agent; requires actual script + plist before activation |
+| **LaunchAgent Registry Watchdog (Planned)** | `com.02luka.launchagent.registry-watchdog` | `g/tools/launchagent_registry_watchdog.zsh` | NO       | Planned watchdog to compare actual LaunchAgents vs registry + safety rules | Planned only; stub script exists, no LaunchAgent yet |
 
 ---
 
