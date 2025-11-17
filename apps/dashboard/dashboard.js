@@ -1,126 +1,33 @@
 const SERVICES_REFRESH_MS = 30000;
-const WO_TIMELINE_REFRESH_MS = 45000;
-const SUMMARY_REFRESH_MS = 60000;
-const SUMMARY_LOADING_FOOTER = 'Updated: —';
+const MLS_REFRESH_MS = 30000;
+const WO_AUTOREFRESH_MS = 60000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
-let realityPanelInitialized = false;
-
 let servicesIntervalId;
-let woTimelineIntervalId;
-let summaryIntervalId;
-let mlsPanelInitialized = false;
-let mlsAllEntries = [];
-let mlsFilterType = '';
-let mlsSearchQuery = '';
-let currentWoId = null;
-let cachedMlsEntries = null;
+let mlsIntervalId;
+let woAutorefreshIntervalId;
+let currentMlsType = '';
+let realityLoading = false;
+
 let allWos = [];
+let visibleWos = [];
+let currentWos = [];
+let currentWoFilter = 'all';
+let woAutorefreshTimer = null;
+let woAutorefreshEnabled = false;
+let woAutorefreshIntervalMs = 30000;
+let currentWoSearch = '';
 let currentWoStatusFilter = '';
-let woTimelineAll = [];
-let woTimelineFilterStatus = '';
-let woTimelineSearchQuery = '';
-let woTimelineInitialized = false;
-let woTimelineAgentFilter = '';
-let woTimelineLimit = 100;
-let woTimelineSummary = null;
-let serviceData = [];
-let serviceAutoRefreshTimer = null;
-
-function formatBadgeLabel(text) {
-  return String(text || '')
-    .trim()
-    .replace(/_/g, ' ');
-}
-
-function makeBadge(text, extraClass = '') {
-  const label = formatBadgeLabel(text);
-  if (!label) return null;
-  const span = document.createElement('span');
-  span.className = ['badge', extraClass].filter(Boolean).join(' ').trim();
-  span.textContent = label;
-  return span;
-}
-
-function woStatusBadge(statusRaw) {
-  const raw = formatBadgeLabel(statusRaw);
-  if (!raw) return null;
-  const status = raw.toLowerCase();
-
-  if (status === 'failed' || status === 'error') {
-    return makeBadge(raw, 'badge-wo badge-wo-failed');
-  }
-
-  if (['done', 'completed', 'success'].includes(status)) {
-    return makeBadge(raw, 'badge-wo badge-wo-done');
-  }
-
-  if (['pending', 'running', 'in progress', 'in-progress', 'in_progress', 'active', 'queued'].includes(status)) {
-    return makeBadge(raw, 'badge-wo badge-wo-active');
-  }
-
-  return makeBadge(raw, 'badge-wo');
-}
-
-function mlsTypeBadge(typeRaw) {
-  const raw = formatBadgeLabel(typeRaw);
-  if (!raw) return null;
-  const type = raw.toLowerCase();
-
-  if (type === 'solution') {
-    return makeBadge('solution', 'badge-mls badge-mls-solution');
-  }
-  if (type === 'failure') {
-    return makeBadge('failure', 'badge-mls badge-mls-failure');
-  }
-  return makeBadge(raw, 'badge-mls');
-}
-
-function normalizeWoTimelineEntry(rawWo = {}) {
-  const id = rawWo.id || rawWo.wo_id || 'UNKNOWN';
-  const normalizedStatus = normalizeWoTimelineStatus(rawWo.status);
-  const createdAt = rawWo.created_at || rawWo.queued_at || rawWo.timestamp || rawWo.started_at || '';
-  const startedAt = rawWo.started_at || rawWo.startedAt || '';
-  const finishedAt = rawWo.finished_at || rawWo.completed_at || rawWo.finishedAt || '';
-  const updatedAt = rawWo.updated_at || rawWo.last_update || finishedAt || '';
-  const title = rawWo.title || rawWo.summary || rawWo.name || id;
-  const description = rawWo.description || rawWo.summary || rawWo.notes || '';
-  const summary = rawWo.summary || rawWo.title || rawWo.goal || rawWo.description || '';
-  const durationSec = Number.isFinite(rawWo.duration_sec) ? rawWo.duration_sec : null;
-  const agent = rawWo.agent || rawWo.owner || rawWo.runner || '';
-  const type = rawWo.type || rawWo.op || rawWo.category || 'other';
-  const tags = Array.isArray(rawWo.tags) ? rawWo.tags.map((tag) => String(tag)) : [];
-  const logTail = Array.isArray(rawWo.log_tail) ? rawWo.log_tail : [];
-  const relatedPr = rawWo.related_pr || rawWo.pr || rawWo.pull_request || '';
-
-  return {
-    id,
-    status: normalizedStatus,
-    createdAt,
-    startedAt,
-    finishedAt,
-    updatedAt,
-    title,
-    description,
-    summary,
-    durationSec,
-    agent,
-    type,
-    tags,
-    logTail,
-    relatedPr
-  };
-}
-
-function normalizeWoTimelineStatus(status) {
-  const raw = String(status || '').toLowerCase();
-  if (!raw) return 'unknown';
-  if (['success', 'completed', 'complete', 'done'].includes(raw)) return 'success';
-  if (['failed', 'error', 'cancelled'].includes(raw)) return 'failed';
-  if (['running', 'in_progress', 'in-progress', 'working', 'active'].includes(raw)) return 'running';
-  if (['queued', 'pending', 'created', 'open'].includes(raw)) return 'queued';
-  return raw;
-}
+let currentWoSortKey = 'started_at';
+let currentWoSortDir = 'desc';
+let currentTimelineWoId = null;
+const WO_STATUS_SORT_ORDER = {
+  running: 4,
+  pending: 3,
+  completed: 2,
+  failed: 1,
+  unknown: 0
+};
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -134,16 +41,6 @@ async function fetchJSON(url) {
   }
 
   return response.json();
-}
-
-function debounce(fn, delay = 200) {
-  let timeoutId;
-  return (...args) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => fn(...args), delay);
-  };
 }
 
 function initTabs() {
@@ -170,8 +67,6 @@ function initTabs() {
       initServicesPanel();
     } else if (targetId === 'mls-panel') {
       initMLSPanel();
-    } else if (targetId === 'reality-panel') {
-      initRealityPanel();
     }
   }
 
@@ -190,42 +85,41 @@ function initTabs() {
   const tabOverview = document.getElementById('tab-overview');
   const tabWos = document.getElementById('tab-wos');
   const tabWoHistory = document.getElementById('tab-wo-history');
+  const tabReality = document.getElementById('tab-reality');
 
   const viewOverview = document.getElementById('view-overview');
   const viewWos = document.getElementById('view-wos');
   const viewWoHistory = document.getElementById('view-wo-history');
+  const viewReality = document.getElementById('view-reality');
 
-  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
-    const buttons = [tabOverview, tabWos, tabWoHistory];
-    const views = [viewOverview, viewWos, viewWoHistory];
+  const tabConfigs = [
+    { button: tabOverview, view: viewOverview },
+    { button: tabWos, view: viewWos },
+    { button: tabWoHistory, view: viewWoHistory, onShow: loadWoHistory },
+  ];
 
-    function setActiveButton(target) {
-      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
-    }
+  if (tabReality && viewReality) {
+    tabConfigs.push({ button: tabReality, view: viewReality, onShow: loadRealitySnapshot });
+  }
 
-    function show(view) {
-      views.forEach((v) => v.classList.add('hidden'));
-      view.classList.remove('hidden');
-    }
+  const validConfigs = tabConfigs.filter((cfg) => cfg.button && cfg.view);
 
-    tabOverview.addEventListener('click', () => {
-      setActiveButton(tabOverview);
-      show(viewOverview);
+  if (validConfigs.length) {
+    const activate = (targetCfg) => {
+      validConfigs.forEach((cfg) => {
+        cfg.button.classList.toggle('active', cfg === targetCfg);
+        cfg.view.classList.toggle('hidden', cfg !== targetCfg);
+      });
+      if (typeof targetCfg.onShow === 'function') {
+        targetCfg.onShow();
+      }
+    };
+
+    validConfigs.forEach((cfg) => {
+      cfg.button.addEventListener('click', () => activate(cfg));
     });
 
-    tabWos.addEventListener('click', () => {
-      setActiveButton(tabWos);
-      show(viewWos);
-    });
-
-    tabWoHistory.addEventListener('click', () => {
-      setActiveButton(tabWoHistory);
-      show(viewWoHistory);
-      loadWoHistory();
-    });
-
-    setActiveButton(tabOverview);
-    show(viewOverview);
+    activate(validConfigs[0]);
   }
 }
 
@@ -242,6 +136,376 @@ function showErrorBanner(id, message) {
 function hideErrorBanner(id) {
   const banner = document.getElementById(id);
   banner?.classList.add('hidden');
+}
+
+// --- Work Orders ---
+
+function initWoFilters() {
+  const filterGroup = document.getElementById('wo-status-filters');
+  if (!filterGroup) return;
+
+  const buttons = filterGroup.querySelectorAll('button[data-filter]');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter || 'all';
+      currentWoFilter = filter;
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === button));
+      applyWoFilter();
+    });
+  });
+}
+
+function initWoSearch() {
+  const input = document.getElementById('wo-search-input');
+  if (!input) return;
+
+  if (currentWoSearch) {
+    input.value = currentWoSearch;
+  }
+
+  input.addEventListener('input', () => {
+    currentWoSearch = input.value.trim().toLowerCase();
+    applyWoFilter();
+  });
+}
+
+function initWoSorting() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  if (!headerCells.length) return;
+
+  headerCells.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (!key) return;
+
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = key === 'id' ? 'asc' : 'desc';
+      }
+
+      updateWoSortHeaderStyles();
+      applyWoFilter();
+    });
+  });
+
+  updateWoSortHeaderStyles();
+}
+
+function updateWoSortHeaderStyles() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  headerCells.forEach((th) => {
+    const key = th.getAttribute('data-sort-key');
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (key === currentWoSortKey) {
+      th.classList.add(currentWoSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function initWoAutorefreshControls() {
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+  const retryBtn = document.getElementById('wos-error-retry');
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const intervalInput = document.getElementById('wo-autorefresh-interval');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+  retryBtn?.addEventListener('click', () => loadWos());
+
+  toggle?.addEventListener('change', () => {
+    woAutorefreshEnabled = Boolean(toggle.checked);
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    } else {
+      stopWoAutorefresh();
+    }
+  });
+
+  intervalInput?.addEventListener('change', () => {
+    const seconds = Number(intervalInput.value);
+    if (!Number.isFinite(seconds) || seconds < 5) {
+      return;
+    }
+    woAutorefreshIntervalMs = seconds * 1000;
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    }
+  });
+}
+
+function startWoAutorefresh() {
+  stopWoAutorefresh();
+  woAutorefreshTimer = setInterval(() => loadWos(), woAutorefreshIntervalMs);
+}
+
+function stopWoAutorefresh() {
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
+}
+
+function setWosLoading(message) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7">${message}</td></tr>`;
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  setWosLoading('Loading work orders…');
+  hideErrorBanner('wos-error');
+
+  try {
+    const res = await fetch('/api/wos', {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+
+    allWos = wos;
+    applyWoFilter();
+
+    const ts = new Date().toLocaleTimeString();
+    const refreshLabel = document.getElementById('wo-last-refresh');
+    if (refreshLabel) {
+      refreshLabel.textContent = `Last refresh: ${ts}`;
+    }
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    showErrorBanner('wos-error', 'Failed to load work orders.');
+    setWosLoading('Failed to load work orders.');
+  }
+}
+
+function applyWoFilter() {
+  let filtered = allWos.slice();
+
+  if (currentWoFilter !== 'all') {
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status || wo.state) === currentWoFilter);
+  }
+
+  if (currentWoSearch) {
+    const q = currentWoSearch;
+    filtered = filtered.filter((wo) => buildWoSearchHaystack(wo).includes(q));
+  }
+
+  filtered.sort((a, b) => compareWos(a, b, currentWoSortKey, currentWoSortDir));
+
+  visibleWos = filtered;
+  renderWosTable(filtered);
+  renderWoSummary(filtered);
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match the current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const status = normalizeWoStatus(wo.status || wo.state);
+    const started = formatWoTimestamp(wo.started_at || wo.startedAt);
+    const finished = formatWoTimestamp(getWoCompletedTime(wo));
+    const updated = formatWoTimestamp(wo.updated_at || wo.updatedAt || wo.last_update || wo.lastUpdate);
+    const actions = Array.isArray(wo.actions) ? wo.actions.join(', ') : wo.action || '—';
+    const timeline = Array.isArray(wo.timeline) ? `${wo.timeline.length} events` : '—';
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(started)}</td>
+      <td>${escapeHtml(finished)}</td>
+      <td>${escapeHtml(updated)}</td>
+      <td>${escapeHtml(actions || '—')}</td>
+      <td>${escapeHtml(timeline)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderWoSummary(wos) {
+  const summary = document.getElementById('wos-summary');
+  if (!summary) return;
+
+  const totals = {
+    running: 0,
+    pending: 0,
+    completed: 0,
+    failed: 0
+  };
+
+  wos.forEach((wo) => {
+    const status = normalizeWoStatus(wo.status || wo.state);
+    if (status in totals) {
+      totals[status] += 1;
+    }
+  });
+
+  summary.innerHTML = `
+    <span><strong>Total:</strong> ${allWos.length}</span>
+    <span><strong>Visible:</strong> ${wos.length}</span>
+    <span><span class="summary-dot running"></span>Running: ${totals.running}</span>
+    <span><span class="summary-dot stopped"></span>Pending: ${totals.pending}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${totals.failed}</span>
+    <span><span class="summary-dot completed"></span>Completed: ${totals.completed}</span>
+  `;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return 'unknown';
+  const normalized = String(status).toLowerCase();
+  if (['success', 'completed', 'complete', 'done'].includes(normalized)) {
+    return 'completed';
+  }
+  if (['failed', 'failure', 'error', 'blocked', 'cancelled'].includes(normalized)) {
+    return 'failed';
+  }
+  if (['running', 'in_progress', 'in-progress', 'active'].includes(normalized)) {
+    return 'running';
+  }
+  if (['pending', 'queued', 'waiting'].includes(normalized)) {
+    return 'pending';
+  }
+  return normalized;
+}
+
+function compareWos(a, b, sortKey, sortDir) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+
+  if (sortKey === 'id') {
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  if (sortKey === 'status') {
+    const va = getStatusSortValue(a?.status);
+    const vb = getStatusSortValue(b?.status);
+    if (va !== vb) {
+      return (va - vb) * dir;
+    }
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  const va = getWoSortValue(a, sortKey);
+  const vb = getWoSortValue(b, sortKey);
+
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return compareWoIds(a?.id, b?.id) * dir;
+}
+
+function getWoSortValue(wo, sortKey) {
+  switch (sortKey) {
+    case 'started_at':
+      return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
+    case 'finished_at':
+      return normalizeWoTimestamp(getWoCompletedTime(wo));
+    case 'updated_at':
+      return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
+    default:
+      return 0;
+  }
+}
+
+function getStatusSortValue(status) {
+  const normalized = normalizeWoStatus(status);
+  if (Object.prototype.hasOwnProperty.call(WO_STATUS_SORT_ORDER, normalized)) {
+    return WO_STATUS_SORT_ORDER[normalized];
+  }
+  return 0;
+}
+
+function compareWoIds(aId, bId) {
+  const aInfo = normalizeWoId(aId);
+  const bInfo = normalizeWoId(bId);
+
+  if (aInfo.numeric !== null && bInfo.numeric !== null && aInfo.numeric !== bInfo.numeric) {
+    return aInfo.numeric - bInfo.numeric;
+  }
+
+  if (aInfo.numeric !== null && bInfo.numeric === null) {
+    return -1;
+  }
+  if (aInfo.numeric === null && bInfo.numeric !== null) {
+    return 1;
+  }
+
+  if (aInfo.text < bInfo.text) return -1;
+  if (aInfo.text > bInfo.text) return 1;
+  return 0;
+}
+
+function normalizeWoId(value) {
+  if (value === undefined || value === null) {
+    return { numeric: null, text: '' };
+  }
+  const text = String(value).toLowerCase();
+  const match = text.match(/(\d+)/);
+  const numeric = match ? Number(match[1]) : null;
+  return { numeric: Number.isNaN(numeric) ? null : numeric, text };
+}
+
+function buildWoSearchHaystack(wo) {
+  const haystacks = [];
+  if (wo.id) haystacks.push(String(wo.id));
+  if (wo.title) haystacks.push(String(wo.title));
+  if (wo.context) haystacks.push(String(wo.context));
+  if (wo.summary) haystacks.push(String(wo.summary));
+  if (wo.description) haystacks.push(String(wo.description));
+  if (wo.agent) haystacks.push(String(wo.agent));
+  if (wo.worker) haystacks.push(String(wo.worker));
+  if (wo.type) haystacks.push(String(wo.type));
+  if (wo.action) haystacks.push(String(wo.action));
+  if (Array.isArray(wo.actions) && wo.actions.length) {
+    haystacks.push(wo.actions.join(' '));
+  }
+  if (Array.isArray(wo.tags) && wo.tags.length) {
+    haystacks.push(wo.tags.join(' '));
+  }
+  if (wo.contextual_data) {
+    haystacks.push(String(wo.contextual_data));
+  }
+  return haystacks.join(' ').toLowerCase();
+}
+
+function normalizeWoTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return 0;
+  return parsed;
+}
+
+function formatWoTimestamp(value) {
+  const ts = normalizeWoTimestamp(value);
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
+}
+
+// Helper to get completion time (checks completed_at first, then finished_at)
+function getWoCompletedTime(wo) {
+  return wo?.completed_at || wo?.finished_at || wo?.finishedAt || '';
 }
 
 // --- Services ---
@@ -376,551 +640,162 @@ function initServicesPanel() {
   servicesIntervalId = setInterval(loadServices, SERVICES_REFRESH_MS);
 }
 
-// --- MLS Lessons Panel ---
+// --- MLS ---
 
-async function refreshMlsEntries() {
-  const listEl = document.getElementById('mls-list');
-  const summaryEl = document.getElementById('mls-summary');
-  if (listEl) {
-    listEl.innerHTML = '<div class="mls-item"><div class="mls-item-header"><span>Loading MLS lessons…</span></div></div>';
+function setMLSLoading() {
+  const summary = document.getElementById('mls-summary');
+  const list = document.getElementById('mls-list');
+  if (summary) {
+    summary.innerHTML = '<span>Loading lessons…</span>';
   }
-  if (summaryEl) {
-    summaryEl.textContent = 'Loading MLS lessons…';
+  if (list) {
+    list.textContent = 'Loading…';
   }
+}
+
+async function loadMLS(typeOverride) {
+  const summary = document.getElementById('mls-summary');
+  const list = document.getElementById('mls-list');
+  if (!summary || !list) return;
+
+  if (typeof typeOverride === 'string') {
+    currentMlsType = typeOverride;
+  }
+
+  setMLSLoading();
+  hideErrorBanner('mls-error');
 
   try {
-    const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    const params = new URLSearchParams();
+    if (currentMlsType) params.set('type', currentMlsType);
+    const query = params.toString();
 
-    const data = await res.json();
-    mlsAllEntries = Array.isArray(data.entries) ? data.entries.slice() : [];
+    const data = await fetchJSON(`/api/mls${query ? `?${query}` : ''}`);
+    const entries = Array.isArray(data?.entries) ? data.entries : [];
 
-    mlsAllEntries.sort((a, b) => {
-      const aKey = a.time || a.id || '';
-      const bKey = b.time || b.id || '';
-      if (aKey === bKey) return 0;
-      return aKey > bKey ? -1 : 1;
-    });
-
-    cachedMlsEntries = mlsAllEntries.slice();
-    if (currentWoId) {
-      refreshWoDetailMls();
-    }
-
-    renderMlsList();
+    renderMLSSummary(data?.summary);
+    renderMLSList(entries);
   } catch (error) {
-    console.error('Failed to refresh MLS entries:', error);
-    if (listEl) {
-      listEl.innerHTML = `
-        <div class="mls-item">
-          <div class="mls-item-header">
-            <span>Failed to load MLS lessons.</span>
-          </div>
-          <div class="mls-item-meta">${escapeHtml(error.message || String(error))}</div>
-        </div>
-      `;
-    }
-    if (summaryEl) {
-      summaryEl.textContent = 'Unable to load MLS summary.';
-    }
+    console.error('Failed to load MLS lessons', error);
+    showErrorBanner('mls-error', 'Failed to load MLS lessons.');
+    summary.innerHTML = '<span>Failed to load MLS lessons.</span>';
+    list.textContent = 'Failed to load MLS lessons.';
   }
 }
 
-function initMLSPanel() {
-  if (mlsPanelInitialized) {
-    return;
-  }
+function renderMLSSummary(summary = {}) {
+  const el = document.getElementById('mls-summary');
+  if (!el) return;
 
-  const panel = document.getElementById('mls-panel');
-  if (!panel) {
-    return;
-  }
-
-  const filterButtons = panel.querySelectorAll('.mls-filter-btn[data-mls-type]');
-  filterButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const type = btn.getAttribute('data-mls-type') || '';
-      mlsFilterType = type;
-
-      filterButtons.forEach((b) => b.classList.remove('mls-filter-btn-active'));
-      btn.classList.add('mls-filter-btn-active');
-
-      renderMlsList();
-    });
-  });
-
-  const searchInput = document.getElementById('mls-search-input');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      mlsSearchQuery = searchInput.value || '';
-      renderMlsList();
-    });
-  }
-
-  refreshMlsEntries();
-  mlsPanelInitialized = true;
-}
-
-function renderMlsList() {
-  const listEl = document.getElementById('mls-list');
-  const summaryEl = document.getElementById('mls-summary');
-  if (!listEl || !summaryEl) {
-    return;
-  }
-
-  let entries = mlsAllEntries.slice();
-
-  if (mlsFilterType) {
-    entries = entries.filter((entry) => (entry.type || '') === mlsFilterType);
-  }
-
-  if (mlsSearchQuery.trim()) {
-    const needle = mlsSearchQuery.trim().toLowerCase();
-    entries = entries.filter((entry) => {
-      const haystack = [
-        entry.id,
-        entry.title,
-        entry.details,
-        entry.context,
-        entry.related_wo,
-        entry.related_session,
-        Array.isArray(entry.tags) ? entry.tags.join(' ') : ''
-      ]
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(needle);
-    });
-  }
-
-  if (!entries.length) {
-    listEl.innerHTML = `
-      <div class="mls-item">
-        <div class="mls-item-header">
-          <span>No MLS lessons match this filter.</span>
-        </div>
-      </div>
-    `;
-  } else {
-    listEl.innerHTML = entries.map((entry) => renderMlsItem(entry)).join('');
-  }
-
-  const total = mlsAllEntries.length;
-  const solutions = mlsAllEntries.filter((entry) => entry.type === 'solution').length;
-  const failures = mlsAllEntries.filter((entry) => entry.type === 'failure').length;
-  const patterns = mlsAllEntries.filter((entry) => entry.type === 'pattern').length;
-  const improvements = mlsAllEntries.filter((entry) => entry.type === 'improvement').length;
-  const activeType = mlsFilterType || 'all';
-  const searchLabel = mlsSearchQuery ? ` | search: "${mlsSearchQuery}"` : '';
-
-  summaryEl.textContent = `Total: ${total} | solutions: ${solutions} | failures: ${failures} | patterns: ${patterns} | improvements: ${improvements} | type filter: ${activeType}${searchLabel}`;
-}
-
-function renderMlsItem(entry) {
-  const id = entry.id || 'MLS-UNKNOWN';
-  const title = entry.title || 'Untitled lesson';
-  const type = entry.type || 'other';
-  const details = entry.details || entry.context || '';
-  const time = entry.time || '';
-  const tags = Array.isArray(entry.tags) ? entry.tags : [];
-  const verified = Boolean(entry.verified);
-  const relatedWo = entry.related_wo || '';
-  const relatedSession = entry.related_session || '';
-
-  const typeClass = getMlsTypeClass(type);
-  const typeLabel = type.toUpperCase();
-  const typeBadge = mlsTypeBadge(type);
-  if (typeBadge) {
-    typeBadge.classList.add('mls-item-type');
-    if (typeClass) {
-      typeBadge.classList.add(typeClass);
-    }
-  }
-  const typeBadgeHtml = typeBadge
-    ? typeBadge.outerHTML
-    : `<span class="mls-item-type ${typeClass}">${escapeHtml(typeLabel)}</span>`;
-
-  const metaParts = [];
-  if (time) metaParts.push(`time: ${time}`);
-  if (relatedWo) metaParts.push(`WO: ${relatedWo}`);
-  if (relatedSession) metaParts.push(`session: ${relatedSession}`);
-  if (verified) metaParts.push('✅ verified');
-  const metaText = metaParts.join(' | ');
-  const tagsText = tags.length ? `tags: ${tags.join(', ')}` : '';
-
-  return `
-    <div class="mls-item" data-mls-id="${escapeHtml(id)}">
-      <div class="mls-item-header">
-        <span class="mls-item-title">${escapeHtml(title)}</span>
-        ${typeBadgeHtml}
-      </div>
-      ${metaText ? `<div class="mls-item-meta">${escapeHtml(metaText)}</div>` : ''}
-      ${details ? `<div class="mls-item-meta">${escapeHtml(details)}</div>` : ''}
-      ${tagsText ? `<div class="mls-item-tags">${escapeHtml(tagsText)}</div>` : ''}
-    </div>
+  el.innerHTML = `
+    <span><strong>Total:</strong> ${summary.total ?? '–'}</span>
+    <span>Solutions: ${summary.solutions ?? '–'}</span>
+    <span>Failures: ${summary.failures ?? '–'}</span>
+    <span>Patterns: ${summary.patterns ?? '–'}</span>
+    <span>Improvements: ${summary.improvements ?? '–'}</span>
   `;
 }
 
-function getMlsTypeClass(type) {
-  switch (type) {
-    case 'solution':
-      return 'mls-type-solution';
-    case 'failure':
-      return 'mls-type-failure';
-    case 'pattern':
-      return 'mls-type-pattern';
-    case 'improvement':
-      return 'mls-type-improvement';
-    default:
-      return 'mls-type-other';
-  }
-}
+function renderMLSList(entries) {
+  const list = document.getElementById('mls-list');
+  if (!list) return;
 
-// --- Work Orders list ---
-
-async function loadWos() {
-  const params = new URLSearchParams();
-  if (currentWoStatusFilter) {
-    params.set('status', currentWoStatusFilter);
-  }
-  const query = params.toString();
-  const url = query ? `/api/wos?${query}` : '/api/wos';
-
-  try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: 'application/json'
-      }
-    });
-    if (!res.ok) {
-      console.error('Failed to fetch WOs', res.status);
-      return;
-    }
-    const payload = await res.json();
-    if (Array.isArray(payload)) {
-      allWos = payload;
-    } else if (Array.isArray(payload?.wos)) {
-      allWos = payload.wos;
-    } else if (Array.isArray(payload?.results)) {
-      allWos = payload.results;
-    } else {
-      allWos = [];
-    }
-    renderWosTable(allWos);
-    renderWoSummary(allWos);
-  } catch (error) {
-    console.error('Error loading WOs', error);
-  }
-}
-
-// === Summary cards ===
-
-function setSummaryText(cardEl, main, sub, foot) {
-  if (!cardEl) return;
-  const mainEl = cardEl.querySelector('.summary-card-main');
-  const subEl = cardEl.querySelector('.summary-card-sub');
-  const footEl = cardEl.querySelector('.summary-card-foot');
-  if (mainEl) {
-    mainEl.textContent = main;
-  }
-  if (subEl) {
-    subEl.textContent = sub;
-  }
-  if (footEl && typeof foot !== 'undefined') {
-    footEl.textContent = foot;
-  }
-}
-
-function formatSummaryUpdatedLabel(date = new Date()) {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    return SUMMARY_LOADING_FOOTER;
-  }
-  try {
-    return `Updated ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-  } catch (error) {
-    console.warn('Falling back to default time string for summary footer', error);
-    return `Updated ${date.toLocaleTimeString()}`;
-  }
-}
-
-function setSummaryLoading(cardEl) {
-  setSummaryText(cardEl, '—', 'loading…', SUMMARY_LOADING_FOOTER);
-}
-
-function initSummaryCards() {
-  const wosCard = document.getElementById('summary-wos');
-  const servicesCard = document.getElementById('summary-services');
-  const mlsCard = document.getElementById('summary-mls');
-
-  if (!wosCard && !servicesCard && !mlsCard) {
+  if (!entries.length) {
+    list.textContent = 'No MLS lessons found.';
     return;
   }
 
-  const refreshAll = () => {
-    refreshSummaryWos(wosCard);
-    refreshSummaryServices(servicesCard);
-    refreshSummaryMls(mlsCard);
-  };
+  list.innerHTML = '';
 
-  refreshAll();
-
-  if (summaryIntervalId) {
-    clearInterval(summaryIntervalId);
-  }
-  summaryIntervalId = setInterval(refreshAll, SUMMARY_REFRESH_MS);
-}
-
-async function refreshSummaryWos(cardEl) {
-  if (!cardEl) return;
-
-  try {
-    setSummaryLoading(cardEl);
-    const payload = await fetchJSON('/api/wos');
-    const wos = Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.wos)
-        ? payload.wos
-        : Array.isArray(payload?.results)
-          ? payload.results
-          : null;
-
-    if (!Array.isArray(wos)) {
-      setSummaryText(cardEl, '0', 'no data');
-      return;
-    }
-
-    const total = wos.length;
-    let active = 0;
-    let failed = 0;
-
-    wos.forEach((wo) => {
-      const status = String(wo?.status || '').toLowerCase();
-      if (!status) return;
-
-      if (status === 'failed' || status === 'error') {
-        failed += 1;
-      } else if (!['done', 'completed', 'cancelled', 'canceled'].includes(status)) {
-        active += 1;
-      }
-    });
-
-    const subParts = [`active: ${active}`];
-    if (failed > 0) {
-      subParts.push(`failed: ${failed}`);
-    }
-
-    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
-  } catch (error) {
-    console.error('Failed to refresh WO summary:', error);
-    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
-  }
-}
-
-async function refreshSummaryServices(cardEl) {
-  if (!cardEl) return;
-
-  try {
-    setSummaryLoading(cardEl);
-    const data = await fetchJSON('/api/services');
-
-    const summary = data?.summary ?? {};
-    const total = Number(summary.total) || 0;
-    const running = Number(summary.running) || 0;
-    const failed = Number(summary.failed) || 0;
-
-    const subParts = [`running: ${running}`];
-    if (failed > 0) {
-      subParts.push(`failed: ${failed}`);
-    }
-
-    const mainValue = total > 0 ? `${running}/${total}` : String(running);
-    setSummaryText(cardEl, mainValue, subParts.join(' | '), formatSummaryUpdatedLabel());
-  } catch (error) {
-    console.error('Failed to refresh services summary:', error);
-    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
-  }
-}
-
-async function refreshSummaryMls(cardEl) {
-  if (!cardEl) return;
-
-  try {
-    setSummaryLoading(cardEl);
-    const data = await fetchJSON('/api/mls');
-
-    const summary = data?.summary ?? {};
-    const total = Number(summary.total) || 0;
-    const solutions = Number(summary.solutions) || 0;
-    const failures = Number(summary.failures) || 0;
-
-    const subParts = [`solutions: ${solutions}`];
-    if (failures > 0) {
-      subParts.push(`failures: ${failures}`);
-    }
-
-    setSummaryText(cardEl, String(total), subParts.join(' | '), formatSummaryUpdatedLabel());
-  } catch (error) {
-    console.error('Failed to refresh MLS summary:', error);
-    setSummaryText(cardEl, '—', 'error loading', SUMMARY_LOADING_FOOTER);
-  }
-}
-
-function initWoStatusFilters() {
-  const container = document.getElementById('wo-status-filters');
-  if (!container) return;
-
-  const chips = Array.from(container.querySelectorAll('.wo-status-chip'));
-  chips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      const newStatus = chip.dataset.status || '';
-      currentWoStatusFilter = newStatus;
-
-      chips.forEach((c) => c.classList.remove('wo-status-chip--active'));
-      chip.classList.add('wo-status-chip--active');
-
-      loadWos();
-    });
+  entries.forEach((entry) => {
+    list.appendChild(createMLSCard(entry));
   });
 }
 
-function normalizeWoStatus(raw) {
-  const status = String(raw ?? '').toLowerCase();
-  if (!status) return 'pending';
-  if (['pending', 'queued', 'created'].includes(status)) return 'pending';
-  if (['running', 'in_progress', 'in-progress', 'working'].includes(status)) return 'running';
-  if (['completed', 'success', 'done'].includes(status)) return 'completed';
-  if (['failed', 'error', 'errored'].includes(status)) return 'failed';
-  return 'other';
-}
+function createMLSCard(entry) {
+  const card = document.createElement('article');
+  card.className = 'mls-card';
 
-function renderWosTable(wos) {
-  const tbody = document.getElementById('wos-table-body');
-  if (!tbody) return;
+  const header = document.createElement('header');
+  const badge = document.createElement('span');
+  const badgeType = entry.type ? `badge-${entry.type}` : 'badge-pattern';
+  badge.className = `badge ${badgeType}`;
+  badge.textContent = entry.type ?? 'entry';
+  const title = document.createElement('h3');
+  title.textContent = entry.title ?? 'Untitled lesson';
+  header.append(badge, title);
+  card.appendChild(header);
 
-  if (!Array.isArray(wos) || !wos.length) {
-    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
-    return;
+  const score = typeof entry.score === 'number' ? entry.score.toFixed(2) : entry.score ?? '–';
+  const tags = Array.isArray(entry.tags) ? entry.tags : [];
+  const relativeTime = formatRelativeTime(entry.time);
+
+  const meta = document.createElement('div');
+  meta.className = 'mls-meta';
+  if (relativeTime) {
+    const timeSpan = document.createElement('span');
+    timeSpan.textContent = relativeTime;
+    meta.appendChild(timeSpan);
   }
-
-  tbody.innerHTML = '';
-
-  wos.forEach((wo) => {
-    const tr = document.createElement('tr');
-
-    const idCell = document.createElement('td');
-    idCell.innerHTML = `<code>${escapeHtml(wo?.id ?? '')}</code>`;
-    tr.appendChild(idCell);
-
-    const statusCell = document.createElement('td');
-    const statusBadge = woStatusBadge(wo?.status);
-    if (statusBadge) {
-      statusCell.appendChild(statusBadge);
-    } else {
-      statusCell.textContent = wo?.status || '—';
-    }
-    tr.appendChild(statusCell);
-
-    tr.appendChild(createTextCell(formatWoTimestamp(wo?.started_at || wo?.created_at)));
-    tr.appendChild(createTextCell(formatWoTimestamp(wo?.finished_at || wo?.completed_at)));
-    tr.appendChild(createTextCell(formatWoTimestamp(wo?.updated_at || wo?.last_update)));
-
-    const actionsCell = document.createElement('td');
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.textContent = 'Copy ID';
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(String(wo?.id ?? ''));
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy ID';
-        }, 1200);
-      } catch (error) {
-        console.error('Failed to copy WO id', error);
-      }
-    });
-    actionsCell.appendChild(copyBtn);
-    tr.appendChild(actionsCell);
-
-    tr.appendChild(createTextCell(buildTimelineSummary(wo)));
-
-    tbody.appendChild(tr);
-  });
-}
-
-function createTextCell(value) {
-  const td = document.createElement('td');
-  td.textContent = value || '—';
-  return td;
-}
-
-function formatWoTimestamp(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) {
-    return isoString;
+  const scoreSpan = document.createElement('span');
+  scoreSpan.textContent = `score ${score}`;
+  meta.appendChild(scoreSpan);
+  if (tags.length) {
+    const tagsSpan = document.createElement('span');
+    tagsSpan.textContent = `tags: ${tags.join(', ')}`;
+    meta.appendChild(tagsSpan);
   }
-  return date.toLocaleString();
-}
+  card.appendChild(meta);
 
-function buildTimelineSummary(wo) {
-  if (Array.isArray(wo?.timeline) && wo.timeline.length) {
-    const labels = wo.timeline
-      .map((event) => event?.label || event?.status || event?.state || event)
-      .filter(Boolean);
-    if (labels.length) {
-      return labels.join(' → ');
+  const detailsText = (entry.details || entry.context || '').trim();
+  if (detailsText) {
+    const detailParagraph = document.createElement('p');
+    const truncated = detailsText.length > 280;
+    detailParagraph.textContent = truncated ? `${detailsText.slice(0, 280)}…` : detailsText;
+    card.appendChild(detailParagraph);
+
+    if (truncated) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.textContent = 'Show more';
+      toggleBtn.addEventListener('click', () => {
+        const isExpanded = toggleBtn.getAttribute('data-expanded') === 'true';
+        if (isExpanded) {
+          detailParagraph.textContent = `${detailsText.slice(0, 280)}…`;
+          toggleBtn.textContent = 'Show more';
+          toggleBtn.setAttribute('data-expanded', 'false');
+        } else {
+          detailParagraph.textContent = detailsText;
+          toggleBtn.textContent = 'Show less';
+          toggleBtn.setAttribute('data-expanded', 'true');
+        }
+      });
+      card.appendChild(toggleBtn);
     }
   }
-  if (wo?.timeline_summary) return wo.timeline_summary;
-  if (typeof wo?.duration === 'number') {
-    return `${Math.round(wo.duration)}s`;
+
+  const footer = document.createElement('div');
+  footer.className = 'mls-footer';
+  if (entry.related_wo) {
+    const woSpan = document.createElement('span');
+    woSpan.textContent = `WO: ${entry.related_wo}`;
+    footer.appendChild(woSpan);
   }
-  if (typeof wo?.duration_ms === 'number') {
-    const seconds = Math.max(0, Math.round(wo.duration_ms / 1000));
-    return `${seconds}s`;
+  if (entry.related_session) {
+    const sessionSpan = document.createElement('span');
+    sessionSpan.textContent = `Session: ${entry.related_session}`;
+    footer.appendChild(sessionSpan);
   }
-  return '—';
-}
-
-function renderWoSummary(wos = []) {
-  const summaryEl = document.getElementById('wos-summary');
-  if (!summaryEl) return;
-
-  const counts = {
-    pending: 0,
-    running: 0,
-    completed: 0,
-    failed: 0,
-    other: 0
-  };
-
-  const dataset = Array.isArray(wos) ? wos : [];
-  dataset.forEach((wo) => {
-    const key = normalizeWoStatus(wo?.status);
-    if (counts[key] !== undefined) {
-      counts[key] += 1;
-    } else {
-      counts.other += 1;
-    }
-  });
-
-  const total = dataset.length;
-  const filteredCount = dataset.length;
-  const parts = [];
-  parts.push(`${total} WOs`);
-  if (counts.running) parts.push(`${counts.running} running`);
-  if (counts.failed) parts.push(`${counts.failed} failed`);
-  if (currentWoStatusFilter) {
-    const label = currentWoStatusFilter
-      .split(',')
-      .map((status) => status.trim() || 'all')
-      .join('/');
-    parts.push(`filter: ${label} (${filteredCount} shown)`);
+  if (entry.verified) {
+    const verifiedSpan = document.createElement('span');
+    verifiedSpan.textContent = 'Verified';
+    footer.appendChild(verifiedSpan);
+  }
+  if (footer.childNodes.length) {
+    card.appendChild(footer);
   }
 
-  summaryEl.textContent = parts.join(' · ');
+  return card;
 }
 
 // --- WO History ---
@@ -970,7 +845,7 @@ function renderWoHistory(wos, limit) {
   const maxRows = Number.isFinite(limit) ? limit : 100;
 
   if (!Array.isArray(wos) || !wos.length) {
-    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">No work orders found.</td></tr>';
     return;
   }
 
@@ -992,163 +867,477 @@ function renderWoHistory(wos, limit) {
     const agent = wo?.agent || wo?.worker || '';
     const type = wo?.type || '';
     const summary = wo?.summary || wo?.description || '';
-    const statusBadge = woStatusBadge(status);
-    if (statusBadge) {
-      statusBadge.classList.add('wo-history-status');
-    }
-    const statusHtml = statusBadge ? statusBadge.outerHTML : escapeHtml(status || '—');
 
     tr.innerHTML = `
       <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
       <td>${escapeHtml(started)}</td>
-      <td>${statusHtml}</td>
+      <td>${escapeHtml(status)}</td>
       <td>${escapeHtml(agent)}</td>
       <td>${escapeHtml(type)}</td>
       <td>${escapeHtml(summary)}</td>
     `;
 
-    const timelineCell = document.createElement('td');
-    const timelineButton = document.createElement('button');
-    timelineButton.type = 'button';
-    timelineButton.className = 'wo-timeline-button';
-    timelineButton.textContent = 'View';
-    if (wo?.id) {
-      timelineButton.addEventListener('click', () => openWoTimeline(wo.id));
-    } else {
-      timelineButton.disabled = true;
-    }
-    timelineCell.appendChild(timelineButton);
-    tr.appendChild(timelineCell);
-
     tbody.appendChild(tr);
   });
 }
 
-// === Service health panel ===
+// --- Work Orders (table + timeline) ---
 
-function serviceStatusBadge(statusRaw) {
-  const label = formatBadgeLabel(statusRaw || 'unknown') || 'unknown';
-  const badge = makeBadge(label);
-  if (!badge) return null;
+function initWoFilters() {
+  const statusSelect = document.getElementById('wo-status-filter');
+  if (!statusSelect) return;
 
-  const status = label.toLowerCase();
-  badge.textContent = status;
-
-  if (status === 'running') {
-    badge.classList.add('badge-service-running');
-  } else if (status === 'failed') {
-    badge.classList.add('badge-service-failed');
-  } else if (status === 'stopped') {
-    badge.classList.add('badge-service-stopped');
-  }
-
-  return badge;
+  currentWoStatusFilter = statusSelect.value || '';
+  statusSelect.addEventListener('change', () => {
+    currentWoStatusFilter = statusSelect.value || '';
+    loadWos();
+  });
 }
 
-async function refreshServices(fromUser) {
-  try {
-    const res = await fetch('/api/services', { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
-      console.error('Failed to load services', res.status);
-      if (fromUser) {
-        alert('Failed to load services status.');
+function initWoSearch() {
+  const searchInput = document.getElementById('wo-search-input');
+  if (!searchInput) return;
+
+  searchInput.addEventListener('input', () => {
+    currentWoSearch = searchInput.value.trim().toLowerCase();
+    renderWosTable(currentWos);
+  });
+}
+
+function initWoSorting() {
+  const headers = document.querySelectorAll('#wos-table thead th[data-sort-key]');
+  headers.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortKey;
+      if (!key) return;
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = 'desc';
       }
-      return;
-    }
-    const payload = await res.json();
-    serviceData = Array.isArray(payload?.services) ? payload.services : [];
-    renderServiceTable(serviceData);
-  } catch (error) {
-    console.error('Error fetching services', error);
-    if (fromUser) {
-      alert('Error fetching services.');
-    }
-  }
+      renderWosTable(currentWos);
+    });
+  });
 }
 
-function renderServiceTable(services) {
-  const tbody = document.getElementById('service-table-body');
+function initWoAutorefreshControls() {
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+
+  const updateAutorefresh = () => {
+    if (woAutorefreshIntervalId) {
+      clearInterval(woAutorefreshIntervalId);
+      woAutorefreshIntervalId = null;
+    }
+    if (toggle?.checked) {
+      woAutorefreshIntervalId = setInterval(() => loadWos(), WO_AUTOREFRESH_MS);
+    }
+  };
+
+  toggle?.addEventListener('change', updateAutorefresh);
+  updateAutorefresh();
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
   if (!tbody) return;
 
-  tbody.innerHTML = '';
+  tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
 
-  if (!Array.isArray(services) || services.length === 0) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 6;
-    td.textContent = 'No 02luka services found.';
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+  const params = new URLSearchParams();
+  if (currentWoStatusFilter) params.set('status', currentWoStatusFilter);
+  params.set('limit', '200');
+  const query = params.toString();
+
+  try {
+    const res = await fetch(`/api/wos${query ? `?${query}` : ''}`, {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch work orders: ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+    currentWos = wos;
+    renderWosTable(currentWos);
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    tbody.innerHTML = '<tr><td colspan="7">Failed to load work orders.</td></tr>';
+  }
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!Array.isArray(wos) || !wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders found.</td></tr>';
+    highlightActiveTimelineRow();
     return;
   }
 
-  services.forEach((svc) => {
-    const tr = document.createElement('tr');
+  const searchTerm = currentWoSearch.trim().toLowerCase();
 
-    const tdLabel = document.createElement('td');
-    tdLabel.textContent = svc?.label || '-';
-    tr.appendChild(tdLabel);
-
-    const tdStatus = document.createElement('td');
-    const badge = serviceStatusBadge(svc?.status);
-    if (badge) {
-      tdStatus.appendChild(badge);
-    } else {
-      tdStatus.textContent = svc?.status || 'unknown';
+  const filtered = wos.filter((wo) => {
+    if (currentWoStatusFilter) {
+      const status = normalizeWoStatus(wo?.status || '').toLowerCase();
+      if (status !== currentWoStatusFilter.toLowerCase()) {
+        return false;
+      }
     }
-    tr.appendChild(tdStatus);
+    if (!searchTerm) return true;
+    return getWoSearchableText(wo).includes(searchTerm);
+  });
 
-    const tdType = document.createElement('td');
-    tdType.textContent = svc?.type || '-';
-    tr.appendChild(tdType);
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match your filters.</td></tr>';
+    highlightActiveTimelineRow();
+    return;
+  }
 
-    const tdPid = document.createElement('td');
-    tdPid.textContent = svc?.pid != null ? String(svc.pid) : '-';
-    tr.appendChild(tdPid);
+  const sorted = [...filtered].sort((a, b) => {
+    const aVal = getWoSortValue(a, currentWoSortKey);
+    const bVal = getWoSortValue(b, currentWoSortKey);
+    if (aVal === bVal) return 0;
+    if (aVal > bVal) return currentWoSortDir === 'asc' ? 1 : -1;
+    return currentWoSortDir === 'asc' ? -1 : 1;
+  });
 
-    const tdExit = document.createElement('td');
-    tdExit.textContent = svc?.exit_code != null ? String(svc.exit_code) : '-';
-    tr.appendChild(tdExit);
+  tbody.innerHTML = '';
 
-    const tdAction = document.createElement('td');
-    const btnLogs = document.createElement('button');
-    btnLogs.type = 'button';
-    btnLogs.textContent = 'Logs';
-    btnLogs.style.fontSize = '0.7rem';
-    btnLogs.addEventListener('click', () => {
-      openServiceLogs();
+  sorted.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const woId = wo?.id ? String(wo.id) : '';
+    tr.dataset.woId = woId;
+
+    const idTd = document.createElement('td');
+    const idCode = document.createElement('code');
+    idCode.textContent = wo?.id ?? '';
+    idTd.appendChild(idCode);
+
+    const statusTd = document.createElement('td');
+    statusTd.textContent = normalizeWoStatus(wo?.status || '');
+
+    const startedTd = document.createElement('td');
+    startedTd.textContent = formatWoTime(wo?.started_at || wo?.startedAt || '');
+
+    const finishedTd = document.createElement('td');
+    finishedTd.textContent = formatWoTime(getWoCompletedTime(wo) || '');
+
+    const updatedTd = document.createElement('td');
+    updatedTd.textContent = formatWoTime(
+      wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate || ''
+    );
+
+    const actionsTd = document.createElement('td');
+    actionsTd.textContent = '—';
+
+    const timelineTd = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Timeline';
+    btn.className = 'wo-timeline-button';
+    btn.dataset.woId = woId;
+    btn.setAttribute('aria-pressed', currentTimelineWoId && woId === currentTimelineWoId ? 'true' : 'false');
+    btn.setAttribute('aria-label', woId ? `Open timeline for work order ${woId}` : 'Open work order timeline');
+    btn.addEventListener('click', () => {
+      const woId = wo?.id;
+      if (!woId) return;
+      openWoTimeline(woId);
     });
-    tdAction.appendChild(btnLogs);
-    tr.appendChild(tdAction);
+    timelineTd.appendChild(btn);
+
+    tr.appendChild(idTd);
+    tr.appendChild(statusTd);
+    tr.appendChild(startedTd);
+    tr.appendChild(finishedTd);
+    tr.appendChild(updatedTd);
+    tr.appendChild(actionsTd);
+    tr.appendChild(timelineTd);
+
+    if (currentTimelineWoId && woId === currentTimelineWoId) {
+      tr.classList.add('wo-timeline-active-row');
+    }
 
     tbody.appendChild(tr);
   });
+
+  highlightActiveTimelineRow();
 }
 
-async function openServiceLogs() {
+function getWoSearchableText(wo) {
+  return [
+    wo?.id,
+    wo?.status,
+    wo?.agent,
+    wo?.worker,
+    wo?.type,
+    wo?.summary,
+    wo?.description
+  ]
+    .map((value) => String(value || '').toLowerCase())
+    .join(' ');
+}
+
+function getWoSortValue(wo, key) {
+  if (!wo || !key) return '';
+  const camelKey = key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+  const value = wo[key] ?? wo[camelKey];
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (/_at$/i.test(key) || /At$/.test(key)) {
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+  if (typeof value === 'string') {
+    return value.toLowerCase();
+  }
+  return value;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return '';
+  const str = String(status).trim();
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function formatWoTime(value) {
+  if (!value) return '';
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) {
+    return String(value);
+  }
+  const date = new Date(timestamp);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+}
+
+function initWoTimeline() {
+  const closeBtn = document.getElementById('wo-timeline-close');
+  const section = document.getElementById('wo-timeline-section');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!closeBtn || !section) return;
+
+  closeBtn.addEventListener('click', () => {
+    section.classList.add('hidden');
+    currentTimelineWoId = null;
+    if (titleEl) {
+      titleEl.textContent = 'WO Timeline';
+    }
+    if (subtitleEl) {
+      subtitleEl.textContent = 'Select a work order from the table to see its history.';
+    }
+    if (contentEl) {
+      contentEl.innerHTML = '';
+    }
+    highlightActiveTimelineRow();
+  });
+}
+
+async function openWoTimeline(woId) {
+  const section = document.getElementById('wo-timeline-section');
+  const titleEl = document.getElementById('wo-timeline-title');
+  const subtitleEl = document.getElementById('wo-timeline-subtitle');
+  const contentEl = document.getElementById('wo-timeline-content');
+
+  if (!section || !titleEl || !subtitleEl || !contentEl) return;
+
+  currentTimelineWoId = woId;
+  highlightActiveTimelineRow();
+
+  titleEl.textContent = `WO Timeline — ${woId}`;
+  subtitleEl.textContent = 'Loading timeline and log tail…';
+  section.classList.remove('hidden');
+  contentEl.innerHTML = '';
+
   try {
-    const res = await fetch('/api/health/logs?lines=200', { headers: { Accept: 'application/json' } });
+    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
+      headers: { Accept: 'application/json' }
+    });
     if (!res.ok) {
-      alert('Failed to load health logs.');
+      subtitleEl.textContent = `Failed to load WO ${woId} (status ${res.status})`;
       return;
     }
-    const data = await res.json();
-    const lines = Array.isArray(data?.lines) ? data.lines : [];
-    const text = lines.join('\n');
-
-    const w = window.open('', 'health-logs');
-    if (w) {
-      w.document.write('<pre style="font-size:11px; white-space:pre-wrap; margin:0;">');
-      w.document.write(escapeHtml(text));
-      w.document.write('</pre>');
-      w.document.close();
-    } else {
-      alert(text.slice(0, 2000) || 'No log data available.');
+    const wo = await res.json();
+    if (currentTimelineWoId !== woId) {
+      return;
     }
+    subtitleEl.textContent = buildTimelineSubtitle(wo);
+    renderWoTimelineContent(wo);
   } catch (error) {
-    console.error('Error loading health logs', error);
-    alert('Error loading health logs.');
+    console.error('Error loading WO timeline', error);
+    subtitleEl.textContent = `Error loading timeline for WO ${woId}`;
   }
+}
+
+function buildTimelineSubtitle(wo) {
+  const status = normalizeWoStatus(wo?.status || 'unknown');
+  const started = formatWoTime(wo?.started_at || wo?.startedAt);
+  const finished = formatWoTime(getWoCompletedTime(wo));
+  const updated = formatWoTime(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate
+  );
+
+  const parts = [`Status: ${status || 'Unknown'}`];
+  if (started) parts.push(`Started: ${started}`);
+  if (finished) parts.push(`Finished: ${finished}`);
+  if (updated) parts.push(`Last update: ${updated}`);
+
+  return parts.join(' • ');
+}
+
+function renderWoTimelineContent(wo) {
+  const contentEl = document.getElementById('wo-timeline-content');
+  if (!contentEl) return;
+
+  const eventsColumn = document.createElement('div');
+  eventsColumn.className = 'wo-timeline-events';
+  const eventsTitle = document.createElement('h4');
+  eventsTitle.textContent = 'Key Events';
+  eventsColumn.appendChild(eventsTitle);
+
+  const eventsList = document.createElement('ul');
+  eventsList.className = 'wo-timeline-list';
+
+  const events = buildWoEventsList(wo);
+  if (!events.length) {
+    const emptyItem = document.createElement('li');
+    emptyItem.className = 'wo-timeline-item';
+    emptyItem.textContent = 'No timeline events available.';
+    eventsList.appendChild(emptyItem);
+  } else {
+    events.forEach((event) => {
+      const item = document.createElement('li');
+      item.className = 'wo-timeline-item';
+
+      const timeEl = document.createElement('div');
+      timeEl.className = 'wo-timeline-item-time';
+      timeEl.textContent = event.time || '';
+
+      const labelEl = document.createElement('div');
+      labelEl.className = 'wo-timeline-item-label';
+      labelEl.textContent = event.label;
+
+      item.appendChild(timeEl);
+      item.appendChild(labelEl);
+
+      if (event.meta) {
+        const metaEl = document.createElement('div');
+        metaEl.className = 'wo-timeline-item-meta';
+        metaEl.textContent = event.meta;
+        item.appendChild(metaEl);
+      }
+
+      eventsList.appendChild(item);
+    });
+  }
+
+  eventsColumn.appendChild(eventsList);
+
+  const logsColumn = document.createElement('div');
+  logsColumn.className = 'wo-timeline-logs';
+  const logsTitle = document.createElement('h4');
+  logsTitle.textContent = 'Log Tail';
+  logsColumn.appendChild(logsTitle);
+
+  const logContainer = document.createElement('div');
+  let logLines = null;
+  if (Array.isArray(wo?.log_tail)) {
+    logLines = wo.log_tail;
+  } else if (Array.isArray(wo?.logTail)) {
+    logLines = wo.logTail;
+  } else if (typeof wo?.log_tail === 'string') {
+    logLines = wo.log_tail.split('\n');
+  }
+
+  if (logLines && logLines.length) {
+    const pre = document.createElement('pre');
+    pre.className = 'wo-log-lines';
+    pre.textContent = logLines.join('\n');
+    logContainer.appendChild(pre);
+  } else {
+    const emptyLog = document.createElement('div');
+    emptyLog.className = 'wo-log-empty';
+    emptyLog.textContent = 'No log tail available for this work order.';
+    logContainer.appendChild(emptyLog);
+  }
+
+  logsColumn.appendChild(logContainer);
+
+  contentEl.innerHTML = '';
+  contentEl.appendChild(eventsColumn);
+  contentEl.appendChild(logsColumn);
+}
+
+function highlightActiveTimelineRow() {
+  const rows = document.querySelectorAll('#wos-table-body tr');
+  const activeId = currentTimelineWoId ? String(currentTimelineWoId) : '';
+  rows.forEach((row) => {
+    const rowId = row.dataset.woId || '';
+    const isActive = Boolean(activeId && rowId === activeId);
+    row.classList.toggle('wo-timeline-active-row', isActive);
+    const button = row.querySelector('.wo-timeline-button');
+    if (button) {
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+  });
+}
+
+function buildWoEventsList(wo) {
+  const events = [];
+
+  const addEvent = (timeValue, label, meta) => {
+    if (!timeValue) return;
+    events.push({
+      rawTime: timeValue,
+      time: formatWoTime(timeValue),
+      label,
+      meta: meta ? String(meta) : ''
+    });
+  };
+
+  addEvent(wo?.created_at || wo?.createdAt, 'Created', wo?.created_by || wo?.createdBy);
+  addEvent(wo?.started_at || wo?.startedAt, 'Started', wo?.worker || wo?.agent);
+  addEvent(getWoCompletedTime(wo), 'Finished', wo?.result || wo?.outcome);
+  addEvent(
+    wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate,
+    'Last updated',
+    wo?.status ? normalizeWoStatus(wo.status) : ''
+  );
+
+  if (Array.isArray(wo?.events)) {
+    wo.events.forEach((event) => {
+      addEvent(event?.time || event?.timestamp, event?.label || event?.type || 'Event', event?.details || event?.message);
+    });
+  }
+
+  events.sort((a, b) => {
+    const aTime = Date.parse(a.rawTime || '') || 0;
+    const bTime = Date.parse(b.rawTime || '') || 0;
+    return aTime - bTime;
+  });
+
+  return events;
 }
 
 function escapeHtml(str) {
@@ -1171,160 +1360,38 @@ function initWoHistoryFilters() {
   limitSelect?.addEventListener('change', () => loadWoHistory());
 }
 
-async function openWoTimeline(woId) {
-  if (!woId) return;
-
-  const modal = document.getElementById('wo-timeline-modal');
-  const titleEl = document.getElementById('wo-timeline-title');
-  const metaEl = document.getElementById('wo-timeline-meta');
-  const eventsEl = document.getElementById('wo-timeline-events');
-  const logEl = document.getElementById('wo-timeline-log-tail');
-
-  if (!modal || !titleEl || !metaEl || !eventsEl || !logEl) {
-    return;
-  }
-
-  titleEl.textContent = `WO Timeline: ${woId}`;
-  metaEl.textContent = 'Loading…';
-  eventsEl.innerHTML = '';
-  logEl.textContent = '';
-
-  modal.classList.remove('hidden');
-
-  try {
-    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=200`, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!res.ok) {
-      metaEl.textContent = `Failed to load WO: HTTP ${res.status}`;
-      return;
-    }
-    const wo = await res.json();
-    renderWoTimeline(wo);
-  } catch (error) {
-    metaEl.textContent = `Error loading WO: ${String(error)}`;
-  }
-}
-
-function closeWoTimeline() {
-  const modal = document.getElementById('wo-timeline-modal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-}
-
-function renderWoTimeline(wo = {}) {
-  const metaEl = document.getElementById('wo-timeline-meta');
-  const eventsEl = document.getElementById('wo-timeline-events');
-  const logEl = document.getElementById('wo-timeline-log-tail');
-
-  if (!metaEl || !eventsEl || !logEl) {
-    return;
-  }
-
-  const id = wo.id || 'UNKNOWN';
-  const status = wo.status || 'unknown';
-  const started = wo.started_at || wo.created_at || '';
-  const finished = wo.finished_at || '';
-  const updated = wo.updated_at || wo.last_update || '';
-
-  let metaText = `ID: ${id} · Status: ${status}`;
-  if (started) metaText += ` · Started: ${started}`;
-  if (finished) metaText += ` · Finished: ${finished}`;
-  if (updated) metaText += ` · Last update: ${updated}`;
-  metaEl.textContent = metaText;
-
-  const logLines = Array.isArray(wo.log_tail)
-    ? wo.log_tail.map((line) => String(line || ''))
-    : typeof wo.log_tail === 'string'
-    ? wo.log_tail.split(/\r?\n/)
-    : [];
-
-  const events = buildTimelineEventsFromWo(wo, logLines);
-
-  eventsEl.innerHTML = '';
-  if (!events.length) {
-    const placeholder = document.createElement('li');
-    placeholder.textContent = 'No timeline events available yet.';
-    eventsEl.appendChild(placeholder);
-  } else {
-    events.forEach((event) => {
-      const li = document.createElement('li');
-      if (event.level === 'error') {
-        li.classList.add('wo-event-error');
-      }
-      li.innerHTML = `
-        <div>${escapeHtml(event.label || '')}</div>
-        <time>${escapeHtml(event.time || '')}</time>
-        ${event.detail ? `<div class="wo-event-detail">${escapeHtml(event.detail)}</div>` : ''}
-      `;
-      eventsEl.appendChild(li);
-    });
-  }
-
-  logEl.textContent = logLines.join('\n');
-}
-
-function buildTimelineEventsFromWo(wo = {}, logLines = []) {
-  const events = [];
-
-  if (wo.created_at) {
-    events.push({
-      time: wo.created_at,
-      label: 'Created',
-      detail: wo.created_by || '',
-      level: 'info'
-    });
-  }
-
-  if (wo.started_at) {
-    events.push({
-      time: wo.started_at,
-      label: 'Started',
-      detail: wo.worker || wo.agent || '',
-      level: 'info'
-    });
-  }
-
-  if (wo.finished_at) {
-    events.push({
-      time: wo.finished_at,
-      label: 'Finished',
-      detail: wo.result || '',
-      level: wo.status === 'failed' ? 'error' : 'info'
-    });
-  }
-
-  if (!wo.finished_at && wo.status) {
-    events.push({
-      time: wo.updated_at || wo.last_update || '',
-      label: `Status: ${wo.status}`,
-      detail: wo.last_error || '',
-      level: wo.status === 'failed' ? 'error' : 'info'
-    });
-  }
-
-  logLines.slice(-5).forEach((line) => {
-    const trimmed = String(line || '').trim();
-    if (!trimmed) return;
-    events.push({
-      time: '',
-      label: 'Log tail',
-      detail: trimmed,
-      level: trimmed.toLowerCase().includes('error') ? 'error' : 'info'
-    });
-  });
-
-  return events;
-}
-
 // --- Reality Snapshot ---
+
+function setRealityLoading() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (meta) meta.textContent = 'Loading Reality snapshot…';
+  if (deployEl) deployEl.textContent = 'Loading deployment data…';
+  if (orchEl) orchEl.textContent = 'Loading orchestrator summary…';
+  if (saveBody) {
+    saveBody.innerHTML = '<tr><td colspan="7">Loading save.sh runs…</td></tr>';
+  }
+
+  updateRealityBadge(document.getElementById('reality-badge-deploy'), 'Deployment', null);
+  updateRealityBadge(document.getElementById('reality-badge-save'), 'save.sh', null);
+  updateRealityBadge(document.getElementById('reality-badge-orch'), 'Orchestrator', null);
+}
 
 async function loadRealitySnapshot() {
   const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Loading Reality snapshot…';
+  if (!meta) {
+    return;
   }
+  if (realityLoading) {
+    return;
+  }
+
+  setRealityLoading();
   hideErrorBanner('reality-error');
+  realityLoading = true;
 
   try {
     const res = await fetch('/api/reality/snapshot?advisory=1');
@@ -1333,11 +1400,14 @@ async function loadRealitySnapshot() {
       renderRealityError(`HTTP ${res.status}`);
       return;
     }
+
     const payload = await res.json();
     renderRealitySnapshot(payload);
   } catch (error) {
     console.error('Error loading Reality snapshot', error);
-    renderRealityError(String(error));
+    renderRealityError('Failed to load Reality snapshot.');
+  } finally {
+    realityLoading = false;
   }
 }
 
@@ -1354,14 +1424,15 @@ function renderRealitySnapshot(payload) {
     return;
   }
 
+  hideErrorBanner('reality-error');
   updateRealityBadge(badgeDeploy, 'Deployment', null);
   updateRealityBadge(badgeSave, 'save.sh', null);
   updateRealityBadge(badgeOrch, 'Orchestrator', null);
 
   if (!payload || payload.status === 'no_snapshot') {
-    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow first.';
     deployEl.textContent = '';
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs in snapshot.</td></tr>';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs recorded.</td></tr>';
     orchEl.textContent = '';
 
     if (payload?.advisory) {
@@ -1370,12 +1441,11 @@ function renderRealitySnapshot(payload) {
       updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
       updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
     }
-
     return;
   }
 
   if (payload.status === 'error') {
-    renderRealityError(payload.error || 'invalid snapshot');
+    renderRealityError(payload.error || 'Invalid Reality snapshot.');
     if (payload.advisory) {
       const adv = payload.advisory;
       updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
@@ -1401,7 +1471,7 @@ function renderRealitySnapshot(payload) {
 
   saveBody.innerHTML = '';
   if (!saveRuns.length) {
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh full-cycle runs in snapshot.</td></tr>';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs captured.</td></tr>';
   } else {
     saveRuns.forEach((run) => {
       const tr = document.createElement('tr');
@@ -1421,8 +1491,7 @@ function renderRealitySnapshot(payload) {
   if (orchestrator) {
     try {
       orchEl.textContent = JSON.stringify(orchestrator, null, 2);
-    } catch (error) {
-      console.error('Failed to stringify orchestrator summary', error);
+    } catch (err) {
       orchEl.textContent = String(orchestrator);
     }
   } else {
@@ -1438,657 +1507,93 @@ function renderRealitySnapshot(payload) {
 }
 
 function renderRealityError(message) {
+  const msg = message || 'Failed to load Reality snapshot.';
   const meta = document.getElementById('reality-meta');
   if (meta) {
-    meta.textContent = 'Reality snapshot unavailable.';
+    meta.textContent = msg;
   }
-  showErrorBanner('reality-error', message || 'Failed to load Reality snapshot.');
+  showErrorBanner('reality-error', msg);
 }
 
 function updateRealityBadge(el, label, status) {
   if (!el) return;
-  el.className = 'badge badge-muted';
+  el.className = 'reality-badge reality-badge-muted';
+  el.textContent = label;
 
   if (!status) {
-    el.textContent = label;
     return;
   }
 
-  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
-  el.className = `badge badge-${normalized}`;
+  const normalized = String(status).toLowerCase().trim().replace(/\s+/g, '_');
+  el.className = `reality-badge reality-badge-${normalized}`;
   el.textContent = `${label}: ${status}`;
 }
 
-function initRealityPanel() {
-  if (realityPanelInitialized) {
-    return;
+function formatRelativeTime(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
   }
 
-  const refreshBtn = document.getElementById('reality-refresh-btn');
-  const retryBtn = document.getElementById('reality-error-retry');
-
-  refreshBtn?.addEventListener('click', () => loadRealitySnapshot());
-  retryBtn?.addEventListener('click', () => loadRealitySnapshot());
-
-  loadRealitySnapshot();
-  realityPanelInitialized = true;
-}
-
-// --- WO ↔ MLS linking (detail panel) ---
-
-function onWorkOrderSelected(woId) {
-  if (!woId) {
-    currentWoId = null;
-  } else {
-    currentWoId = String(woId);
-  }
-  refreshWoDetailMls();
-}
-
-async function refreshWoDetailMls() {
-  const emptyEl = document.getElementById('wo-detail-mls-empty');
-  const listEl = document.getElementById('wo-detail-mls-list');
-
-  if (!listEl) {
-    return;
-  }
-
-  const defaultMessage = emptyEl?.dataset?.defaultMessage || 'No MLS lessons linked to this work order yet.';
-
-  if (!currentWoId) {
-    listEl.innerHTML = '';
-    if (emptyEl) {
-      emptyEl.style.display = '';
-      emptyEl.textContent = defaultMessage;
-    }
-    return;
-  }
-
-  try {
-    if (!Array.isArray(cachedMlsEntries)) {
-      const res = await fetch('/api/mls', { headers: { Accept: 'application/json' } });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const payload = await res.json();
-      cachedMlsEntries = Array.isArray(payload.entries) ? payload.entries : [];
-    }
-
-    const related = cachedMlsEntries.filter((entry) => {
-      if (!entry || entry.related_wo === undefined || entry.related_wo === null) {
-        return false;
-      }
-      return String(entry.related_wo) === String(currentWoId);
-    });
-
-    listEl.innerHTML = '';
-
-    if (!related.length) {
-      if (emptyEl) {
-        emptyEl.style.display = '';
-        emptyEl.textContent = defaultMessage;
-      }
-      return;
-    }
-
-    if (emptyEl) {
-      emptyEl.style.display = 'none';
-      emptyEl.textContent = defaultMessage;
-    }
-
-    related.forEach((entry) => {
-      const li = document.createElement('li');
-      li.className = 'wo-detail-mls-item';
-      const entryId = entry.id || entry.mls_id || 'MLS-UNKNOWN';
-      li.dataset.mlsId = entryId;
-      li.textContent = entry.title || entryId || 'MLS lesson';
-      listEl.appendChild(li);
-    });
-  } catch (error) {
-    console.error('Failed to load related MLS lessons for WO', currentWoId, error);
-    cachedMlsEntries = null;
-    listEl.innerHTML = '';
-    if (emptyEl) {
-      emptyEl.style.display = '';
-      emptyEl.textContent = 'Error loading MLS lessons for this work order.';
-    }
-  }
-}
-
-function focusMlsCardById(mlsId) {
-  const list = document.getElementById('mls-list');
-  if (!list || !mlsId) {
-    return;
-  }
-
-  const safeId = cssEscapeAttr(mlsId);
-  if (!safeId) {
-    return;
-  }
-
-  const card = list.querySelector(`[data-mls-id="${safeId}"]`);
-  if (card && typeof card.scrollIntoView === 'function') {
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    card.classList.add('mls-card-highlight');
-    setTimeout(() => card.classList.remove('mls-card-highlight'), 1500);
-  }
-}
-
-function cssEscapeAttr(value) {
-  if (value === undefined || value === null) {
-    return '';
-  }
-  const stringValue = String(value);
-  if (typeof window !== 'undefined' && window.CSS && typeof window.CSS.escape === 'function') {
-    return window.CSS.escape(stringValue);
-  }
-  return stringValue.replace(/"/g, '\\"');
-}
-
-document.addEventListener('click', (event) => {
-  const baseTarget = event.target;
-  if (!(baseTarget instanceof Element)) {
-    return;
-  }
-
-  const target = baseTarget.closest('.wo-detail-mls-item');
-  if (!target) {
-    return;
-  }
-
-  const mlsId = target.dataset?.mlsId;
-  if (!mlsId) {
-    return;
-  }
-
-  if (typeof window.selectMlsLesson === 'function') {
-    window.selectMlsLesson(mlsId);
-    return;
-  }
-
-  focusMlsCardById(mlsId);
-});
-
-// --- WO detail rendering / history ---
-
-function renderWoDetail(wo) {
-  const container = document.getElementById('wo-detail-content');
-
-  if (!container) {
-    renderWoDetailHistory(wo);
-    return;
-  }
-
-  container.innerHTML = '';
-
-  if (!wo) {
-    const placeholder = document.createElement('p');
-    placeholder.textContent = 'Select a work order to view its details.';
-    container.appendChild(placeholder);
-    renderWoDetailHistory(null);
-    return;
-  }
-
-  const title = document.createElement('h3');
-  title.textContent = wo.id || 'Work Order';
-  container.appendChild(title);
-
-  if (wo.status) {
-    const statusLine = document.createElement('div');
-    statusLine.textContent = `Status: ${wo.status}`;
-    container.appendChild(statusLine);
-  }
-
-  const description = wo.description || wo.goal || wo.summary;
-  if (description) {
-    const descEl = document.createElement('p');
-    descEl.textContent = description;
-    container.appendChild(descEl);
-  }
-
-  const metaFields = [
-    { label: 'Owner', value: wo.owner || wo.created_by || wo.requested_by },
-    { label: 'Worker', value: wo.worker || wo.agent },
-    { label: 'Type', value: wo.type },
-    { label: 'Started', value: formatWoTimestamp(wo.started_at || wo.created_at) },
-    { label: 'Finished', value: formatWoTimestamp(wo.finished_at) },
-    { label: 'Updated', value: formatWoTimestamp(wo.updated_at || wo.last_update) }
-  ].filter((item) => item.value);
-
-  if (metaFields.length) {
-    const list = document.createElement('ul');
-    list.className = 'wo-detail-meta';
-    metaFields.forEach((item) => {
-      const li = document.createElement('li');
-      li.textContent = `${item.label}: ${item.value}`;
-      list.appendChild(li);
-    });
-    container.appendChild(list);
-  }
-
-  renderWoDetailHistory(wo);
-}
-
-function renderWoDetailHistory(wo) {
-  const listEl = document.getElementById('wo-detail-history-list');
-  const emptyEl = document.getElementById('wo-detail-history-empty');
-
-  if (!listEl) {
-    return;
-  }
-
-  listEl.innerHTML = '';
-
-  const historyItems = normalizeWoDetailHistory(wo);
-
-  if (!historyItems.length) {
-    if (emptyEl) {
-      emptyEl.style.display = '';
-      emptyEl.textContent = 'No history recorded for this work order yet.';
-    }
-    return;
-  }
-
-  if (emptyEl) {
-    emptyEl.style.display = 'none';
-  }
-
-  historyItems.forEach((rawItem) => {
-    const item = typeof rawItem === 'object' && rawItem !== null ? rawItem : { message: rawItem };
-    const li = document.createElement('li');
-    li.className = 'wo-history-item';
-
-    const meta = document.createElement('div');
-    meta.className = 'wo-history-meta';
-    const timeValue =
-      item.time ||
-      item.timestamp ||
-      item.date ||
-      item.when ||
-      item.created_at ||
-      item.updated_at ||
-      '';
-    const formattedTime = formatWoTimestamp(timeValue) || timeValue || '';
-    const statusValue = item.status || item.state || item.type || item.event || '';
-    const metaParts = [formattedTime, statusValue].filter(Boolean);
-    if (metaParts.length) {
-      meta.textContent = metaParts.join(' · ');
-      li.appendChild(meta);
-    }
-
-    const message =
-      item.message ||
-      item.details ||
-      item.note ||
-      item.summary ||
-      item.description ||
-      (typeof rawItem === 'string' || typeof rawItem === 'number' ? String(rawItem) : '');
-
-    if (message) {
-      const body = document.createElement('div');
-      body.textContent = message;
-      li.appendChild(body);
-    } else if (!metaParts.length) {
-      const fallback = document.createElement('div');
-      fallback.textContent = 'Event recorded';
-      li.appendChild(fallback);
-    }
-
-    listEl.appendChild(li);
-  });
-}
-
-function normalizeWoDetailHistory(wo) {
-  if (!wo) {
-    return [];
-  }
-
-  const candidates = [wo.history, wo.events, wo.timeline];
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate) && candidate.length) {
-      return candidate;
-    }
-  }
-  return [];
-}
-
-async function loadAndRenderWorkOrder(woId) {
-  const historyList = document.getElementById('wo-detail-history-list');
-  const historyEmpty = document.getElementById('wo-detail-history-empty');
-  const detailContainer = document.getElementById('wo-detail-content');
-
-  if (!woId) {
-    renderWoDetail(null);
-    return;
-  }
-
-  if (detailContainer) {
-    detailContainer.innerHTML = '<p>Loading work order…</p>';
-  }
-  if (historyList) {
-    historyList.innerHTML = '';
-  }
-  if (historyEmpty) {
-    historyEmpty.style.display = '';
-    historyEmpty.textContent = 'Loading history…';
-  }
-
-  try {
-    const res = await fetch(`/api/wos/${encodeURIComponent(woId)}?tail=50`, { headers: { Accept: 'application/json' } });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-    const wo = await res.json();
-    renderWoDetail(wo);
-  } catch (error) {
-    console.error('Error loading WO detail', woId, error);
-    if (detailContainer) {
-      detailContainer.innerHTML = '';
-      const message = document.createElement('p');
-      message.textContent = `Failed to load work order ${woId}.`;
-      detailContainer.appendChild(message);
-    }
-    if (historyEmpty) {
-      historyEmpty.style.display = '';
-      historyEmpty.textContent = 'Failed to load history for this work order.';
-    }
-  }
-}
-
-// --- WO Timeline Panel ---
-
-function initWoTimelinePanel() {
-  const panel = document.getElementById('wo-timeline-panel');
-  if (!panel || woTimelineInitialized) {
-    return;
-  }
-
-  const statusSelect = document.getElementById('wo-filter-status');
-  if (statusSelect) {
-    statusSelect.addEventListener('change', () => {
-      woTimelineFilterStatus = statusSelect.value || '';
-      refreshWoTimeline();
-    });
-  }
-
-  const agentInput = document.getElementById('wo-filter-agent');
-  if (agentInput) {
-    const handleAgent = debounce(() => {
-      woTimelineAgentFilter = agentInput.value || '';
-      refreshWoTimeline();
-    }, 200);
-    agentInput.addEventListener('input', handleAgent);
-  }
-
-  const limitInput = document.getElementById('wo-filter-limit');
-  if (limitInput) {
-    limitInput.addEventListener('change', () => {
-      const parsed = parseInt(limitInput.value, 10);
-      if (Number.isNaN(parsed)) {
-        return;
-      }
-      const next = Math.min(1000, Math.max(10, parsed));
-      woTimelineLimit = next;
-      limitInput.value = String(next);
-      refreshWoTimeline();
-    });
-  }
-
-  const searchInput = document.getElementById('wo-filter-search');
-  if (searchInput) {
-    const handleSearch = debounce(() => {
-      woTimelineSearchQuery = searchInput.value || '';
-      renderWoTimelinePanel();
-    }, 200);
-    searchInput.addEventListener('input', handleSearch);
-  }
-
-  const refreshBtn = document.getElementById('wo-timeline-refresh');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => refreshWoTimeline());
-  }
-
-  const listEl = document.getElementById('wo-timeline-list');
-  listEl?.addEventListener('click', (event) => {
-    const actionBtn = event.target.closest('.wo-timeline-view');
-    if (actionBtn?.dataset.woId) {
-      openWoTimeline(actionBtn.dataset.woId);
-    }
-  });
-
-  woTimelineInitialized = true;
-  refreshWoTimeline();
-  woTimelineIntervalId = setInterval(refreshWoTimeline, WO_TIMELINE_REFRESH_MS);
-}
-
-async function refreshWoTimeline() {
-  const panel = document.getElementById('wo-timeline-panel');
-  if (!panel) return;
-
-  const listEl = document.getElementById('wo-timeline-list');
-  const summaryEl = document.getElementById('wo-timeline-summary');
-
-  if (!woTimelineAll.length) {
-    if (summaryEl) {
-      summaryEl.textContent = 'Loading timeline…';
-    }
-    if (listEl) {
-      listEl.innerHTML = '<article class="wo-timeline-item"><div class="wo-timeline-summary-text">Loading timeline…</div></article>';
-    }
-  }
-
-  const params = new URLSearchParams();
-  if (woTimelineFilterStatus) {
-    params.set('status', woTimelineFilterStatus);
-  }
-  if (woTimelineAgentFilter && woTimelineAgentFilter.trim()) {
-    params.set('agent', woTimelineAgentFilter.trim());
-  }
-  if (Number.isFinite(woTimelineLimit) && woTimelineLimit > 0) {
-    params.set('limit', String(woTimelineLimit));
-  }
-  params.set('tail', '1');
-
-  try {
-    const res = await fetch(`/api/wos/history?${params.toString()}`, {
-      headers: { Accept: 'application/json' }
-    });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    const payload = await res.json();
-    const dataset = Array.isArray(payload?.items) ? payload.items : [];
-    const entries = dataset.map((wo) => normalizeWoTimelineEntry(wo));
-    entries.sort((a, b) => getTimelineSortKey(b) - getTimelineSortKey(a));
-    woTimelineAll = entries;
-    woTimelineSummary = payload?.summary || null;
-    renderWoTimelinePanel();
-  } catch (error) {
-    console.error('Failed to refresh WO timeline', error);
-    woTimelineSummary = null;
-    if (listEl) {
-      listEl.innerHTML = `
-        <article class="wo-timeline-item">
-          <div class="wo-timeline-summary-text">Failed to load work orders.</div>
-          <div class="wo-timeline-extra">${escapeHtml(error.message || String(error))}</div>
-        </article>
-      `;
-    }
-    if (summaryEl) {
-      summaryEl.textContent = 'Failed to load timeline.';
-    }
-  }
-}
-
-function renderWoTimelinePanel() {
-  const listEl = document.getElementById('wo-timeline-list');
-  const summaryEl = document.getElementById('wo-timeline-summary');
-  if (!listEl || !summaryEl) return;
-
-  let entries = woTimelineAll;
-  if (woTimelineFilterStatus) {
-    entries = entries.filter((entry) => (entry.status || '') === woTimelineFilterStatus);
-  }
-
-  const normalizedSearch = woTimelineSearchQuery.trim().toLowerCase();
-  if (normalizedSearch) {
-    entries = entries.filter((entry) => {
-      const haystack = [
-        entry.id,
-        entry.title,
-        entry.description,
-        entry.summary,
-        entry.agent,
-        entry.type,
-        Array.isArray(entry.tags) ? entry.tags.join(' ') : ''
-      ]
-        .map((value) => String(value || '').toLowerCase());
-      return haystack.some((field) => field && field.includes(normalizedSearch));
-    });
-  }
-
-  if (!entries.length) {
-    listEl.innerHTML = '<div class="wo-timeline-empty">No work orders match the current filters.</div>';
-  } else {
-    listEl.innerHTML = entries.map((entry) => renderWoTimelineItem(entry)).join('');
-  }
-
-  const fallbackCounts = { success: 0, failed: 0, running: 0, queued: 0 };
-  let total = woTimelineAll.length;
-  if (woTimelineSummary?.total !== undefined) {
-    total = woTimelineSummary.total;
-  }
-
-  const counts = { ...fallbackCounts, ...(woTimelineSummary?.status_counts || {}) };
-  if (!woTimelineSummary) {
-    woTimelineAll.forEach((entry) => {
-      if (counts[entry.status] !== undefined) {
-        counts[entry.status] += 1;
-      }
-    });
-  }
-
-  const summaryParts = [
-    `<span><strong>Total:</strong> ${total}</span>`,
-    `<span><strong>Success:</strong> ${counts.success ?? 0}</span>`,
-    `<span><strong>Failed:</strong> ${counts.failed ?? 0}</span>`,
-    `<span><strong>Running:</strong> ${counts.running ?? 0}</span>`,
-    `<span><strong>Queued:</strong> ${counts.queued ?? 0}</span>`
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const absDiffMs = Math.abs(diffMs);
+  const thresholds = [
+    { unit: 'day', value: 86400000 },
+    { unit: 'hour', value: 3600000 },
+    { unit: 'minute', value: 60000 }
   ];
 
-  if (woTimelineFilterStatus) {
-    summaryParts.push(`<span>Filter: ${escapeHtml(woTimelineFilterStatus)}</span>`);
+  let unit = 'second';
+  let value = diffMs / 1000;
+
+  for (const threshold of thresholds) {
+    if (absDiffMs >= threshold.value) {
+      unit = threshold.unit;
+      value = diffMs / threshold.value;
+      break;
+    }
   }
 
-  if (woTimelineAgentFilter) {
-    summaryParts.push(`<span>Agent: ${escapeHtml(woTimelineAgentFilter)}</span>`);
-  }
-
-  if (normalizedSearch) {
-    summaryParts.push(`<span>Search: "${escapeHtml(woTimelineSearchQuery.trim())}"</span>`);
-  }
-
-  summaryEl.innerHTML = summaryParts.join(' · ');
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  return `${rtf.format(Math.round(value), unit)} · ${date.toLocaleString()}`;
 }
 
-function renderWoTimelineItem(entry) {
-  const normalizedStatus = (entry.status || 'unknown').toLowerCase();
-  const statusClassName = normalizedStatus.replace(/[^a-z0-9_-]/g, '-');
-  const statusBadge = woStatusBadge(entry.status);
-  if (statusBadge) {
-    statusBadge.classList.add('wo-timeline-status');
+function initMLSPanel() {
+  if (mlsIntervalId) {
+    return;
   }
 
-  const statusHtml = statusBadge
-    ? statusBadge.outerHTML
-    : `<span class="wo-timeline-status">${escapeHtml((entry.status || 'unknown').toUpperCase())}</span>`;
+  const refreshBtn = document.getElementById('mls-refresh-btn');
+  const retryBtn = document.getElementById('mls-error-retry');
+  const pills = document.querySelectorAll('#mls-type-pills .pill-button');
 
-  const started = formatWoTimestamp(entry.startedAt) || '—';
-  const finished = formatWoTimestamp(entry.finishedAt || entry.updatedAt) || '—';
-  const duration = formatTimelineDuration(entry.durationSec);
-  const summaryText = entry.summary || entry.description || '';
-  const summaryHtml = summaryText ? escapeHtml(summaryText) : '<em>No summary available</em>';
+  pills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      pills.forEach((btn) => btn.classList.remove('active'));
+      pill.classList.add('active');
+      loadMLS(pill.dataset.type || '');
+    });
+  });
 
-  const extraParts = [];
-  if (entry.relatedPr) {
-    extraParts.push(`<span><strong>PR:</strong> ${escapeHtml(entry.relatedPr)}</span>`);
-  }
-  if (Array.isArray(entry.tags) && entry.tags.length) {
-    extraParts.push(`<span><strong>Tags:</strong> ${entry.tags.map((tag) => escapeHtml(tag)).join(', ')}</span>`);
-  }
+  refreshBtn?.addEventListener('click', () => loadMLS());
+  retryBtn?.addEventListener('click', () => loadMLS());
 
-  let logHtml = '';
-  if (Array.isArray(entry.logTail) && entry.logTail.length) {
-    const logLines = entry.logTail.map((line) => escapeHtml(line)).join('\n');
-    logHtml = `
-      <details class="wo-timeline-log">
-        <summary>Log tail</summary>
-        <pre>${logLines}</pre>
-      </details>
-    `;
-  }
-
-  return `
-    <article class="wo-timeline-item status-${escapeHtml(statusClassName)}" data-wo-id="${escapeHtml(entry.id)}">
-      <div class="wo-timeline-card-header">
-        <div>
-          <span class="wo-timeline-id">${escapeHtml(entry.id)}</span>
-          ${statusHtml}
-        </div>
-        <div class="wo-timeline-meta">
-          <span>Type: ${escapeHtml(entry.type || '—')}</span>
-          <span>Agent: ${escapeHtml(entry.agent || '—')}</span>
-        </div>
-      </div>
-      <div class="wo-timeline-times">
-        <div><strong>Started:</strong> ${escapeHtml(started)}</div>
-        <div><strong>Finished:</strong> ${escapeHtml(finished)}</div>
-        <div><strong>Duration:</strong> ${escapeHtml(duration)}</div>
-      </div>
-      <div class="wo-timeline-summary-text">${summaryHtml}</div>
-      ${extraParts.length ? `<div class="wo-timeline-extra">${extraParts.join('')}</div>` : ''}
-      ${logHtml}
-      <div class="wo-timeline-actions">
-        <button type="button" class="wo-timeline-view" data-wo-id="${escapeHtml(entry.id)}">View details</button>
-      </div>
-    </article>
-  `;
-}
-
-function formatTimelineDuration(seconds) {
-  if (!Number.isFinite(seconds)) {
-    return '—';
-  }
-  if (seconds < 120) {
-    return `${Math.round(seconds)}s`;
-  }
-  const minutes = seconds / 60;
-  if (minutes < 120) {
-    return `${Math.round(minutes)} min`;
-  }
-  const hours = minutes / 60;
-  if (hours < 48) {
-    return `${hours.toFixed(1)} hr`;
-  }
-  const days = hours / 24;
-  return `${days.toFixed(1)} d`;
-}
-
-function getTimelineSortKey(entry) {
-  const candidate = entry.updatedAt || entry.finishedAt || entry.startedAt || entry.createdAt;
-  const parsed = candidate ? Date.parse(candidate) : NaN;
-  if (Number.isNaN(parsed)) {
-    return 0;
-  }
-  return parsed;
+  loadMLS('');
+  mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
-  initWoStatusFilters();
+  initWoFilters();
+  initWoSearch();
+  initWoSorting();
+  initWoAutorefreshControls();
+  initWoTimeline();
   loadWos();
+  document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
 
 function cleanupIntervals() {
@@ -2097,62 +1602,23 @@ function cleanupIntervals() {
     servicesIntervalId = null;
   }
 
-  if (serviceAutoRefreshTimer) {
-    clearInterval(serviceAutoRefreshTimer);
-    serviceAutoRefreshTimer = null;
+  if (mlsIntervalId) {
+    clearInterval(mlsIntervalId);
+    mlsIntervalId = null;
   }
 
-  if (woTimelineIntervalId) {
-    clearInterval(woTimelineIntervalId);
-    woTimelineIntervalId = null;
+  if (woAutorefreshIntervalId) {
+    clearInterval(woAutorefreshIntervalId);
+    woAutorefreshIntervalId = null;
   }
-
-  if (summaryIntervalId) {
-    clearInterval(summaryIntervalId);
-    summaryIntervalId = null;
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const serviceRefreshBtn = document.getElementById('service-refresh');
-  if (serviceRefreshBtn) {
-    serviceRefreshBtn.addEventListener('click', () => {
-      refreshServices(true);
-    });
-  }
-
-  refreshServices(false);
-  if (!serviceAutoRefreshTimer) {
-    serviceAutoRefreshTimer = setInterval(() => {
-      refreshServices(false);
-    }, 60000);
-  }
-
-  initSummaryCards();
   initDashboard();
-  initWoTimelinePanel();
-  renderWoDetail(null);
-
-  window.addEventListener('wo:select', (event) => {
-    const detail = event?.detail;
-    let woId = null;
-    if (detail && typeof detail === 'object') {
-      woId = detail.id || detail.woId || detail.wo_id || detail.value;
-    } else if (detail) {
-      woId = detail;
-    }
-
-    if (woId) {
-      onWorkOrderSelected(woId);
-      loadAndRenderWorkOrder(woId);
-    } else {
-      onWorkOrderSelected(null);
-      renderWoDetail(null);
-    }
-  });
-
-  refreshWoDetailMls();
-  window.loadAndRenderWorkOrder = loadAndRenderWorkOrder;
 });
 
 window.addEventListener('beforeunload', () => {

@@ -150,6 +150,12 @@ const state = {
     filter: 'all',        // 'all'|'solution'|'failure'|'pattern'|'improvement'
     selectedId: null
   },
+  realitySnapshot: {
+    payload: null,
+    loading: false,
+    error: null,
+    fetchController: null
+  },
   // View scope and filters (Phase 2 - Interactive KPI Cards)
   viewScope: 'wo',        // 'wo' | 'mls' | 'services'
   mlsFilter: null,        // null | 'total' | 'solutions' | 'failures'
@@ -195,7 +201,8 @@ const metrics = {
     successRate: 0,          // Percentage (0-100)
     lastUpdated: null        // Timestamp of last calculation
   },
-  mls: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
+  mls: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
+  reality: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
 };
 
 // Timed fetch wrapper with metrics tracking
@@ -2314,6 +2321,161 @@ function renderMLSLessonDetail() {
   `;
 }
 
+// --- Reality Snapshot ---
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  if (!meta && !deployEl && !saveBody && !orchEl) {
+    return; // Panel not rendered in this variant
+  }
+
+  if (state.realitySnapshot.fetchController) {
+    try { state.realitySnapshot.fetchController.abort(); } catch {}
+  }
+
+  const ctrl = new AbortController();
+  state.realitySnapshot.fetchController = ctrl;
+  state.realitySnapshot.loading = true;
+  state.realitySnapshot.error = null;
+  renderRealitySnapshot();
+
+  try {
+    await timed('reality', async () => {
+      const res = await fetch('http://127.0.0.1:8767/api/reality/snapshot', {
+        signal: ctrl.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+
+      const payload = await res.json();
+      state.realitySnapshot.payload = payload;
+      return payload;
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    state.realitySnapshot.error = String(err);
+    state.realitySnapshot.payload = null;
+  } finally {
+    if (state.realitySnapshot.fetchController === ctrl) {
+      state.realitySnapshot.fetchController = null;
+      state.realitySnapshot.loading = false;
+      renderRealitySnapshot();
+    }
+  }
+}
+
+function renderRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  if (!meta && !deployEl && !saveBody && !orchEl) return;
+
+  const { loading, error, payload } = state.realitySnapshot;
+
+  const setTableMessage = (message) => {
+    if (!saveBody) return;
+    saveBody.innerHTML = `
+      <tr>
+        <td colspan="7" class="table-placeholder">${escapeHtml(message)}</td>
+      </tr>
+    `;
+  };
+
+  const clearPanels = () => {
+    if (deployEl) deployEl.textContent = '';
+    if (orchEl) orchEl.textContent = '';
+    setTableMessage('No save.sh runs available.');
+  };
+
+  if (loading) {
+    if (meta) meta.textContent = 'Loading Reality snapshot…';
+    if (deployEl) deployEl.textContent = '';
+    setTableMessage('Loading save.sh runs…');
+    if (orchEl) orchEl.textContent = '';
+    return;
+  }
+
+  if (error) {
+    if (meta) meta.textContent = `Reality snapshot error: ${error}`;
+    clearPanels();
+    return;
+  }
+
+  if (!payload || payload.status === 'no_snapshot') {
+    if (meta) meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
+    if (deployEl) deployEl.textContent = '';
+    setTableMessage('No save.sh runs captured.');
+    if (orchEl) orchEl.textContent = '';
+    return;
+  }
+
+  if (payload.status === 'error') {
+    if (meta) meta.textContent = `Reality snapshot error: ${payload.error || 'invalid snapshot'}`;
+    clearPanels();
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || 'unknown';
+  const deployment = data.deployment_report || {};
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  if (meta) {
+    const source = payload.snapshot_path || 'unknown source';
+    meta.textContent = `Latest snapshot: ${timestamp} (source: ${source})`;
+  }
+
+  if (deployEl) {
+    if (deployment && (deployment.path || deployment.summary)) {
+      const lines = [];
+      if (deployment.path) lines.push(`Report: ${deployment.path}`);
+      if (deployment.summary) lines.push(String(deployment.summary));
+      deployEl.textContent = lines.join('\n');
+    } else {
+      deployEl.textContent = 'No deployment report in snapshot.';
+    }
+  }
+
+  if (saveBody) {
+    if (!saveRuns.length) {
+      setTableMessage('No save.sh runs captured.');
+    } else {
+      saveBody.innerHTML = '';
+      saveRuns.forEach((run) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${escapeHtml(run.test_id || '')}</code></td>
+          <td>${escapeHtml(run.lane || '')}</td>
+          <td>${escapeHtml(run.layer1 || '')}</td>
+          <td>${escapeHtml(run.layer2 || '')}</td>
+          <td>${escapeHtml(run.layer3 || '')}</td>
+          <td>${escapeHtml(run.layer4 || '')}</td>
+          <td>${escapeHtml(run.git || '')}</td>
+        `;
+        saveBody.appendChild(tr);
+      });
+    }
+  }
+
+  if (orchEl) {
+    if (orchestrator) {
+      try {
+        orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+      } catch (jsonErr) {
+        console.warn('Failed to stringify orchestrator summary', jsonErr);
+        orchEl.textContent = String(orchestrator);
+      }
+    } else {
+      orchEl.textContent = 'No orchestrator summary in snapshot.';
+    }
+  }
+}
+
 // Refresh all dashboard data
 async function refreshAllData() {
   const timestamp = new Date().toLocaleTimeString();
@@ -2327,7 +2489,8 @@ async function refreshAllData() {
     loadRoadmap(),
     loadServices(),
     loadWOs(),
-    loadMLS()
+    loadMLS(),
+    loadRealitySnapshot()
   ]);
 
   // Update health indicator
@@ -2749,6 +2912,7 @@ window.loadLogs = loadLogs;
 window.refreshAllData = refreshAllData;
 window.loadServices = loadServices;
 window.loadMLS = loadMLS;
+window.loadRealitySnapshot = loadRealitySnapshot;
 window.openWODrawer = openWODrawer;
 window.closeWODrawer = closeWODrawer;
 window.loadWODetail = loadWODetail;
