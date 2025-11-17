@@ -26,14 +26,24 @@ from pathlib import Path
 wo_path = Path(sys.argv[1])
 rules_path = Path(sys.argv[2])
 
+VALID_TARGETS = {"CLC", "LPE", "shell", "Andy", "CLS"}
+
 def load_yaml(path: Path):
     if not path.exists():
         return {}
-    with path.open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            return yaml.safe_load(handle) or {}
+    except Exception as e:
+        print(f"Error loading YAML from {path}: {e}", file=sys.stderr)
+        return {}
 
-with wo_path.open("r", encoding="utf-8") as handle:
-    data = yaml.safe_load(handle) or {}
+try:
+    with wo_path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+except Exception as e:
+    print(f"Error loading WO from {wo_path}: {e}", file=sys.stderr)
+    data = {}
 
 rules = load_yaml(rules_path).get("routes", [])
 
@@ -43,12 +53,35 @@ route_hints = data.get("route_hints") or {}
 fallback_order = route_hints.get("fallback_order") or []
 task_type = (data.get("task") or {}).get("type")
 
+# Match rules: check if fallback_contains is a substring of any fallback_order element
 for rule in rules:
     match = rule.get("match") or {}
-    if match.get("task_type") == task_type and str(match.get("fallback_contains")).lower() in [str(x).lower() for x in fallback_order]:
-        print(rule.get("target", "CLC"))
+    rule_task_type = match.get("task_type")
+    fallback_contains = match.get("fallback_contains")
+    
+    # Check task_type match
+    if rule_task_type and rule_task_type != task_type:
+        continue
+    
+    # Check fallback_contains: substring matching (case-insensitive)
+    if fallback_contains:
+        fallback_contains_lower = str(fallback_contains).lower()
+        fallback_matches = any(
+            fallback_contains_lower in str(x).lower()
+            for x in fallback_order
+        )
+        if not fallback_matches:
+            continue
+    
+    # Rule matched - validate target before returning
+    target = rule.get("target", "CLC")
+    if target in VALID_TARGETS:
+        print(target)
         sys.exit(0)
+    else:
+        print(f"Invalid target '{target}' in rule '{rule.get('name', 'unnamed')}', using default CLC", file=sys.stderr)
 
+# Fallback: check strict_target for shell
 if strict_target and any(str(c).lower() == "shell" for c in target_candidates):
     print("shell")
 else:
