@@ -1,0 +1,13 @@
+{
+  "number": 999,
+  "title": "feat: sandbox-only payload for multi-agent review",
+  "body": "Fixture payload so Codex/CLS can exercise the CLI without hitting GitHub.",
+  "author": { "login": "sandbox-bot" },
+  "headRefName": "feature/sandbox-fixture",
+  "baseRefName": "main",
+  "url": "https://example.invalid/pr/999",
+  "files": [
+    { "path": "tools/multi_agent_pr_review.zsh", "status": "modified", "additions": 200, "deletions": 10 },
+    { "path": "manuals/multi_agent_pr_review_manual.md", "status": "added", "additions": 80, "deletions": 0 }
+  ]
+}
