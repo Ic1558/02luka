@@ -76,6 +76,9 @@ logs/
 .tmp/
 coverage/
 tools/puppeteer/.logs/
+g/reports/system/reality_hooks_pr_*.md
+g/reports/system/claude_orchestrator_summary.json*
+.tmp_telemetry_schema_check_*.py
 
 .venv/
 g/rag/.venv/
