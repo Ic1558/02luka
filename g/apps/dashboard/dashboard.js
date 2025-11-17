@@ -769,6 +769,10 @@ function renderWOs() {
   const completedCount = state.wos.data.filter(w => w.status === 'success').length;
   const completedEl = document.getElementById('completed-wos');
   if (completedEl) completedEl.textContent = completedCount;
+
+  // Calculate and update pipeline metrics
+  calculatePipelineMetrics();
+  updatePipelineMetricsUI();
 }
 
 // Keep old function name for compatibility
@@ -2197,6 +2201,10 @@ async function refreshAllData() {
 
   // Update health indicator
   updateHealthPill();
+  
+  // Update pipeline metrics (calculated from WO data)
+  calculatePipelineMetrics();
+  updatePipelineMetricsUI();
 }
 
 // Setup auto-refresh (for dashboard data)
