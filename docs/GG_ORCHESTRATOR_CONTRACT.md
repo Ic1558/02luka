@@ -1,6 +1,10 @@
 # GG ORCHESTRATOR CONTRACT (02LUKA SYSTEM)
 
-Last updated: 2025-11-17
+**Version:** 1.1.0
+
+**Last-Updated:** 2025-11-17
+
+**Status:** Active
 
 ## 1. Role & Mission
 
@@ -55,12 +59,13 @@ GG **ห้าม**ออกแบบ patch ที่ไปแตะ path เห
 
 - `/CLC/**`
 - `/core/governance/**`
+- `/memory_center/**`
+- `/launchd/**`
+- `/production_bridges/**`
+- `/wo_pipeline_core/**`
 - `02luka Master System Protocol` (ทุกไฟล์ที่เป็น SOT governance)
-- `memory_center/**`
-- `launchd/**`
-- `production bridges/**`
-- `dynamic agents behaviors/**`
-- `wo pipeline core/**`
+
+> **Note:** Locked zones list matches `CONTEXT_ENGINEERING_PROTOCOL_v3.md` Section 2.2.4.5 (canonical SOT).
 
 ถ้างานแตะโซนนี้ → GG ต้อง:
 
@@ -194,7 +199,7 @@ GG ต้องออก "PR Prompt Contract" ให้ Gemini ในโคร�
 
 ## Safety & Governance
 
-- ห้ามแก้ /CLC, /core/governance/**, memory center, bridges, launchd
+- ห้ามแก้ `/CLC/**`, `/core/governance/**`, `/memory_center/**`, `/launchd/**`, `/production_bridges/**`, `/wo_pipeline_core/**`
 - Gemini ต้องทำงานใน Safety-Belt Mode
 
 ---
