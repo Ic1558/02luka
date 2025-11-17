@@ -1,0 +1,8 @@
+version: 0
+routes:
+  - name: lpe-write-fallback
+    match:
+      task_type: write
+      fallback_contains: lpe
+    target: LPE
+    notes: "Send write-focused WOs with LPE fallback into the LPE queue."
