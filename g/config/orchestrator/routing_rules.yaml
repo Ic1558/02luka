@@ -1,0 +1,12 @@
+# v0 routing rules for Mary → worker bridge
+version: v0
+rules:
+  - name: write-to-lpe
+    when:
+      task.type: "write"
+      fallback: "lpe"
+    route: "LPE"
+    notes: |
+      Write-type work orders that explicitly request LPE fallback are dispatched
+      to the Local Patch Engine queue (bridge/inbox/LPE) and processed via the
+      Luka CLI SIP handler.
