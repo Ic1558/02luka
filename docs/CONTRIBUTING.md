@@ -44,7 +44,7 @@ cls-status
 
 Use conventional commit format:
 
-```
+```text
 type(scope): description
 
 - Detail 1
@@ -99,6 +99,7 @@ bash scripts/smoke.sh
 ```
 
 Tests check:
+
 1. Directory structure
 2. CLS integration files
 3. Workflow files (artifact@v4)
@@ -108,6 +109,7 @@ Tests check:
 ### CI Workflows
 
 GitHub Actions will automatically run:
+
 - **validate**: Smoke tests
 - **docs-links**: Documentation validation
 - **ops-gate**: Operational checks
