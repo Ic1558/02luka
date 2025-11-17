@@ -1,7 +1,10 @@
 #!/bin/zsh
 # Agent Status - Unified health check for all 02luka agents
 # Created: 2025-11-05
-# Usage: ~/02luka/tools/agent_status.zsh
+# Usage: $SOT/tools/agent_status.zsh
+
+# SOT variable (PATH protocol compliance)
+SOT="${SOT:-$HOME/02luka}"
 
 setopt ERR_EXIT
 set -e
@@ -98,12 +101,12 @@ echo "════════════════════════�
 
 echo -n "WO Executor:         "
 check_service "com.02luka.wo_executor"
-echo "  Last activity:     $(get_log_activity ~/02luka/logs/wo_executor.out.log)"
+echo "  Last activity:     $(get_log_activity "$SOT/logs/wo_executor.out.log")"
 echo ""
 
 echo -n "JSON WO Processor:   "
 check_service "com.02luka.json_wo_processor"
-echo "  Last activity:     $(get_log_activity ~/02luka/logs/json_wo_processor.out.log)"
+echo "  Last activity:     $(get_log_activity "$SOT/logs/json_wo_processor.out.log")"
 echo ""
 
 # R&D Autopilot System
@@ -226,7 +229,7 @@ echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "🛠  Quick Actions"
 echo "═══════════════════════════════════════════════════════════"
-echo "  • View logs:      ~/02luka/logs/"
-echo "  • Autopilot:      ~/02luka/tools/autopilot_status.zsh"
+echo "  • View logs:      \$SOT/logs/"
+echo "  • Autopilot:      \$SOT/tools/autopilot_status.zsh"
 echo "  • Restart agent:  launchctl unload/load ~/Library/LaunchAgents/com.02luka.<service>.plist"
 echo ""

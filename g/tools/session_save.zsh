@@ -5,9 +5,12 @@
 
 set -euo pipefail
 
+# SOT variable (PATH protocol compliance)
+SOT="${SOT:-$HOME/02luka}"
+
 # Load env
-if [ -f ~/02luka/.env.local ]; then
-  source ~/02luka/.env.local
+if [ -f "$SOT/.env.local" ]; then
+  source "$SOT/.env.local"
 fi
 
 MEM_REPO="${LUKA_MEM_REPO_ROOT:-$HOME/LocalProjects/02luka-memory}"
@@ -183,10 +186,10 @@ else
 fi
 
 # Trigger hub index refresh if available
-if [[ -f ~/02luka/tools/hub_index_now.zsh ]]; then
+if [[ -f "$SOT/tools/hub_index_now.zsh" ]]; then
   echo ""
   echo "🔄 Triggering hub index refresh..."
-  ~/02luka/tools/hub_index_now.zsh 2>/dev/null || echo "⚠️  Hub index refresh failed"
+  "$SOT/tools/hub_index_now.zsh" 2>/dev/null || echo "⚠️  Hub index refresh failed"
 fi
 
 echo ""
@@ -242,20 +245,20 @@ echo ""
 echo "🔍 Scanning system reality..."
 
 # Check if system_map_scan.zsh exists
-if [[ -f ~/02luka/tools/system_map_scan.zsh ]]; then
-  ~/02luka/tools/system_map_scan.zsh 2>&1 | head -5
+if [[ -f "$SOT/tools/system_map_scan.zsh" ]]; then
+  "$SOT/tools/system_map_scan.zsh" 2>&1 | head -5
   echo "✅ System map updated"
 else
   echo "⚠️  system_map_scan.zsh not found (from System Truth Sync feature)"
   echo "   Creating placeholder system map..."
-  
-  SYSTEM_MAP_FILE="$HOME/02luka/g/system_map/system_map.v1.json"
+
+  SYSTEM_MAP_FILE="$SOT/g/system_map/system_map.v1.json"
   mkdir -p "$(dirname "$SYSTEM_MAP_FILE")"
-  
+
   # Count LaunchAgents, scripts, etc.
   LA_COUNT=$(launchctl list | grep -c com.02luka || echo 0)
-  TOOL_COUNT=$(find ~/02luka/tools -type f -name "*.zsh" ! -path "*/node_modules/*" | wc -l | tr -d ' ')
-  
+  TOOL_COUNT=$(find "$SOT/tools" -type f -name "*.zsh" ! -path "*/node_modules/*" | wc -l | tr -d ' ')
+
   cat > "$SYSTEM_MAP_FILE" <<EOSYSMAP
 {
   "version": 1,
@@ -268,7 +271,7 @@ else
     },
     "tools": {
       "count": $TOOL_COUNT,
-      "path": "~/02luka/tools"
+      "path": "\$SOT/tools"
     }
   },
   "status": "minimal_scan",
@@ -285,17 +288,17 @@ echo ""
 echo "📝 Updating 02luka.md..."
 
 # Check if system_map_render.zsh exists
-if [[ -f ~/02luka/tools/system_map_render.zsh ]]; then
-  ~/02luka/tools/system_map_render.zsh 2>&1 | head -5
+if [[ -f "$SOT/tools/system_map_render.zsh" ]]; then
+  "$SOT/tools/system_map_render.zsh" 2>&1 | head -5
   echo "✅ 02luka.md updated"
 else
   echo "⚠️  system_map_render.zsh not found (from System Truth Sync feature)"
   echo "   Will update manually with session info..."
-  
+
   # Add a simple timestamp update to 02luka.md
-  if [[ -f ~/02luka/02luka.md ]]; then
+  if [[ -f "$SOT/02luka.md" ]]; then
     # Check if AUTO_RUNTIME markers exist
-    if grep -q "<!-- AUTO_RUNTIME_START -->" ~/02luka/02luka.md 2>/dev/null; then
+    if grep -q "<!-- AUTO_RUNTIME_START -->" "$SOT/02luka.md" 2>/dev/null; then
       # Markers exist, update section
       sed -i.bak '/<!-- AUTO_RUNTIME_START -->/,/<!-- AUTO_RUNTIME_END -->/c\
 <!-- AUTO_RUNTIME_START -->\
@@ -303,7 +306,7 @@ else
 **Agent:** '"$AGENT"'\
 **MLS Entries:** '"$TOTAL_ENTRIES"' (S:'"$SOLUTIONS"' I:'"$IMPROVEMENTS"' F:'"$FAILURES"' P:'"$PATTERNS"')\
 **System Map:** `g/system_map/system_map.v1.json`\
-<!-- AUTO_RUNTIME_END -->' ~/02luka/02luka.md
+<!-- AUTO_RUNTIME_END -->' "$SOT/02luka.md"
       echo "✅ Updated AUTO_RUNTIME section in 02luka.md"
     else
       echo "⚠️  AUTO_RUNTIME markers not found in 02luka.md"
@@ -322,8 +325,8 @@ fi
 echo ""
 echo "📦 Committing to main 02luka repo..."
 
-if [[ -d ~/02luka/.git ]]; then
-  cd ~/02luka
+if [[ -d "$SOT/.git" ]]; then
+  cd "$SOT"
   
   # Add all changed files
   git add -A 2>/dev/null || true
@@ -364,8 +367,8 @@ echo ""
 echo "📊 What Was Saved:"
 echo "  1. Session file:    $SESSION_FILE"
 echo "  2. AI summary:      $AI_SUMMARY_FILE"
-echo "  3. System map:      ~/02luka/g/system_map/system_map.v1.json"
-echo "  4. Documentation:   ~/02luka/02luka.md"
+echo "  3. System map:      \$SOT/g/system_map/system_map.v1.json"
+echo "  4. Documentation:   \$SOT/02luka.md"
 echo "  5. Memory repo:     Git committed"
 echo "  6. Main repo:       Git committed"
 echo ""
