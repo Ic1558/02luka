@@ -122,7 +122,7 @@ KNOWLEDGE_PATH="$SOT/g/knowledge"  # MLS & knowledge base
 | **GG** | ✅ Yes | ✅ Yes | Governance | N/A |
 | **GC** | ✅ Yes | ✅ Yes | Specs, PRPs | N/A |
 | **CLC** | ✅ Yes | ✅ Yes | Code, configs | 200K/session |
-| **Codex** | ✅ Yes | ❌ NO | Code suggestions | N/A |
+| **Codex** | ✅ Yes | ⚠️ MAY (Boss override) | Code suggestions + local edits | N/A |
 | **LPE** | ❌ NO | ✅ Yes (Boss-approved) | Emergency writes | N/A |
 | **Kim** | ✅ Yes | ❌ NO | Orchestration | N/A |
 
@@ -169,7 +169,7 @@ GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
    ```
 
 3. **Check protocols when needed:**
-   - Agent capabilities → `CONTEXT_ENGINEERING_PROTOCOL_v3.md`
+   - Agent capabilities & Boss override → `CONTEXT_ENGINEERING_PROTOCOL_v3.md` (Section 2.3)
    - Path/tool usage → `PATH_AND_TOOL_PROTOCOL.md`
    - PR workflow → `MULTI_AGENT_PR_CONTRACT.md`
 
@@ -198,7 +198,7 @@ GD_PATH="~/Library/CloudStorage/GoogleDrive-ittipong.c@gmail.com/My Drive/02luka
 - Hardcode `~/02luka` or `/Users/*/02luka` paths
 - Create symlinks in SOT directories
 - Bypass MLS tools (write directly to mls_lessons.jsonl)
-- Commit to SOT if you're Codex (use CLC instead)
+- Commit to SOT as Codex **without Boss override** (use CLC instead, or wait for Boss authorization)
 - Skip validation before file writes
 
 ### SHOULD (Recommended)

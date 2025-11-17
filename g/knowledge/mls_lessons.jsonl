@@ -349,3 +349,16 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763374916",
+  "type": "solution",
+  "title": "Protocol v3.1-REV: Boss Override Mode",
+  "description": "Created Boss override capability for Codex/Liam/Andy to reduce CLC dependency when token-limited. Allows Cursor-based edits under explicit Boss authorization. Pre-commit hook changed from block to tag. Enables protocol updates and small fixes via Cursor when CLC unavailable.",
+  "context": "Boss override triggers: 'Use Cursor to apply this patch now' or 'REVISION-PROTOCOL > I run or use Liam do'. Safety: AI:OP-001 restrictions still apply. MLS logging required with producer tag. Section 2.3 added to CONTEXT_ENGINEERING_PROTOCOL_v3.md",
+  "related_wo": "none",
+  "related_session": "none",
+  "timestamp": "2025-11-17T10:21:56Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
