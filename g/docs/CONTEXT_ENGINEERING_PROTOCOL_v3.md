@@ -1,27 +1,21 @@
-# Context Engineering Protocol v3.1-REV
-**Version:** 3.1.0-REV
+# Context Engineering Protocol v3.2
+**Version:** 3.2.0
 **Status:** PROTOCOL (Single Source of Truth)
 **Last Updated:** 2025-11-17
 **Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
-**Maintainer:** Boss (ittipong.c@gmail.com)
+**Maintainer:** Gemini (as Protocol Maintainer)
 
 ---
 
 ## 1. Scope & Purpose
 
-Protocol นี้กำหนด **context engineering architecture** สำหรับระบบ 02luka
+This protocol defines the **context engineering architecture** for the 02luka system. It answers the following core questions:
+1.  **Reasoning:** Which agents can think and make decisions?
+2.  **Writing:** Which agents can write to the Source of Truth (SOT) repositories?
+3.  **Fallback:** What is the fallback ladder when primary agents are unavailable?
+4.  **Flow:** How does context and work flow between agents?
 
-**คำถามหลักที่ตอบ:**
-1. ใครคิดได้? (Which agents can reason)
-2. ใครเขียน SOT ได้? (Which agents can write to repositories)
-3. Fallback ladder คืออะไร? (When primary writers fail)
-4. Context ไหลยังไง? (Flow from GG → GC → CLC → Codex → LPE → Kim)
-
-**ทำไมต้องมี:**
-- ป้องกัน context chaos (หลาย agent เขียนไฟล์เดียวกัน)
-- กำหนด ownership ชัดเจน (ใครเป็นเจ้าของชั้นไหน)
-- กำหนด graceful degradation (เมื่อ CLC หมด token)
-- Audit trail สมบูรณ์ (ใครเขียนอะไร เมื่อไหร่ ทำไม)
+The goal is to prevent context chaos, define clear ownership, ensure graceful degradation, and maintain a complete audit trail.
 
 ---
 
@@ -29,19 +23,21 @@ Protocol นี้กำหนด **context engineering architecture** สำห
 
 ### 2.1 Layer Definition
 
-```
-Layer 1: GG (Governance Gate)
-  ↓ delegates to
-Layer 2: GC (Governance Copilot)
-  ↓ delegates to
-Layer 3: CLC (Claude Code)
-  ↓ can consult (read-only)
-Layer 4: Codex (Cursor AI)
-  ↓ falls back to
-Layer 5: LPE (Local Prompt Executor)
-  ↓ orchestrates via
-Layer 6: Kim (API Gateway)
-```
+This is a **conceptual hierarchy of authority and capability**, not a strict linear data flow.
+
+- **GG and GC** sit at the **governance layers**.
+- **Gemini** is the **primary operational writer** for most development tasks.
+- **CLC** is a **privileged writer**, focused on locked zones.
+- **Codex/Liam** are **consultative assistants** and emergency writers.
+- **LPE** is a **dumb fallback writer** when CLC is unavailable.
+- **Kim** is an **orchestrator/gateway** that can route tasks to GG/GC/CLC.
+
+**Typical flow for code changes:**
+- GG/GC decide → Gemini implements → Codex/Liam assists inside the IDE.
+
+**Fallback flow:**
+- If a smart writer (Gemini/CLC) is unavailable → Boss may use LPE or activate Emergency Override Mode for an IDE Agent (see 4.5).
+
 
 ### 2.2 Agent Capabilities (Formal Rules)
 
@@ -106,6 +102,9 @@ Layer 6: Kim (API Gateway)
 - **MUST NOT** exceed 200K tokens/session
 - **MUST** trigger fallback at 190K tokens
 - **MUST** monitor token usage via health check
+- **MUST** respect the configured token budget (e.g., 200K tokens/session; see current CLC settings).
+- **MUST** trigger fallback when approaching the critical limit (e.g., 190K tokens).
+- **MUST** monitor token usage via health check.
 
 **Authorization:**
 - Self-approved for operational code
@@ -153,6 +152,28 @@ Layer 6: Kim (API Gateway)
 
 ---
 
+#### Layer 4.5: Gemini (Versatile Compute Agent)
+
+**Thinking Capability:**
+- **CAN** perform heavy compute tasks.
+- **CAN** execute bulk operations and scripts.
+- **CAN** run complex tests and analysis.
+
+**Writing Capability:**
+- **SHOULD NOT** write to SOT repositories or create commits in normal operation.
+- **MAY** write to SOT under the same Boss override rules as Codex/Liam.
+- **MUST** delegate final SOT writes to CLC unless in an emergency override mode.
+
+**Authorization:**
+- Activated via explicit routing from Boss, GG, or Liam.
+- Not an automatic replacement for other agents.
+- Boss override required for direct SOT writes.
+
+**Example Task:**
+> "Analyze performance logs from the last 24 hours and generate a summary report."
+
+---
+
 #### Layer 5: LPE (Local Prompt Executor)
 
 **Thinking Capability:**
@@ -168,6 +189,7 @@ Layer 6: Kim (API Gateway)
 
 **Trigger Conditions:**
 - CLC session reaches token limit (>190K tokens)
+- CLC session reaches its configured token limit (e.g., >190K tokens)
 - CLC session unavailable
 - Boss requires urgent change
 
@@ -251,6 +273,8 @@ Boss ถือสิทธิ์ override เต็มรูปแบบ:
 | **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Operational code | Self-approved | 200K/session |
 | **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override/local-only) | Code suggestions + local edits | Boss override for writes | N/A |
+| **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override/local-only) | Code suggestions, local edits | Boss override for writes | N/A |
+| **Gemini**| ✅ CAN (compute) | ⚠️ MAY (override) | Bulk ops, scripts, analysis | Boss override for writes | Subscription Quota |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
 
