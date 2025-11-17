@@ -1050,6 +1050,51 @@
       </div>
     </div>
 
+    <!-- WO Pipeline Metrics Section -->
+    <div class="stat-card" style="margin-bottom: 24px;">
+      <div class="label" style="margin-bottom: 16px;">Pipeline Metrics</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Throughput</div>
+          <div style="font-size: 24px; font-weight: 700; color: #1a202c;" id="pipeline-throughput">-</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Avg Time</div>
+          <div style="font-size: 24px; font-weight: 700; color: #1a202c;" id="pipeline-avg-time">-</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Queue</div>
+          <div style="font-size: 24px; font-weight: 700; color: #1a202c;" id="pipeline-queue">-</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: #718096; margin-bottom: 4px;">Success Rate</div>
+          <div style="font-size: 24px; font-weight: 700;" id="pipeline-success-rate">-</div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+        <div style="text-align: center;">
+          <div style="font-size: 11px; color: #718096; margin-bottom: 4px;">Queued</div>
+          <div style="font-size: 18px; font-weight: 600; color: #4299e1;" id="pipeline-queued">0</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 11px; color: #718096; margin-bottom: 4px;">Running</div>
+          <div style="font-size: 18px; font-weight: 600; color: #ed8936;" id="pipeline-running">0</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 11px; color: #718096; margin-bottom: 4px;">Success</div>
+          <div style="font-size: 18px; font-weight: 600; color: #48bb78;" id="pipeline-success">0</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 11px; color: #718096; margin-bottom: 4px;">Failed</div>
+          <div style="font-size: 18px; font-weight: 600; color: #f56565;" id="pipeline-failed">0</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 11px; color: #718096; margin-bottom: 4px;">Pending</div>
+          <div style="font-size: 18px; font-weight: 600; color: #a0aec0;" id="pipeline-pending">0</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Roadmap Progress -->
     <div class="panel">
       <h2>📋 Current Roadmap Progress</h2>
