@@ -1,9 +1,14 @@
 
 # Context Engineering Protocol v3.2
+
 **Version:** 3.2.0
+
 **Status:** PROTOCOL (Single Source of Truth)
+
 **Last Updated:** 2025-11-17
+
 **Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
+
 **Maintainer:** Gemini (as Protocol Maintainer)
 
 ---
@@ -11,10 +16,14 @@
 ## 1. Scope & Purpose
 
 This protocol defines the **context engineering architecture** for the 02luka system. It answers the following core questions:
-1.  **Reasoning:** Which agents can think and make decisions?
-2.  **Writing:** Which agents can write to the Source of Truth (SOT) repositories?
-3.  **Fallback:** What is the fallback ladder when primary agents are unavailable?
-4.  **Flow:** How does context and work flow between agents?
+
+1. **Reasoning:** Which agents can think and make decisions?
+
+2. **Writing:** Which agents can write to the Source of Truth (SOT) repositories?
+
+3. **Fallback:** What is the fallback ladder when primary agents are unavailable?
+
+4. **Flow:** How does context and work flow between agents?
 
 The goal is to prevent context chaos, define clear ownership, ensure graceful degradation, and maintain a complete audit trail.
 
@@ -27,36 +36,51 @@ The goal is to prevent context chaos, define clear ownership, ensure graceful de
 This is a **conceptual hierarchy of authority and capability**, not a strict linear data flow.
 
 - **GG and GC** sit at the **governance layers**.
+
 - **Gemini** is the **primary operational writer** for most development tasks.
+
 - **CLC** is a **privileged writer**, focused on locked zones.
+
 - **Codex/Liam** are **consultative assistants** and emergency writers.
+
 - **LPE** is a **dumb fallback writer** when CLC is unavailable.
+
 - **Kim** is an **orchestrator/gateway** that can route tasks to GG/GC/CLC.
 
 **Typical flow for code changes:**
+
 - GG/GC decide → Gemini implements → Codex/Liam assists inside the IDE.
 
 **Fallback flow:**
-- If a smart writer (Gemini/CLC) is unavailable → Boss may use LPE or activate Emergency Override Mode for an IDE Agent (see 4.5).
 
+- If a smart writer (Gemini/CLC) is unavailable → Boss may use LPE or activate Emergency Override Mode for an IDE Agent (see 4.5).
 
 ### 2.2 Agent Capabilities (Formal Rules)
 
 #### Layer 1: GG (Governance Gate)
 
 **Thinking Capability:**
+
 - **CAN** perform strategic reasoning
+
 - **CAN** make governance decisions
+
 - **CAN** perform risk/value analysis
 
 **Writing Capability:**
+
 - **MUST ONLY** write governance documents
+
 - **MUST ONLY** write policy files
+
 - **MUST NOT** write operational code
+
 - **MUST** delegate code writing to GC or CLC
 
 **Authorization:**
+
 - Self-approval for governance docs (Boss oversight)
+
 - Boss approval for system-wide policy changes
 
 **Example Decision:**
@@ -67,17 +91,25 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 #### Layer 2: GC (Governance Copilot)
 
 **Thinking Capability:**
+
 - **CAN** perform tactical reasoning
+
 - **CAN** create implementation plans
+
 - **CAN** review code for governance compliance
 
 **Writing Capability:**
+
 - **CAN** write specs, PRPs, review reports
+
 - **CAN** write governance documentation
+
 - **MUST** delegate implementation to an operational writer (Gemini/CLC)
 
 **Authorization:**
+
 - GG approval required for governance decisions
+
 - Self-approved for tactical specs
 
 **Example Decision:**
@@ -88,23 +120,35 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 #### Layer 3: CLC (Privileged Writer)
 
 **Thinking Capability:**
+
 - **CAN** perform operational reasoning
+
 - **CAN** plan code implementations
+
 - **CAN** debug and troubleshoot
 
 **Writing Capability:**
+
 - **CAN** write code, configs, and scripts, primarily within locked zones.
+
 - **CAN** commit to SOT repositories
+
 - **MUST** validate all writes via pre-commit hooks
+
 - **MUST** log all SOT writes to MLS
 
 **Token Budget:**
+
 - **MUST** respect the configured token budget (e.g., 200K tokens/session).
+
 - **MUST** trigger a fallback warning when approaching the critical limit (e.g., >95% of budget).
+
 - **MUST** monitor and report token usage.
 
 **Authorization:**
+
 - Self-approved for writes within its designated (locked) zones.
+
 - Boss approval for architecture changes
 
 **Example Decision:**
@@ -115,13 +159,19 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 #### Layer 4: Codex (Consultative Assistant)
 
 **Thinking Capability:**
+
 - **CAN** analyze code
+
 - **CAN** suggest solutions
+
 - **CAN** explore codebase
+
 - **CAN** run read-only CLI commands for diagnostics (`grep`, `ls`, `npm test`, etc.).
 
 **Writing Capability:**
+
 - **Normal Mode:** **MUST NOT** write or commit to SOT. Can only write to ephemeral/draft files.
+
 - **Override Mode:** **MAY** write and commit to SOT when under explicit Boss override (see Section 2.3).
 
 **Example Decision:**
@@ -132,20 +182,29 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 #### Layer 4.5: Gemini (Operational Writer & Split-Mode Compute Agent)
 
 **Thinking Capability:**
+
 - **CAN** perform all tasks of CLC and Codex.
+
 - **CAN** perform repository-wide reasoning, analysis, and refactoring.
+
 - **MUST** act as a primary operational writer for **non-locked zones** (apps, tools, tests, normal docs).
+
 - **CAN** perform heavy compute tasks, bulk analysis, and multi-file refactors.
+
 - **CAN** generate specs, PRPs, and implementation plans (เหมือน GC/CLC ใน scope ปกติ).
+
 - **MUST** reason about **output limits** และ **daily quota** ก่อนออกแบบวิธีทำงานในแต่ละ task.
- 
+
 **Writing Capability (Safety-Belt + Split-Mode):**
+
 - **CAN** write and revise operational code, configs, docs, and tests via **patch/diff output**.
+
 - **MUST** operate in **Safety-Belt Mode**:
   - ไม่เขียน “ทั้งไฟล์ยาว ๆ” ทีเดียวถ้ามีโอกาสโดน truncate
   - เน้นออกเป็น **block/phase/section-based patch** แทน
- 
+
 **Safety-Belt Mode (Mandatory Rules):**
+
 1. **Plan-First, Then Patch**
    - ก่อนเปลี่ยนอะไรที่ยาว / ซับซ้อน → Gemini **MUST** ส่ง:
      - รายการ **bullet** หรือ **phase plan**:
@@ -156,7 +215,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
      - section / heading ไหน
      - ไฟล์ไหน
      - ความเสี่ยงประมาณไหน (low/medium/high)
- 
+
 2. **Section-Scoped Patch Output**
    - สำหรับไฟล์ยาว (เช่น protocol, governance docs, long scripts):
      - Gemini **MUST NOT** พยายาม rewrite ทั้งไฟล์ในคำตอบเดียว
@@ -166,14 +225,14 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
    - Output ต้องเป็น:
      - unified diff หรือ replace-block ชัดเจน
      - ไม่ยัดส่วนที่ไม่เปลี่ยนกลับมาซ้ำโดยไม่จำเป็น
- 
+
 3. **PHASE / BLOCK Tagging**
    - เมื่อแบ่งงาน:
      - ทุกคำตอบที่เป็น patch **MUST** เริ่มด้วย header เช่น:
        - `## PHASE 1/3 — Patch Section 2.2 Capability Matrix`
      - ถ้า patch ยังไม่ครบทั้งหมด ให้แจ้ง Boss ตรง ๆ ว่ายังเหลือ:
        - `Remaining: PHASE 2/3 (Fallback Ladder), PHASE 3/3 (Token Monitoring)`
- 
+
 4. **Output Limit Awareness**
    - ถ้า Gemini คาดว่าผลลัพธ์จะใกล้เกิน limit:
      - **MUST** เลือก:
@@ -184,7 +243,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
      - เปลี่ยนกลยุทธ์เป็น:
        - แยกเป็น section เล็กลง
        - หรือ generate เฉพาะส่วนที่สำคัญที่สุดก่อน
- 
+
 5. **Locked Zones Respect**
    - Locked zones: `/CLC/**`, `/core/governance/**`, `/memory_center/**`, `/launchd/**`, `/production_bridges/**`, `/wo_pipeline_core/**`
    - Gemini:
@@ -192,56 +251,68 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
      - เมื่อถูกสั่งให้แตะ locked zone:
        - **MUST** สร้างเป็น **spec/patch proposal** แทน actual write
        - ให้ CLC หรือ GG/GC ใช้ต่อ
- 
+
 **Quota-Aware Behaviour:**
+
 - Daily Limit: ~1500 requests / user / day, 120 / minute (GeminiPro Code Assist).
+
 - Gemini **SHOULD**:
   - รวมงานที่เกี่ยวข้องไว้ในคำขอเดียว ถ้าไม่เสี่ยงโดน truncate
   - เตือน Boss ถ้า task มีแนวโน้มใช้ request จำนวนมาก (เช่น multi-file refactor ใหญ่)
   - เสนอ “minimal viable patch” ก่อน แล้วเหลือ refactor ส่วนที่ไม่ critical ไว้หลัง
 
 **Authorization:**
+
 - Primary operational writer for:
   - `apps/**`, `tools/**`, `tests/**`, `docs/**` (non-governance)
+
 - Boss, GG, หรือ Liam สามารถ route งานให้ Gemini ทำโดยตรง
+
 - Boss override:
   - ยกเลิกข้อจำกัดบางส่วน (ยกเว้น locked zones) สำหรับ emergency
   - commit จาก Gemini ควรมี tag เช่น `[EMERGENCY_GEMINI_WRITE]` หรือ `[GEMINI_PATCH]`.
-  
-**Example Operations:**
-> "Refactor auth module across 3 files"  
-> → Gemini:  
-> 1) ส่ง phase plan (ไฟล์ไหน, อะไรบ้าง)  
-> 2) ส่ง patch เฉพาะไฟล์แรก (PHASE 1/3), รอ confirm ก่อนไป PHASE 2/3
 
+**Example Operations:**
+
+> "Refactor auth module across 3 files"  
+> → Gemini: ส่ง phase plan (ไฟล์ไหน, อะไรบ้าง), แล้วส่ง patch เฉพาะไฟล์แรก (PHASE 1/3), รอ confirm ก่อนไป PHASE 2/3  
 > "Clean up CONTEXT_ENGINEERING_PROTOCOL_v3.md to 3.2"  
-> → Gemini:  
-> 1) แบ่งงานเป็น: Layer Hierarchy, Capability Matrix, Fallback Ladder  
-> 2) แก้ทีละ section เพื่อไม่ให้ output โดน truncate  
-> 3) ทุก patch ใช้ anchor/section-tag ชัดเจน
+> → Gemini: แบ่งงานเป็น Layer Hierarchy, Capability Matrix, Fallback Ladder, แก้ทีละ section เพื่อไม่ให้ output โดน truncate, และทุก patch ใช้ anchor/section-tag ชัดเจน
 
 ---
 
 #### Layer 5: LPE (Local Prompt Executor)
 
 **Thinking Capability:**
+
 - **MUST NOT** perform reasoning
+
 - **MUST** execute Boss instructions exactly
+
 - **MUST NOT** make decisions autonomously
 
 **Writing Capability:**
+
 - **CAN** write any file Boss specifies
+
 - **MUST** require Boss approval for all writes
+
 - **MUST** log all writes to MLS
+
 - **CAN ONLY** be used as fallback when CLC unavailable
 
 **Trigger Conditions:**
+
 - A smart writer (CLC/Gemini) is unavailable.
+
 - Boss requires urgent change
 
 **Authorization:**
+
 - Boss approval **REQUIRED** for every write
+
 - MLS logging **REQUIRED** with Boss message ID
+
 - Next CLC session **MUST** review all LPE writes
 
 **Example Operation:**
@@ -252,17 +323,25 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 #### Layer 6: Kim (API Gateway / Orchestrator)
 
 **Thinking Capability:**
+
 - **CAN** perform routing decisions
+
 - **CAN** prioritize task queues
+
 - **CAN** analyze task requirements
 
 **Writing Capability:**
+
 - **MUST NOT** write to SOT
+
 - **MUST** delegate all writes to an appropriate writer (Gemini, CLC, or LPE)
+
 - **CAN ONLY** coordinate between agents
 
 **Authorization:**
+
 - No direct write permissions
+
 - Delegates to authorized writers only
 
 **Example Decision:**
@@ -275,26 +354,31 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 **Purpose:**
 Defines the rules for when Boss grants temporary write permissions to agents that are normally read-only or restricted (e.g., Codex, Liam).
 
-**2.3.1 Trigger**
+### 2.3.1 Trigger
 
 - **WHEN** Boss พูดหรือพิมพ์คำสั่งชัดเจน เช่น:
   - `"Use Cursor to apply this patch now."`
   - `"REVISION-PROTOCOL > Liam do"`
   - or any explicit instruction for an IDE agent to write to SOT.
+
 - **THEN** the agent enters **Override Mode** for the duration of that task.
 
-**2.3.2 Capabilities under Boss Override**
+### 2.3.2 Capabilities under Boss Override
 
 In Override Mode:
+
 - The agent's read-only restrictions are temporarily lifted.
+
 - The agent **MAY** edit files, run CLI commands, and use `git` to commit changes.
+
 - The agent **SHOULD**:
   - Summarize the list of changed files for the Boss.
   - Ensure the commit message contains an appropriate tag, like `EMERGENCY_WRITE`.
 
-**2.3.3 Scope & Safety**
+### 2.3.3 Scope & Safety
 
 - The override does not bypass system-level prohibitions in `AI:OP-001`.
+
 - Once the task is complete, the agent **MUST** return to its normal operational mode.
 
 ---
@@ -306,7 +390,7 @@ In Override Mode:
 | **GG** | ✅ MUST (strategic) | ✅ CAN (governance only) | Governance docs, policy | Self (Boss oversight) | N/A |
 | **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Privileged/locked zones | Self-approved | Configurable Budget |
-| **Gemini**<br/>(Split-Mode Agent)| ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
+| **Gemini** (Split-Mode Agent) | ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
 | **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override) | Code suggestions, small fixes | Boss override for writes | N/A |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
@@ -314,10 +398,10 @@ In Override Mode:
 ---
 
 ## 4. Fallback Ladder Protocol
- 
+
 ### 4.1 Decision Tree: When a Smart Writer is Unavailable
 
-```
+```text
 ┌─────────────────────────────────────┐
 │ CLC reaches 200K tokens             │
 │ OR CLC session not open             │
@@ -343,33 +427,44 @@ In Override Mode:
     │ 3. Log to MLS            │
     │ 4. Next CLC reviews      │
     └──────────────────────────┘
+
 ```
 
 ### 4.2 Scenario 1: CLC Out of Tokens
 
 **Trigger:**
+
 - CLC session reaches 190K+ tokens
 
 **Decision Rule:**
 
 **IF** urgent change required:
+
 - **THEN** use LPE fallback
+
 - **ELSE** wait for new CLC session
 
 **LPE Fallback Procedure:**
+
 1. Boss **MUST** dictate exact changes to LPE
+
 2. LPE **MUST** execute writes without reasoning
+
 3. LPE **MUST** log to MLS:
    - Timestamp
    - Producer: LPE
    - Action: Write file X
    - Reason: CLC out of tokens
    - Boss approval: [message ID]
+
 4. Next CLC session **MUST** review LPE changes
+
 5. CLC **MUST** validate correctness
+
 6. CLC **MUST** fix if issues found
 
 **MLS Log Format (Required):**
+
 ```json
 {
   "timestamp": "2025-11-17T06:00:00",
@@ -380,42 +475,61 @@ In Override Mode:
   "approval": "Boss message 2025-11-17T05:59:00",
   "content_hash": "a1b2c3d4..."
 }
+
 ```
 
 ### 4.3 Scenario 2: CLC Session Unavailable
 
 **Trigger:**
+
 - Boss needs change but no CLC session open
+
 - Urgent operational requirement
 
 **Procedure:**
+
 1. Boss **MAY** use LPE as fallback writer
+
 2. Boss **MUST** approve each write explicitly
+
 3. LPE **MUST** log to MLS (same format as 4.2)
+
 4. Next CLC session **MUST** review all LPE writes
 
 ### 4.4 Scenario 3: Codex Suggests Change
 
 **Trigger:**
+
 - Codex provides code suggestion
+
 - Boss wants to apply suggestion
 
 **Decision Rule:**
 
 **IF** CLC session available:
+
 - **THEN** Boss delegates to CLC
+
 - CLC writes + commits
+
 - MLS logs: "Codex suggestion implemented by CLC"
 
 **ELSE IF** CLC unavailable:
+
 - **THEN** Boss uses LPE fallback
+
 - Boss dictates Codex suggestion to LPE
+
 - LPE writes + logs to MLS
+
 - MLS logs: "Codex suggestion via LPE (CLC unavailable)"
 
 **Codex Constraint (Enforced):**
+
 - Codex **MUST NOT** write to SOT directly
+
 - Codex **MUST** inform Boss: "I cannot write to git. Please use CLC or LPE."
+
 - Git hook **MUST** reject any commits with author="Codex"
 
 ---
@@ -423,10 +537,13 @@ In Override Mode:
 ### 4.5 Emergency Codex/Liam Write Mode (CLC Outage)
 
 **Trigger Conditions:**
+
 - CLC session is unavailable or out of tokens
+
 - Boss issues an explicit command such as:
   - "REVISION-PROTOCOL → Liam do"
   - "Use Cursor to apply this patch now"
+
 - Scope is **limited** to:
   - Protocol/documentation updates
   - Small, localized code/script fixes
@@ -452,12 +569,13 @@ In Override Mode:
   - perform large-scale refactors
   - delete SOT directories or core protocols
   - modify AI:OP-001 content without an explicit Boss-written spec
+
 - When CLC becomes available again:
   - CLC **MUST** review all `EMERGENCY_LIAM_WRITE` commits
   - CLC **MUST** validate correctness and update protocols if needed
 
-> **Note:**  
-> Running CLI commands for diagnostics (e.g. `grep`, `ls`, `npm test`, `pytest`, `launchctl list`, `curl localhost:...`) is considered **read-only with respect to SOT**, even if it produces temporary files (`logs/`, `.cache/`, `node_modules/`, `dist/`).  
+> **Note:**
+> Running CLI commands for diagnostics (e.g. `grep`, `ls`, `npm test`, `pytest`, `launchctl list`, `curl localhost:...`) is considered **read-only with respect to SOT**, even if it produces temporary files (`logs/`, `.cache/`, `node_modules/`, `dist/`).
 > Such commands are **allowed** for Codex/Liam under normal operation.
 
 ---
@@ -467,7 +585,8 @@ In Override Mode:
 ### 5.1 Pattern: Normal Operation (CLC Active)
 
 **Flow:**
-```
+
+```text
 Boss request
     ↓
 CLC receives + validates
@@ -484,14 +603,18 @@ MLS captures learnings
 ```
 
 **Rules:**
+
 - CLC **MUST** use all available tools (Read, Write, Edit, Bash, Git)
+
 - CLC **MUST** validate via pre-commit hooks
+
 - CLC **MUST** log all SOT writes to MLS
 
 ### 5.2 Pattern: CLC + Codex Collaboration
 
 **Flow:**
-```
+
+```text
 Boss: "Help me understand this codebase"
     ↓
 CLC explores with Task tool
@@ -510,14 +633,18 @@ MLS logs: "Codex suggestion implemented by CLC"
 ```
 
 **Rules:**
+
 - Codex **MUST** be read-only
+
 - CLC **MUST** execute all writes
+
 - MLS **MUST** log Codex → CLC handoff
 
 ### 5.3 Pattern: GG → GC → CLC Cascade
 
 **Flow:**
-```
+
+```text
 GG decides: "We need feature X for governance"
     ↓
 GG → GC: "Create implementation spec for X"
@@ -536,14 +663,18 @@ GG validates governance compliance
 ```
 
 **Rules:**
+
 - Each layer **MUST** add detail
+
 - Each layer **MUST** delegate down hierarchy
+
 - Review **MUST** flow back up hierarchy
 
 ### 5.4 Pattern: LPE Emergency Fallback
 
 **Flow:**
-```
+
+```text
 CLC hits token limit mid-task
     ↓
 Boss: "I need this file updated NOW"
@@ -562,14 +693,18 @@ IF issues found: CLC fixes + reports
 ```
 
 **Rules:**
+
 - All LPE writes **MUST** be logged for CLC review
+
 - Boss approval **REQUIRED** for each write
+
 - CLC **MUST** validate all LPE writes in next session
 
 ### 5.5 Pattern: Kim Multi-Agent Orchestration
 
 **Flow:**
-```
+
+```text
 External request → Kim API
     ↓
 Kim analyzes: "This needs code change + governance review"
@@ -584,8 +719,11 @@ Kim → External caller: "Task complete with governance approval"
 ```
 
 **Rules:**
+
 - Kim **MUST NOT** write to SOT
+
 - Kim **MUST** delegate to appropriate agents
+
 - Kim **MAY** coordinate parallel execution
 
 ---
@@ -623,6 +761,7 @@ exit 0
 ```
 
 **Installation:**
+
 ```bash
 chmod +x .git/hooks/pre-commit
 ```
@@ -641,8 +780,11 @@ chmod +x .git/hooks/pre-commit
 | 190K+ | Fallback trigger | CLC **MUST** prepare LPE fallback |
 
 **Implementation:**
+
 - CLC **MUST** report token usage in responses
+
 - Health check **MAY** monitor token usage
+
 - Boss **MUST** decide: continue with LPE or new session
 
 ### 6.3 MLS Audit Trail
@@ -652,13 +794,19 @@ chmod +x .git/hooks/pre-commit
 **Required Logging:**
 
 Every SOT write **MUST** log:
+
 - **Who:** Agent that wrote (GG/GC/CLC/LPE)
+
 - **When:** Timestamp (ISO 8601)
+
 - **What:** File path + content hash
+
 - **Why:** Reason/context
+
 - **Approval:** Boss approval (if LPE)
 
 **MLS Entry Format:**
+
 ```json
 {
   "timestamp": "2025-11-17T06:00:00",
@@ -672,6 +820,7 @@ Every SOT write **MUST** log:
 ```
 
 **Query Examples:**
+
 ```bash
 # Find all LPE writes
 node ~/02luka/knowledge/index.cjs --hybrid "LPE emergency write"
@@ -700,15 +849,18 @@ node ~/02luka/knowledge/index.cjs --hybrid "Codex suggestion implemented"
 | `gg.nlp-bridge` | Governance routing | → GG/GC | Routes governance decisions |
 
 **Rule:**
+
 - LaunchAgents **MAY** trigger AI agents
+
 - LaunchAgents **MUST NOT** perform reasoning themselves
+
 - LaunchAgents **MUST** be deterministic automation only
 
 ### 7.2 Context Layer Selection
 
 **Decision Tree:**
 
-```
+```text
 LaunchAgent event occurs
     ↓
 Does it require governance decision?
@@ -733,6 +885,7 @@ Is it pure automation?
 **Who:** CLC, LPE (before any SOT write)
 
 **What to validate:**
+
 ```bash
 # 1. LaunchAgent script existence
 bash ~/02luka/g/tools/check_launchagent_scripts.sh
@@ -745,8 +898,11 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 ```
 
 **Rule:**
+
 - All checks **MUST** pass before commit
+
 - Failed validation **MUST** block commit
+
 - Boss **MAY** override for emergency
 
 ### 8.2 Runtime Validation (Monitoring)
@@ -754,9 +910,13 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 **Who:** Health dashboard, monitoring LaunchAgents
 
 **What to monitor:**
+
 - CLC token usage (warn at 150K, alert at 180K)
+
 - LPE fallback usage (count + frequency)
+
 - Codex/Liam violation attempts (should be zero)
+
 - MLS logging compliance (100% for SOT writes)
 
 **Alert Thresholds:**
@@ -773,14 +933,21 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 **Who:** Boss or GG
 
 **What to check:**
+
 - Review MLS logs for all LPE writes
+
 - Verify CLC token usage patterns
+
 - Check for any Codex violation attempts
+
 - Validate enforcement mechanisms still active
 
 **Report:**
+
 - Weekly compliance report to MLS
+
 - List any protocol violations
+
 - Recommend adjustments if needed
 
 ---
@@ -842,13 +1009,19 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 ### 9.3 Protocol Version Control
 
 **Versioning:**
+
 - Major version (X.0.0): Breaking changes (agent capabilities changed)
+
 - Minor version (3.X.0): New agents/layers added
+
 - Patch version (3.0.X): Documentation/clarification only
 
 **Change Requirements:**
+
 - Major/Minor changes **REQUIRE** Boss approval
+
 - Patch changes **MAY** be self-approved by protocol maintainer
+
 - All changes **MUST** be documented in MLS
 
 ---
@@ -856,43 +1029,67 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 ## 10. Glossary
 
 **SOT (Single Source of Truth):**
+
 - Git repositories containing authoritative code/docs
+
 - Only authorized writers can commit
+
 - All changes tracked via git + MLS
 
 **Context Layer:**
+
 - Hierarchical level in 02luka agent system
+
 - Each layer has specific capabilities and constraints
+
 - Delegation flows down hierarchy, review flows up
- 
+
 **Authorized Writer:**
+
 - Agent that can commit to SOT repos
+
 - Currently: **Gemini**, **CLC**, GG, GC, and LPE (with Boss approval)
+
 - Codex and Kim are NOT authorized writers
 
 **Read-Only Agent:**
+
 - Agent that can analyze but not write to SOT
+
 - Currently: Codex, Kim
+
 - Must delegate writes to authorized agents
 
 **Token Budget:**
+
 - Maximum tokens per CLC session (200K)
+
 - Monitored to prevent mid-task failures
+
 - Fallback triggers at 190K tokens
 
 **MLS (Multi-Loop Learning System):**
+
 - Knowledge base capturing decisions, learnings, patterns
+
 - Searchable via `knowledge/index.cjs`
+
 - Required for all LPE writes and protocol violations
 
 **Fallback Ladder:**
+
 - Sequence of alternative agents when primary unavailable
+
 - **Smart Writer (Gemini/CLC) → LPE** (when primary writer is unavailable)
+
 - **Codex → Gemini/CLC/LPE** (Codex cannot write, so it delegates to an available writer)
 
 **Enforcement Mechanism:**
+
 - Automated check that prevents protocol violations
+
 - Examples: Git pre-commit hook, token monitor, MLS validation
+
 - Required for maintaining protocol compliance
 
 ---
@@ -900,18 +1097,27 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 ## 11. References
 
 **Related Protocols:**
+
 - `MULTI_AGENT_PR_CONTRACT.md` - PR routing and classification
+
 - `LAUNCHAGENT_REGISTRY.md` - LaunchAgent lifecycle management
+
 - `AI:OP-001` - Operations protocol
 
 **Related Documentation:**
+
 - `CONTEXT_ENGINEERING_GLOBAL.md` (DEPRECATED - replaced by this protocol)
+
 - `g/DELEGATION_QUICK_REF.md` - Quick reference for delegation
+
 - `manuals/MLS_SYSTEM_GUIDE.md` - MLS usage guide
 
 **Tools:**
+
 - `check_launchagent_scripts.sh` - Validate LaunchAgent paths
+
 - `validate_runtime_state.zsh` - Runtime validation
+
 - `knowledge/index.cjs` - MLS search interface
 
 ---
@@ -919,8 +1125,11 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 ## 12. Protocol Status
 
 **Version:** 3.2.0
+
 **Status:** PROTOCOL (Single Source of Truth)
+
 **Approved by:** Boss
+
 **Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
 
 ---
@@ -930,10 +1139,15 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 > **"Gemini writes non‑locked zones via patch. CLC writes privileged zones. Codex thinks. LPE transcribes."**
 
 This protocol ensures:
+
 - ✅ Clear agent authorization
+
 - ✅ Graceful degradation (Smart Writer → LPE)
+
 - ✅ Audit trails (MLS logging)
+
 - ✅ Enforcement mechanisms (git hooks, monitoring)
+
 - ✅ Protocol compliance (validation gates)
 
 **All agents MUST follow this protocol. No exceptions without Boss approval.**
