@@ -129,11 +129,17 @@ function get_files() {
 
 function search_pattern_in_files() {
   local regex="$1"
+  local pattern_id="${2:-}"
   local chunk_size=200
   local -a chunk=()
   local chunk_matches
   local matches=""
   for file_path in "${FILE_CANDIDATES[@]}"; do
+    # Exempt workflow files from superuser_exec (sudo) check
+    # GitHub Actions workflows legitimately use sudo for package installation
+    if [[ "$pattern_id" == "superuser_exec" ]] && [[ "$file_path" == .github/workflows/* ]]; then
+      continue
+    fi
     chunk+=("$file_path")
     if (( ${#chunk[@]} == chunk_size )); then
       chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${chunk[@]}" || true)"
@@ -146,10 +152,23 @@ function search_pattern_in_files() {
   done
 
   if (( ${#chunk[@]} )); then
-    chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${chunk[@]}" || true)"
-    if [[ -n "$chunk_matches" ]]; then
-      [[ -n "$matches" ]] && matches+=$'\n'
-      matches+="$chunk_matches"
+    # Filter out workflow files for superuser_exec pattern before searching
+    local -a filtered_chunk=()
+    if [[ "$pattern_id" == "superuser_exec" ]]; then
+      for file_path in "${chunk[@]}"; do
+        if [[ "$file_path" != .github/workflows/* ]]; then
+          filtered_chunk+=("$file_path")
+        fi
+      done
+    else
+      filtered_chunk=("${chunk[@]}")
+    fi
+    if (( ${#filtered_chunk[@]} )); then
+      chunk_matches="$(rg --line-number --no-heading --color=never --pcre2 -e "$regex" "${filtered_chunk[@]}" || true)"
+      if [[ -n "$chunk_matches" ]]; then
+        [[ -n "$matches" ]] && matches+=$'\n'
+        matches+="$chunk_matches"
+      fi
     fi
   fi
 
@@ -197,7 +216,7 @@ VIOLATIONS=()
 
 while IFS=$'\t' read -r pattern_id pattern_desc pattern_regex; do
   [[ -z "$pattern_id" ]] && continue
-  matches="$(search_pattern_in_files "$pattern_regex")"
+  matches="$(search_pattern_in_files "$pattern_regex" "$pattern_id")"
   if [[ -n "$matches" ]]; then
     while IFS= read -r line; do
       [[ -z "$line" ]] && continue
