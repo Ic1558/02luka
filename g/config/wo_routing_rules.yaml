@@ -1,4 +1,8 @@
-version: 0
+version: 1
+# Routing rules for Work Order dispatcher (mary_dispatcher.zsh)
+# Rules are evaluated in order; first match wins
+# Valid targets: CLC, LPE, shell, Andy, CLS
+
 routes:
   - name: lpe-write-fallback
     match:
@@ -6,3 +10,16 @@ routes:
       fallback_contains: lpe
     target: LPE
     notes: "Send write-focused WOs with LPE fallback into the LPE queue."
+
+  - name: shell-strict-target
+    match:
+      # Matches when strict_target is set and target_candidates includes "shell"
+      # This is handled separately in the dispatcher logic
+    target: shell
+    notes: "Routes to shell when strict_target is set and shell is in target_candidates (handled in dispatcher)."
+
+  - name: default-clc
+    match:
+      # No match criteria - this is the default fallback
+    target: CLC
+    notes: "Default target for all unmatched WOs. This rule is implicit in dispatcher logic."
