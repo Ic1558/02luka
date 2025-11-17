@@ -15,7 +15,7 @@ behavior. They are derived from the latest
 
 ## Files
 
-- `apps/dashboard/api_server.py`
+- `g/apps/dashboard/api_server.py`
   - Extends `GET /api/reality/snapshot`:
     - Accepts `?advisory=1` to include an `advisory` field:
       ```jsonc
@@ -29,13 +29,17 @@ behavior. They are derived from the latest
       ```
     - Advisory is read from `g/reports/system/reality_hooks_advisory_latest.md`
       if present; otherwise defaults to `"unknown"`.
+    - Snapshot + advisory lookups now target `g/reports/system/` (the
+      aggregator output directory) so the API can always find the newest
+      Reality Hooks artifacts.
 
 - `apps/dashboard/index.html`
   - Adds badges to Reality header:
     - `#reality-badge-deploy`
     - `#reality-badge-save`
     - `#reality-badge-orch`
-  - Optional CSS for badge colors.
+  - Scoped CSS via `.reality-badge*` utility classes so the Reality status chips
+    do not affect other `.badge` elements already used across the dashboard.
 
 - `apps/dashboard/dashboard.js`
   - `loadRealitySnapshot()` now calls `/api/reality/snapshot?advisory=1`.

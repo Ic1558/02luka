@@ -3,18 +3,31 @@ const MLS_REFRESH_MS = 30000;
 const WO_AUTOREFRESH_MS = 60000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
-let realityPanelInitialized = false;
-
 let servicesIntervalId;
 let mlsIntervalId;
 let woAutorefreshIntervalId;
 let currentMlsType = '';
+let realityLoading = false;
+
+let allWos = [];
+let visibleWos = [];
 let currentWos = [];
+let currentWoFilter = 'all';
+let woAutorefreshTimer = null;
+let woAutorefreshEnabled = false;
+let woAutorefreshIntervalMs = 30000;
 let currentWoSearch = '';
 let currentWoStatusFilter = '';
 let currentWoSortKey = 'started_at';
 let currentWoSortDir = 'desc';
 let currentTimelineWoId = null;
+const WO_STATUS_SORT_ORDER = {
+  running: 4,
+  pending: 3,
+  completed: 2,
+  failed: 1,
+  unknown: 0
+};
 
 async function fetchJSON(url) {
   const response = await fetch(url, {
@@ -54,8 +67,6 @@ function initTabs() {
       initServicesPanel();
     } else if (targetId === 'mls-panel') {
       initMLSPanel();
-    } else if (targetId === 'reality-panel') {
-      initRealityPanel();
     }
   }
 
@@ -74,42 +85,41 @@ function initTabs() {
   const tabOverview = document.getElementById('tab-overview');
   const tabWos = document.getElementById('tab-wos');
   const tabWoHistory = document.getElementById('tab-wo-history');
+  const tabReality = document.getElementById('tab-reality');
 
   const viewOverview = document.getElementById('view-overview');
   const viewWos = document.getElementById('view-wos');
   const viewWoHistory = document.getElementById('view-wo-history');
+  const viewReality = document.getElementById('view-reality');
 
-  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
-    const buttons = [tabOverview, tabWos, tabWoHistory];
-    const views = [viewOverview, viewWos, viewWoHistory];
+  const tabConfigs = [
+    { button: tabOverview, view: viewOverview },
+    { button: tabWos, view: viewWos },
+    { button: tabWoHistory, view: viewWoHistory, onShow: loadWoHistory },
+  ];
 
-    function setActiveButton(target) {
-      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
-    }
+  if (tabReality && viewReality) {
+    tabConfigs.push({ button: tabReality, view: viewReality, onShow: loadRealitySnapshot });
+  }
 
-    function show(view) {
-      views.forEach((v) => v.classList.add('hidden'));
-      view.classList.remove('hidden');
-    }
+  const validConfigs = tabConfigs.filter((cfg) => cfg.button && cfg.view);
 
-    tabOverview.addEventListener('click', () => {
-      setActiveButton(tabOverview);
-      show(viewOverview);
+  if (validConfigs.length) {
+    const activate = (targetCfg) => {
+      validConfigs.forEach((cfg) => {
+        cfg.button.classList.toggle('active', cfg === targetCfg);
+        cfg.view.classList.toggle('hidden', cfg !== targetCfg);
+      });
+      if (typeof targetCfg.onShow === 'function') {
+        targetCfg.onShow();
+      }
+    };
+
+    validConfigs.forEach((cfg) => {
+      cfg.button.addEventListener('click', () => activate(cfg));
     });
 
-    tabWos.addEventListener('click', () => {
-      setActiveButton(tabWos);
-      show(viewWos);
-    });
-
-    tabWoHistory.addEventListener('click', () => {
-      setActiveButton(tabWoHistory);
-      show(viewWoHistory);
-      loadWoHistory();
-    });
-
-    setActiveButton(tabOverview);
-    show(viewOverview);
+    activate(validConfigs[0]);
   }
 }
 
@@ -126,6 +136,376 @@ function showErrorBanner(id, message) {
 function hideErrorBanner(id) {
   const banner = document.getElementById(id);
   banner?.classList.add('hidden');
+}
+
+// --- Work Orders ---
+
+function initWoFilters() {
+  const filterGroup = document.getElementById('wo-status-filters');
+  if (!filterGroup) return;
+
+  const buttons = filterGroup.querySelectorAll('button[data-filter]');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter || 'all';
+      currentWoFilter = filter;
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === button));
+      applyWoFilter();
+    });
+  });
+}
+
+function initWoSearch() {
+  const input = document.getElementById('wo-search-input');
+  if (!input) return;
+
+  if (currentWoSearch) {
+    input.value = currentWoSearch;
+  }
+
+  input.addEventListener('input', () => {
+    currentWoSearch = input.value.trim().toLowerCase();
+    applyWoFilter();
+  });
+}
+
+function initWoSorting() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  if (!headerCells.length) return;
+
+  headerCells.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (!key) return;
+
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = key === 'id' ? 'asc' : 'desc';
+      }
+
+      updateWoSortHeaderStyles();
+      applyWoFilter();
+    });
+  });
+
+  updateWoSortHeaderStyles();
+}
+
+function updateWoSortHeaderStyles() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  headerCells.forEach((th) => {
+    const key = th.getAttribute('data-sort-key');
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (key === currentWoSortKey) {
+      th.classList.add(currentWoSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function initWoAutorefreshControls() {
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+  const retryBtn = document.getElementById('wos-error-retry');
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const intervalInput = document.getElementById('wo-autorefresh-interval');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+  retryBtn?.addEventListener('click', () => loadWos());
+
+  toggle?.addEventListener('change', () => {
+    woAutorefreshEnabled = Boolean(toggle.checked);
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    } else {
+      stopWoAutorefresh();
+    }
+  });
+
+  intervalInput?.addEventListener('change', () => {
+    const seconds = Number(intervalInput.value);
+    if (!Number.isFinite(seconds) || seconds < 5) {
+      return;
+    }
+    woAutorefreshIntervalMs = seconds * 1000;
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    }
+  });
+}
+
+function startWoAutorefresh() {
+  stopWoAutorefresh();
+  woAutorefreshTimer = setInterval(() => loadWos(), woAutorefreshIntervalMs);
+}
+
+function stopWoAutorefresh() {
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
+}
+
+function setWosLoading(message) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7">${message}</td></tr>`;
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  setWosLoading('Loading work orders…');
+  hideErrorBanner('wos-error');
+
+  try {
+    const res = await fetch('/api/wos', {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+
+    allWos = wos;
+    applyWoFilter();
+
+    const ts = new Date().toLocaleTimeString();
+    const refreshLabel = document.getElementById('wo-last-refresh');
+    if (refreshLabel) {
+      refreshLabel.textContent = `Last refresh: ${ts}`;
+    }
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    showErrorBanner('wos-error', 'Failed to load work orders.');
+    setWosLoading('Failed to load work orders.');
+  }
+}
+
+function applyWoFilter() {
+  let filtered = allWos.slice();
+
+  if (currentWoFilter !== 'all') {
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status || wo.state) === currentWoFilter);
+  }
+
+  if (currentWoSearch) {
+    const q = currentWoSearch;
+    filtered = filtered.filter((wo) => buildWoSearchHaystack(wo).includes(q));
+  }
+
+  filtered.sort((a, b) => compareWos(a, b, currentWoSortKey, currentWoSortDir));
+
+  visibleWos = filtered;
+  renderWosTable(filtered);
+  renderWoSummary(filtered);
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match the current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const status = normalizeWoStatus(wo.status || wo.state);
+    const started = formatWoTimestamp(wo.started_at || wo.startedAt);
+    const finished = formatWoTimestamp(getWoCompletedTime(wo));
+    const updated = formatWoTimestamp(wo.updated_at || wo.updatedAt || wo.last_update || wo.lastUpdate);
+    const actions = Array.isArray(wo.actions) ? wo.actions.join(', ') : wo.action || '—';
+    const timeline = Array.isArray(wo.timeline) ? `${wo.timeline.length} events` : '—';
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(started)}</td>
+      <td>${escapeHtml(finished)}</td>
+      <td>${escapeHtml(updated)}</td>
+      <td>${escapeHtml(actions || '—')}</td>
+      <td>${escapeHtml(timeline)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderWoSummary(wos) {
+  const summary = document.getElementById('wos-summary');
+  if (!summary) return;
+
+  const totals = {
+    running: 0,
+    pending: 0,
+    completed: 0,
+    failed: 0
+  };
+
+  wos.forEach((wo) => {
+    const status = normalizeWoStatus(wo.status || wo.state);
+    if (status in totals) {
+      totals[status] += 1;
+    }
+  });
+
+  summary.innerHTML = `
+    <span><strong>Total:</strong> ${allWos.length}</span>
+    <span><strong>Visible:</strong> ${wos.length}</span>
+    <span><span class="summary-dot running"></span>Running: ${totals.running}</span>
+    <span><span class="summary-dot stopped"></span>Pending: ${totals.pending}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${totals.failed}</span>
+    <span><span class="summary-dot completed"></span>Completed: ${totals.completed}</span>
+  `;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return 'unknown';
+  const normalized = String(status).toLowerCase();
+  if (['success', 'completed', 'complete', 'done'].includes(normalized)) {
+    return 'completed';
+  }
+  if (['failed', 'failure', 'error', 'blocked', 'cancelled'].includes(normalized)) {
+    return 'failed';
+  }
+  if (['running', 'in_progress', 'in-progress', 'active'].includes(normalized)) {
+    return 'running';
+  }
+  if (['pending', 'queued', 'waiting'].includes(normalized)) {
+    return 'pending';
+  }
+  return normalized;
+}
+
+function compareWos(a, b, sortKey, sortDir) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+
+  if (sortKey === 'id') {
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  if (sortKey === 'status') {
+    const va = getStatusSortValue(a?.status);
+    const vb = getStatusSortValue(b?.status);
+    if (va !== vb) {
+      return (va - vb) * dir;
+    }
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  const va = getWoSortValue(a, sortKey);
+  const vb = getWoSortValue(b, sortKey);
+
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return compareWoIds(a?.id, b?.id) * dir;
+}
+
+function getWoSortValue(wo, sortKey) {
+  switch (sortKey) {
+    case 'started_at':
+      return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
+    case 'finished_at':
+      return normalizeWoTimestamp(getWoCompletedTime(wo));
+    case 'updated_at':
+      return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
+    default:
+      return 0;
+  }
+}
+
+function getStatusSortValue(status) {
+  const normalized = normalizeWoStatus(status);
+  if (Object.prototype.hasOwnProperty.call(WO_STATUS_SORT_ORDER, normalized)) {
+    return WO_STATUS_SORT_ORDER[normalized];
+  }
+  return 0;
+}
+
+function compareWoIds(aId, bId) {
+  const aInfo = normalizeWoId(aId);
+  const bInfo = normalizeWoId(bId);
+
+  if (aInfo.numeric !== null && bInfo.numeric !== null && aInfo.numeric !== bInfo.numeric) {
+    return aInfo.numeric - bInfo.numeric;
+  }
+
+  if (aInfo.numeric !== null && bInfo.numeric === null) {
+    return -1;
+  }
+  if (aInfo.numeric === null && bInfo.numeric !== null) {
+    return 1;
+  }
+
+  if (aInfo.text < bInfo.text) return -1;
+  if (aInfo.text > bInfo.text) return 1;
+  return 0;
+}
+
+function normalizeWoId(value) {
+  if (value === undefined || value === null) {
+    return { numeric: null, text: '' };
+  }
+  const text = String(value).toLowerCase();
+  const match = text.match(/(\d+)/);
+  const numeric = match ? Number(match[1]) : null;
+  return { numeric: Number.isNaN(numeric) ? null : numeric, text };
+}
+
+function buildWoSearchHaystack(wo) {
+  const haystacks = [];
+  if (wo.id) haystacks.push(String(wo.id));
+  if (wo.title) haystacks.push(String(wo.title));
+  if (wo.context) haystacks.push(String(wo.context));
+  if (wo.summary) haystacks.push(String(wo.summary));
+  if (wo.description) haystacks.push(String(wo.description));
+  if (wo.agent) haystacks.push(String(wo.agent));
+  if (wo.worker) haystacks.push(String(wo.worker));
+  if (wo.type) haystacks.push(String(wo.type));
+  if (wo.action) haystacks.push(String(wo.action));
+  if (Array.isArray(wo.actions) && wo.actions.length) {
+    haystacks.push(wo.actions.join(' '));
+  }
+  if (Array.isArray(wo.tags) && wo.tags.length) {
+    haystacks.push(wo.tags.join(' '));
+  }
+  if (wo.contextual_data) {
+    haystacks.push(String(wo.contextual_data));
+  }
+  return haystacks.join(' ').toLowerCase();
+}
+
+function normalizeWoTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return 0;
+  return parsed;
+}
+
+function formatWoTimestamp(value) {
+  const ts = normalizeWoTimestamp(value);
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
+}
+
+// Helper to get completion time (checks completed_at first, then finished_at)
+function getWoCompletedTime(wo) {
+  return wo?.completed_at || wo?.finished_at || wo?.finishedAt || '';
 }
 
 // --- Services ---
@@ -652,7 +1032,7 @@ function renderWosTable(wos) {
     startedTd.textContent = formatWoTime(wo?.started_at || wo?.startedAt || '');
 
     const finishedTd = document.createElement('td');
-    finishedTd.textContent = formatWoTime(wo?.finished_at || wo?.finishedAt || '');
+    finishedTd.textContent = formatWoTime(getWoCompletedTime(wo) || '');
 
     const updatedTd = document.createElement('td');
     updatedTd.textContent = formatWoTime(
@@ -813,7 +1193,7 @@ async function openWoTimeline(woId) {
 function buildTimelineSubtitle(wo) {
   const status = normalizeWoStatus(wo?.status || 'unknown');
   const started = formatWoTime(wo?.started_at || wo?.startedAt);
-  const finished = formatWoTime(wo?.finished_at || wo?.finishedAt);
+  const finished = formatWoTime(getWoCompletedTime(wo));
   const updated = formatWoTime(
     wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate
   );
@@ -938,7 +1318,7 @@ function buildWoEventsList(wo) {
 
   addEvent(wo?.created_at || wo?.createdAt, 'Created', wo?.created_by || wo?.createdBy);
   addEvent(wo?.started_at || wo?.startedAt, 'Started', wo?.worker || wo?.agent);
-  addEvent(wo?.finished_at || wo?.finishedAt, 'Finished', wo?.result || wo?.outcome);
+  addEvent(getWoCompletedTime(wo), 'Finished', wo?.result || wo?.outcome);
   addEvent(
     wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate,
     'Last updated',
@@ -978,6 +1358,175 @@ function initWoHistoryFilters() {
 
   statusFilter?.addEventListener('change', () => loadWoHistory());
   limitSelect?.addEventListener('change', () => loadWoHistory());
+}
+
+// --- Reality Snapshot ---
+
+function setRealityLoading() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (meta) meta.textContent = 'Loading Reality snapshot…';
+  if (deployEl) deployEl.textContent = 'Loading deployment data…';
+  if (orchEl) orchEl.textContent = 'Loading orchestrator summary…';
+  if (saveBody) {
+    saveBody.innerHTML = '<tr><td colspan="7">Loading save.sh runs…</td></tr>';
+  }
+
+  updateRealityBadge(document.getElementById('reality-badge-deploy'), 'Deployment', null);
+  updateRealityBadge(document.getElementById('reality-badge-save'), 'save.sh', null);
+  updateRealityBadge(document.getElementById('reality-badge-orch'), 'Orchestrator', null);
+}
+
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  if (!meta) {
+    return;
+  }
+  if (realityLoading) {
+    return;
+  }
+
+  setRealityLoading();
+  hideErrorBanner('reality-error');
+  realityLoading = true;
+
+  try {
+    const res = await fetch('/api/reality/snapshot?advisory=1');
+    if (!res.ok) {
+      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
+      renderRealityError(`HTTP ${res.status}`);
+      return;
+    }
+
+    const payload = await res.json();
+    renderRealitySnapshot(payload);
+  } catch (error) {
+    console.error('Error loading Reality snapshot', error);
+    renderRealityError('Failed to load Reality snapshot.');
+  } finally {
+    realityLoading = false;
+  }
+}
+
+function renderRealitySnapshot(payload) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  const badgeDeploy = document.getElementById('reality-badge-deploy');
+  const badgeSave = document.getElementById('reality-badge-save');
+  const badgeOrch = document.getElementById('reality-badge-orch');
+
+  if (!meta || !deployEl || !saveBody || !orchEl) {
+    return;
+  }
+
+  hideErrorBanner('reality-error');
+  updateRealityBadge(badgeDeploy, 'Deployment', null);
+  updateRealityBadge(badgeSave, 'save.sh', null);
+  updateRealityBadge(badgeOrch, 'Orchestrator', null);
+
+  if (!payload || payload.status === 'no_snapshot') {
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow first.';
+    deployEl.textContent = '';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs recorded.</td></tr>';
+    orchEl.textContent = '';
+
+    if (payload?.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  if (payload.status === 'error') {
+    renderRealityError(payload.error || 'Invalid Reality snapshot.');
+    if (payload.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || '';
+  const deployment = data.deployment_report || null;
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
+
+  if (deployment && deployment.path) {
+    deployEl.textContent = `Report: ${deployment.path}`;
+  } else {
+    deployEl.textContent = 'No deployment report in snapshot.';
+  }
+
+  saveBody.innerHTML = '';
+  if (!saveRuns.length) {
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs captured.</td></tr>';
+  } else {
+    saveRuns.forEach((run) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
+        <td>${escapeHtml(run?.lane || '')}</td>
+        <td>${escapeHtml(run?.layer1 || '')}</td>
+        <td>${escapeHtml(run?.layer2 || '')}</td>
+        <td>${escapeHtml(run?.layer3 || '')}</td>
+        <td>${escapeHtml(run?.layer4 || '')}</td>
+        <td>${escapeHtml(run?.git || '')}</td>
+      `;
+      saveBody.appendChild(tr);
+    });
+  }
+
+  if (orchestrator) {
+    try {
+      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+    } catch (err) {
+      orchEl.textContent = String(orchestrator);
+    }
+  } else {
+    orchEl.textContent = 'No orchestrator summary in snapshot.';
+  }
+
+  if (payload.advisory) {
+    const adv = payload.advisory;
+    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+  }
+}
+
+function renderRealityError(message) {
+  const msg = message || 'Failed to load Reality snapshot.';
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = msg;
+  }
+  showErrorBanner('reality-error', msg);
+}
+
+function updateRealityBadge(el, label, status) {
+  if (!el) return;
+  el.className = 'reality-badge reality-badge-muted';
+  el.textContent = label;
+
+  if (!status) {
+    return;
+  }
+
+  const normalized = String(status).toLowerCase().trim().replace(/\s+/g, '_');
+  el.className = `reality-badge reality-badge-${normalized}`;
+  el.textContent = `${label}: ${status}`;
 }
 
 function formatRelativeTime(isoString) {
@@ -1035,163 +1584,6 @@ function initMLSPanel() {
   mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
-// --- Reality Snapshot ---
-
-async function loadRealitySnapshot() {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Loading Reality snapshot…';
-  }
-  hideErrorBanner('reality-error');
-
-  try {
-    const res = await fetch('/api/reality/snapshot?advisory=1');
-    if (!res.ok) {
-      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
-      renderRealityError(`HTTP ${res.status}`);
-      return;
-    }
-    const payload = await res.json();
-    renderRealitySnapshot(payload);
-  } catch (error) {
-    console.error('Error loading Reality snapshot', error);
-    renderRealityError(String(error));
-  }
-}
-
-function renderRealitySnapshot(payload) {
-  const meta = document.getElementById('reality-meta');
-  const deployEl = document.getElementById('reality-deployment');
-  const saveBody = document.getElementById('reality-save-body');
-  const orchEl = document.getElementById('reality-orchestrator');
-  const badgeDeploy = document.getElementById('reality-badge-deploy');
-  const badgeSave = document.getElementById('reality-badge-save');
-  const badgeOrch = document.getElementById('reality-badge-orch');
-
-  if (!meta || !deployEl || !saveBody || !orchEl) {
-    return;
-  }
-
-  updateRealityBadge(badgeDeploy, 'Deployment', null);
-  updateRealityBadge(badgeSave, 'save.sh', null);
-  updateRealityBadge(badgeOrch, 'Orchestrator', null);
-
-  if (!payload || payload.status === 'no_snapshot') {
-    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
-    deployEl.textContent = '';
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs in snapshot.</td></tr>';
-    orchEl.textContent = '';
-
-    if (payload?.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-
-    return;
-  }
-
-  if (payload.status === 'error') {
-    renderRealityError(payload.error || 'invalid snapshot');
-    if (payload.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-    return;
-  }
-
-  const data = payload.data || {};
-  const timestamp = data.timestamp || '';
-  const deployment = data.deployment_report || null;
-  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
-  const orchestrator = data.orchestrator_summary || null;
-
-  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
-
-  if (deployment && deployment.path) {
-    deployEl.textContent = `Report: ${deployment.path}`;
-  } else {
-    deployEl.textContent = 'No deployment report in snapshot.';
-  }
-
-  saveBody.innerHTML = '';
-  if (!saveRuns.length) {
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh full-cycle runs in snapshot.</td></tr>';
-  } else {
-    saveRuns.forEach((run) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
-        <td>${escapeHtml(run?.lane || '')}</td>
-        <td>${escapeHtml(run?.layer1 || '')}</td>
-        <td>${escapeHtml(run?.layer2 || '')}</td>
-        <td>${escapeHtml(run?.layer3 || '')}</td>
-        <td>${escapeHtml(run?.layer4 || '')}</td>
-        <td>${escapeHtml(run?.git || '')}</td>
-      `;
-      saveBody.appendChild(tr);
-    });
-  }
-
-  if (orchestrator) {
-    try {
-      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
-    } catch (error) {
-      console.error('Failed to stringify orchestrator summary', error);
-      orchEl.textContent = String(orchestrator);
-    }
-  } else {
-    orchEl.textContent = 'No orchestrator summary in snapshot.';
-  }
-
-  if (payload.advisory) {
-    const adv = payload.advisory;
-    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-  }
-}
-
-function renderRealityError(message) {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Reality snapshot unavailable.';
-  }
-  showErrorBanner('reality-error', message || 'Failed to load Reality snapshot.');
-}
-
-function updateRealityBadge(el, label, status) {
-  if (!el) return;
-  el.className = 'badge badge-muted';
-
-  if (!status) {
-    el.textContent = label;
-    return;
-  }
-
-  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
-  el.className = `badge badge-${normalized}`;
-  el.textContent = `${label}: ${status}`;
-}
-
-function initRealityPanel() {
-  if (realityPanelInitialized) {
-    return;
-  }
-
-  const refreshBtn = document.getElementById('reality-refresh-btn');
-  const retryBtn = document.getElementById('reality-error-retry');
-
-  refreshBtn?.addEventListener('click', () => loadRealitySnapshot());
-  retryBtn?.addEventListener('click', () => loadRealitySnapshot());
-
-  loadRealitySnapshot();
-  realityPanelInitialized = true;
-}
-
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
@@ -1201,6 +1593,7 @@ function initDashboard() {
   initWoAutorefreshControls();
   initWoTimeline();
   loadWos();
+  document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
 
 function cleanupIntervals() {
@@ -1217,6 +1610,10 @@ function cleanupIntervals() {
   if (woAutorefreshIntervalId) {
     clearInterval(woAutorefreshIntervalId);
     woAutorefreshIntervalId = null;
+  }
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
   }
 }
 
