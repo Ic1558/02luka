@@ -1,0 +1,791 @@
+# Context Engineering Protocol v3.0
+**Version:** 3.0.0
+**Status:** PROTOCOL (Single Source of Truth)
+**Last Updated:** 2025-11-17
+**Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
+**Maintainer:** Boss (ittipong.c@gmail.com)
+
+---
+
+## 1. Scope & Purpose
+
+Protocol นี้กำหนด **context engineering architecture** สำหรับระบบ 02luka
+
+**คำถามหลักที่ตอบ:**
+1. ใครคิดได้? (Which agents can reason)
+2. ใครเขียน SOT ได้? (Which agents can write to repositories)
+3. Fallback ladder คืออะไร? (When primary writers fail)
+4. Context ไหลยังไง? (Flow from GG → GC → CLC → Codex → LPE → Kim)
+
+**ทำไมต้องมี:**
+- ป้องกัน context chaos (หลาย agent เขียนไฟล์เดียวกัน)
+- กำหนด ownership ชัดเจน (ใครเป็นเจ้าของชั้นไหน)
+- กำหนด graceful degradation (เมื่อ CLC หมด token)
+- Audit trail สมบูรณ์ (ใครเขียนอะไร เมื่อไหร่ ทำไม)
+
+---
+
+## 2. Agent Layer Hierarchy (กฎ Mandatory)
+
+### 2.1 Layer Definition
+
+```
+Layer 1: GG (Governance Gate)
+  ↓ delegates to
+Layer 2: GC (Governance Copilot)
+  ↓ delegates to
+Layer 3: CLC (Claude Code)
+  ↓ can consult (read-only)
+Layer 4: Codex (Cursor AI)
+  ↓ falls back to
+Layer 5: LPE (Local Prompt Executor)
+  ↓ orchestrates via
+Layer 6: Kim (API Gateway)
+```
+
+### 2.2 Agent Capabilities (Formal Rules)
+
+#### Layer 1: GG (Governance Gate)
+
+**Thinking Capability:**
+- **CAN** perform strategic reasoning
+- **CAN** make governance decisions
+- **CAN** perform risk/value analysis
+
+**Writing Capability:**
+- **MUST ONLY** write governance documents
+- **MUST ONLY** write policy files
+- **MUST NOT** write operational code
+- **MUST** delegate code writing to GC or CLC
+
+**Authorization:**
+- Self-approval for governance docs (Boss oversight)
+- Boss approval for system-wide policy changes
+
+**Example Decision:**
+> "Should we adopt feature X based on risk/value analysis?"
+
+---
+
+#### Layer 2: GC (Governance Copilot)
+
+**Thinking Capability:**
+- **CAN** perform tactical reasoning
+- **CAN** create implementation plans
+- **CAN** review code for governance compliance
+
+**Writing Capability:**
+- **CAN** write specs, PRPs, review reports
+- **CAN** write governance documentation
+- **MUST NOT** write operational code without GG approval
+- **MUST** delegate implementation to CLC
+
+**Authorization:**
+- GG approval required for governance decisions
+- Self-approved for tactical specs
+
+**Example Decision:**
+> "How do we implement GG decision Y safely?"
+
+---
+
+#### Layer 3: CLC (Claude Code)
+
+**Thinking Capability:**
+- **CAN** perform operational reasoning
+- **CAN** plan code implementations
+- **CAN** debug and troubleshoot
+
+**Writing Capability:**
+- **CAN** write code, configs, scripts, reports
+- **CAN** commit to SOT repositories
+- **MUST** validate all writes via pre-commit hooks
+- **MUST** log all SOT writes to MLS
+
+**Token Budget:**
+- **MUST NOT** exceed 200K tokens/session
+- **MUST** trigger fallback at 190K tokens
+- **MUST** monitor token usage via health check
+
+**Authorization:**
+- Self-approved for operational code
+- Boss approval for architecture changes
+
+**Example Decision:**
+> "What's the best way to fix this LaunchAgent path issue?"
+
+---
+
+#### Layer 4: Codex (Cursor AI / VSCode Extension)
+
+**Thinking Capability:**
+- **CAN** analyze code
+- **CAN** suggest solutions
+- **CAN** explore codebase
+
+**Writing Capability:**
+- **MUST NOT** write to SOT repositories
+- **MUST NOT** commit to git
+- **MUST** delegate all writes to CLC or LPE
+- **CAN ONLY** create ephemeral suggestions
+
+**Constraint:**
+- **CANNOT** push to git (no commit permissions)
+- **CANNOT** modify SOT files directly
+- **MUST** be read-only for all SOT operations
+
+**Enforcement:**
+- Git pre-commit hook **MUST** reject commits with author="Codex"
+- MLS **MUST** log any Codex suggestion that becomes implementation
+
+**Example Decision:**
+> "This function looks like it handles authentication..."
+
+---
+
+#### Layer 5: LPE (Local Prompt Executor)
+
+**Thinking Capability:**
+- **MUST NOT** perform reasoning
+- **MUST** execute Boss instructions exactly
+- **MUST NOT** make decisions autonomously
+
+**Writing Capability:**
+- **CAN** write any file Boss specifies
+- **MUST** require Boss approval for all writes
+- **MUST** log all writes to MLS
+- **CAN ONLY** be used as fallback when CLC unavailable
+
+**Trigger Conditions:**
+- CLC session reaches token limit (>190K tokens)
+- CLC session unavailable
+- Boss requires urgent change
+
+**Authorization:**
+- Boss approval **REQUIRED** for every write
+- MLS logging **REQUIRED** with Boss message ID
+- Next CLC session **MUST** review all LPE writes
+
+**Example Operation:**
+> Boss: "Write this code to file X" → LPE: *writes without reasoning*
+
+---
+
+#### Layer 6: Kim (API Gateway / Orchestrator)
+
+**Thinking Capability:**
+- **CAN** perform routing decisions
+- **CAN** prioritize task queues
+- **CAN** analyze task requirements
+
+**Writing Capability:**
+- **MUST NOT** write to SOT
+- **MUST** delegate all writes to CLC or LPE
+- **CAN ONLY** coordinate between agents
+
+**Authorization:**
+- No direct write permissions
+- Delegates to authorized writers only
+
+**Example Decision:**
+> "This task should go to CLC, that one to GC"
+
+---
+
+## 3. Capability Matrix (Reference Table)
+
+| Agent | Think | Write SOT | Scope | Approval | Token Limit |
+|-------|-------|-----------|-------|----------|-------------|
+| **GG** | ✅ MUST (strategic) | ✅ CAN (governance only) | Governance docs, policy | Self (Boss oversight) | N/A |
+| **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
+| **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Operational code | Self-approved | 200K/session |
+| **Codex** | ✅ CAN (analysis) | ❌ MUST NOT | Code suggestions (ephemeral) | N/A | N/A |
+| **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
+| **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
+
+---
+
+## 4. Fallback Ladder Protocol
+
+### 4.1 Decision Tree: When CLC Is Unavailable
+
+```
+┌─────────────────────────────────────┐
+│ CLC reaches 200K tokens             │
+│ OR CLC session not open             │
+└──────────────┬──────────────────────┘
+               ↓
+     ┌─────────────────────┐
+     │ Is this urgent?     │
+     └─────┬───────────┬───┘
+           │           │
+          YES         NO
+           │           │
+           ↓           ↓
+    ┌──────────┐  ┌────────────────┐
+    │ Use LPE  │  │ Wait for new   │
+    │ Fallback │  │ CLC session    │
+    └──────────┘  └────────────────┘
+           │
+           ↓
+    ┌──────────────────────────┐
+    │ LPE Fallback Protocol:   │
+    │ 1. Boss dictates change  │
+    │ 2. LPE writes (no think) │
+    │ 3. Log to MLS            │
+    │ 4. Next CLC reviews      │
+    └──────────────────────────┘
+```
+
+### 4.2 Scenario 1: CLC Out of Tokens
+
+**Trigger:**
+- CLC session reaches 190K+ tokens
+
+**Decision Rule:**
+
+**IF** urgent change required:
+- **THEN** use LPE fallback
+- **ELSE** wait for new CLC session
+
+**LPE Fallback Procedure:**
+1. Boss **MUST** dictate exact changes to LPE
+2. LPE **MUST** execute writes without reasoning
+3. LPE **MUST** log to MLS:
+   - Timestamp
+   - Producer: LPE
+   - Action: Write file X
+   - Reason: CLC out of tokens
+   - Boss approval: [message ID]
+4. Next CLC session **MUST** review LPE changes
+5. CLC **MUST** validate correctness
+6. CLC **MUST** fix if issues found
+
+**MLS Log Format (Required):**
+```json
+{
+  "timestamp": "2025-11-17T06:00:00",
+  "producer": "LPE",
+  "type": "emergency_write",
+  "file": "g/tools/script.zsh",
+  "reason": "CLC token limit exceeded",
+  "approval": "Boss message 2025-11-17T05:59:00",
+  "content_hash": "a1b2c3d4..."
+}
+```
+
+### 4.3 Scenario 2: CLC Session Unavailable
+
+**Trigger:**
+- Boss needs change but no CLC session open
+- Urgent operational requirement
+
+**Procedure:**
+1. Boss **MAY** use LPE as fallback writer
+2. Boss **MUST** approve each write explicitly
+3. LPE **MUST** log to MLS (same format as 4.2)
+4. Next CLC session **MUST** review all LPE writes
+
+### 4.4 Scenario 3: Codex Suggests Change
+
+**Trigger:**
+- Codex provides code suggestion
+- Boss wants to apply suggestion
+
+**Decision Rule:**
+
+**IF** CLC session available:
+- **THEN** Boss delegates to CLC
+- CLC writes + commits
+- MLS logs: "Codex suggestion implemented by CLC"
+
+**ELSE IF** CLC unavailable:
+- **THEN** Boss uses LPE fallback
+- Boss dictates Codex suggestion to LPE
+- LPE writes + logs to MLS
+- MLS logs: "Codex suggestion via LPE (CLC unavailable)"
+
+**Codex Constraint (Enforced):**
+- Codex **MUST NOT** write to SOT directly
+- Codex **MUST** inform Boss: "I cannot write to git. Please use CLC or LPE."
+- Git hook **MUST** reject any commits with author="Codex"
+
+---
+
+## 5. Context Flow Patterns
+
+### 5.1 Pattern: Normal Operation (CLC Active)
+
+**Flow:**
+```
+Boss request
+    ↓
+CLC receives + validates
+    ↓
+CLC thinks + plans
+    ↓
+CLC writes code/docs
+    ↓
+CLC commits to git
+    ↓
+CLC reports to Boss
+    ↓
+MLS captures learnings
+```
+
+**Rules:**
+- CLC **MUST** use all available tools (Read, Write, Edit, Bash, Git)
+- CLC **MUST** validate via pre-commit hooks
+- CLC **MUST** log all SOT writes to MLS
+
+### 5.2 Pattern: CLC + Codex Collaboration
+
+**Flow:**
+```
+Boss: "Help me understand this codebase"
+    ↓
+CLC explores with Task tool
+    ↓
+Boss opens Cursor (Codex active)
+    ↓
+Codex provides IDE-based suggestions
+    ↓
+Boss decides what to implement
+    ↓
+Boss → CLC: "Implement solution X"
+    ↓
+CLC writes + commits
+    ↓
+MLS logs: "Codex suggestion implemented by CLC"
+```
+
+**Rules:**
+- Codex **MUST** be read-only
+- CLC **MUST** execute all writes
+- MLS **MUST** log Codex → CLC handoff
+
+### 5.3 Pattern: GG → GC → CLC Cascade
+
+**Flow:**
+```
+GG decides: "We need feature X for governance"
+    ↓
+GG → GC: "Create implementation spec for X"
+    ↓
+GC writes spec + PRP
+    ↓
+GC → CLC: "Implement according to spec"
+    ↓
+CLC executes implementation
+    ↓
+CLC → GC: "Implementation complete, ready for review"
+    ↓
+GC reviews + approves
+    ↓
+GG validates governance compliance
+```
+
+**Rules:**
+- Each layer **MUST** add detail
+- Each layer **MUST** delegate down hierarchy
+- Review **MUST** flow back up hierarchy
+
+### 5.4 Pattern: LPE Emergency Fallback
+
+**Flow:**
+```
+CLC hits token limit mid-task
+    ↓
+Boss: "I need this file updated NOW"
+    ↓
+Boss → LPE: "Write this content to file Y"
+    ↓
+LPE writes (no thinking)
+    ↓
+LPE logs to MLS: "Emergency write by LPE, Boss approval [ID]"
+    ↓
+Next CLC session: Review MLS log
+    ↓
+CLC validates LPE changes
+    ↓
+IF issues found: CLC fixes + reports
+```
+
+**Rules:**
+- All LPE writes **MUST** be logged for CLC review
+- Boss approval **REQUIRED** for each write
+- CLC **MUST** validate all LPE writes in next session
+
+### 5.5 Pattern: Kim Multi-Agent Orchestration
+
+**Flow:**
+```
+External request → Kim API
+    ↓
+Kim analyzes: "This needs code change + governance review"
+    ↓
+Kim → CLC: "Implement change"
+    ↓
+Kim → GC: "Review for governance compliance"
+    ↓
+Both complete → Kim aggregates results
+    ↓
+Kim → External caller: "Task complete with governance approval"
+```
+
+**Rules:**
+- Kim **MUST NOT** write to SOT
+- Kim **MUST** delegate to appropriate agents
+- Kim **MAY** coordinate parallel execution
+
+---
+
+## 6. Enforcement Mechanisms (Mandatory)
+
+### 6.1 Git Pre-Commit Hook
+
+**Purpose:** Prevent protocol violations before commit
+
+**Location:** `.git/hooks/pre-commit`
+
+**Required Checks:**
+
+```bash
+#!/bin/bash
+# .git/hooks/pre-commit
+
+# Check 1: Prevent Codex commits
+if [[ $COMMITTER == "Codex" ]]; then
+  echo "❌ PROTOCOL VIOLATION: Codex cannot commit to SOT"
+  echo "Use CLC or LPE as fallback writer"
+  exit 1
+fi
+
+# Check 2: Validate LaunchAgent scripts exist
+if ! bash ~/02luka/g/tools/check_launchagent_scripts.sh; then
+  echo "❌ PROTOCOL VIOLATION: LaunchAgent validation failed"
+  exit 1
+fi
+
+# Check 3: Verify MLS logging for SOT writes (if applicable)
+# (Optional: check if MLS entry exists for this commit)
+
+exit 0
+```
+
+**Installation:**
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+### 6.2 Token Budget Monitoring
+
+**Purpose:** Prevent CLC token exhaustion without fallback
+
+**Monitoring Points:**
+
+| Tokens Used | Action | Rule |
+|-------------|--------|------|
+| < 150K | Normal operation | CLC **MAY** continue |
+| 150K - 180K | Warning | CLC **SHOULD** warn Boss |
+| 180K - 190K | Alert | CLC **MUST** alert Boss |
+| 190K+ | Fallback trigger | CLC **MUST** prepare LPE fallback |
+
+**Implementation:**
+- CLC **MUST** report token usage in responses
+- Health check **MAY** monitor token usage
+- Boss **MUST** decide: continue with LPE or new session
+
+### 6.3 MLS Audit Trail
+
+**Purpose:** Track all SOT writes for accountability
+
+**Required Logging:**
+
+Every SOT write **MUST** log:
+- **Who:** Agent that wrote (GG/GC/CLC/LPE)
+- **When:** Timestamp (ISO 8601)
+- **What:** File path + content hash
+- **Why:** Reason/context
+- **Approval:** Boss approval (if LPE)
+
+**MLS Entry Format:**
+```json
+{
+  "timestamp": "2025-11-17T06:00:00",
+  "producer": "CLC",
+  "type": "sot_write",
+  "file": "g/tools/script.zsh",
+  "reason": "Fix LaunchAgent path issue",
+  "content_hash": "sha256:a1b2c3d4...",
+  "approval": null
+}
+```
+
+**Query Examples:**
+```bash
+# Find all LPE writes
+node ~/02luka/knowledge/index.cjs --hybrid "LPE emergency write"
+
+# Find CLC token limit incidents
+node ~/02luka/knowledge/index.cjs --hybrid "token limit fallback"
+
+# Find Codex suggestions implemented
+node ~/02luka/knowledge/index.cjs --hybrid "Codex suggestion implemented"
+```
+
+---
+
+## 7. Integration with LaunchAgents
+
+### 7.1 Agent-Triggered Workflows
+
+**Mapping Table:**
+
+| LaunchAgent | Triggers | Context Layer | Action |
+|-------------|----------|---------------|--------|
+| `mls.cursor.watcher` | Cursor prompt capture | → MLS | Captures Codex interactions for learning |
+| `mary.dispatcher` | Work order routing | → Kim → CLC/GC | Routes tasks to appropriate agent |
+| `backup.gdrive` | Data sync | → Local script | No context layer (pure automation) |
+| `health.dashboard` | Status generation | → Local script | Generates JSON without AI reasoning |
+| `gg.nlp-bridge` | Governance routing | → GG/GC | Routes governance decisions |
+
+**Rule:**
+- LaunchAgents **MAY** trigger AI agents
+- LaunchAgents **MUST NOT** perform reasoning themselves
+- LaunchAgents **MUST** be deterministic automation only
+
+### 7.2 Context Layer Selection
+
+**Decision Tree:**
+
+```
+LaunchAgent event occurs
+    ↓
+Does it require governance decision?
+    ├─ YES → Route to GG/GC
+    └─ NO → Continue
+               ↓
+Does it require code changes?
+    ├─ YES → Route to CLC
+    └─ NO → Continue
+               ↓
+Is it pure automation?
+    ├─ YES → Execute local script
+    └─ NO → Route to Kim for orchestration
+```
+
+---
+
+## 8. Validation & Compliance
+
+### 8.1 Pre-Commit Validation (Required)
+
+**Who:** CLC, LPE (before any SOT write)
+
+**What to validate:**
+```bash
+# 1. LaunchAgent script existence
+bash ~/02luka/g/tools/check_launchagent_scripts.sh
+
+# 2. No hardcoded paths (if applicable)
+bash ~/02luka/g/tools/check_hardcoded_paths.sh
+
+# 3. MLS compliance (if applicable)
+bash ~/02luka/g/tools/check_mls_compliance.sh
+```
+
+**Rule:**
+- All checks **MUST** pass before commit
+- Failed validation **MUST** block commit
+- Boss **MAY** override for emergency
+
+### 8.2 Runtime Validation (Monitoring)
+
+**Who:** Health dashboard, monitoring LaunchAgents
+
+**What to monitor:**
+- CLC token usage (warn at 150K, alert at 180K)
+- LPE fallback usage (count + frequency)
+- Codex violation attempts (should be zero)
+- MLS logging compliance (100% for SOT writes)
+
+**Alert Thresholds:**
+
+| Metric | Warning | Critical | Action |
+|--------|---------|----------|--------|
+| CLC tokens | 150K | 190K | Prepare LPE fallback |
+| LPE usage | 5/day | 10/day | Investigate why CLC unavailable |
+| Codex violations | 1/week | 1/day | Review git hooks |
+| MLS missing logs | 1% | 5% | Audit SOT writes |
+
+### 8.3 Periodic Audit (Weekly)
+
+**Who:** Boss or GG
+
+**What to check:**
+- Review MLS logs for all LPE writes
+- Verify CLC token usage patterns
+- Check for any Codex violation attempts
+- Validate enforcement mechanisms still active
+
+**Report:**
+- Weekly compliance report to MLS
+- List any protocol violations
+- Recommend adjustments if needed
+
+---
+
+## 9. Maintenance Protocol
+
+### 9.1 Adding New Agent/Layer
+
+**Procedure:**
+
+1. **Define capabilities:**
+   - Can think? (Yes/No)
+   - Can write SOT? (Yes/No, where?)
+   - Authorization required? (Who approves?)
+   - Token limits? (If applicable)
+
+2. **Update this protocol:**
+   - Add to Section 2.2 (Agent Capabilities)
+   - Add to Section 3 (Capability Matrix)
+   - Add to relevant flow patterns (Section 5)
+
+3. **Add enforcement:**
+   - Update git pre-commit hook if needed
+   - Add monitoring to health dashboard
+   - Add MLS logging requirements
+
+4. **Test compliance:**
+   - Verify new agent follows rules
+   - Validate enforcement mechanisms work
+   - Document in MLS
+
+5. **Boss approval:**
+   - Required for new agent
+   - Version bump this protocol
+
+### 9.2 Modifying Agent Capabilities
+
+**Procedure:**
+
+1. **Document change:**
+   - What capability is changing?
+   - Why is it changing?
+   - What's the impact?
+
+2. **Update protocol:**
+   - Modify Section 2.2 (specific agent rules)
+   - Update Section 3 (capability matrix)
+   - Update enforcement mechanisms
+
+3. **Test changes:**
+   - Verify no protocol violations
+   - Validate enforcement still works
+   - Update MLS with learnings
+
+4. **Boss approval:**
+   - Required for capability changes
+   - Version bump this protocol
+
+### 9.3 Protocol Version Control
+
+**Versioning:**
+- Major version (X.0.0): Breaking changes (agent capabilities changed)
+- Minor version (3.X.0): New agents/layers added
+- Patch version (3.0.X): Documentation/clarification only
+
+**Change Requirements:**
+- Major/Minor changes **REQUIRE** Boss approval
+- Patch changes **MAY** be self-approved by protocol maintainer
+- All changes **MUST** be documented in MLS
+
+---
+
+## 10. Glossary
+
+**SOT (Single Source of Truth):**
+- Git repositories containing authoritative code/docs
+- Only authorized writers can commit (GG, GC, CLC, LPE with approval)
+- All changes tracked via git + MLS
+
+**Context Layer:**
+- Hierarchical level in 02luka agent system
+- Each layer has specific capabilities and constraints
+- Delegation flows down hierarchy, review flows up
+
+**Authorized Writer:**
+- Agent that can commit to SOT repos
+- Currently: GG, GC, CLC, LPE (with Boss approval)
+- Codex and Kim are NOT authorized writers
+
+**Read-Only Agent:**
+- Agent that can analyze but not write to SOT
+- Currently: Codex, Kim
+- Must delegate writes to authorized agents
+
+**Token Budget:**
+- Maximum tokens per CLC session (200K)
+- Monitored to prevent mid-task failures
+- Fallback triggers at 190K tokens
+
+**MLS (Multi-Loop Learning System):**
+- Knowledge base capturing decisions, learnings, patterns
+- Searchable via `knowledge/index.cjs`
+- Required for all LPE writes and protocol violations
+
+**Fallback Ladder:**
+- Sequence of alternative agents when primary unavailable
+- CLC → LPE (when CLC out of tokens or unavailable)
+- Codex → CLC/LPE (Codex cannot write)
+
+**Enforcement Mechanism:**
+- Automated check that prevents protocol violations
+- Examples: Git pre-commit hook, token monitor, MLS validation
+- Required for maintaining protocol compliance
+
+---
+
+## 11. References
+
+**Related Protocols:**
+- `MULTI_AGENT_PR_CONTRACT.md` - PR routing and classification
+- `LAUNCHAGENT_REGISTRY.md` - LaunchAgent lifecycle management
+- `AI:OP-001` - Operations protocol
+
+**Related Documentation:**
+- `CONTEXT_ENGINEERING_GLOBAL.md` (DEPRECATED - replaced by this protocol)
+- `g/DELEGATION_QUICK_REF.md` - Quick reference for delegation
+- `manuals/MLS_SYSTEM_GUIDE.md` - MLS usage guide
+
+**Tools:**
+- `check_launchagent_scripts.sh` - Validate LaunchAgent paths
+- `validate_runtime_state.zsh` - Runtime validation
+- `knowledge/index.cjs` - MLS search interface
+
+---
+
+## 12. Protocol Status
+
+**Version:** 3.0.0
+**Status:** PROTOCOL (Effective immediately)
+**Approved by:** Boss
+**Supersedes:** CONTEXT_ENGINEERING_GLOBAL.md v1.0.0-DRAFT
+**Next Review:** 2025-12-17 (30 days)
+
+---
+
+**🎯 Key Principle (Invariant):**
+
+> **"Codex can think. CLC can write. When CLC unavailable, LPE writes (but doesn't think)."**
+
+This protocol ensures:
+- ✅ Clear agent authorization
+- ✅ Graceful degradation (CLC → LPE)
+- ✅ Audit trails (MLS logging)
+- ✅ Enforcement mechanisms (git hooks, monitoring)
+- ✅ Protocol compliance (validation gates)
+
+**All agents MUST follow this protocol. No exceptions without Boss approval.**
