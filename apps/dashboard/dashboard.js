@@ -7,6 +7,23 @@ let mlsIntervalId;
 let currentMlsType = '';
 let realityLoading = false;
 
+let allWos = [];
+let visibleWos = [];
+let currentWoFilter = 'all';
+let woAutorefreshTimer = null;
+let woAutorefreshEnabled = false;
+let woAutorefreshIntervalMs = 30000;
+let currentWoSearch = '';
+let currentWoSortKey = 'started_at';
+let currentWoSortDir = 'desc';
+const WO_STATUS_SORT_ORDER = {
+  running: 4,
+  pending: 3,
+  completed: 2,
+  failed: 1,
+  unknown: 0
+};
+
 async function fetchJSON(url) {
   const response = await fetch(url, {
     headers: {
@@ -114,6 +131,371 @@ function showErrorBanner(id, message) {
 function hideErrorBanner(id) {
   const banner = document.getElementById(id);
   banner?.classList.add('hidden');
+}
+
+// --- Work Orders ---
+
+function initWoFilters() {
+  const filterGroup = document.getElementById('wo-status-filters');
+  if (!filterGroup) return;
+
+  const buttons = filterGroup.querySelectorAll('button[data-filter]');
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.filter || 'all';
+      currentWoFilter = filter;
+      buttons.forEach((btn) => btn.classList.toggle('active', btn === button));
+      applyWoFilter();
+    });
+  });
+}
+
+function initWoSearch() {
+  const input = document.getElementById('wo-search-input');
+  if (!input) return;
+
+  if (currentWoSearch) {
+    input.value = currentWoSearch;
+  }
+
+  input.addEventListener('input', () => {
+    currentWoSearch = input.value.trim().toLowerCase();
+    applyWoFilter();
+  });
+}
+
+function initWoSorting() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  if (!headerCells.length) return;
+
+  headerCells.forEach((th) => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (!key) return;
+
+      if (currentWoSortKey === key) {
+        currentWoSortDir = currentWoSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentWoSortKey = key;
+        currentWoSortDir = key === 'id' ? 'asc' : 'desc';
+      }
+
+      updateWoSortHeaderStyles();
+      applyWoFilter();
+    });
+  });
+
+  updateWoSortHeaderStyles();
+}
+
+function updateWoSortHeaderStyles() {
+  const headerCells = document.querySelectorAll('#wos-table th[data-sort-key]');
+  headerCells.forEach((th) => {
+    const key = th.getAttribute('data-sort-key');
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (key === currentWoSortKey) {
+      th.classList.add(currentWoSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function initWoAutorefreshControls() {
+  const refreshBtn = document.getElementById('wo-refresh-btn');
+  const retryBtn = document.getElementById('wos-error-retry');
+  const toggle = document.getElementById('wo-autorefresh-toggle');
+  const intervalInput = document.getElementById('wo-autorefresh-interval');
+
+  refreshBtn?.addEventListener('click', () => loadWos());
+  retryBtn?.addEventListener('click', () => loadWos());
+
+  toggle?.addEventListener('change', () => {
+    woAutorefreshEnabled = Boolean(toggle.checked);
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    } else {
+      stopWoAutorefresh();
+    }
+  });
+
+  intervalInput?.addEventListener('change', () => {
+    const seconds = Number(intervalInput.value);
+    if (!Number.isFinite(seconds) || seconds < 5) {
+      return;
+    }
+    woAutorefreshIntervalMs = seconds * 1000;
+    if (woAutorefreshEnabled) {
+      startWoAutorefresh();
+    }
+  });
+}
+
+function startWoAutorefresh() {
+  stopWoAutorefresh();
+  woAutorefreshTimer = setInterval(() => loadWos(), woAutorefreshIntervalMs);
+}
+
+function stopWoAutorefresh() {
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
+  }
+}
+
+function setWosLoading(message) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7">${message}</td></tr>`;
+}
+
+async function loadWos() {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  setWosLoading('Loading work orders…');
+  hideErrorBanner('wos-error');
+
+  try {
+    const res = await fetch('/api/wos', {
+      headers: { Accept: 'application/json' }
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    let wos = [];
+    if (Array.isArray(data)) {
+      wos = data;
+    } else if (Array.isArray(data?.wos)) {
+      wos = data.wos;
+    } else if (Array.isArray(data?.results)) {
+      wos = data.results;
+    }
+
+    allWos = wos;
+    applyWoFilter();
+
+    const ts = new Date().toLocaleTimeString();
+    const refreshLabel = document.getElementById('wo-last-refresh');
+    if (refreshLabel) {
+      refreshLabel.textContent = `Last refresh: ${ts}`;
+    }
+  } catch (error) {
+    console.error('Failed to load work orders', error);
+    showErrorBanner('wos-error', 'Failed to load work orders.');
+    setWosLoading('Failed to load work orders.');
+  }
+}
+
+function applyWoFilter() {
+  let filtered = allWos.slice();
+
+  if (currentWoFilter !== 'all') {
+    filtered = filtered.filter((wo) => normalizeWoStatus(wo.status || wo.state) === currentWoFilter);
+  }
+
+  if (currentWoSearch) {
+    const q = currentWoSearch;
+    filtered = filtered.filter((wo) => buildWoSearchHaystack(wo).includes(q));
+  }
+
+  filtered.sort((a, b) => compareWos(a, b, currentWoSortKey, currentWoSortDir));
+
+  visibleWos = filtered;
+  renderWosTable(filtered);
+  renderWoSummary(filtered);
+}
+
+function renderWosTable(wos) {
+  const tbody = document.getElementById('wos-table-body');
+  if (!tbody) return;
+
+  if (!wos.length) {
+    tbody.innerHTML = '<tr><td colspan="7">No work orders match the current filters.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  wos.forEach((wo) => {
+    const tr = document.createElement('tr');
+    const status = normalizeWoStatus(wo.status || wo.state);
+    const started = formatWoTimestamp(wo.started_at || wo.startedAt);
+    const finished = formatWoTimestamp(wo.finished_at || wo.finishedAt);
+    const updated = formatWoTimestamp(wo.updated_at || wo.updatedAt || wo.last_update || wo.lastUpdate);
+    const actions = Array.isArray(wo.actions) ? wo.actions.join(', ') : wo.action || '—';
+    const timeline = Array.isArray(wo.timeline) ? `${wo.timeline.length} events` : '—';
+
+    tr.innerHTML = `
+      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(started)}</td>
+      <td>${escapeHtml(finished)}</td>
+      <td>${escapeHtml(updated)}</td>
+      <td>${escapeHtml(actions || '—')}</td>
+      <td>${escapeHtml(timeline)}</td>
+    `;
+
+    tbody.appendChild(tr);
+  });
+}
+
+function renderWoSummary(wos) {
+  const summary = document.getElementById('wos-summary');
+  if (!summary) return;
+
+  const totals = {
+    running: 0,
+    pending: 0,
+    completed: 0,
+    failed: 0
+  };
+
+  wos.forEach((wo) => {
+    const status = normalizeWoStatus(wo.status || wo.state);
+    if (status in totals) {
+      totals[status] += 1;
+    }
+  });
+
+  summary.innerHTML = `
+    <span><strong>Total:</strong> ${allWos.length}</span>
+    <span><strong>Visible:</strong> ${wos.length}</span>
+    <span><span class="summary-dot running"></span>Running: ${totals.running}</span>
+    <span><span class="summary-dot stopped"></span>Pending: ${totals.pending}</span>
+    <span><span class="summary-dot failed"></span>Failed: ${totals.failed}</span>
+    <span><span class="summary-dot completed"></span>Completed: ${totals.completed}</span>
+  `;
+}
+
+function normalizeWoStatus(status) {
+  if (!status) return 'unknown';
+  const normalized = String(status).toLowerCase();
+  if (['success', 'completed', 'complete', 'done'].includes(normalized)) {
+    return 'completed';
+  }
+  if (['failed', 'failure', 'error', 'blocked', 'cancelled'].includes(normalized)) {
+    return 'failed';
+  }
+  if (['running', 'in_progress', 'in-progress', 'active'].includes(normalized)) {
+    return 'running';
+  }
+  if (['pending', 'queued', 'waiting'].includes(normalized)) {
+    return 'pending';
+  }
+  return normalized;
+}
+
+function compareWos(a, b, sortKey, sortDir) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+
+  if (sortKey === 'id') {
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  if (sortKey === 'status') {
+    const va = getStatusSortValue(a?.status);
+    const vb = getStatusSortValue(b?.status);
+    if (va !== vb) {
+      return (va - vb) * dir;
+    }
+    return compareWoIds(a?.id, b?.id) * dir;
+  }
+
+  const va = getWoSortValue(a, sortKey);
+  const vb = getWoSortValue(b, sortKey);
+
+  if (va < vb) return -1 * dir;
+  if (va > vb) return 1 * dir;
+  return compareWoIds(a?.id, b?.id) * dir;
+}
+
+function getWoSortValue(wo, sortKey) {
+  switch (sortKey) {
+    case 'started_at':
+      return normalizeWoTimestamp(wo?.started_at || wo?.startedAt);
+    case 'finished_at':
+      return normalizeWoTimestamp(wo?.finished_at || wo?.finishedAt);
+    case 'updated_at':
+      return normalizeWoTimestamp(wo?.updated_at || wo?.updatedAt || wo?.last_update || wo?.lastUpdate);
+    default:
+      return 0;
+  }
+}
+
+function getStatusSortValue(status) {
+  const normalized = normalizeWoStatus(status);
+  if (Object.prototype.hasOwnProperty.call(WO_STATUS_SORT_ORDER, normalized)) {
+    return WO_STATUS_SORT_ORDER[normalized];
+  }
+  return 0;
+}
+
+function compareWoIds(aId, bId) {
+  const aInfo = normalizeWoId(aId);
+  const bInfo = normalizeWoId(bId);
+
+  if (aInfo.numeric !== null && bInfo.numeric !== null && aInfo.numeric !== bInfo.numeric) {
+    return aInfo.numeric - bInfo.numeric;
+  }
+
+  if (aInfo.numeric !== null && bInfo.numeric === null) {
+    return -1;
+  }
+  if (aInfo.numeric === null && bInfo.numeric !== null) {
+    return 1;
+  }
+
+  if (aInfo.text < bInfo.text) return -1;
+  if (aInfo.text > bInfo.text) return 1;
+  return 0;
+}
+
+function normalizeWoId(value) {
+  if (value === undefined || value === null) {
+    return { numeric: null, text: '' };
+  }
+  const text = String(value).toLowerCase();
+  const match = text.match(/(\d+)/);
+  const numeric = match ? Number(match[1]) : null;
+  return { numeric: Number.isNaN(numeric) ? null : numeric, text };
+}
+
+function buildWoSearchHaystack(wo) {
+  const haystacks = [];
+  if (wo.id) haystacks.push(String(wo.id));
+  if (wo.title) haystacks.push(String(wo.title));
+  if (wo.context) haystacks.push(String(wo.context));
+  if (wo.summary) haystacks.push(String(wo.summary));
+  if (wo.description) haystacks.push(String(wo.description));
+  if (wo.agent) haystacks.push(String(wo.agent));
+  if (wo.worker) haystacks.push(String(wo.worker));
+  if (wo.type) haystacks.push(String(wo.type));
+  if (wo.action) haystacks.push(String(wo.action));
+  if (Array.isArray(wo.actions) && wo.actions.length) {
+    haystacks.push(wo.actions.join(' '));
+  }
+  if (Array.isArray(wo.tags) && wo.tags.length) {
+    haystacks.push(wo.tags.join(' '));
+  }
+  if (wo.contextual_data) {
+    haystacks.push(String(wo.contextual_data));
+  }
+  return haystacks.join(' ').toLowerCase();
+}
+
+function normalizeWoTimestamp(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return 0;
+  return parsed;
+}
+
+function formatWoTimestamp(value) {
+  const ts = normalizeWoTimestamp(value);
+  if (!ts) return '—';
+  const date = new Date(ts);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString();
 }
 
 // --- Services ---
@@ -736,6 +1118,11 @@ function initMLSPanel() {
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
+  initWoFilters();
+  initWoSearch();
+  initWoSorting();
+  initWoAutorefreshControls();
+  loadWos();
   document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
 
@@ -748,6 +1135,11 @@ function cleanupIntervals() {
   if (mlsIntervalId) {
     clearInterval(mlsIntervalId);
     mlsIntervalId = null;
+  }
+
+  if (woAutorefreshTimer) {
+    clearInterval(woAutorefreshTimer);
+    woAutorefreshTimer = null;
   }
 }
 
