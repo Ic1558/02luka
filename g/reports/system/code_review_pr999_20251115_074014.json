@@ -1,0 +1,260 @@
+{
+  "pr_number": "999",
+  "title": "feat: sandbox-only payload for multi-agent review",
+  "mode": "review",
+  "timestamp": "20251115_074014",
+  "agents": 1,
+  "payload": {
+    "cli": "multi_agent_pr_review",
+    "pr_number": "999",
+    "title": "feat: sandbox-only payload for multi-agent review",
+    "body": "Fixture payload so Codex/CLS can exercise the CLI without hitting GitHub.",
+    "author": "sandbox-bot",
+    "head": "feature/sandbox-fixture",
+    "base": "main",
+    "url": "https://example.invalid/pr/999",
+    "files_summary": "- tools/multi_agent_pr_review.zsh (modified, +200/-10)
+- manuals/multi_agent_pr_review_manual.md (added, +80/-0)",
+    "diff": "diff --git a/manuals/placeholder.md b/manuals/placeholder.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/manuals/placeholder.md
+@@ -0,0 +1,5 @@
++# Sandbox Fixture
++
++This file exists only to exercise the multi-agent PR review CLI.
++It proves we can ingest diffs without hitting GitHub.
++Remember to delete it after testing.",
+    "contract_path": "/Users/icmini/02luka/docs/MULTI_AGENT_PR_CONTRACT.md",
+    "contract": "# Multi-Agent PR Contract (02luka)
+
+**Version:** 2025-11-15  
+
+**Scope:** กฎกลางสำหรับ PR ที่แตะระบบ agent / governance / tools
+
+---
+
+## 1. เป้าหมาย
+
+- ให้ทุก PR บอกชัดเจนว่า:
+
+  - ทำอะไร
+
+  - กระทบ agent ไหน
+
+  - ควรจัดประเภทเป็น PR / Local Fix / WO / Asking
+
+- ทำให้ GG, GC, CLS, Mary ใช้ข้อมูลเดียวกันในการตัดสินใจว่า:
+
+  - ต้องอ่านไฟล์ไหน
+
+  - ต้องรันเทสอะไร
+
+  - ต้อง sync อะไรข้ามเครื่องบ้าง
+
+---
+
+## 2. ประเภทของงาน (4 Routing Types)
+
+### 2.1 PR / Feature / Governance
+
+ใช้เมื่อ:
+
+- แตะไฟล์ในกลุ่ม:
+
+  - `.github/**`
+
+  - `docs/**` (ระดับระบบ)
+
+  - `launchd/**`, `LaunchAgents/**`
+
+  - `tools/**` ที่ agent อื่นใช้ร่วมกัน
+
+  - `config/**`, `schemas/**`, `telemetry/**`, `state/**`
+
+- เปลี่ยน behavior ระดับระบบ เช่น:
+
+  - security, sandbox, auth, path rules
+
+  - routing ระหว่าง GG ↔ GC ↔ Mary ↔ Kim
+
+**ตัวอย่าง:**
+
+- เพิ่ม Codex sandbox guardrail
+
+- เปลี่ยน PR template
+
+- เปลี่ยน LaunchAgent สำหรับ memory / health
+
+---
+
+### 2.2 Local Fix / Small Patch
+
+ใช้เมื่อ:
+
+- แตะไฟล์จำนวนน้อย เชิง implementation เท่านั้น
+
+- ไม่เปลี่ยน contract ระหว่าง agent
+
+- ไม่แตะ security / auth / filesystem routing
+
+**ตัวอย่าง:**
+
+- แก้ typo ใน report generator เดียว
+
+- ปรับข้อความ log ของ script ตัวหนึ่ง
+
+---
+
+### 2.3 Work Order (WO) / Automation
+
+ใช้เมื่อ:
+
+- สร้างหรือเปลี่ยน script / flow ที่รันงานจริง เช่น:
+
+  - `tools/wo_pipeline/**`
+
+  - `agents/**`
+
+  - `bridge/**`
+
+  - LaunchAgent สำหรับ worker
+
+- เน้น execution pipeline: queue, worker, health, retry
+
+**ตัวอย่าง:**
+
+- เพิ่ม worker ตัวใหม่
+
+- ปรับ script deploy ให้ใช้ sandbox mode
+
+---
+
+### 2.4 Asking / Exploration / Docs-only
+
+ใช้เมื่อ:
+
+- เป็นเอกสาร อธิบาย concept, spec, PLAN
+
+- หรือเป็น POC ที่ไม่ wired เข้าระบบจริง
+
+---
+
+## 3. Multi-Agent Contract
+
+ทุก PR ที่เป็น **PR / Feature / Governance** ต้อง:
+
+1. ระบุ agent ที่ได้รับผลกระทบชัดเจน
+
+2. อธิบาย behavior change แบบก่อน/หลัง
+
+3. เข้ากันได้กับ:
+
+   - `CODEX_SANDBOX_MODE.md`
+
+   - `CODEX_MASTER_READINESS.md`
+
+   - เอกสาร governance ที่เกี่ยวข้อง (Mary, CLS, GC)
+
+---
+
+## 4. ใช้คู่กับ PR Template
+
+ไฟล์ `.github/PULL_REQUEST_TEMPLATE.md` ถูกออกแบบให้:
+
+- ให้ผู้เขียน PR:
+
+  - เลือกประเภท (4 type)
+
+  - ระบุ agent impact
+
+  - เช็ค sandbox / safety checklist
+
+- ให้ GG/GC/CLS/Mary:
+
+  - อ่าน PR ได้เหมือนกัน ไม่ต้องเดา context
+
+  - ใช้ metadata เพื่อตัดสินใจว่าจะรันเทสอะไร / ส่ง alert ให้ใคร
+
+---
+
+## 5. Integration กับ Local Bot / Codex / Cursor
+
+แนวคิด (ไม่ผูกกับ implementation เจาะจง):
+
+- Local bot / Codex prompt ชุดนี้ควร:
+
+  - อ่านคำสั่งธรรมชาติ (ไทย/อังกฤษ)
+
+  - ตัดสินใจว่าเป็น type ไหน (4 แบบข้างบน)
+
+  - สร้าง body PR ตาม template อัตโนมัติ
+
+- ถ้าสั่งว่า:
+
+> \"เพิ่ม sandbox guardrail ให้ codex และอัปเดต template ให้รองรับ multi-agent\"
+
+bot ควรแปลงเป็น:
+
+- Type: PR / Feature / Governance
+
+- Impact:
+
+  - GG, CLS, Mary, GC
+
+- สรุปไฟล์ที่จะเปลี่ยน:
+
+  - `.github/PULL_REQUEST_TEMPLATE.md`
+
+  - `docs/MULTI_AGENT_PR_CONTRACT.md`
+
+  - `docs/CODEX_SANDBOX_MODE.md` (ถ้าแตะ)
+
+รายละเอียด prompt/flow สำหรับ bot ให้เก็บไว้ในไฟล์ config หรือ docs อื่นต่อไป (เช่น `docs/CODEX_PROMPT_RECIPES.md`) โดยอิง rules ในเอกสารนี้เสมอ
+
+---
+
+## 6. กฎสั้น ๆ สำหรับ GG / GC / CLS / Mary
+
+- ถ้า PR แตะ:
+
+  - `.github/**`, `docs/**` ระดับระบบ → treat as **Governance PR**
+
+  - security / auth / path / sandbox → ต้องรีวิวโดย CLS/GC
+
+- ถ้าเป็น Local Fix, แต่ไปแตะ:
+
+  - `launchd/**`, `tools/wo_pipeline/**` → ให้ยกระดับเป็น WO หรือ PR
+
+---
+
+## 7. อนาคตขยาย
+
+ภายหลังสามารถเพิ่ม:
+
+- `config/intent_classifier/pr_intent_rules.yaml`
+
+- script สำหรับให้ local bot อ่านไฟล์นี้และ auto-route
+
+- telemetry สำหรับเก็บว่า PR ไหนจัดประเภทผิดบ่อย ๆ
+
+---
+
+**Related Documents:**
+
+- `.github/PULL_REQUEST_TEMPLATE.md` - PR template with routing types
+- `docs/MULTI_AGENT_INTENT_ROUTING.md` - Decision tree cheat sheet
+- `docs/CODEX_SANDBOX_MODE.md` - Codex sandbox rules
+- `docs/CODEX_MASTER_READINESS.md` - Codex readiness guidelines",
+    "cli_mode": "review",
+    "num_agents": "1",
+    "generated_at": "20251115_074014"
+  },
+  "orchestrator": {
+    "error": "invalid_orchestrator_summary",
+    "summary_path": "/Users/icmini/02luka/g/reports/system/claude_orchestrator_summary.json",
+    "reason": "Invalid control character at: line 7 column 103 (char 228)"
+  },
+  "report_path": "/Users/icmini/02luka/g/reports/system/code_review_pr999_20251115_074014.md"
+}

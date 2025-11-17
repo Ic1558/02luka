@@ -19,6 +19,7 @@ ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+REPORTS_SYSTEM = ROOT / "g" / "reports" / "system"
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -567,33 +568,32 @@ class APIHandler(BaseHTTPRequestHandler):
             self.send_json_response({'lines': ['No logs available']})
 
     def _read_reality_advisory(self):
-        """Read the latest Reality Hooks advisory summary if available."""
+        """Read latest Reality Hooks advisory summary if available."""
         advisory = {
             "deployment": {"status": "unknown"},
             "save_sh": {"status": "unknown"},
             "orchestrator": {"status": "unknown"},
         }
 
-        latest = LOGS / "reality_hooks_advisory_latest.md"
+        latest = REPORTS_SYSTEM / "reality_hooks_advisory_latest.md"
         if not latest.exists():
             return advisory
 
         try:
-            statuses = []
-            with open(latest, 'r', encoding='utf-8') as handle:
+            sections = ["deployment", "save_sh", "orchestrator"]
+            section_index = 0
+            with open(latest, 'r') as handle:
                 for raw_line in handle:
                     line = raw_line.strip()
-                    if line.startswith("- Advisory: **"):
-                        parts = line.split("**")
-                        if len(parts) >= 3:
-                            statuses.append(parts[1].strip())
-                        if len(statuses) >= 3:
-                            break
-
-            keys = ["deployment", "save_sh", "orchestrator"]
-            for key, status in zip(keys, statuses):
-                if status:
-                    advisory[key]["status"] = status
+                    if not line.startswith("- Advisory: **"):
+                        continue
+                    status = line.split("**")[1].strip() if "**" in line else "unknown"
+                    if section_index < len(sections):
+                        key = sections[section_index]
+                        advisory[key]["status"] = status or "unknown"
+                    section_index += 1
+                    if section_index >= len(sections):
+                        break
         except Exception as exc:
             print(f"Error reading Reality advisory: {exc}")
 
@@ -601,19 +601,10 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def handle_reality_snapshot(self, query):
         """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
+        include_advisory = query.get('advisory', ['0'])[0] == '1'
         try:
-            base_patterns = [
-                LOGS.parent / "reality_hooks_snapshot_*.json",
-                LOGS.parent / "g" / "reports" / "system" / "reality_hooks_snapshot_*.json",
-            ]
-
-            snapshot_files = []
-            for pattern in base_patterns:
-                snapshot_files.extend(glob.glob(str(pattern)))
-                if snapshot_files:
-                    break
-
-            include_advisory = query.get('advisory', ['0'])[0] == '1'
+            pattern = str(REPORTS_SYSTEM / "reality_hooks_snapshot_*.json")
+            snapshot_files = glob.glob(pattern)
 
             if not snapshot_files:
                 response = {
@@ -627,7 +618,7 @@ class APIHandler(BaseHTTPRequestHandler):
                 return
 
             latest_file = max(snapshot_files)
-            with open(latest_file, 'r', encoding='utf-8') as handle:
+            with open(latest_file, 'r') as handle:
                 try:
                     data = json.load(handle)
                 except json.JSONDecodeError:

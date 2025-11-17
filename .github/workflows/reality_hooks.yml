@@ -1,4 +1,4 @@
-name: reality_hooks
+name: Reality Hooks
 
 on:
   pull_request:
@@ -10,6 +10,8 @@ jobs:
   reality_hooks:
     name: reality_hooks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,9 +24,20 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
+      - name: Set up Zsh
+        run: |
+          if ! command -v zsh >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y zsh
+          fi
+
       - name: Run reality hooks
         run: |
+          chmod +x tools/reality_hooks/pr_reality_check.zsh
           tools/reality_hooks/pr_reality_check.zsh
+        env:
+          ROOT: ${{ github.workspace }}
+          GITHUB_SHA: ${{ github.sha }}
 
       - name: Upload reality hooks report
         if: always()
