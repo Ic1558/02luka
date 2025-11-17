@@ -12,7 +12,7 @@ ORCHESTRATOR="$REPO_ROOT/tools/claude_subagents/orchestrator.zsh"
 
 usage() {
   cat <<'USAGE'
-Usage: tools/multi_agent_pr_review.zsh <PR_NUMBER> [--agents N] [--mode review|compete|collab]
+Usage: tools/multi_agent_pr_review.zsh <PR_NUMBER> [--agents N] [--mode review|compete|collab] [--meta-file PATH] [--diff-file PATH]
 
 Required:
   PR_NUMBER          GitHub pull request number
@@ -20,6 +20,8 @@ Required:
 Options:
   --agents N         Number of reviewer agents (default: 2)
   --mode MODE        review | compete | collab (default: review)
+  --meta-file PATH   Use saved gh metadata JSON instead of calling GitHub (sandbox/testing)
+  --diff-file PATH   Use local diff file instead of gh pr diff (sandbox/testing)
   -h, --help         Show this help message
 USAGE
 }
@@ -52,6 +54,8 @@ fi
 
 NUM_AGENTS=2
 MODE="review"
+META_FILE=""
+DIFF_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -80,6 +84,14 @@ while [[ $# -gt 0 ]]; do
           ;;
       esac
       ;;
+    --meta-file)
+      shift || die "Missing value for --meta-file"
+      META_FILE="$1"
+      ;;
+    --diff-file)
+      shift || die "Missing value for --diff-file"
+      DIFF_FILE="$1"
+      ;;
     -h|--help)
       usage
       exit 0
@@ -91,7 +103,16 @@ while [[ $# -gt 0 ]]; do
   shift || true
 done
 
-command -v gh >/dev/null 2>&1 || die "GitHub CLI (gh) is required"
+if [[ -n "$META_FILE" && ! -r "$META_FILE" ]]; then
+  die "Cannot read --meta-file: $META_FILE"
+fi
+if [[ -n "$DIFF_FILE" && ! -r "$DIFF_FILE" ]]; then
+  die "Cannot read --diff-file: $DIFF_FILE"
+fi
+
+if [[ -z "$META_FILE" || -z "$DIFF_FILE" ]]; then
+  command -v gh >/dev/null 2>&1 || die "GitHub CLI (gh) is required unless both --meta-file and --diff-file are provided"
+fi
 command -v jq >/dev/null 2>&1 || die "jq is required"
 [[ -x "$ORCHESTRATOR" ]] || die "Orchestrator not found at $ORCHESTRATOR"
 [[ -f "$CONTRACT_FILE" ]] || die "Contract file missing at $CONTRACT_FILE"
@@ -101,9 +122,14 @@ mkdir -p "$REPORT_DIR"
 TMP_DIR="$(mktemp -d)"
 trap 'test -d "$TMP_DIR" && (cd "$TMP_DIR" && find . -delete && cd .. && rmdir "$TMP_DIR")' EXIT
 
-log "Fetching metadata for PR #$PR_NUMBER"
-if ! PR_DATA=$(gh pr view "$PR_NUMBER" --json number,title,body,author,headRefName,baseRefName,isDraft,mergeable,url,files --repo . 2>/dev/null); then
-  die "Unable to fetch PR #$PR_NUMBER via gh"
+if [[ -n "$META_FILE" ]]; then
+  log "Using metadata override from $META_FILE"
+  PR_DATA="$(cat "$META_FILE")" || die "Failed to read metadata file"
+else
+  log "Fetching metadata for PR #$PR_NUMBER"
+  if ! PR_DATA=$(gh pr view "$PR_NUMBER" --json number,title,body,author,headRefName,baseRefName,isDraft,mergeable,url,files --repo . 2>/dev/null); then
+    die "Unable to fetch PR #$PR_NUMBER via gh"
+  fi
 fi
 
 PR_TITLE="$(echo "$PR_DATA" | jq -r '.title // ""')"
@@ -118,9 +144,14 @@ if [[ -z "$PR_FILES_BLOCK" ]]; then
   PR_FILES_BLOCK="- (no files listed by gh)"
 fi
 
-log "Fetching diff for PR #$PR_NUMBER"
-if ! PR_DIFF=$(gh pr diff "$PR_NUMBER" --color=never --repo . 2>/dev/null); then
-  die "Unable to fetch diff for PR #$PR_NUMBER"
+if [[ -n "$DIFF_FILE" ]]; then
+  log "Using diff override from $DIFF_FILE"
+  PR_DIFF="$(cat "$DIFF_FILE")" || die "Failed to read diff file"
+else
+  log "Fetching diff for PR #$PR_NUMBER"
+  if ! PR_DIFF=$(gh pr diff "$PR_NUMBER" --color=never --repo . 2>/dev/null); then
+    die "Unable to fetch diff for PR #$PR_NUMBER"
+  fi
 fi
 
 CONTRACT_TEXT="$(cat "$CONTRACT_FILE")"
@@ -241,26 +272,59 @@ set -e
 
 SUMMARY_FILE="$REPORT_DIR/claude_orchestrator_summary.json"
 [[ -f "$SUMMARY_FILE" ]] || die "Expected orchestrator summary at $SUMMARY_FILE"
-SUMMARY_JSON="$(cat "$SUMMARY_FILE")"
+SUMMARY_JSON_TMP="$TMP_DIR/orchestrator_summary_clean.json"
 
-AGENT_REPORT=$(SUMMARY_JSON_PATH="$SUMMARY_FILE" python3 - <<'PY'
+AGENT_REPORT=$(SUMMARY_JSON_PATH="$SUMMARY_FILE" SUMMARY_JSON_OUTPUT="$SUMMARY_JSON_TMP" python3 - <<'PY'
 import json
 import os
 import sys
+
 summary_path = os.environ.get("SUMMARY_JSON_PATH")
-if not summary_path:
-    sys.exit(1)
-with open(summary_path, "r", encoding="utf-8") as handle:
-    data = json.load(handle)
-parts = []
-for agent in data.get("agents", []):
-    stdout = agent.get("stdout", "")
-    stdout = stdout.encode('utf-8').decode('unicode_escape')
-    block = [f"### Agent {agent.get('id')} (score: {agent.get('score')}, exit: {agent.get('exit_code')})", "", "```", stdout.strip(), "```"]
-    parts.append("\n".join(block))
-print("\n\n".join([p for p in parts if p.strip()]))
+output_path = os.environ.get("SUMMARY_JSON_OUTPUT")
+if not summary_path or not output_path:
+    print("(summary path unavailable)")
+    sys.exit(0)
+
+def build_blocks(payload: dict) -> str:
+    parts = []
+    for agent in payload.get("agents", []):
+        stdout = agent.get("stdout", "")
+        try:
+            stdout = stdout.encode("utf-8").decode("unicode_escape")
+        except UnicodeDecodeError:
+            pass
+        block = [
+            f"### Agent {agent.get('id')} (score: {agent.get('score')}, exit: {agent.get('exit_code')})",
+            "",
+            "```",
+            stdout.strip(),
+            "```",
+        ]
+        parts.append("\n".join(block))
+    return "\n\n".join([p for p in parts if p.strip()])
+
+try:
+    with open(summary_path, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception as exc:  # noqa: BLE001
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(
+            {
+                "error": "invalid_orchestrator_summary",
+                "summary_path": summary_path,
+                "reason": str(exc),
+            },
+            handle,
+        )
+    print(f"(unable to parse orchestrator summary JSON: {exc})")
+else:
+    with open(output_path, "w", encoding="utf-8") as handle:
+        json.dump(data, handle)
+    rendered = build_blocks(data)
+    print(rendered if rendered.strip() else "(no agent output captured)")
 PY
 )
+SUMMARY_JSON="$(cat "$SUMMARY_JSON_TMP")"
 
 cat > "$REPORT_MD" <<EOF
 # Multi-Agent PR Review Report
@@ -285,10 +349,11 @@ $PR_FILES_BLOCK
 ${AGENT_REPORT:-"(no agent output captured)"}
 
 ## Raw Orchestrator Output
-```
-$ORCH_OUTPUT
-```
+EOF
 
+{
+  printf '```\n%s\n```\n\n' "$ORCH_OUTPUT"
+  cat <<'EOF'
 classification:
   task_type: PR_FEAT
   primary_tool: codex_cli
@@ -297,6 +362,7 @@ classification:
   reason: "Multi-agent CLI to automate PR reviews using existing orchestrator and governance contract."
 
 EOF
+} >> "$REPORT_MD"
 
 REPORT_JSON_CONTENT=$(jq -n \
   --arg pr_number "$PR_NUMBER" \

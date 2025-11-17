@@ -2,11 +2,10 @@ const SERVICES_REFRESH_MS = 30000;
 const MLS_REFRESH_MS = 30000;
 const KNOWN_SERVICE_TYPES = new Set(['bridge', 'worker', 'automation', 'monitoring']);
 
-let realityPanelInitialized = false;
-
 let servicesIntervalId;
 let mlsIntervalId;
 let currentMlsType = '';
+let realityLoading = false;
 
 let allWos = [];
 let visibleWos = [];
@@ -63,8 +62,6 @@ function initTabs() {
       initServicesPanel();
     } else if (targetId === 'mls-panel') {
       initMLSPanel();
-    } else if (targetId === 'reality-panel') {
-      initRealityPanel();
     }
   }
 
@@ -83,42 +80,41 @@ function initTabs() {
   const tabOverview = document.getElementById('tab-overview');
   const tabWos = document.getElementById('tab-wos');
   const tabWoHistory = document.getElementById('tab-wo-history');
+  const tabReality = document.getElementById('tab-reality');
 
   const viewOverview = document.getElementById('view-overview');
   const viewWos = document.getElementById('view-wos');
   const viewWoHistory = document.getElementById('view-wo-history');
+  const viewReality = document.getElementById('view-reality');
 
-  if (tabOverview && tabWos && tabWoHistory && viewOverview && viewWos && viewWoHistory) {
-    const buttons = [tabOverview, tabWos, tabWoHistory];
-    const views = [viewOverview, viewWos, viewWoHistory];
+  const tabConfigs = [
+    { button: tabOverview, view: viewOverview },
+    { button: tabWos, view: viewWos },
+    { button: tabWoHistory, view: viewWoHistory, onShow: loadWoHistory },
+  ];
 
-    function setActiveButton(target) {
-      buttons.forEach((btn) => btn.classList.toggle('active', btn === target));
-    }
+  if (tabReality && viewReality) {
+    tabConfigs.push({ button: tabReality, view: viewReality, onShow: loadRealitySnapshot });
+  }
 
-    function show(view) {
-      views.forEach((v) => v.classList.add('hidden'));
-      view.classList.remove('hidden');
-    }
+  const validConfigs = tabConfigs.filter((cfg) => cfg.button && cfg.view);
 
-    tabOverview.addEventListener('click', () => {
-      setActiveButton(tabOverview);
-      show(viewOverview);
+  if (validConfigs.length) {
+    const activate = (targetCfg) => {
+      validConfigs.forEach((cfg) => {
+        cfg.button.classList.toggle('active', cfg === targetCfg);
+        cfg.view.classList.toggle('hidden', cfg !== targetCfg);
+      });
+      if (typeof targetCfg.onShow === 'function') {
+        targetCfg.onShow();
+      }
+    };
+
+    validConfigs.forEach((cfg) => {
+      cfg.button.addEventListener('click', () => activate(cfg));
     });
 
-    tabWos.addEventListener('click', () => {
-      setActiveButton(tabWos);
-      show(viewWos);
-    });
-
-    tabWoHistory.addEventListener('click', () => {
-      setActiveButton(tabWoHistory);
-      show(viewWoHistory);
-      loadWoHistory();
-    });
-
-    setActiveButton(tabOverview);
-    show(viewOverview);
+    activate(validConfigs[0]);
   }
 }
 
@@ -895,6 +891,175 @@ function initWoHistoryFilters() {
   limitSelect?.addEventListener('change', () => loadWoHistory());
 }
 
+// --- Reality Snapshot ---
+
+function setRealityLoading() {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+
+  if (meta) meta.textContent = 'Loading Reality snapshot…';
+  if (deployEl) deployEl.textContent = 'Loading deployment data…';
+  if (orchEl) orchEl.textContent = 'Loading orchestrator summary…';
+  if (saveBody) {
+    saveBody.innerHTML = '<tr><td colspan="7">Loading save.sh runs…</td></tr>';
+  }
+
+  updateRealityBadge(document.getElementById('reality-badge-deploy'), 'Deployment', null);
+  updateRealityBadge(document.getElementById('reality-badge-save'), 'save.sh', null);
+  updateRealityBadge(document.getElementById('reality-badge-orch'), 'Orchestrator', null);
+}
+
+async function loadRealitySnapshot() {
+  const meta = document.getElementById('reality-meta');
+  if (!meta) {
+    return;
+  }
+  if (realityLoading) {
+    return;
+  }
+
+  setRealityLoading();
+  hideErrorBanner('reality-error');
+  realityLoading = true;
+
+  try {
+    const res = await fetch('/api/reality/snapshot?advisory=1');
+    if (!res.ok) {
+      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
+      renderRealityError(`HTTP ${res.status}`);
+      return;
+    }
+
+    const payload = await res.json();
+    renderRealitySnapshot(payload);
+  } catch (error) {
+    console.error('Error loading Reality snapshot', error);
+    renderRealityError('Failed to load Reality snapshot.');
+  } finally {
+    realityLoading = false;
+  }
+}
+
+function renderRealitySnapshot(payload) {
+  const meta = document.getElementById('reality-meta');
+  const deployEl = document.getElementById('reality-deployment');
+  const saveBody = document.getElementById('reality-save-body');
+  const orchEl = document.getElementById('reality-orchestrator');
+  const badgeDeploy = document.getElementById('reality-badge-deploy');
+  const badgeSave = document.getElementById('reality-badge-save');
+  const badgeOrch = document.getElementById('reality-badge-orch');
+
+  if (!meta || !deployEl || !saveBody || !orchEl) {
+    return;
+  }
+
+  hideErrorBanner('reality-error');
+  updateRealityBadge(badgeDeploy, 'Deployment', null);
+  updateRealityBadge(badgeSave, 'save.sh', null);
+  updateRealityBadge(badgeOrch, 'Orchestrator', null);
+
+  if (!payload || payload.status === 'no_snapshot') {
+    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow first.';
+    deployEl.textContent = '';
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs recorded.</td></tr>';
+    orchEl.textContent = '';
+
+    if (payload?.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  if (payload.status === 'error') {
+    renderRealityError(payload.error || 'Invalid Reality snapshot.');
+    if (payload.advisory) {
+      const adv = payload.advisory;
+      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+    }
+    return;
+  }
+
+  const data = payload.data || {};
+  const timestamp = data.timestamp || '';
+  const deployment = data.deployment_report || null;
+  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
+  const orchestrator = data.orchestrator_summary || null;
+
+  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
+
+  if (deployment && deployment.path) {
+    deployEl.textContent = `Report: ${deployment.path}`;
+  } else {
+    deployEl.textContent = 'No deployment report in snapshot.';
+  }
+
+  saveBody.innerHTML = '';
+  if (!saveRuns.length) {
+    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs captured.</td></tr>';
+  } else {
+    saveRuns.forEach((run) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
+        <td>${escapeHtml(run?.lane || '')}</td>
+        <td>${escapeHtml(run?.layer1 || '')}</td>
+        <td>${escapeHtml(run?.layer2 || '')}</td>
+        <td>${escapeHtml(run?.layer3 || '')}</td>
+        <td>${escapeHtml(run?.layer4 || '')}</td>
+        <td>${escapeHtml(run?.git || '')}</td>
+      `;
+      saveBody.appendChild(tr);
+    });
+  }
+
+  if (orchestrator) {
+    try {
+      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
+    } catch (err) {
+      orchEl.textContent = String(orchestrator);
+    }
+  } else {
+    orchEl.textContent = 'No orchestrator summary in snapshot.';
+  }
+
+  if (payload.advisory) {
+    const adv = payload.advisory;
+    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
+    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
+    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
+  }
+}
+
+function renderRealityError(message) {
+  const msg = message || 'Failed to load Reality snapshot.';
+  const meta = document.getElementById('reality-meta');
+  if (meta) {
+    meta.textContent = msg;
+  }
+  showErrorBanner('reality-error', msg);
+}
+
+function updateRealityBadge(el, label, status) {
+  if (!el) return;
+  el.className = 'reality-badge reality-badge-muted';
+  el.textContent = label;
+
+  if (!status) {
+    return;
+  }
+
+  const normalized = String(status).toLowerCase().trim().replace(/\s+/g, '_');
+  el.className = `reality-badge reality-badge-${normalized}`;
+  el.textContent = `${label}: ${status}`;
+}
+
 function formatRelativeTime(isoString) {
   if (!isoString) return '';
   const date = new Date(isoString);
@@ -950,163 +1115,6 @@ function initMLSPanel() {
   mlsIntervalId = setInterval(() => loadMLS(), MLS_REFRESH_MS);
 }
 
-// --- Reality Snapshot ---
-
-async function loadRealitySnapshot() {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Loading Reality snapshot…';
-  }
-  hideErrorBanner('reality-error');
-
-  try {
-    const res = await fetch('/api/reality/snapshot?advisory=1');
-    if (!res.ok) {
-      console.error('Failed to fetch Reality snapshot', res.status, await res.text());
-      renderRealityError(`HTTP ${res.status}`);
-      return;
-    }
-    const payload = await res.json();
-    renderRealitySnapshot(payload);
-  } catch (error) {
-    console.error('Error loading Reality snapshot', error);
-    renderRealityError(String(error));
-  }
-}
-
-function renderRealitySnapshot(payload) {
-  const meta = document.getElementById('reality-meta');
-  const deployEl = document.getElementById('reality-deployment');
-  const saveBody = document.getElementById('reality-save-body');
-  const orchEl = document.getElementById('reality-orchestrator');
-  const badgeDeploy = document.getElementById('reality-badge-deploy');
-  const badgeSave = document.getElementById('reality-badge-save');
-  const badgeOrch = document.getElementById('reality-badge-orch');
-
-  if (!meta || !deployEl || !saveBody || !orchEl) {
-    return;
-  }
-
-  updateRealityBadge(badgeDeploy, 'Deployment', null);
-  updateRealityBadge(badgeSave, 'save.sh', null);
-  updateRealityBadge(badgeOrch, 'Orchestrator', null);
-
-  if (!payload || payload.status === 'no_snapshot') {
-    meta.textContent = 'No Reality Hooks snapshot found yet. Run the Reality Hooks workflow in CI first.';
-    deployEl.textContent = '';
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh runs in snapshot.</td></tr>';
-    orchEl.textContent = '';
-
-    if (payload?.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-
-    return;
-  }
-
-  if (payload.status === 'error') {
-    renderRealityError(payload.error || 'invalid snapshot');
-    if (payload.advisory) {
-      const adv = payload.advisory;
-      updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-      updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-      updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-    }
-    return;
-  }
-
-  const data = payload.data || {};
-  const timestamp = data.timestamp || '';
-  const deployment = data.deployment_report || null;
-  const saveRuns = Array.isArray(data.save_sh_full_cycle) ? data.save_sh_full_cycle : [];
-  const orchestrator = data.orchestrator_summary || null;
-
-  meta.textContent = `Latest snapshot: ${timestamp || 'unknown'} (source: ${payload.snapshot_path || 'unknown'})`;
-
-  if (deployment && deployment.path) {
-    deployEl.textContent = `Report: ${deployment.path}`;
-  } else {
-    deployEl.textContent = 'No deployment report in snapshot.';
-  }
-
-  saveBody.innerHTML = '';
-  if (!saveRuns.length) {
-    saveBody.innerHTML = '<tr><td colspan="7">No save.sh full-cycle runs in snapshot.</td></tr>';
-  } else {
-    saveRuns.forEach((run) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><code>${escapeHtml(run?.test_id || '')}</code></td>
-        <td>${escapeHtml(run?.lane || '')}</td>
-        <td>${escapeHtml(run?.layer1 || '')}</td>
-        <td>${escapeHtml(run?.layer2 || '')}</td>
-        <td>${escapeHtml(run?.layer3 || '')}</td>
-        <td>${escapeHtml(run?.layer4 || '')}</td>
-        <td>${escapeHtml(run?.git || '')}</td>
-      `;
-      saveBody.appendChild(tr);
-    });
-  }
-
-  if (orchestrator) {
-    try {
-      orchEl.textContent = JSON.stringify(orchestrator, null, 2);
-    } catch (error) {
-      console.error('Failed to stringify orchestrator summary', error);
-      orchEl.textContent = String(orchestrator);
-    }
-  } else {
-    orchEl.textContent = 'No orchestrator summary in snapshot.';
-  }
-
-  if (payload.advisory) {
-    const adv = payload.advisory;
-    updateRealityBadge(badgeDeploy, 'Deployment', adv.deployment?.status);
-    updateRealityBadge(badgeSave, 'save.sh', adv.save_sh?.status);
-    updateRealityBadge(badgeOrch, 'Orchestrator', adv.orchestrator?.status);
-  }
-}
-
-function renderRealityError(message) {
-  const meta = document.getElementById('reality-meta');
-  if (meta) {
-    meta.textContent = 'Reality snapshot unavailable.';
-  }
-  showErrorBanner('reality-error', message || 'Failed to load Reality snapshot.');
-}
-
-function updateRealityBadge(el, label, status) {
-  if (!el) return;
-  el.className = 'badge badge-muted';
-
-  if (!status) {
-    el.textContent = label;
-    return;
-  }
-
-  const normalized = String(status).toLowerCase().replace(/\s+/g, '_');
-  el.className = `badge badge-${normalized}`;
-  el.textContent = `${label}: ${status}`;
-}
-
-function initRealityPanel() {
-  if (realityPanelInitialized) {
-    return;
-  }
-
-  const refreshBtn = document.getElementById('reality-refresh-btn');
-  const retryBtn = document.getElementById('reality-error-retry');
-
-  refreshBtn?.addEventListener('click', () => loadRealitySnapshot());
-  retryBtn?.addEventListener('click', () => loadRealitySnapshot());
-
-  loadRealitySnapshot();
-  realityPanelInitialized = true;
-}
-
 function initDashboard() {
   initTabs();
   initWoHistoryFilters();
@@ -1115,6 +1123,7 @@ function initDashboard() {
   initWoSorting();
   initWoAutorefreshControls();
   loadWos();
+  document.getElementById('reality-error-retry')?.addEventListener('click', () => loadRealitySnapshot());
 }
 
 function cleanupIntervals() {
