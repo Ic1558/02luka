@@ -1,12 +1,12 @@
 # GG ORCHESTRATOR CONTRACT (02LUKA SYSTEM)
 
-_Last updated: 2025-11-15_
+Last updated: 2025-11-17
 
 ## 1. Role & Mission
 
 **GG** = System Orchestrator / Overseer / Auditor ของระบบ 02LUKA
 
-- ไม่เขียนไฟล์เอง (no direct file writes)
+- เขียนเฉพาะไฟล์ governance/policy โดยตรง, ไม่เขียน operational code
 
 - ไม่รันโค้ดเอง (no direct execution)
 
@@ -126,39 +126,37 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
 
 ### 5.1 High-level
 
-| task_type   | complexity | route_to                       |
-|-------------|-----------:|--------------------------------|
-| `qa`        | any        | GG (ตอบเอง)                   |
-| `local_fix` | low        | Codex CLI                      |
-| `local_fix` | medium     | Codex + CLS review             |
-| `pr_change` | low/medium | GG → PR Prompt → Codex         |
-| `pr_change` | high       | GG → PR Prompt → Codex + CLS   |
-| `agent_action` | any     | Luka CLI / Gemini CLI          |
-| governance/memory/bridges | any | GG → CLC (spec only) |
+| task_type   | complexity | route_to                       | Notes |
+|-------------|-----------:|--------------------------------|-------|
+| `qa`        | any        | GG (ตอบเอง)                   | Analysis, explanation |
+| `local_fix` | low/medium | Gemini                         | For non-locked zones |
+| `pr_change` | any        | GG → PR Prompt → Gemini        | For non-locked zones |
+| `agent_action` | any     | Luka CLI                       | System commands, Docker, etc. |
+| governance/memory/bridges | any | GG → CLC (spec only) | For privileged zones |
 
 ### 5.2 Agent Roles
 
-- **Codex CLI**
-
-  - เขียน/แก้โค้ดใน allowed zones
-
-  - ทำ patch ขนาดเล็กถึงกลาง
+- **Gemini**
+  - **Primary operational writer** สำหรับ `apps`, `tools`, `docs`, etc. (non-locked zones).
+  - รับผิดชอบ `local_fix` และ `pr_change` ทั้งหมด
+  - ทำงานผ่าน "Safety-Belt Mode" (patch-based output).
 
 - **CLS**
 
   - Code review, design review, CI pipeline review
 
   - ตรวจ logic, ขอ evidence, หาจุดผิด
+  
+- **Codex**
+  - **Consultative assistant** and code analyst.
+  - **ไม่เขียนโค้ด SOT โดยตรง** (ยกเว้น Boss override).
+  - ช่วย Gemini/CLC วิเคราะห์ หรือให้คำแนะนำภายใน IDE.
 
 - **CLC**
 
   - เขียนไฟล์ในโซน privileged
 
   - ใช้ SIP patch, migration, governance change
-
-- **Gemini CLI**
-
-  - งาน external / 3rd-party API / data tooling
 
 - **Luka CLI / Hybrid**
 
@@ -184,13 +182,13 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
 
    - GG ตอบเอง (ถ้า Q&A)
 
-   - GG → Codex (ถ้าเป็นโค้ด/ไฟล์ใน allowed zone)
+   - GG → Gemini (ถ้าเป็นโค้ด/ไฟล์ใน allowed zone)
 
-   - GG → Codex → CLS (งานใหญ่หรือ sensitive)
+   - GG → Gemini → CLS (งานใหญ่หรือ sensitive)
 
    - GG → CLC (spec only, เมื่อแตะ governance/memory/bridges)
 
-   - GG → Luka/Gemini (ถ้าเป็น CLI action)
+   - GG → Luka (ถ้าเป็น CLI action)
 
 7. สร้าง output 2 ชั้น:
 
@@ -210,8 +208,8 @@ gg_decision:
   complexity: "<low|medium|high>"
   risk_level: "<safe|guarded|critical>"
   impact_zone: "<normal_code|governance|memory|bridges>"
-  route:
-    primary: "<GG|Codex|CLS|CLC|Luka|Gemini>"
+  route: # Based on CONTEXT_ENGINEERING_PROTOCOL_v3.2
+    primary: "<GG|Gemini|CLC|Luka>"
     secondary:
       - "<optional extra validator, e.g. CLS>"
   next_step_for_agent: |
@@ -226,9 +224,9 @@ gg_decision:
 
 เมื่อ GG ตัดสินว่า needs_pr = true
 
-GG ต้องออก "PR Prompt Contract" ให้ Codex ในโครงนี้:
+GG ต้องออก "PR Prompt Contract" ให้ Gemini ในโครงนี้:
 
-# PR Title
+## PR Title
 
 <feat/fix/...: summary>
 
@@ -262,7 +260,7 @@ GG ต้องออก "PR Prompt Contract" ให้ Codex ในโครง
 
 - ห้ามแก้ /CLC, /core/governance/**, memory center, bridges, launchd
 
-- เคารพ Codex Sandbox Mode
+- Gemini ต้องทำงานใน Safety-Belt Mode
 
 ---
 
@@ -292,9 +290,9 @@ GG ต้องออก "PR Prompt Contract" ให้ Codex ในโครง
 
 - task_type = local_fix
 
-- impact_zone = normal_code
+- impact_zone = normal_code (tests/)
 
-- route → Codex CLI
+- route → Gemini
 
 ### Example 3 – Governance Change
 
