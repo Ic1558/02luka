@@ -6,6 +6,12 @@ name: Bridge Self-Check
 # - MLS logging follows Protocol v3.2 (tags include context-protocol-v3.2)
 run-name: "Bridge Self-Check (${{ github.event_name }}): strict=${{ github.event.inputs.ci_strict || vars.CI_STRICT || '0' }}"
 
+# Governance: Aligned with Context Engineering Protocol v3.2
+# - Critical issues → Mary/GC route to CLC (locked) or Gemini (non-locked)
+# - Warnings → Mary/GC review, optional escalation
+# - MLS logging follows Protocol v3.2 (tags include context-protocol-v3.2)
+# Reference: g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md
+
 on:
   pull_request:
   schedule:
@@ -278,7 +284,7 @@ jobs:
             } > "$prompt_file"
           elif [[ "$STATUS" == "warning" || "$WARN" != "0" ]]; then
             {
-              echo "ATTENTION → Mary/GC"
+              echo "ATTENTION → Mary/GC (for review)"
               echo "เหตุผล: พบ warnings ใน bridge/self-check (ไม่ถึง critical) ตาม Context Protocol v3.2"
               echo "การดำเนินการ: Mary/GC ตัดสินใจว่าจะ escalate ไป CLC/Gemini หรือรอรอบถัดไป"
               echo ""
