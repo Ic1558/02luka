@@ -1,100 +1,72 @@
 #!/usr/bin/env python3
-"""Append Local Patch Engine events into the MLS ledger.
+"""Append an event to the MLS ledger in JSONL format."""
 
-This helper keeps ledger writes consistent so other tooling can
-consume daily JSONL files. It intentionally avoids external
-dependencies beyond PyYAML (already required by the Luka CLI).
-"""
 import argparse
 import datetime as dt
 import json
-import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-try:
-    import yaml  # type: ignore
-except Exception:  # pragma: no cover - runtime only
-    yaml = None
+import pathlib
+from typing import Any, Dict
 
 
-def _load_patch_meta(path: Optional[Path]) -> Dict[str, Any]:
-    if not path or not path.exists() or not yaml:
-        return {}
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception:
-        return {}
-    meta = data.get("meta", {}) if isinstance(data, dict) else {}
-    return meta if isinstance(meta, dict) else {}
+def build_event(args: argparse.Namespace, base: pathlib.Path) -> Dict[str, Any]:
+    timestamp = args.timestamp or dt.datetime.utcnow().isoformat() + "Z"
+    ledger_id = f"MLS-LPE-{dt.datetime.utcnow():%Y%m%d-%H%M%S}"
 
+    patch_path = None
+    if args.patch_file:
+        patch_path = pathlib.Path(args.patch_file).expanduser().resolve()
+        try:
+            patch_path = patch_path.relative_to(base)
+        except ValueError:
+            pass
+        patch_path = str(patch_path)
 
-def _as_list(raw: Optional[str]) -> List[str]:
-    if not raw:
-        return []
-    raw = raw.strip()
-    if not raw:
-        return []
-    try:
-        parsed = json.loads(raw)
-        if isinstance(parsed, list):
-            return [str(x) for x in parsed]
-    except Exception:
-        pass
-    return [part.strip() for part in raw.split(",") if part.strip()]
-
-
-def append_event(
-    ledger_dir: Path,
-    wo_id: str,
-    status: str,
-    files: List[str],
-    errors: List[str],
-    patch_meta: Dict[str, Any],
-    source: str = "lpe_worker",
-) -> str:
-    ledger_dir.mkdir(parents=True, exist_ok=True)
-    now = dt.datetime.now(dt.timezone.utc)
-    ts = now.isoformat().replace("+00:00", "Z")
-    day = now.strftime("%Y-%m-%d")
-    event_id = f"MLS-LPE-{now.strftime('%Y%m%d%H%M%S')}"
-    entry = {
-        "id": event_id,
-        "ts": ts,
-        "source": source,
-        "wo_id": wo_id,
-        "status": status,
-        "files": files,
-        "errors": errors,
-        "patch_meta": patch_meta,
+    event: Dict[str, Any] = {
+        "id": ledger_id,
+        "ts": timestamp,
+        "source": args.source,
+        "wo_id": args.wo_id,
+        "status": args.status,
+        "patch_file": patch_path,
+        "message": args.message,
     }
-    ledger_path = ledger_dir / f"{day}.jsonl"
-    ledger_path.parent.mkdir(parents=True, exist_ok=True)
-    with ledger_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    return event_id
+
+    if args.metadata:
+        try:
+            event["meta"] = json.loads(args.metadata)
+        except json.JSONDecodeError:
+            event["meta_raw"] = args.metadata
+
+    return event
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Append an event to the MLS ledger")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wo-id", required=True, help="Work order identifier")
-    parser.add_argument("--status", required=True, help="status value (success/error/partial/invalid)")
-    parser.add_argument("--files", help="Comma-separated or JSON array of touched files", default="")
-    parser.add_argument("--errors", help="Comma-separated or JSON array of errors", default="")
-    parser.add_argument("--patch-file", help="Optional patch file to extract meta", default=None)
-    parser.add_argument("--ledger-dir", help="Override ledger directory")
+    parser.add_argument("--status", required=True, help="Status label for the patch")
+    parser.add_argument("--patch-file", help="Path to patch file used by LPE")
+    parser.add_argument("--message", default="", help="Human readable context")
+    parser.add_argument("--source", default="lpe", help="Event producer")
+    parser.add_argument("--metadata", help="Optional JSON metadata string")
+    parser.add_argument("--timestamp", help="Override timestamp")
+    parser.add_argument(
+        "--ledger-dir",
+        default=None,
+        help="Ledger directory (defaults to <repo>/mls/ledger)",
+    )
+
     args = parser.parse_args()
 
-    base = Path(os.getenv("LUKA_SOT", Path.home() / "02luka"))
-    ledger_dir = Path(args.ledger_dir) if args.ledger_dir else base / "mls" / "ledger"
-    patch_path = Path(args.patch_file).resolve() if args.patch_file else None
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    ledger_dir = pathlib.Path(args.ledger_dir) if args.ledger_dir else repo_root / "mls" / "ledger"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
 
-    files = _as_list(args.files)
-    errors = _as_list(args.errors)
-    patch_meta = _load_patch_meta(patch_path)
+    event = build_event(args, repo_root)
+    ledger_path = ledger_dir / f"{dt.date.today():%Y-%m-%d}.jsonl"
+    with ledger_path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, ensure_ascii=False) + "\n")
 
-    event_id = append_event(ledger_dir, args.wo_id, args.status, files, errors, patch_meta)
-    print(event_id)
+    print(event["id"])
 
 
 if __name__ == "__main__":
