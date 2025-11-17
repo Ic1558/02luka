@@ -1,185 +1,95 @@
-# CI Reliability Pack
+# CI Reliability Pack — Quiet by Default
 
-**Goal:** Make CI quiet and reliable by default, reducing red PRs and only requiring critical checks to pass.
+**Goal:** Keep PRs green by default while still offering on-demand heavy smoke coverage when engineers explicitly request it.
 
 ## Summary of Changes
+- Only the `validate` job is required; all other jobs (`ops-gate`, `rag-vector-selftest`, `ci-summary`) now run with `continue-on-error: true`, `timeout-minutes` guards, and `strategy.fail-fast: false`.
+- Heavy jobs are gated behind an opt-in signal (`run-smoke` label, `[run-smoke]` in the PR title, or any push to `main`/`develop`).
+- `validate` always prints the last 200 lines of `boss-api` logs when it fails so the root cause is obvious without spelunking artifacts.
+- A dedicated `ci-summary` job (with `if: always()`) shows the end state of every job so maintainers can see optional failures without blocking merges.
 
-This CI reliability pack implements a "quiet by default" strategy where only essential validation runs on every PR, while heavier/optional tests can be triggered on-demand.
+## Why
+- Reduce noisy red PRs during R&D bursts.
+- Keep the single required check focused on fast, deterministic validation.
+- Make failures actionable with inline logs rather than opaque artifacts.
 
-### 1. Job Classification
+## Job Classification
+### Required
+- **validate** – Phase 4/5/6 smoke tests (fast path, ~5–8 min). Must pass for merge.
 
-#### REQUIRED (must pass for PR merge):
-- **validate** - Phase 4/5/6 smoke tests (local, fast, ~5-8 min)
+### Optional (non-blocking)
+- **ops-gate** – Phase 5/6/7 smoke tests (ops layer)
+- **rag-vector-selftest** – Phase 15 RAG vector tests
+- **ci-summary** – Aggregates the final status of all jobs
 
-#### OPTIONAL (continue-on-error, won't block merge):
-- **ops-gate** - Phase 5/6/7 smoke tests (ops layer)
-- **rag-vector-selftest** - Phase 15 RAG vector search tests
-- **ci-summary** - Always-running summary job showing status of all jobs
+All optional jobs:
+- Run with `continue-on-error: true`
+- Use explicit `timeout-minutes` to avoid hangs
+- Set `strategy: { fail-fast: false }` when matrixed
+- Skip automatically on forked PRs
 
-### 2. Gating Mechanisms
+## Opt-in Label/Title Gating
+Optional jobs only run when:
+- PR has the `run-smoke` label, **or**
+- PR title contains `[run-smoke]`, **or**
+- Event is a push to `main`/`develop` (always run on protected branches)
 
-Optional jobs are automatically skipped unless:
-- PR has the `run-smoke` label, OR
-- Running on push to main/develop branches
-
-Optional jobs are also skipped when:
+Optional jobs are explicitly skipped when:
 - PR title contains `[skip-smoke]`
-- PR is from a forked repository (`github.event.pull_request.head.repo.fork == false`)
+- PR originates from a fork (`github.event.pull_request.head.repo.fork == true`)
 
-### 3. Reliability Features
+### How to request heavy coverage
+1. Add the `run-smoke` label to your PR, **or** include `[run-smoke]` in the title.
+2. Re-run the workflow from the Actions tab if it already completed.
 
-All jobs include:
-- **timeout-minutes** - Prevents jobs from hanging indefinitely
-- **continue-on-error: true** - Optional jobs won't fail the PR
-- **strategy: { fail-fast: false }** - Matrix jobs continue even if one fails
-- **Fork protection** - Heavy jobs don't run on external forks
+### Example PR titles
+- `feat: new vector index [run-smoke]`
+- `fix: hot path regression [skip-smoke]`
 
-### 4. Script Enhancements
-
-**tools/ci/validate.sh** now supports:
-- `SKIP_BOSS_API=1` - Skip server start for faster validation in environments where the server is unavailable or unnecessary
-
-**scripts/smoke_with_server.sh** already includes:
-- Automatic printing of last 200 lines of `boss-api.out.log` on test failure for easier debugging
+## Workflow Enhancements
+- `tools/ci/validate.sh` respects `SKIP_BOSS_API=1` for local fast iterations.
+- `scripts/smoke_with_server.sh` prints boss-api log tails whenever the job fails.
+- `ci-summary` consolidates job outcomes so maintainers know which optional suites failed/skipped without digging through each job.
 
 ## Usage Guide
-
 ### For PR Authors
-
-#### Normal PR (fast, quiet mode):
-```bash
-# Just open your PR - only 'validate' job runs (fast)
-gh pr create --title "feat: add new feature"
-```
-
-#### Run full smoke tests on-demand:
-```bash
-# Add the 'run-smoke' label to trigger optional jobs
-gh pr edit <PR-NUMBER> --add-label "run-smoke"
-```
-
-#### Skip even optional jobs (docs-only changes):
-```bash
-# Add [skip-smoke] to your PR title
-gh pr create --title "docs: update README [skip-smoke]"
-```
+- **Normal PR:** Do nothing. Only `validate` runs and must pass.
+- **Need heavy smoke:** Add the `run-smoke` label or `[run-smoke]` in the title.
+- **Docs-only PR:** Add `[skip-smoke]` to the title if you want every optional job skipped even on pushes.
 
 ### For Maintainers
+1. Label the PR with `run-smoke` to force heavy coverage.
+2. Re-run the workflow if needed, then remove the label after verification.
+3. Check the always-running `ci-summary` job for a consolidated report.
 
-#### Re-run heavy tests manually:
-1. Add the `run-smoke` label to the PR
-2. Re-run the workflow from the Actions tab
-3. Remove the label after verification
-
-#### Check detailed job status:
-The `ci-summary` job always runs and shows:
-- Status of required job (validate)
-- Status of optional jobs (ops-gate, rag-vector-selftest)
-- Clear indication of which jobs can fail without blocking
-
-### For Local Development
-
-#### Skip server start in validation:
+### Local Quickcheck
 ```bash
-# Useful when boss-api is unavailable or for faster iteration
+# Fast validation without boss-api start
 SKIP_BOSS_API=1 bash tools/ci/validate.sh
-```
 
-#### Run full validation with server:
-```bash
-# Default behavior - starts server and runs tests
+# Full validation (default)
 bash tools/ci/validate.sh
-```
 
-## CI Workflow Structure
-
-```
-┌─────────────────────────────────────────────────────┐
-│ validate [REQUIRED]                                  │
-│ - Phase 4/5/6 smoke tests                           │
-│ - Must pass for PR to be green                     │
-│ - Runs on all PRs                                   │
-│ - Timeout: 8 minutes                                │
-└─────────────────────────────────────────────────────┘
-                     │
-                     ├─────────────────────────────────┐
-                     ▼                                 ▼
-┌─────────────────────────────────┐  ┌──────────────────────────────────┐
-│ ops-gate [OPTIONAL]              │  │ rag-vector-selftest [OPTIONAL]   │
-│ - Phase 5/6/7 smoke tests       │  │ - Phase 15 RAG vector tests      │
-│ - continue-on-error: true       │  │ - continue-on-error: true        │
-│ - Skipped on forks              │  │ - Skipped on forks               │
-│ - Skipped unless 'run-smoke'    │  │ - Skipped unless 'run-smoke'     │
-│ - Skipped if [skip-smoke]       │  │ - Skipped if [skip-smoke]        │
-│ - Timeout: 8 minutes            │  │ - Timeout: 15 minutes            │
-└─────────────────────────────────┘  └──────────────────────────────────┘
-                     │                                 │
-                     └─────────────┬───────────────────┘
-                                   ▼
-                  ┌────────────────────────────────────┐
-                  │ ci-summary                          │
-                  │ - if: always()                      │
-                  │ - Shows status of all jobs         │
-                  │ - Fails only if validate failed    │
-                  │ - Timeout: 2 minutes               │
-                  └────────────────────────────────────┘
+# CLS helper
+./tools/dispatch_quick.zsh pr:quickcheck <PR#>
 ```
 
 ## Benefits
-
-1. **Fewer Red PRs** - Only critical validation must pass
-2. **Faster Feedback** - Most PRs run only 1 fast job (~5-8 min)
-3. **On-Demand Testing** - Heavy tests available via `run-smoke` label
-4. **Fork Friendly** - External contributors don't trigger expensive jobs
-5. **Better Debugging** - Auto-print logs on failure, summary job shows all statuses
-6. **Reliable** - Timeouts prevent hanging, continue-on-error prevents flaky test blocking
-
-## Migration Notes
-
-### Before (all jobs required):
-- All 3 jobs must pass for PR to be green
-- Any flaky job blocks the PR
-- Forks run expensive tests unnecessarily
-- PRs often show as red even when core validation passes
-
-### After (quiet by default):
-- Only 'validate' must pass for PR to be green
-- Optional jobs can fail without blocking
-- Forks skip expensive tests
-- PRs are green as long as core validation passes
-- Heavy tests run on-demand via 'run-smoke' label
+1. **Fewer Red PRs** – Only critical validation blocks merges.
+2. **Faster Feedback** – Most PRs complete in ~5–8 minutes.
+3. **On-Demand Testing** – Heavy suites available via `run-smoke` without touching workflow YAML.
+4. **Fork Friendly** – External contributors avoid expensive jobs automatically.
+5. **Better Debugging** – boss-api tails are surfaced automatically on failure.
+6. **Deterministic** – Timeouts + fail-fast disabled matrices keep CI resilient.
 
 ## Troubleshooting
-
-### "Why is my PR green but some jobs show as skipped?"
-Optional jobs are skipped by default. Add the `run-smoke` label if you need them to run.
-
-### "I want to run all tests on my PR"
-Add the `run-smoke` label to your PR using:
-```bash
-gh pr edit <PR-NUMBER> --add-label "run-smoke"
-```
-
-### "The validate job failed but I need more debugging info"
-Check the job logs - `smoke_with_server.sh` automatically prints the last 200 lines of boss-api logs on failure.
-
-### "I don't want any smoke tests on my docs-only PR"
-Add `[skip-smoke]` to your PR title:
-```bash
-gh pr edit <PR-NUMBER> --title "docs: update README [skip-smoke]"
-```
-
-### "How do I test locally without starting the server?"
-Use the `SKIP_BOSS_API` environment variable:
-```bash
-SKIP_BOSS_API=1 bash tools/ci/validate.sh
-```
+- **"Why is my PR green but some jobs show skipped?"** Optional suites skipped by default; add `run-smoke` to run them.
+- **"Validate failed—where are the logs?"** Scroll to the end of the job; the script prints the boss-api tail automatically.
+- **"I want zero smoke for docs-only"** Add `[skip-smoke]` to the PR title.
+- **"Need local validation without the server"** Run `SKIP_BOSS_API=1 bash tools/ci/validate.sh`.
 
 ## Future Enhancements
-
-Potential improvements for future iterations:
-- Path-based gating (e.g., skip all tests if only `.md` files changed)
-- Scheduled nightly runs of all optional jobs
-- Matrix testing for multiple Node/Python versions
-- Performance benchmarking jobs
-- Security scanning jobs (SAST, dependency checks)
+- Path-based gating (skip tests when only `.md` changes).
+- Scheduled nightly runs of optional suites.
+- Multi-runtime matrices (Node/Python versions) for compatibility.
+- Add SAST/dependency checks behind the same gating primitives.

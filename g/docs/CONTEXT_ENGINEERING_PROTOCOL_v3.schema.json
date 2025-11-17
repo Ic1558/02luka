@@ -85,7 +85,7 @@
     },
     {
       "name": "Codex",
-      "aliases": ["Liam", "Andy", "Cursor AI", "Consultative Assistant"],
+      "aliases": ["Codex IDE", "OpenAI Codex IDE", "codex-ide"],
       "layer": 4,
       "can_think": true,
       "thinking_scope": "analysis",
@@ -103,6 +103,25 @@
         "MUST inform Boss: 'I cannot write to git. Please use CLC or LPE.'"
       ],
       "approval_required": "Boss override for writes",
+      "token_limit": null,
+      "primary_users": ["Boss"],
+      "usage_frequency": "refactor_and_generation",
+      "notes": "Codex IDE runs as an extension inside Cursor; separate from Cursor AI (Liam/Andy/CLS)."
+    },
+    {
+      "name": "CursorAI",
+      "aliases": ["Liam", "Andy", "CLS", "Cursor AI"],
+      "layer": 4.2,
+      "can_think": true,
+      "thinking_scope": "analysis",
+      "can_write_sot": false,
+      "write_mode_normal": "read-only",
+      "write_restrictions": [
+        "MUST NOT write to SOT directly",
+        "MUST delegate all writes to CLC/Gemini/LPE",
+        "Backed by Claude 3.5 Haiku via Cursor AI pane"
+      ],
+      "approval_required": null,
       "token_limit": null,
       "primary_users": ["Liam", "Andy"],
       "usage_frequency": "routing_and_planning"
@@ -198,7 +217,7 @@
       }
     ],
     "emergency_override": {
-      "agent": "Codex/Liam/Andy",
+      "agent": "CursorAI/Codex",
       "condition": "CLC unavailable AND Boss explicit authorization",
       "scope": [
         "protocol/documentation updates",
@@ -213,7 +232,7 @@
     "git_pre_commit_hook": {
       "location": ".git/hooks/pre-commit",
       "checks": [
-        "Tag Codex/Liam/Andy commits (warning, not hard block)",
+        "Tag CursorAI/Codex commits (warning, not hard block)",
         "Validate LaunchAgent scripts exist",
         "Verify MLS logging for SOT writes (optional)"
       ]
