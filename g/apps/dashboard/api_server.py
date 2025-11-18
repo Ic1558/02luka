@@ -287,6 +287,8 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_get_logs(query)
         elif path == '/api/reality/snapshot':
             self.handle_reality_snapshot(query)
+        elif path == '/api/quota':
+            self.handle_quota_metrics()
         else:
             self.send_error(404, "Not found")
 
@@ -753,9 +755,25 @@ class APIHandler(BaseHTTPRequestHandler):
             print(f"Error reading Reality Hooks snapshot: {exc}")
             self.send_error(500, f"Failed to read Reality Hooks snapshot: {str(exc)}")
 
-    def send_json_response(self, data):
+    def handle_quota_metrics(self):
+        """Handle GET /api/quota - return multi-engine quota metrics"""
+        metrics_path = ROOT / "g" / "apps" / "dashboard" / "data" / "quota_metrics.json"
+
+        if not metrics_path.exists():
+            self.send_json_response({"error": "quota metrics not available"}, status=404)
+            return
+
+        try:
+            data = json.loads(metrics_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self.send_json_response({"error": "invalid metrics format"}, status=500)
+            return
+
+        self.send_json_response(data)
+
+    def send_json_response(self, data, status=200):
         """Send JSON response"""
-        self.send_response(200)
+        self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_cors_headers()
         self.end_headers()
