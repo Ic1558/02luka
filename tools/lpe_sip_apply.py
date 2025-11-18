@@ -5,9 +5,34 @@ import sys
 import pathlib
 import json
 import yaml
+import os
+import fnmatch
 
 BASE_PATH = (pathlib.Path(__file__).resolve().parent.parent)
 SAFE_ROOTS = {"g", "core", "LaunchAgents", "tools", "apps", "docs", "config", "etc", "server", "scripts", "bin", "web", "bridge", "analytics", "memory", "telemetry", "wo", "work_orders", "logs", "mls", "knowledge"}
+
+def _load_path_acl() -> list[str]:
+    raw = os.environ.get("LPE_PATH_ACL", "").strip()
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+    if isinstance(data, list):
+        return [str(item) for item in data if isinstance(item, str)]
+    if isinstance(data, str):
+        return [data]
+    return []
+
+PATH_ACL = _load_path_acl()
+
+def _env_flag(name: str) -> bool:
+    value = os.environ.get(name, "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+ALLOW_CREATE = _env_flag("LPE_ALLOW_CREATE")
+ALLOW_DELETE = _env_flag("LPE_ALLOW_DELETE")
 
 
 def _load_patch(path: pathlib.Path) -> dict:
@@ -20,6 +45,12 @@ def _load_patch(path: pathlib.Path) -> dict:
     return data
 
 
+def _matches_acl(relative: str) -> bool:
+    if not PATH_ACL:
+        return True
+    return any(fnmatch.fnmatch(relative, pattern) for pattern in PATH_ACL)
+
+
 def _ensure_safe_path(relative: str) -> pathlib.Path:
     rel_path = pathlib.Path(relative)
     if rel_path.is_absolute():
@@ -29,9 +60,14 @@ def _ensure_safe_path(relative: str) -> pathlib.Path:
     top = rel_path.parts[0]
     if top not in SAFE_ROOTS:
         raise ValueError(f"Forbidden path outside allowed roots: {relative}")
+    rel_str = rel_path.as_posix()
+    if not _matches_acl(rel_str):
+        raise ValueError(f"Path '{rel_str}' blocked by path_acl")
     resolved = (BASE_PATH / rel_path).resolve()
     if BASE_PATH not in resolved.parents and resolved != BASE_PATH:
         raise ValueError(f"Resolved path escapes base directory: {relative}")
+    if not resolved.exists() and not ALLOW_CREATE:
+        raise ValueError(f"Creation of '{relative}' blocked (allow_create=0)")
     resolved.parent.mkdir(parents=True, exist_ok=True)
     return resolved
 
@@ -77,11 +113,19 @@ def _insert_relative(target: pathlib.Path, match: str, content: str, *, before: 
     return True
 
 
+def _delete_file(target: pathlib.Path) -> bool:
+    if not target.exists():
+        return False
+    target.unlink()
+    return True
+
+
 MODE_HANDLERS = {
     "append": _append_content,
     "replace_block": _replace_block,
     "insert_before": lambda t, m, c: _insert_relative(t, m, c, before=True),
     "insert_after": lambda t, m, c: _insert_relative(t, m, c, before=False),
+    "delete_file": _delete_file,
 }
 
 
@@ -102,6 +146,11 @@ def apply_op(op: dict) -> bool:
         raise ValueError(f"Unsupported mode: {mode}")
 
     handler = MODE_HANDLERS[mode]
+
+    if mode == "delete_file":
+        if not ALLOW_DELETE:
+            raise ValueError("delete_file operation blocked (allow_delete=0)")
+        return handler(target)
 
     if mode == "append":
         return handler(target, content)
