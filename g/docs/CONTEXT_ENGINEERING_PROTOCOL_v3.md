@@ -310,6 +310,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 - **CAN** read the whole repository using direct file system access.
 - **MUST** adhere to all rules defined in `g/docs/GEMINI_CLI_RULES.md`.
 - **MUST** load `g/knowledge/mls_lessons_cli.jsonl` when present, display the “MLS Recent Lessons (Read-Only)” block, and treat it as authoritative guidance for LaunchAgents, bridge/handlers, watchers, Redis, and filesystem work—MLS wins whenever generic instincts disagree, and the canonical ledger stays read-only.
+- **SHOULD** treat `g/tools/mls_build_cli_feed.py` as the canonical refresh job and coordinate with MLS workers or job schedulers so it runs after ledger updates, keeping the CLI prompt block aligned with the latest lessons.
 
 **Writing Capability:**
 - **SHOULD** avoid full-file overwrites unless a diff is explicitly provided and approved.

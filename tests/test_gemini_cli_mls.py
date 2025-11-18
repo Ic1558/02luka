@@ -102,6 +102,7 @@ class GeminiCliMlsTest(unittest.TestCase):
             output = result.stdout
             self.assertIn("MLS Recent Lessons (Read-Only)", output)
             self.assertIn("validate_launchagent_paths.zsh", output)
+            self.assertIn("mls_suggestion", output)
         finally:
             shutil.rmtree(workdir)
 
