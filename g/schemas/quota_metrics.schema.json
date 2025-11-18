@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Quota Metrics",
+  "type": "object",
+  "required": ["updated_at", "month", "engines"],
+  "properties": {
+    "updated_at": { "type": "string" },
+    "month": { "type": "string" },
+    "engines": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["label", "used", "limit", "ratio", "status"],
+        "properties": {
+          "label": { "type": "string" },
+          "used": { "type": "number" },
+          "limit": { "type": "number" },
+          "ratio": { "type": "number" },
+          "status": { "type": "string", "enum": ["ok", "warn", "stop", "unknown"] },
+          "warn_ratio": { "type": "number" },
+          "stop_ratio": { "type": "number" }
+        }
+      }
+    }
+  }
+}

@@ -84,6 +84,31 @@
       margin-bottom: 24px;
     }
 
+    .card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .card-sm {
+      padding: 16px;
+    }
+
+    .quota-widget { font-size: 0.9rem; }
+    .quota-title { font-weight: 600; margin-bottom: 4px; }
+    .quota-list { list-style: none; padding: 0; margin: 0; }
+    .quota-item { display: flex; align-items: center; margin-bottom: 4px; gap: 6px; }
+    .quota-label { flex: 0 0 110px; }
+    .quota-bar { flex: 1; background: #222; border-radius: 4px; overflow: hidden; height: 6px; }
+    .quota-bar-fill { display: block; height: 100%; background: #4caf50; }
+    .quota-pct { width: 40px; text-align: right; }
+
+    .quota-status-warn .quota-bar-fill { background: #ff9800; }
+    .quota-status-stop .quota-bar-fill { background: #f44336; }
+    .quota-status-unknown .quota-bar-fill { background: #616161; }
+    .quota-widget-empty { color: #a0aec0; }
+
     .dashboard-nav {
       display: flex;
       gap: 12px;
@@ -1079,6 +1104,12 @@
         <div class="label">Completed WOs</div>
         <div class="value" id="completed-wos">-</div>
       </div>
+    </div>
+
+    <!-- Quota Widget -->
+    <div class="panel">
+      <h2>🧮 Token Distribution</h2>
+      <div id="quota-widget" class="card card-sm"></div>
     </div>
 
     <!-- Roadmap Progress -->
