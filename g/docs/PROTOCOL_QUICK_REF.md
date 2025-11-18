@@ -1,9 +1,10 @@
 # Context Engineering Protocol v3.2 - Quick Reference
 
-**Version:** 3.2.0  
-**Last Updated:** 2025-11-17  
-**Full Protocol:** `CONTEXT_ENGINEERING_PROTOCOL_v3.md`  
+**Version:** 3.2.0
+**Last Updated:** 2025-11-17
+**Full Protocol:** `CONTEXT_ENGINEERING_PROTOCOL_v3.md`
 **Machine-Readable:** `CONTEXT_ENGINEERING_PROTOCOL_v3.schema.json`
+**Why:** `02LUKA_PHILOSOPHY.md`
 
 ---
 
