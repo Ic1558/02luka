@@ -253,6 +253,18 @@ class WOCollector:
         except Exception:
             return []
 
+def parse_ts(ts):
+    """Safely parse an ISO-8601 timestamp, handling 'Z' for UTC."""
+    if not ts:
+        return None
+    try:
+        # Handle 'Z' suffix for UTC, which fromisoformat doesn't like in older pythons
+        normalized = ts.replace('Z', '+00:00')
+        return datetime.fromisoformat(normalized)
+    except (ValueError, TypeError):
+        return None
+
+
 class APIHandler(BaseHTTPRequestHandler):
     """HTTP request handler for WO API"""
 
@@ -266,6 +278,8 @@ class APIHandler(BaseHTTPRequestHandler):
 
         if path.rstrip('/') == '/api/wos':
             self.handle_list_wos(query)
+        elif path == '/api/wos/history':
+            self.handle_list_wos_history(query)
         elif path.startswith('/api/wos/'):
             segments = [segment for segment in path.split('/') if segment]
             # Expected shapes: api/wos/<id> or api/wos/<id>/insights
@@ -384,6 +398,88 @@ class APIHandler(BaseHTTPRequestHandler):
             self.send_json_response(wo)
         else:
             self.send_error(404, f"WO {wo_id} not found")
+
+    def handle_list_wos_history(self, query):
+        """Handle GET /api/wos/history - normalized WO timeline"""
+        # Always refresh before building timeline
+        self.collector.collect_all()
+
+        wos = self.collector.wos or []
+
+        status_filter = query.get('status', [''])[0]
+        agent_filter = query.get('agent', [''])[0]
+        type_filter = query.get('type', [''])[0]
+        try:
+            limit = int(query.get('limit', ['200'])[0])
+        except (ValueError, TypeError):
+            limit = 200
+        if limit <= 0:
+            limit = 200
+
+        def normalize(wo):
+            started_at = wo.get('started_at')
+            finished_at = wo.get('finished_at') or wo.get('completed_at')
+
+            duration = None
+            try:
+                if started_at and finished_at:
+                    from datetime import datetime
+
+                    def parse_ts(ts):
+                        return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+
+                    duration = (parse_ts(finished_at) - parse_ts(started_at)).total_seconds()
+            except Exception:
+                duration = None
+
+            log_tail = None
+            if 'tail' in query and wo.get('log_path'):
+                try:
+                    log_tail = self.collector._get_log_tail(wo['log_path'], 20)
+                except Exception:
+                    log_tail = None
+
+            return {
+                'id': wo.get('id'),
+                'status': wo.get('status'),
+                'type': wo.get('type'),
+                'agent': wo.get('agent') or wo.get('runner'),
+                'started_at': started_at,
+                'finished_at': finished_at,
+                'duration_sec': duration,
+                'summary': wo.get('summary') or wo.get('title'),
+                'log_tail': log_tail,
+                'related_pr': wo.get('related_pr'),
+                'tags': wo.get('tags', []),
+            }
+
+        items = [normalize(wo) for wo in wos]
+
+        if status_filter:
+            items = [i for i in items if i['status'] == status_filter]
+        if agent_filter:
+            items = [i for i in items if (i['agent'] or '').lower() == agent_filter.lower()]
+        if type_filter:
+            items = [i for i in items if i['type'] == type_filter]
+
+        def sort_key(item):
+            ts = item.get('started_at') or item.get('id')
+            return ts or ''
+
+        items_sorted = sorted(items, key=sort_key, reverse=True)[:limit]
+
+        self.send_json_response({
+            'items': items_sorted,
+            'summary': {
+                'total': len(items_sorted),
+                'status_counts': {
+                    'success': len([i for i in items_sorted if i['status'] == 'success']),
+                    'failed': len([i for i in items_sorted if i['status'] == 'failed']),
+                    'running': len([i for i in items_sorted if i['status'] == 'running']),
+                    'queued': len([i for i in items_sorted if i['status'] == 'queued']),
+                }
+            }
+        })
 
     def handle_get_wo_insights(self, wo_id, query):
         """Handle GET /api/wos/:id/insights - combined WO + MLS snapshot."""
@@ -770,6 +866,7 @@ def run_server(port=8767):
     server = HTTPServer(('127.0.0.1', port), APIHandler)
     print(f"🚀 Dashboard API server running on http://127.0.0.1:{port}")
     print(f"   - GET /api/wos - List all WOs")
+    print(f"   - GET /api/wos/history - WO timeline/history view")
     print(f"   - GET /api/wos/:id - Get WO details")
     print(f"   - GET /api/wos/:id/insights - WO + MLS insights snapshot")
     print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
