@@ -1,0 +1,23 @@
+wo_id: "GEMINI_YYYYMMDD_0001"
+engine: "gemini"
+task_type: "bulk_test_generation"  # หรือ "code_transform"
+priority: "normal"
+
+input:
+  instructions: |
+    Generate tests for the following module with at least 80% branch coverage.
+  target_files:
+    - "g/apps/dashboard/api_server.py"
+  context:
+    repo_root: "/Users/icmini/02luka"
+    impact_zone: "apps"
+    locked_zone: false
+
+output:
+  expected_format: "patch"
+  reviewer: "andy"     # หรือ "cls"
+
+meta:
+  created_by: "gg"
+  source: "kim_telegram"
+  notes: []
