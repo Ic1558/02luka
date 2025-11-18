@@ -118,3 +118,17 @@ lukadata/
 # 
 # For additional local-only volume/backup patterns, see:
 # .git/info/exclude (local-only, never committed)
+g/reports/mcp_health/
+g/reports/system/launchagents_runtime/
+g/reports/system/*_RUNTIME_*.md
+g/reports/system/*_RUNTIME_*.jsonl
+g/reports/system/system_checks_*.json.tmp
+g/apps/dashboard/cache/
+g/apps/dashboard/tmp-*.json
+bridge/inbox/**
+bridge/outbox/**
+!bridge/inbox/**/.gitkeep
+!bridge/outbox/**/.gitkeep
+*.old
+tmp_*.yaml
+/knowledge/mls_lessons.jsonl
