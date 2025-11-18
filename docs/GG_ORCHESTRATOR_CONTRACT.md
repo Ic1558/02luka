@@ -127,6 +127,12 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
     - Bulk operations (>10 files or >5000 tokens output)
     - Test generation, script scaffolding, documentation generation
   - **ไม่แตะ locked zones** (same restrictions as Gemini IDE)
+
+### Layer 4.5 – Gemini (Heavy Compute Offload)
+
+- Role: handle heavy multi-file analysis, bulk test generation, and code transforms in non-locked zones.
+- Triggered by: GG/Liam when `task_type` is `bulk_test_generation` or `impact_zone` is `apps/tools` and complexity is `complex`.
+- Output: specs or patches that must be reviewed/applied via CLS/CLC/LPE according to AI:OP-001.
 - **CLS**
   - Code review, design review, CI pipeline review
   - ตรวจ logic, ขอ evidence, หาจุดผิด

@@ -9,16 +9,16 @@ Protocol: v3.2 compliant
 Created: 2025-11-18
 """
 
+import importlib
 import os
 import json
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 from pathlib import Path
 
-try:
-    import google.generativeai as genai
-except ImportError:
-    genai = None
+genai_spec = importlib.util.find_spec("google.generativeai")
+genai = importlib.import_module("google.generativeai") if genai_spec else None
+if not genai:
     logging.warning("google-generativeai not installed. Run: pip install google-generativeai")
 
 logger = logging.getLogger(__name__)
@@ -216,3 +216,117 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     success = test_connection()
     exit(0 if success else 1)
+
+
+# --- High-level task router ---
+
+_connector_instance = GeminiConnector()
+
+
+def run_gemini_task(task_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    High-level entrypoint for Gemini tasks.
+
+    Args:
+        task_type: e.g. "bulk_test_generation", "spec_refine", "code_transform"
+        payload: normalized payload from handler
+
+    Returns:
+        Dict with execution result and metadata.
+    """
+    if not _connector_instance.is_available():
+        return {
+            "ok": False,
+            "error": "Gemini connector not available",
+            "task_type": task_type,
+        }
+
+    handlers: Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]] = {
+        "bulk_test_generation": _run_bulk_test_generation,
+        "code_transform": _run_code_transform,
+    }
+
+    handler = handlers.get(task_type, _run_generic_task)
+    return handler(payload)
+
+
+def _run_bulk_test_generation(payload: Dict[str, Any]) -> Dict[str, Any]:
+    files = payload.get("files", [])
+    instructions = payload.get("instructions", "Generate comprehensive automated tests")
+    context = payload.get("context", {})
+
+    prompt = (
+        "You are a test generation specialist. "
+        "Generate runnable tests with coverage across provided files.\n\n"
+        f"Files: {', '.join(files) if files else 'not specified'}\n"
+        f"Instructions: {instructions}\n"
+        f"Context: {json.dumps(context, indent=2)}\n\n"
+        "Requirements:\n"
+        "1. Include setup/teardown and mocks when needed.\n"
+        "2. Cover both happy paths and edge cases.\n"
+        "3. Return complete test code without TODOs.\n"
+    )
+
+    response = _connector_instance.generate_text(
+        prompt=prompt,
+        temperature=context.get("temperature", 0.7),
+        max_output_tokens=context.get("max_output_tokens", 2048),
+    )
+
+    return {
+        "ok": bool(response),
+        "task_type": "bulk_test_generation",
+        "prompt": prompt,
+        "response": response,
+    }
+
+
+def _run_code_transform(payload: Dict[str, Any]) -> Dict[str, Any]:
+    files = payload.get("files", [])
+    instructions = payload.get("instructions", "Perform the requested code transformation")
+    context = payload.get("context", {})
+
+    prompt = (
+        "You are performing a targeted code transformation."
+        " Apply the instructions to the referenced files and return a structured patch.\n\n"
+        f"Files: {', '.join(files) if files else 'not specified'}\n"
+        f"Instructions: {instructions}\n"
+        f"Context: {json.dumps(context, indent=2)}"
+    )
+
+    response = _connector_instance.generate_text(
+        prompt=prompt,
+        temperature=context.get("temperature", 0.3),
+        max_output_tokens=context.get("max_output_tokens", 2048),
+    )
+
+    return {
+        "ok": bool(response),
+        "task_type": "code_transform",
+        "prompt": prompt,
+        "response": response,
+    }
+
+
+def _run_generic_task(payload: Dict[str, Any]) -> Dict[str, Any]:
+    instructions = payload.get("instructions", "Provide the requested output")
+    context = payload.get("context", {})
+
+    prompt = (
+        "You are executing a Gemini task. Follow the instructions precisely and return actionable output.\n\n"
+        f"Instructions: {instructions}\n"
+        f"Context: {json.dumps(context, indent=2)}"
+    )
+
+    response = _connector_instance.generate_text(
+        prompt=prompt,
+        temperature=context.get("temperature", 0.5),
+        max_output_tokens=context.get("max_output_tokens", 2048),
+    )
+
+    return {
+        "ok": bool(response),
+        "task_type": payload.get("task_type", "generic"),
+        "prompt": prompt,
+        "response": response,
+    }

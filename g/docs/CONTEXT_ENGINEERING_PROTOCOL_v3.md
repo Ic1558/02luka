@@ -285,6 +285,16 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 
 #### Layer 4.5: Gemini (Operational Writer & Split-Mode Compute Agent)
 
+**State:** IMPLEMENTED (connector + handler) / PLANNED (WO + quota)
+
+- **Source:** external Gemini API (consumer subscription)
+- **Responsibilities:**
+  - heavy compute, bulk tests, large refactors
+  - relieve token pressure from CLC/Codex
+- **Routing:**
+  - invoked via Liam decision (`route_to: gemini`)
+  - only for non-locked zones (apps/tools), never `/CLC` or governance files
+
 **🔹 Two Operational Modes:**
 
 1. **Gemini IDE** (Code Assist) - IDE-integrated writer for normal development
