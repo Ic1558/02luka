@@ -1,44 +1,25 @@
 # Dashboard Services & MLS Panels
 
-<<<<<<< HEAD
 Date: 2025-11-15
 
-## Services Panel
-
-- Source: `/api/services`
-- Shows LaunchAgent services with label, type, status, PID, and exit code.
-- Filters:
-  - Status: running / stopped / failed
-  - Type: bridge / worker / automation / monitoring / other
-- Auto-refreshes every 30 seconds (plus manual Refresh button).
-- Use it to quickly spot stuck or failing 02luka agents.
-
-## MLS Panel
-
-- Source: `/api/mls`
-- Lists multi-loop-learning lessons (MLS) with time, type, title, score, tags, and verification state.
-- Row click reveals details (context, related WO, related session).
-- Filters:
-  - Type: solution / failure / pattern / improvement
-  - Checkbox: Verified only
-- Auto-refreshes every 30 seconds to keep lessons up to date.
-=======
-This update adds two operator-facing panels to the Work Orchestration dashboard so you can observe the runtime agents exposed by `/api/services` and `/api/mls` without leaving the browser.
+This update introduces two operator-focused panels to the Work Orchestration dashboard so you can observe runtime agents and learning signals without leaving the browser.
 
 ## Services Panel
-- **Summary metrics** – Cards for total, running, stopped and failed LaunchAgent services.
-- **Filters** – Inline chips let you slice by status (`all`, `running`, `stopped`, `failed`) or type (`bridge`, `worker`, `monitoring`, `automation`, `other`).
-- **Table view** – Real-time table driven by `/api/services` showing `label`, `type`, `status`, `PID`, and `exit_code`. Empty/error states are handled inline.
-- **Auto-refresh** – Tied into the existing 30s dashboard refresh cadence so the counts and table stay current alongside the health pill.
+- **Source:** `/api/services`
+- **Summary metrics:** Cards display total, running, stopped, and failed LaunchAgent services.
+- **Filters:**
+  - Status chips: `all`, `running`, `stopped`, `failed`
+  - Type chips: `bridge`, `worker`, `automation`, `monitoring`, `other`
+- **Table view:** Real-time table with `label`, `type`, `status`, `PID`, and `exit_code`. Empty/error states are handled inline, and the section auto-refreshes every 30 seconds (plus manual refresh button).
+- **Use cases:** Quickly spot stuck or failing agents, confirm PID/exit codes, and verify LaunchAgent coverage per service type.
 
 ## MLS Lessons Panel
-- **Aggregated counters** – Totals for all lessons plus per-type counts (solutions, failures, patterns, improvements) sourced from `/api/mls`.
-- **Type filter** – Pill controls filter the lesson list client-side while keeping access to the full summary.
-- **Rich detail view** – Clicking a lesson row opens contextual metadata (title, timestamp, score, context, tags, related WO/session) without leaving the panel.
-- **Keyboard-friendly** – All filter chips are focusable buttons and the list rows advertise active selection, matching the dashboard’s existing accessibility conventions.
+- **Source:** `/api/mls`
+- **Aggregated counters:** Totals for all lessons plus per-type counts (solutions, failures, patterns, improvements) sourced from the API payload.
+- **Filters:** Type pills let you slice client-side; a "Verified only" checkbox keeps focus on trusted learnings.
+- **Detail view:** Clicking a lesson row reveals time, title, score, tags, verification state, related work order, and related session context.
+- **Auto-refresh:** Polls every 30 seconds so new lessons appear alongside the latest services data.
+- **Accessibility:** Filter chips are focusable buttons and list rows advertise active selection to match the dashboard’s existing interaction patterns.
 
 ## Navigation
-A quick nav under the header links to the new sections (`#services-panel`, `#mls-panel`) so operators can jump straight to the data they care about.
-
-These panels only touch the front-end: the Node API server and security layers remain unchanged.
->>>>>>> origin/main
+A quick nav under the dashboard header links directly to `#services-panel` and `#mls-panel`, making it easy for operators to jump to the data they care about. These enhancements are front-end only—the API server and security layers remain unchanged.

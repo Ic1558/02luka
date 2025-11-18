@@ -4,6 +4,7 @@ Dashboard API Server - Serves WO data and logs
 Runs alongside the static HTTP server on port 8767
 """
 
+import glob
 import json
 import os
 import re
@@ -18,6 +19,7 @@ ROOT = Path.home() / "02luka"
 BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
+REPORTS_SYSTEM = ROOT / "g" / "reports" / "system"
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -262,17 +264,31 @@ class APIHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        if path == '/api/wos':
+        if path.rstrip('/') == '/api/wos':
             self.handle_list_wos(query)
         elif path.startswith('/api/wos/'):
-            wo_id = path.split('/')[-1]
-            self.handle_get_wo(wo_id, query)
+            segments = [segment for segment in path.split('/') if segment]
+            # Expected shapes: api/wos/<id> or api/wos/<id>/insights
+            if len(segments) >= 3 and segments[0] == 'api' and segments[1] == 'wos':
+                wo_id = segments[2]
+                if len(segments) == 3:
+                    self.handle_get_wo(wo_id, query)
+                elif len(segments) == 4 and segments[-1] == 'insights':
+                    self.handle_get_wo_insights(wo_id, query)
+                else:
+                    self.send_error(404, "Not found")
+            else:
+                self.send_error(404, "Not found")
         elif path == '/api/services':
             self.handle_list_services(query)
         elif path == '/api/mls':
             self.handle_list_mls(query)
         elif path == '/api/health/logs':
             self.handle_get_logs(query)
+        elif path == '/api/reality/snapshot':
+            self.handle_reality_snapshot(query)
+        elif path == '/api/quota':
+            self.handle_quota_metrics()
         else:
             self.send_error(404, "Not found")
 
@@ -310,6 +326,39 @@ class APIHandler(BaseHTTPRequestHandler):
 
         self.send_json_response(wos_sorted)
 
+    def _build_wo_timeline(self, wo):
+        """Build a derived timeline for a work order from timestamps and log tail."""
+        events = []
+
+        created = wo.get('created_at') or wo.get('id')
+        if created:
+            events.append({'ts': created, 'type': 'created', 'label': 'WO created'})
+
+        if wo.get('started_at'):
+            events.append({'ts': wo['started_at'], 'type': 'started', 'label': 'Execution started'})
+
+        if wo.get('finished_at'):
+            events.append({
+                'ts': wo['finished_at'],
+                'type': 'finished',
+                'label': 'Execution finished',
+                'status': wo.get('status')
+            })
+
+        log_tail = wo.get('log_tail')
+        if isinstance(log_tail, list):
+            for line in log_tail:
+                text = line.strip()
+                if not text:
+                    continue
+                if 'ERROR' in text:
+                    events.append({'ts': None, 'type': 'error', 'label': text[:200]})
+                elif 'STATE:' in text:
+                    events.append({'ts': None, 'type': 'state', 'label': text[:200]})
+
+        events.sort(key=lambda e: (e['ts'] is None, e['ts'] or ''))
+        return events
+
     def handle_get_wo(self, wo_id, query):
         """Handle GET /api/wos/:id - get WO details"""
         # Refresh WO list
@@ -320,13 +369,127 @@ class APIHandler(BaseHTTPRequestHandler):
         if wo:
             # Add log tail if requested
             if 'tail' in query:
-                lines = int(query['tail'][0])
+                try:
+                    lines = int(query['tail'][0])
+                except (ValueError, TypeError):
+                    lines = 200
                 if wo.get('log_path'):
                     wo['log_tail'] = self.collector._get_log_tail(wo['log_path'], lines)
+
+            timeline_flag = query.get('timeline', ['0'])[0]
+            if timeline_flag == '1':
+                try:
+                    wo['timeline'] = self._build_wo_timeline(wo)
+                except Exception as e:
+                    print(f"Warning: failed to build timeline for WO {wo_id}: {e}")
 
             self.send_json_response(wo)
         else:
             self.send_error(404, f"WO {wo_id} not found")
+
+    def handle_get_wo_insights(self, wo_id, query):
+        """Handle GET /api/wos/:id/insights - combined WO + MLS snapshot."""
+        self.collector.collect_all()
+        wo = self.collector.get_wo_by_id(wo_id)
+
+        if not wo:
+            self.send_error(404, f"WO {wo_id} not found")
+            return
+
+        started_at = wo.get('started_at')
+        finished_at = wo.get('finished_at') or wo.get('completed_at')
+        status = wo.get('status')
+        agent = wo.get('agent') or wo.get('runner')
+        summary = wo.get('summary') or wo.get('title')
+
+        duration = None
+        if started_at and finished_at:
+            try:
+                def parse_ts(ts):
+                    if not ts:
+                        return None
+                    normalized = ts.replace('Z', '+00:00')
+                    return datetime.fromisoformat(normalized)
+
+                started_dt = parse_ts(started_at)
+                finished_dt = parse_ts(finished_at)
+                if started_dt and finished_dt:
+                    duration = (finished_dt - started_dt).total_seconds()
+            except Exception:
+                duration = None
+
+        mls_summary = None
+        try:
+            mls_entries = self._load_mls_entries()
+            related = [e for e in mls_entries if (e.get('related_wo') or '') == wo_id]
+            if related:
+                mls_summary = {
+                    'total': len(related),
+                    'solutions': len([e for e in related if e.get('type') == 'solution']),
+                    'failures': len([e for e in related if e.get('type') == 'failure']),
+                    'patterns': len([e for e in related if e.get('type') == 'pattern']),
+                    'improvements': len([e for e in related if e.get('type') == 'improvement']),
+                }
+        except Exception as exc:
+            print(f"Warning: failed to build MLS summary for {wo_id}: {exc}")
+
+        recommendation = self._build_wo_recommendation(status, mls_summary)
+
+        payload = {
+            'id': wo_id,
+            'status': status,
+            'type': wo.get('type'),
+            'agent': agent,
+            'started_at': started_at,
+            'finished_at': finished_at,
+            'duration_sec': duration,
+            'summary': summary,
+            'related_pr': wo.get('related_pr'),
+            'tags': wo.get('tags', []),
+            'mls_summary': mls_summary,
+            'recommendation': recommendation,
+        }
+
+        self.send_json_response(payload)
+
+    def _build_wo_recommendation(self, status, mls_summary):
+        """Simple deterministic recommendations for WO + MLS state."""
+        rec = {
+            'level': 'info',
+            'code': 'none',
+            'title': 'No immediate action required',
+            'details': 'WO is not marked as failed and has no MLS failures recorded.',
+        }
+
+        if not status:
+            return rec
+
+        if status == 'failed':
+            rec['level'] = 'high'
+            rec['code'] = 'wo_failed'
+            rec['title'] = 'Work-order failed'
+            rec['details'] = 'WO status is failed. Check logs and MLS entries, then decide whether to re-run or escalate.'
+        elif status in ('running', 'queued'):
+            rec['level'] = 'info'
+            rec['code'] = 'wo_in_progress'
+            rec['title'] = 'Work-order still in progress'
+            rec['details'] = 'WO is not finished yet. Wait for completion before applying follow-up actions.'
+
+        if mls_summary:
+            failures = mls_summary.get('failures', 0)
+            solutions = mls_summary.get('solutions', 0)
+            if failures and not solutions:
+                rec['level'] = 'high'
+                rec['code'] = 'mls_failures_no_solution'
+                rec['title'] = 'MLS records failures without solutions'
+                rec['details'] = 'This WO has MLS failure entries but no solution logged. Consider creating or linking a solution lesson.'
+            elif failures and solutions:
+                rec['level'] = 'medium'
+                rec['code'] = 'mls_failures_with_solutions'
+                rec['title'] = 'Failures with solutions available'
+                rec['details'] = 'Failures were recorded in MLS, but solutions exist. Ensure the solution is applied and marked as verified.'
+
+        return rec
 
     def handle_list_services(self, query):
         """Handle GET /api/services - list all 02luka LaunchAgent services"""
@@ -421,53 +584,7 @@ class APIHandler(BaseHTTPRequestHandler):
     def handle_list_mls(self, query):
         """Handle GET /api/mls - list all MLS lessons"""
         try:
-            mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
-
-            if not mls_file.exists():
-                # Return empty response if file doesn't exist
-                self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
-                return
-
-            # Read multi-line JSONL file (pretty-printed JSON objects separated by newlines)
-            entries = []
-            with open(mls_file, 'r') as f:
-                content = f.read().strip()
-
-            # Split by "}\n{" to separate pretty-printed JSON objects
-            json_objects = []
-            if content:
-                # Add back the braces that were removed by split
-                parts = content.split('}\n{')
-                for i, part in enumerate(parts):
-                    if i == 0:
-                        json_str = part + '}'
-                    elif i == len(parts) - 1:
-                        json_str = '{' + part
-                    else:
-                        json_str = '{' + part + '}'
-                    json_objects.append(json_str)
-
-            # Parse each JSON object
-            for json_str in json_objects:
-                try:
-                    entry = json.loads(json_str)
-                    # Normalize the entry for frontend
-                    entries.append({
-                        'id': entry.get('id', 'MLS-UNKNOWN'),
-                        'type': entry.get('type', 'other'),
-                        'title': entry.get('title', 'Untitled'),
-                        'details': entry.get('description', ''),
-                        'context': entry.get('context', ''),
-                        'time': entry.get('timestamp', ''),
-                        'related_wo': entry.get('related_wo'),
-                        'related_session': entry.get('related_session'),
-                        'tags': entry.get('tags', []),
-                        'verified': entry.get('verified', False),
-                        'score': entry.get('usefulness_score', 0)
-                    })
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {e}")
-                    continue
+            entries = self._load_mls_entries()
 
             # Filter by type if requested
             type_filter = query.get('type', [''])[0]
@@ -494,9 +611,46 @@ class APIHandler(BaseHTTPRequestHandler):
 
             self.send_json_response(response)
 
+        except FileNotFoundError:
+            self.send_json_response({'entries': [], 'summary': {'total': 0, 'solutions': 0, 'failures': 0, 'patterns': 0, 'improvements': 0}})
         except Exception as e:
             print(f"Error reading MLS lessons: {e}")
             self.send_error(500, f"Failed to read MLS lessons: {str(e)}")
+
+    def _load_mls_entries(self):
+        """Load MLS lessons from the JSONL file."""
+        mls_file = ROOT / "g" / "knowledge" / "mls_lessons.jsonl"
+        if not mls_file.exists():
+            raise FileNotFoundError("MLS lessons file not found")
+
+        entries = []
+        with open(mls_file, 'r', encoding='utf-8') as handle:
+            for raw_line in handle:
+                line = raw_line.strip()
+                if not line:
+                    continue
+
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    print(f"Warning: Skipping invalid JSON object in mls_lessons.jsonl: {exc}")
+                    continue
+
+                entries.append({
+                    'id': entry.get('id', 'MLS-UNKNOWN'),
+                    'type': entry.get('type', 'other'),
+                    'title': entry.get('title', 'Untitled'),
+                    'details': entry.get('description', ''),
+                    'context': entry.get('context', ''),
+                    'time': entry.get('timestamp', ''),
+                    'related_wo': entry.get('related_wo'),
+                    'related_session': entry.get('related_session'),
+                    'tags': entry.get('tags', []),
+                    'verified': entry.get('verified', False),
+                    'score': entry.get('usefulness_score', 0)
+                })
+
+        return entries
 
     def handle_get_logs(self, query):
         """Handle GET /api/health/logs - get system logs"""
@@ -520,9 +674,106 @@ class APIHandler(BaseHTTPRequestHandler):
         else:
             self.send_json_response({'lines': ['No logs available']})
 
-    def send_json_response(self, data):
+    def _read_reality_advisory(self):
+        """Read latest Reality Hooks advisory summary if available."""
+        advisory = {
+            "deployment": {"status": "unknown"},
+            "save_sh": {"status": "unknown"},
+            "orchestrator": {"status": "unknown"},
+        }
+
+        latest = REPORTS_SYSTEM / "reality_hooks_advisory_latest.md"
+        if not latest.exists():
+            return advisory
+
+        try:
+            sections = ["deployment", "save_sh", "orchestrator"]
+            section_index = 0
+            with open(latest, 'r') as handle:
+                for raw_line in handle:
+                    line = raw_line.strip()
+                    if not line.startswith("- Advisory: **"):
+                        continue
+                    status = line.split("**")[1].strip() if "**" in line else "unknown"
+                    if section_index < len(sections):
+                        key = sections[section_index]
+                        advisory[key]["status"] = status or "unknown"
+                    section_index += 1
+                    if section_index >= len(sections):
+                        break
+        except Exception as exc:
+            print(f"Error reading Reality advisory: {exc}")
+
+        return advisory
+
+    def handle_reality_snapshot(self, query):
+        """Handle GET /api/reality/snapshot - return latest reality hooks snapshot"""
+        include_advisory = query.get('advisory', ['0'])[0] == '1'
+        try:
+            pattern = str(REPORTS_SYSTEM / "reality_hooks_snapshot_*.json")
+            snapshot_files = glob.glob(pattern)
+
+            if not snapshot_files:
+                response = {
+                    "status": "no_snapshot",
+                    "snapshot_path": None,
+                    "data": None,
+                }
+                if include_advisory:
+                    response["advisory"] = self._read_reality_advisory()
+                self.send_json_response(response)
+                return
+
+            latest_file = max(snapshot_files)
+            with open(latest_file, 'r') as handle:
+                try:
+                    data = json.load(handle)
+                except json.JSONDecodeError:
+                    response = {
+                        "status": "error",
+                        "snapshot_path": latest_file,
+                        "data": None,
+                        "error": "invalid_json",
+                    }
+                    if include_advisory:
+                        response["advisory"] = self._read_reality_advisory()
+                    self.send_json_response(response)
+                    return
+
+            response = {
+                "status": "ok",
+                "snapshot_path": latest_file,
+                "data": data,
+            }
+
+            if include_advisory:
+                response["advisory"] = self._read_reality_advisory()
+
+            self.send_json_response(response)
+
+        except Exception as exc:
+            print(f"Error reading Reality Hooks snapshot: {exc}")
+            self.send_error(500, f"Failed to read Reality Hooks snapshot: {str(exc)}")
+
+    def handle_quota_metrics(self):
+        """Handle GET /api/quota - return multi-engine quota metrics"""
+        metrics_path = ROOT / "g" / "apps" / "dashboard" / "data" / "quota_metrics.json"
+
+        if not metrics_path.exists():
+            self.send_json_response({"error": "quota metrics not available"}, status=404)
+            return
+
+        try:
+            data = json.loads(metrics_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            self.send_json_response({"error": "invalid metrics format"}, status=500)
+            return
+
+        self.send_json_response(data)
+
+    def send_json_response(self, data, status=200):
         """Send JSON response"""
-        self.send_response(200)
+        self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_cors_headers()
         self.end_headers()
@@ -538,6 +789,7 @@ def run_server(port=8767):
     print(f"🚀 Dashboard API server running on http://127.0.0.1:{port}")
     print(f"   - GET /api/wos - List all WOs")
     print(f"   - GET /api/wos/:id - Get WO details")
+    print(f"   - GET /api/wos/:id/insights - WO + MLS insights snapshot")
     print(f"   - GET /api/services - List all 02luka services (v2.2.0)")
     print(f"   - GET /api/services?status=stopped - Filter services by status")
     print(f"   - GET /api/mls - List all MLS lessons (v2.2.0)")

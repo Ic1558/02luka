@@ -349,3 +349,17 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-OPS-RUNTIME-STATE-20251117",
+  "type": "solution",
+  "title": "Runtime LaunchAgent validation logic",
+  "description": "Defines runtime validation for com.02luka.* LaunchAgents using launchctl PID/exit status, Redis subscriber counts, and OK/WARN/ERROR classification, with reports stored under reports/system/launchagents_runtime.",
+  "tags": [
+    "ops",
+    "launchagent",
+    "monitoring",
+    "runtime"
+  ],
+  "verified": false,
+  "usefulness_score": 9
+}

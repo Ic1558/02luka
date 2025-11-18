@@ -1,0 +1,11 @@
+diff --git a/manuals/placeholder.md b/manuals/placeholder.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/manuals/placeholder.md
+@@ -0,0 +1,5 @@
++# Sandbox Fixture
++
++This file exists only to exercise the multi-agent PR review CLI.
++It proves we can ingest diffs without hitting GitHub.
++Remember to delete it after testing.

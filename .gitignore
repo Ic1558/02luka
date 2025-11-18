@@ -76,6 +76,9 @@ logs/
 .tmp/
 coverage/
 tools/puppeteer/.logs/
+g/reports/system/reality_hooks_pr_*.md
+g/reports/system/claude_orchestrator_summary.json*
+.tmp_telemetry_schema_check_*.py
 
 .venv/
 g/rag/.venv/
@@ -91,6 +94,7 @@ core/nlp/kim_session_profiles.json
 
 mls/paula/intel/*.json
 mls/memory/adaptive/*.json
+/knowledge/mls_lessons.jsonl
 # Generated governance index
 g/reports/system/index.json
 g/reports/system/trends_snapshot_*.html
@@ -114,3 +118,17 @@ lukadata/
 # 
 # For additional local-only volume/backup patterns, see:
 # .git/info/exclude (local-only, never committed)
+g/reports/mcp_health/
+g/reports/system/launchagents_runtime/
+g/reports/system/*_RUNTIME_*.md
+g/reports/system/*_RUNTIME_*.jsonl
+g/reports/system/system_checks_*.json.tmp
+g/apps/dashboard/cache/
+g/apps/dashboard/tmp-*.json
+bridge/inbox/**
+bridge/outbox/**
+!bridge/inbox/**/.gitkeep
+!bridge/outbox/**/.gitkeep
+*.old
+tmp_*.yaml
+/knowledge/mls_lessons.jsonl
