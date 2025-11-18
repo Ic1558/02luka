@@ -17,6 +17,21 @@ log() {
   printf '[%s] %s\n' "$(date -Iseconds)" "$*" >> "$LOG_FILE"
 }
 
+warn() {
+  echo "$*" >&2
+  log "$*"
+}
+
+USE_PYYAML=0
+if python3 - <<'PY' 2>/dev/null
+import yaml  # type: ignore
+PY
+then
+  USE_PYYAML=1
+else
+  warn "[mary_dispatcher] WARNING: PyYAML missing, falling back to safe mode (no YAML parsing)."
+fi
+
 normalize_id() {
   local file="$1"
   local base="${${file:t}%.*}"
@@ -29,34 +44,53 @@ normalize_id() {
 
 resolve_destination() {
   local file="$1"
-  python3 - "$file" "$ROUTING_RULES" <<'PY'
+  USE_PYYAML="$USE_PYYAML" python3 - "$file" "$ROUTING_RULES" <<'PY'
+import json
+import os
 import sys
-import yaml
 from pathlib import Path
+
+use_yaml = os.environ.get("USE_PYYAML", "0") == "1"
+if use_yaml:
+    import yaml
 
 wo_path = Path(sys.argv[1])
 rules_path = Path(sys.argv[2])
 
 VALID_TARGETS = {"CLC", "LPE", "shell", "Andy", "CLS"}
 
-def load_yaml(path: Path):
+
+def safe_load(path: Path):
     if not path.exists():
         return {}
     try:
         with path.open("r", encoding="utf-8") as handle:
-            return yaml.safe_load(handle) or {}
-    except Exception as e:
-        print(f"Error loading YAML from {path}: {e}", file=sys.stderr)
+            if use_yaml:
+                return yaml.safe_load(handle) or {}
+            return json.load(handle)
+    except Exception as exc:  # pragma: no cover - runtime guard
+        print(f"Error loading config {path}: {exc}", file=sys.stderr)
         return {}
 
-try:
-    with wo_path.open("r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
-except Exception as e:
-    print(f"Error loading WO from {wo_path}: {e}", file=sys.stderr)
-    data = {}
 
-rules = load_yaml(rules_path).get("routes", [])
+def load_work_order(path: Path):
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            if use_yaml:
+                return yaml.safe_load(handle) or {}
+            return json.load(handle)
+    except Exception as exc:
+        print(f"Error loading WO from {path}: {exc}", file=sys.stderr)
+        return {}
+
+
+rules = safe_load(rules_path).get("routes", []) if use_yaml else []
+
+if not use_yaml:
+    print("CLC")
+    sys.exit(0)
+
+data = load_work_order(wo_path)
 
 strict_target = data.get("strict_target")
 target_candidates = data.get("target_candidates") or []
@@ -69,11 +103,11 @@ for rule in rules:
     match = rule.get("match") or {}
     rule_task_type = match.get("task_type")
     fallback_contains = match.get("fallback_contains")
-    
+
     # Check task_type match
     if rule_task_type and rule_task_type != task_type:
         continue
-    
+
     # Check fallback_contains: substring matching (case-insensitive)
     if fallback_contains:
         fallback_contains_lower = str(fallback_contains).lower()
@@ -83,7 +117,7 @@ for rule in rules:
         )
         if not fallback_matches:
             continue
-    
+
     # Rule matched - validate target before returning
     target = rule.get("target", "CLC")
     if target in VALID_TARGETS:
@@ -102,20 +136,50 @@ PY
 
 convert_to_lpe_json() {
   local yaml_file="$1" json_out="$2" wo_id="$3"
-  python3 - "$yaml_file" "$json_out" "$wo_id" <<'PY'
-import json, sys, yaml, pathlib
+
+  if [[ "$USE_PYYAML" -eq 0 ]]; then
+    warn "[mary_dispatcher] Skipping LPE conversion for $yaml_file because PyYAML is unavailable."
+    return 1
+  fi
+
+  USE_PYYAML="$USE_PYYAML" python3 - "$yaml_file" "$json_out" "$wo_id" <<'PY'
+import json
+import sys
+import pathlib
+import os
+
+use_yaml = os.environ.get("USE_PYYAML", "0") == "1"
+if use_yaml:
+    import yaml
+
 source = pathlib.Path(sys.argv[1])
 target = pathlib.Path(sys.argv[2])
 wo_id = sys.argv[3]
-with source.open("r", encoding="utf-8") as handle:
-    data = yaml.safe_load(handle) or {}
+
+def load_source() -> dict:
+    try:
+        with source.open("r", encoding="utf-8") as handle:
+            if use_yaml:
+                return yaml.safe_load(handle) or {}
+            return json.load(handle)
+    except Exception as exc:
+        print(f"Failed to parse {source}: {exc}", file=sys.stderr)
+        return {}
+
+
+data = load_source()
+if not data:
+    print(json.dumps({"id": wo_id}), file=target.open("w", encoding="utf-8"))
+    sys.exit(0)
+
 if "id" not in data:
     data["id"] = wo_id
-target.write_text(json.dumps(data), encoding="utf-8")
+
+target.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
 PY
 }
 
-log "start mary_dispatcher"
+log "start mary_dispatcher (use_pyyaml=$USE_PYYAML)"
 
 for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
   [[ -f "$file" ]] || continue
@@ -126,7 +190,7 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
     LPE)
       mkdir -p "$LPE_INBOX"
       tmp_json="$LPE_INBOX/.mary_${id}.$$.json"
-      convert_to_lpe_json "$file" "$tmp_json" "$id"
+      convert_to_lpe_json "$file" "$tmp_json" "$id" || { warn "[mary_dispatcher] failed to convert $file for LPE"; continue; }
       mv "$tmp_json" "$LPE_INBOX/${id}.json"
       cp "$file" "$OUTBOX/${id}.yaml"
       mv "$file" "$ROOT/bridge/processed/ENTRY/${id}.yaml"
@@ -141,7 +205,7 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
       log "$id -> $dest"
       ;;
     *)
-      log "unknown route for $file (dest=$dest)"
+      warn "unknown route for $file (dest=$dest)"
       ;;
   esac
 done
