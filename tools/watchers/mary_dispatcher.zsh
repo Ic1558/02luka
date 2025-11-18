@@ -29,7 +29,7 @@ PY
 then
   USE_PYYAML=1
 else
-  warn "[mary_dispatcher] WARNING: PyYAML missing, falling back to safe mode (no YAML parsing)."
+  warn "[mary_dispatcher] WARNING: PyYAML not available, using fallback parser"
 fi
 
 normalize_id() {
@@ -137,11 +137,6 @@ PY
 convert_to_lpe_json() {
   local yaml_file="$1" json_out="$2" wo_id="$3"
 
-  if [[ "$USE_PYYAML" -eq 0 ]]; then
-    warn "[mary_dispatcher] Skipping LPE conversion for $yaml_file because PyYAML is unavailable."
-    return 1
-  fi
-
   USE_PYYAML="$USE_PYYAML" python3 - "$yaml_file" "$json_out" "$wo_id" <<'PY'
 import json
 import sys
@@ -163,7 +158,7 @@ def load_source() -> dict:
                 return yaml.safe_load(handle) or {}
             return json.load(handle)
     except Exception as exc:
-        print(f"Failed to parse {source}: {exc}", file=sys.stderr)
+        print(f"[mary_dispatcher] WARNING: Failed to parse {source} with {'PyYAML' if use_yaml else 'JSON fallback'}: {exc}", file=sys.stderr)
         return {}
 
 

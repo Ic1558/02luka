@@ -11,32 +11,26 @@ from typing import Any, Dict, Iterable, Optional
 
 ALLOWED_TYPES = {"solution", "failure", "improvement", "pattern", "antipattern"}
 ALLOWED_PRODUCERS = {"cls", "codex", "clc", "gemini"}
+OPTIONAL_KEYS = {"schema_version", "meta", "id"}
 
-DEFAULT_SCHEMA: Dict[str, Any] = {
+BASE_TEMPLATE: Dict[str, Any] = {
     "id": "",
     "ts": "",
     "type": "solution",
     "title": "",
     "summary": "",
-    "memo": "",
     "source": {
         "producer": "",
         "context": "",
-        "session": "",
         "repo": "",
         "run_id": "",
         "workflow": "",
-        "sha": "",
-        "artifact": "",
-        "artifact_path": "",
     },
     "links": {"followup_id": "", "wo_id": ""},
     "tags": [],
     "author": "",
     "confidence": 0.0,
 }
-
-OPTIONAL_KEYS = {"schema_version", "meta", "meta_raw"}
 
 
 def load_json_line(path: pathlib.Path) -> Optional[Dict[str, Any]]:
@@ -63,45 +57,46 @@ def find_baseline_entry(base: pathlib.Path) -> Optional[Dict[str, Any]]:
     return load_json_line(lessons)
 
 
-def merge_schema(template: Dict[str, Any], baseline: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    merged = json.loads(json.dumps(template))  # deep copy
+def derive_template(baseline: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    template = json.loads(json.dumps(BASE_TEMPLATE))  # deep copy
     if not baseline:
-        return merged
-    for key, value in baseline.items():
+        return template
+
+    for key, value in template.items():
         if isinstance(value, dict):
-            merged.setdefault(key, {})
+            baseline_section = baseline.get(key, {}) if isinstance(baseline.get(key), dict) else {}
             for nested_key in value:
-                merged[key].setdefault(nested_key, "")
+                if nested_key in baseline_section and isinstance(baseline_section[nested_key], str):
+                    template[key][nested_key] = baseline_section[nested_key] or ""
         elif isinstance(value, list):
-            merged.setdefault(key, [])
-        else:
-            merged.setdefault(key, "" if isinstance(value, str) else value)
-    return merged
+            if isinstance(baseline.get(key), list):
+                template[key] = []
+        elif isinstance(value, str) and isinstance(baseline.get(key), str):
+            template[key] = baseline.get(key) or value
+    return template
 
 
-def fill_missing_from_template(entry: Dict[str, Any], template: Dict[str, Any]) -> None:
+def prune_entry(entry: Dict[str, Any], template: Dict[str, Any]) -> None:
+    allowed_keys = set(template) | OPTIONAL_KEYS
+    for key in list(entry.keys()):
+        if key not in allowed_keys:
+            entry.pop(key, None)
+
     for key, sample in template.items():
-        if key not in entry:
-            if isinstance(sample, dict):
-                entry[key] = {nested: "" for nested in sample}
-            elif isinstance(sample, list):
-                entry[key] = []
-            elif isinstance(sample, str):
-                entry[key] = ""
-            else:
-                entry[key] = sample
-        elif isinstance(sample, dict):
-            for nested_key, nested_sample in sample.items():
-                if not isinstance(entry[key], dict):
-                    entry[key] = {nested_key: nested_sample}
-                entry[key].setdefault(nested_key, nested_sample if not isinstance(nested_sample, str) else "")
+        if isinstance(sample, dict):
+            entry.setdefault(key, {})
+            for nested in list(entry[key].keys()):
+                if nested not in sample:
+                    entry[key].pop(nested, None)
+        elif isinstance(sample, list):
+            entry.setdefault(key, [])
 
 
 def validate_entry(entry: Dict[str, Any], template: Dict[str, Any]) -> None:
-    required_keys = set(DEFAULT_SCHEMA)
+    required_keys = {"ts", "type", "title", "summary", "source", "links", "tags", "author", "confidence"}
     missing_required = [key for key in required_keys if key not in entry or entry.get(key) in (None, "")]
     if missing_required:
-        raise ValueError(f"missing required fields: {', '.join(missing_required)}")
+        raise ValueError(f"missing required fields: {', '.join(sorted(missing_required))}")
 
     extra_keys = set(entry) - set(template) - OPTIONAL_KEYS
     if extra_keys:
@@ -117,21 +112,28 @@ def validate_entry(entry: Dict[str, Any], template: Dict[str, Any]) -> None:
     source = entry.get("source", {})
     if not isinstance(source, dict):
         raise ValueError("source must be an object")
+    allowed_source_keys = set(template["source"])
+    extra_source = set(source) - allowed_source_keys
+    if extra_source:
+        raise ValueError(f"unexpected source fields: {', '.join(sorted(extra_source))}")
     for required in ("producer", "context"):
-        if not isinstance(source.get(required), str):
-            raise ValueError(f"source.{required} must be a string")
+        if not isinstance(source.get(required), str) or not source.get(required):
+            raise ValueError(f"source.{required} must be a non-empty string")
     if source.get("producer") not in ALLOWED_PRODUCERS:
         raise ValueError(f"source.producer must be one of {', '.join(sorted(ALLOWED_PRODUCERS))}")
 
     links = entry.get("links", {})
     if not isinstance(links, dict):
         raise ValueError("links must be an object")
-    if not isinstance(links.get("wo_id"), str):
-        raise ValueError("links.wo_id must be a string")
+    for key in ("followup_id", "wo_id"):
+        if key not in links:
+            raise ValueError(f"links.{key} missing")
+        if links[key] is not None and not isinstance(links[key], str):
+            raise ValueError(f"links.{key} must be a string or null")
 
     tags = entry.get("tags")
-    if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
-        raise ValueError("tags must be a list of strings")
+    if not isinstance(tags, list) or any(not isinstance(tag, str) or not tag for tag in tags):
+        raise ValueError("tags must be a list of non-empty strings")
 
     confidence = entry.get("confidence")
     if not isinstance(confidence, (int, float)) or not (0 <= float(confidence) <= 1):
@@ -164,7 +166,6 @@ def build_ledger_entry(args: argparse.Namespace, base: pathlib.Path, template: D
         tags.append(f"source:{args.source}")
 
     summary = args.summary or args.message or f"LPE patch {args.status or 'update'}"
-    memo = args.memo or (args.patch_file or "")
     title = args.title or f"LPE {derived_type} ({args.wo_id})"
 
     entry: Dict[str, Any] = {
@@ -173,20 +174,15 @@ def build_ledger_entry(args: argparse.Namespace, base: pathlib.Path, template: D
         "type": derived_type,
         "title": title,
         "summary": summary,
-        "memo": memo,
         "source": {
             "producer": producer,
             "context": args.context or args.source or "lpe_worker",
-            "session": args.session or "",
             "repo": args.repo or "",
             "run_id": args.run_id or "",
             "workflow": args.workflow or "",
-            "sha": args.sha or "",
-            "artifact": args.artifact or "",
-            "artifact_path": args.artifact_path or "",
         },
         "links": {
-            "followup_id": args.followup_id or "",
+            "followup_id": args.followup_id,
             "wo_id": args.wo_id,
         },
         "tags": tags,
@@ -197,13 +193,24 @@ def build_ledger_entry(args: argparse.Namespace, base: pathlib.Path, template: D
     if args.schema_version:
         entry["schema_version"] = args.schema_version
 
+    meta_data: Dict[str, Any] = {}
+    if args.message:
+        meta_data["message"] = args.message
+    if args.patch_file:
+        meta_data["patch_file"] = args.patch_file
+    if args.status:
+        meta_data["status"] = args.status
     if args.metadata:
         try:
-            entry["meta"] = json.loads(args.metadata)
+            extra_meta = json.loads(args.metadata)
+            if isinstance(extra_meta, dict):
+                meta_data.update(extra_meta)
         except json.JSONDecodeError:
-            entry["meta_raw"] = args.metadata
+            meta_data["metadata_raw"] = args.metadata
+    if meta_data:
+        entry["meta"] = meta_data
 
-    fill_missing_from_template(entry, template)
+    prune_entry(entry, template)
     validate_entry(entry, template)
     return entry
 
@@ -221,17 +228,12 @@ def main() -> None:
     parser.add_argument("--event-type", dest="event_type", help="Override event type")
     parser.add_argument("--title", help="Ledger title override")
     parser.add_argument("--summary", help="Ledger summary override")
-    parser.add_argument("--memo", help="Optional memo field")
     parser.add_argument("--author", default="codex", help="Author of the entry")
     parser.add_argument("--producer", help="Producer name (codex/cls/clc/gemini)")
     parser.add_argument("--context", help="Context string for source")
-    parser.add_argument("--session", help="Session identifier")
     parser.add_argument("--repo", help="Repository name")
     parser.add_argument("--run-id", dest="run_id", help="Run identifier")
     parser.add_argument("--workflow", help="Workflow identifier")
-    parser.add_argument("--sha", help="Commit SHA")
-    parser.add_argument("--artifact", help="Artifact name")
-    parser.add_argument("--artifact-path", dest="artifact_path", help="Path to artifact")
     parser.add_argument("--followup-id", dest="followup_id", help="Followup identifier")
     parser.add_argument("--schema-version", dest="schema_version", help="Optional schema version")
     parser.add_argument("--tag", dest="tags", action="append", default=[], help="Tag (repeatable, comma-separated supported)")
@@ -244,7 +246,7 @@ def main() -> None:
     ledger_dir.mkdir(parents=True, exist_ok=True)
 
     baseline = find_baseline_entry(repo_root)
-    template = merge_schema(DEFAULT_SCHEMA, baseline)
+    template = derive_template(baseline)
 
     event = build_ledger_entry(args, repo_root, template)
     ledger_path = ledger_dir / f"{dt.date.today():%Y-%m-%d}.jsonl"
