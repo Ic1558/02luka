@@ -165,12 +165,42 @@ const state = {
   logRefreshInterval: null
 };
 
+const timelineRefs = {
+  navButton: document.getElementById('nav-timeline'),
+  view: document.getElementById('wo-timeline-view'),
+  container: document.getElementById('wo-timeline-container'),
+  summary: document.getElementById('wo-timeline-summary'),
+  filterStatus: document.getElementById('timeline-filter-status'),
+  filterAgent: document.getElementById('timeline-filter-agent'),
+  limit: document.getElementById('timeline-limit'),
+  refreshBtn: document.getElementById('timeline-refresh')
+};
+
+const timelineState = {
+  initialized: false
+};
+
 // --- TELEMETRY & METRICS ---
 const metrics = {
   wos: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   logs: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   roadmap: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   services: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
+  // WO Pipeline Metrics
+  pipeline: {
+    throughput: 0,           // WOs per hour (calculated from last 24h)
+    avgProcessingTime: 0,    // Average duration in seconds
+    queueDepth: 0,           // Number of pending/queued WOs
+    stageDistribution: {     // Count by stage
+      queued: 0,
+      running: 0,
+      success: 0,
+      failed: 0,
+      pending: 0
+    },
+    successRate: 0,          // Percentage (0-100)
+    lastUpdated: null        // Timestamp of last calculation
+  },
   mls: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 },
   reality: { ok: 0, err: 0, ms: [], consecutiveErrors: 0 }
 };
@@ -212,6 +242,122 @@ function getAvgMs(name) {
 function isHealthy(name) {
   const m = metrics[name];
   return m.consecutiveErrors < 3 && (m.ok > 0 || m.err === 0);
+}
+
+// --- WO PIPELINE METRICS CALCULATION ---
+function calculatePipelineMetrics() {
+  const wos = state.wos.data || [];
+  if (!wos.length) {
+    // Reset metrics if no data
+    metrics.pipeline.throughput = 0;
+    metrics.pipeline.avgProcessingTime = 0;
+    metrics.pipeline.queueDepth = 0;
+    metrics.pipeline.stageDistribution = { queued: 0, running: 0, success: 0, failed: 0, pending: 0 };
+    metrics.pipeline.successRate = 0;
+    metrics.pipeline.lastUpdated = new Date().toISOString();
+    return;
+  }
+
+  // Calculate stage distribution
+  const distribution = {
+    queued: 0,
+    running: 0,
+    success: 0,
+    failed: 0,
+    pending: 0
+  };
+
+  wos.forEach(wo => {
+    const status = wo.status || 'pending';
+    if (distribution.hasOwnProperty(status)) {
+      distribution[status]++;
+    } else if (status === 'blocked') {
+      distribution.failed++;
+    }
+  });
+
+  metrics.pipeline.stageDistribution = distribution;
+  metrics.pipeline.queueDepth = distribution.queued + distribution.pending;
+
+  // Calculate average processing time (from completed WOs)
+  const completedWOs = wos.filter(w => w.status === 'success' || w.status === 'failed');
+  if (completedWOs.length > 0) {
+    const totalDuration = completedWOs.reduce((sum, wo) => {
+      return sum + (wo.duration_ms || 0);
+    }, 0);
+    metrics.pipeline.avgProcessingTime = Math.round(totalDuration / completedWOs.length / 1000); // Convert to seconds
+  } else {
+    metrics.pipeline.avgProcessingTime = 0;
+  }
+
+  // Calculate throughput (WOs per hour from last 24 hours)
+  const now = Date.now();
+  const oneDayAgo = now - (24 * 60 * 60 * 1000);
+  
+  const recentWOs = wos.filter(wo => {
+    if (!wo.started_at && !wo.completed_at) return false;
+    const woTime = wo.completed_at ? new Date(wo.completed_at).getTime() : new Date(wo.started_at).getTime();
+    return woTime >= oneDayAgo;
+  });
+
+  // Count completed WOs in last 24h
+  const completedIn24h = recentWOs.filter(w => w.status === 'success' || w.status === 'failed').length;
+  metrics.pipeline.throughput = Math.round(completedIn24h / 24); // WOs per hour
+
+  // Calculate success rate
+  const totalCompleted = completedWOs.length;
+  const successful = completedWOs.filter(w => w.status === 'success').length;
+  metrics.pipeline.successRate = totalCompleted > 0 
+    ? Math.round((successful / totalCompleted) * 100) 
+    : 0;
+
+  metrics.pipeline.lastUpdated = new Date().toISOString();
+}
+
+// Update pipeline metrics UI
+function updatePipelineMetricsUI() {
+  const p = metrics.pipeline;
+
+  // Update throughput display
+  const throughputEl = document.getElementById('pipeline-throughput');
+  if (throughputEl) {
+    throughputEl.textContent = `${p.throughput} WO/hr`;
+  }
+
+  // Update average processing time
+  const avgTimeEl = document.getElementById('pipeline-avg-time');
+  if (avgTimeEl) {
+    avgTimeEl.textContent = p.avgProcessingTime > 0 ? `${p.avgProcessingTime}s` : '-';
+  }
+
+  // Update queue depth
+  const queueEl = document.getElementById('pipeline-queue');
+  if (queueEl) {
+    queueEl.textContent = p.queueDepth;
+  }
+
+  // Update success rate
+  const successRateEl = document.getElementById('pipeline-success-rate');
+  if (successRateEl) {
+    successRateEl.textContent = `${p.successRate}%`;
+    // Color code based on success rate
+    if (p.successRate >= 90) {
+      successRateEl.style.color = '#48bb78';
+    } else if (p.successRate >= 70) {
+      successRateEl.style.color = '#ed8936';
+    } else {
+      successRateEl.style.color = '#f56565';
+    }
+  }
+
+  // Update stage distribution
+  const stages = ['queued', 'running', 'success', 'failed', 'pending'];
+  stages.forEach(stage => {
+    const el = document.getElementById(`pipeline-${stage}`);
+    if (el) {
+      el.textContent = p.stageDistribution[stage] || 0;
+    }
+  });
 }
 
 // --- RETRY BACKOFF WITH JITTER ---
@@ -761,6 +907,10 @@ function renderWOs() {
   const completedCount = state.wos.data.filter(w => w.status === 'success').length;
   const completedEl = document.getElementById('completed-wos');
   if (completedEl) completedEl.textContent = completedCount;
+
+  // Calculate and update pipeline metrics
+  calculatePipelineMetrics();
+  updatePipelineMetricsUI();
 }
 
 // Keep old function name for compatibility
@@ -2345,6 +2495,10 @@ async function refreshAllData() {
 
   // Update health indicator
   updateHealthPill();
+  
+  // Update pipeline metrics (calculated from WO data)
+  calculatePipelineMetrics();
+  updatePipelineMetricsUI();
 }
 
 // Setup auto-refresh (for dashboard data)
@@ -2516,6 +2670,174 @@ function renderFilterBadge() {
   `;
 }
 
+// ===============================
+// WO Timeline / History View
+// ===============================
+
+function initTimelineView() {
+  const { navButton, view, container, summary, filterStatus, filterAgent, limit, refreshBtn } = timelineRefs;
+  if (!navButton || !view || !container || !summary) {
+    console.warn('WO timeline elements not found; skipping timeline init.');
+    return;
+  }
+
+  timelineState.initialized = true;
+
+  navButton.addEventListener('click', () => {
+    showTimelineView(view);
+    if (!view.dataset.initialized) {
+      view.dataset.initialized = '1';
+      fetchWoTimeline();
+    }
+    view.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => fetchWoTimeline());
+  }
+
+  if (filterStatus) {
+    filterStatus.addEventListener('change', () => fetchWoTimeline());
+  }
+
+  if (filterAgent) {
+    filterAgent.addEventListener('change', () => fetchWoTimeline());
+  }
+
+  if (limit) {
+    limit.addEventListener('change', () => fetchWoTimeline());
+  }
+}
+
+function showTimelineView(target) {
+  document.querySelectorAll('.view').forEach((section) => {
+    section.classList.add('hidden');
+  });
+  if (target) {
+    target.classList.remove('hidden');
+  }
+}
+
+async function fetchWoTimeline() {
+  const { container, summary, filterStatus, filterAgent, limit } = timelineRefs;
+  if (!container || !summary) return;
+
+  const params = new URLSearchParams();
+  const status = (filterStatus && filterStatus.value.trim()) || '';
+  const agent = (filterAgent && filterAgent.value.trim()) || '';
+  const limitValue = limit && limit.value ? parseInt(limit.value, 10) : 100;
+
+  if (status) params.set('status', status);
+  if (agent) params.set('agent', agent);
+  if (limitValue) params.set('limit', String(limitValue));
+  params.set('tail', '1');
+
+  container.innerHTML = '<p>Loading timeline…</p>';
+  summary.textContent = '';
+
+  try {
+    const response = await fetch(`/api/wos/history?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    renderWoTimeline(data);
+  } catch (error) {
+    console.error('Failed to load WO timeline', error);
+    container.innerHTML = `<p class="error">Failed to load timeline: ${escapeHtml(error.message || 'Unknown error')}</p>`;
+  }
+}
+
+function renderWoTimeline(data) {
+  const { container, summary } = timelineRefs;
+  if (!container || !summary) return;
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  const stats = data.summary || {};
+
+  if (items.length === 0) {
+    container.innerHTML = '<p>No work-orders found for the selected filters.</p>';
+  } else {
+    container.innerHTML = items.map(renderTimelineCard).join('\n');
+  }
+
+  const counts = stats.status_counts || {};
+  const total = stats.total ?? items.length;
+  summary.innerHTML = `
+    <div>
+      <strong>Total:</strong> ${total}
+      &nbsp;&nbsp;
+      <strong>Success:</strong> ${counts.success ?? 0}
+      &nbsp;&nbsp;
+      <strong>Failed:</strong> ${counts.failed ?? 0}
+      &nbsp;&nbsp;
+      <strong>Running:</strong> ${counts.running ?? 0}
+      &nbsp;&nbsp;
+      <strong>Queued:</strong> ${counts.queued ?? 0}
+    </div>
+  `;
+}
+
+function renderTimelineCard(item) {
+  const id = escapeHtml(item.id || '(unknown)');
+  const status = escapeHtml(item.status || 'unknown');
+  const type = escapeHtml(item.type || 'other');
+  const agent = escapeHtml(item.agent || '—');
+  const started = escapeHtml(item.started_at || '—');
+  const finished = escapeHtml(item.finished_at || '—');
+  const summary = item.summary ? escapeHtml(item.summary) : '<em>No summary</em>';
+  const relatedPr = item.related_pr ? `<div><strong>PR:</strong> ${escapeHtml(item.related_pr)}</div>` : '';
+  const tags = Array.isArray(item.tags) && item.tags.length
+    ? `<div><strong>Tags:</strong> ${item.tags.map((tag) => escapeHtml(tag)).join(', ')}</div>`
+    : '';
+  const durationSec = Number.isFinite(item.duration_sec) ? Math.round(item.duration_sec) : null;
+  const statusClass = `status-${(item.status || 'unknown').toLowerCase()}`;
+
+  let durationText = '—';
+  if (durationSec != null) {
+    durationText = durationSec < 120
+      ? `${durationSec}s`
+      : `${Math.round(durationSec / 60)} min`;
+  }
+
+  let logSection = '';
+  if (Array.isArray(item.log_tail) && item.log_tail.length) {
+    const tail = item.log_tail.map((line) => escapeHtml(line)).join('\n');
+    logSection = `
+      <details class="wo-log">
+        <summary>Log tail</summary>
+        <pre>${tail}</pre>
+      </details>
+    `;
+  }
+
+  return `
+    <article class="wo-timeline-card ${statusClass}">
+      <header class="wo-timeline-card-header">
+        <div>
+          <span class="wo-id">${id}</span>
+          <span class="wo-status badge">${status}</span>
+        </div>
+        <div class="wo-meta">
+          <span class="wo-type">${type}</span>
+          <span class="wo-agent">Agent: ${agent}</span>
+        </div>
+      </header>
+      <div class="wo-times">
+        <div><strong>Started:</strong> ${started}</div>
+        <div><strong>Finished:</strong> ${finished}</div>
+        <div><strong>Duration:</strong> ${durationText}</div>
+      </div>
+      <div class="wo-summary">${summary}</div>
+      <div class="wo-extra">
+        ${relatedPr}
+        ${tags}
+      </div>
+      ${logSection}
+    </article>
+  `;
+}
+
 // Initialize dashboard
 async function initDashboard() {
   console.log('🚀 Initializing dashboard v2.0.1...');
@@ -2560,6 +2882,7 @@ async function initDashboard() {
   // Initialize Services + MLS panels
   initServicePanelControls();
   initMLSLessonsPanel();
+  initTimelineView();
 
   // Initial load
   await refreshAllData();

@@ -122,6 +122,140 @@ async function writeStateFile(woId, data) {
   }
 }
 
+async function listWorkOrdersFromState() {
+  try {
+    const files = await fs.readdir(STATE_DIR);
+    const wos = [];
+
+    for (const file of files) {
+      if (!file.endsWith('.json')) {
+        continue;
+      }
+
+      const woId = file.replace('.json', '');
+      const data = await readStateFile(woId);
+      if (data) {
+        data.id = data.id || woId;
+        wos.push(data);
+      }
+    }
+
+    return wos;
+  } catch (err) {
+    console.error('Failed to list WO state files', err);
+    return [];
+  }
+}
+
+function normalizeTimelineStatus(status) {
+  const raw = String(status || '').toLowerCase();
+  if (!raw) return 'unknown';
+  if (['complete', 'completed', 'done', 'success'].includes(raw)) return 'success';
+  if (['failed', 'error', 'cancelled'].includes(raw)) return 'failed';
+  if (['running', 'in_progress', 'in-progress', 'active'].includes(raw)) return 'running';
+  if (['queued', 'pending', 'created', 'open'].includes(raw)) return 'queued';
+  return raw;
+}
+
+function firstValue(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return '';
+}
+
+function safeTimestamp(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toISOString();
+}
+
+function durationSeconds(startedAt, finishedAt) {
+  if (!startedAt || !finishedAt) return null;
+  const startMs = Date.parse(startedAt);
+  const endMs = Date.parse(finishedAt);
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+    return null;
+  }
+  return Math.max(0, (endMs - startMs) / 1000);
+}
+
+async function readLogTail(logPath, lines = 20) {
+  if (!logPath) return null;
+  try {
+    const resolved = path.isAbsolute(logPath)
+      ? logPath
+      : path.join(BASE, logPath);
+
+    if (!resolved.startsWith(BASE)) {
+      console.warn('Skipping log tail outside BASE path:', logPath);
+      return null;
+    }
+
+    const content = await fs.readFile(resolved, 'utf8');
+    const entries = content.split(/\r?\n/).filter(Boolean);
+    return entries.slice(-lines);
+  } catch (err) {
+    console.warn('Failed to read log tail', logPath, err.message);
+    return null;
+  }
+}
+
+async function buildTimelineItems(wos, { includeLogTail = false } = {}) {
+  const items = await Promise.all(
+    wos.map(async (wo) => {
+      const startedAt = safeTimestamp(
+        firstValue(
+          wo.started_at,
+          wo.startedAt,
+          wo.ts_start,
+          wo.started,
+          wo.ts_create
+        )
+      );
+      const finishedAt = safeTimestamp(
+        firstValue(wo.finished_at, wo.completed_at, wo.finishedAt, wo.ts_update)
+      );
+      const logTail = includeLogTail ? await readLogTail(wo.log_path, 20) : null;
+
+      return {
+        id: wo.id || wo.wo_id || wo.name || 'unknown',
+        status: normalizeTimelineStatus(wo.status),
+        type: wo.type || wo.op || wo.category || 'other',
+        agent: wo.agent || wo.owner || wo.runner || '',
+        started_at: startedAt || '',
+        finished_at: finishedAt || '',
+        duration_sec: durationSeconds(startedAt, finishedAt),
+        summary: firstValue(wo.summary, wo.goal, wo.title, wo.description),
+        log_tail: logTail,
+        related_pr: wo.related_pr || wo.pr || wo.pull_request || '',
+        tags: Array.isArray(wo.tags) ? wo.tags : []
+      };
+    })
+  );
+
+  return items;
+}
+
+function summarizeTimeline(items) {
+  const counts = { success: 0, failed: 0, running: 0, queued: 0 };
+  items.forEach((item) => {
+    if (counts[item.status] !== undefined) {
+      counts[item.status] += 1;
+    }
+  });
+
+  return {
+    total: items.length,
+    status_counts: counts
+  };
+}
+
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -211,21 +345,46 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && pathname === '/api/wos') {
     try {
-      const files = await fs.readdir(STATE_DIR);
-      const wos = [];
-
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const woId = file.replace('.json', '');
-          const data = await readStateFile(woId);
-          if (data) {
-            wos.push(data);
-          }
-        }
-      }
-
+      const wos = await listWorkOrdersFromState();
       return sendJSON(res, 200, wos);
     } catch (err) {
+      return sendError(res, 500, err.message);
+    }
+  }
+
+  if (req.method === 'GET' && pathname === '/api/wos/history') {
+    try {
+      const wos = await listWorkOrdersFromState();
+      const includeTail = 'tail' in parsedUrl.query;
+      let items = await buildTimelineItems(wos, { includeLogTail: includeTail });
+
+      const statusFilter = (parsedUrl.query.status || '').toString().toLowerCase();
+      const agentFilter = (parsedUrl.query.agent || '').toString().toLowerCase();
+      const typeFilter = (parsedUrl.query.type || '').toString().toLowerCase();
+      const limit = Math.max(1, Math.min(1000, parseInt(parsedUrl.query.limit || '200', 10) || 200));
+
+      if (statusFilter) {
+        items = items.filter((item) => (item.status || '').toLowerCase() === statusFilter);
+      }
+      if (agentFilter) {
+        items = items.filter((item) => (item.agent || '').toLowerCase() === agentFilter);
+      }
+      if (typeFilter) {
+        items = items.filter((item) => (item.type || '').toLowerCase() === typeFilter);
+      }
+
+      items.sort((a, b) => {
+        const aKey = Date.parse(a.started_at || a.finished_at || '') || 0;
+        const bKey = Date.parse(b.started_at || b.finished_at || '') || 0;
+        return bKey - aKey;
+      });
+
+      const limited = items.slice(0, limit);
+      const summary = summarizeTimeline(limited);
+
+      return sendJSON(res, 200, { items: limited, summary });
+    } catch (err) {
+      console.error('Failed to build WO timeline', err);
       return sendError(res, 500, err.message);
     }
   }
@@ -397,6 +556,7 @@ async function start() {
     console.log(`🚀 WO Dashboard Server running on http://localhost:${PORT}`);
     console.log('📊 API endpoints:');
     console.log('   GET  /api/wos');
+    console.log('   GET  /api/wos/history');
     console.log('   GET  /api/wo/:id');
     console.log('   POST /api/wo/:id/action');
     console.log('   GET  /api/followup');
