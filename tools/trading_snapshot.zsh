@@ -10,7 +10,7 @@ REPORT_DIR="g/reports/trading"
 usage() {
   cat <<'USAGE'
 Usage: tools/trading_snapshot.zsh [--day <YYYY-MM-DD|today> | --from <YYYY-MM-DD> --to <YYYY-MM-DD>] \
-       [--market <name>] [--account <name>] [--symbol <name>] [--json]
+       [--market <name>] [--account <name>] [--symbol <name>] [--scenario <name>] [--tag <name>] [--json]
 
 Examples:
   tools/trading_snapshot.zsh --day today
@@ -24,8 +24,59 @@ Flags:
   --market    Optional market filter
   --account   Optional account filter
   --symbol    Optional symbol filter
+  --scenario  Optional scenario filter
+  --tag       Optional strategy tag filter
   --json      Print JSON summary to stdout and save a .json snapshot alongside the markdown report
 USAGE
+}
+
+slugify() {
+  local value="$1"
+  value="${value//[[:space:]]/-}"
+  value="${value//[^[:alnum:]_.-]/-}"
+  while [[ "$value" == *--* ]]; do
+    value="${value//--/-}"
+  done
+  while [[ "$value" == [-._]* ]]; do
+    value="${value#[-._]}"
+  done
+  while [[ "$value" == *[-._] ]]; do
+    value="${value%[-._]}"
+  done
+  if [[ -z "$value" ]]; then
+    value="value"
+  fi
+  printf '%s' "$value"
+}
+
+build_filter_suffix() {
+  local suffix=""
+  if [[ -n "$MARKET_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$MARKET_FILTER")"
+    suffix+="_market-${slug}"
+  fi
+  if [[ -n "$ACCOUNT_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$ACCOUNT_FILTER")"
+    suffix+="_account-${slug}"
+  fi
+  if [[ -n "$SYMBOL_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$SYMBOL_FILTER")"
+    suffix+="_symbol-${slug}"
+  fi
+  if [[ -n "$SCENARIO_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$SCENARIO_FILTER")"
+    suffix+="_scenario-${slug}"
+  fi
+  if [[ -n "$TAG_FILTER" ]]; then
+    local slug
+    slug="$(slugify "$TAG_FILTER")"
+    suffix+="_tag-${slug}"
+  fi
+  printf '%s' "$suffix"
 }
 
 DAY=""
@@ -34,6 +85,8 @@ TO_DATE=""
 MARKET_FILTER=""
 ACCOUNT_FILTER=""
 SYMBOL_FILTER=""
+SCENARIO_FILTER=""
+TAG_FILTER=""
 JSON_OUTPUT=false
 
 while [[ $# -gt 0 ]]; do
@@ -60,6 +113,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --symbol)
       SYMBOL_FILTER="${2:-}"
+      shift 2
+      ;;
+    --scenario)
+      SCENARIO_FILTER="${2:-}"
+      shift 2
+      ;;
+    --tag)
+      TAG_FILTER="${2:-}"
       shift 2
       ;;
     --json)
@@ -147,26 +208,20 @@ build_filter_suffix() {
 
 if [[ "$FROM_DATE" == "$TO_DATE" ]]; then
   RANGE_LABEL="$FROM_DATE"
-  REPORT_NAME="trading_snapshot_${FROM_DATE}"
+  RANGE_SLUG="$FROM_DATE"
 else
   RANGE_LABEL="${FROM_DATE} to ${TO_DATE}"
-  REPORT_NAME="trading_snapshot_${FROM_DATE}_${TO_DATE}"
+  RANGE_SLUG="${FROM_DATE}_${TO_DATE}"
 fi
 
-FILTER_SUFFIX="$(build_filter_suffix \
-  "market=$MARKET_FILTER" \
-  "account=$ACCOUNT_FILTER" \
-  "symbol=$SYMBOL_FILTER"
-)"
-
-if [[ -n "$FILTER_SUFFIX" ]]; then
-  REPORT_NAME+="$FILTER_SUFFIX"
-fi
+FILTER_SUFFIX="$(build_filter_suffix)"
+REPORT_NAME="trading_snapshot_${RANGE_SLUG}${FILTER_SUFFIX}"
 
 SUMMARY_JSON_FILE="$(mktemp)"
 
 FROM_DATE_ENV="$FROM_DATE" TO_DATE_ENV="$TO_DATE" \
 MARKET_FILTER_ENV="$MARKET_FILTER" ACCOUNT_FILTER_ENV="$ACCOUNT_FILTER" SYMBOL_FILTER_ENV="$SYMBOL_FILTER" \
+SCENARIO_FILTER_ENV="$SCENARIO_FILTER" TAG_FILTER_ENV="$TAG_FILTER" \
 python3 - "$JOURNAL" "$SUMMARY_JSON_FILE" <<'PY'
 import json
 import os
@@ -181,6 +236,8 @@ to_date = os.environ.get("TO_DATE_ENV")
 market_filter = (os.environ.get("MARKET_FILTER_ENV") or "").strip() or None
 account_filter = (os.environ.get("ACCOUNT_FILTER_ENV") or "").strip() or None
 symbol_filter = (os.environ.get("SYMBOL_FILTER_ENV") or "").strip() or None
+scenario_filter = (os.environ.get("SCENARIO_FILTER_ENV") or "").strip() or None
+tag_filter = (os.environ.get("TAG_FILTER_ENV") or "").strip() or None
 
 if not from_date or not to_date:
     raise SystemExit("Missing date filters")
@@ -228,6 +285,10 @@ with open(journal_path, "r", encoding="utf-8") as handle:
         if account_filter and str(entry.get("account", "")) != account_filter:
             continue
         if symbol_filter and str(entry.get("symbol", "")) != symbol_filter:
+            continue
+        if scenario_filter and str(entry.get("scenario", "")) != scenario_filter:
+            continue
+        if tag_filter and str(entry.get("strategy_tag", "")) != tag_filter:
             continue
         trades.append(entry)
 
@@ -317,6 +378,8 @@ summary = {
         "market": market_filter,
         "account": account_filter,
         "symbol": symbol_filter,
+        "scenario": scenario_filter,
+        "tag": tag_filter,
         "generated_at": datetime.datetime.now().astimezone().isoformat(),
     },
     "stats": {
@@ -371,6 +434,8 @@ lines.append(f"- Range: {filters['range_label']}")
 lines.append(f"- Market filter: {filters.get('market') or '(none)'}")
 lines.append(f"- Account filter: {filters.get('account') or '(none)'}")
 lines.append(f"- Symbol filter: {filters.get('symbol') or '(none)'}")
+lines.append(f"- Scenario filter: {filters.get('scenario') or '(none)'}")
+lines.append(f"- Tag filter: {filters.get('tag') or '(none)'}")
 lines.append(f"- Generated: {filters['generated_at']}")
 lines.append("")
 lines.append("## 1. Summary")
