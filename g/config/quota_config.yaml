@@ -1,0 +1,22 @@
+version: 1
+engines:
+  gpt:
+    label: "GPT (GG/CLC)"
+    monthly_limit: 1000000   # tokens หรือ approx units
+    warn_ratio: 0.8
+    stop_ratio: 0.95
+  gemini:
+    label: "Gemini"
+    monthly_limit: 800000
+    warn_ratio: 0.8
+    stop_ratio: 0.95
+  codex:
+    label: "Codex (Cursor)"
+    monthly_limit: 600000
+    warn_ratio: 0.8
+    stop_ratio: 0.95
+  clc:
+    label: "CLC (Claude)"
+    monthly_limit: 400000
+    warn_ratio: 0.8
+    stop_ratio: 0.95
