@@ -110,6 +110,16 @@ git push origin master
 Scanner → WO Generation → Autopilot Approval → Executor → Telemetry → Dashboard
 ```
 
+### Gemini Layer (4.5) – Heavy Compute Offload
+
+- Gemini is available as a **non-writing** engine for heavy computation:
+  - bulk test generation
+  - large-scale refactor proposals
+  - complex multi-file analysis
+- Gemini outputs are treated as **specs or patches for review**, never direct writes.
+- CLC/LPE/CLS remain the only actors allowed to apply changes to SOT via SIP.
+- See `g/manuals/GEMINI_INTEGRATION.md` for routing rules and examples.
+
 ---
 
 ## 🚨 Important Configuration

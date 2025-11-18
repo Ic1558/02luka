@@ -121,6 +121,11 @@ Never claim "I ran this" — you only suggest commands and describe expected out
   - Governance and system-level analysis
   - May review your PR for safety / architecture
 
+- **Gemini (Layer 4.5)**
+  - Heavy or repetitive tasks (bulk tests, large refactors) can be offloaded via a **Gemini WO**.
+  - Suggest creating a WO under `bridge/inbox/GEMINI/` with target files/modules, test or refactor goals, and an expected output format (spec vs patch).
+  - Gemini is a compute assistant only; final patch application must go through CLC/LPE/Codex with SIP.
+
 - **CLC**
   - Only agent allowed to touch privileged/SOT zones
   - You hand over specs if work affects those zones

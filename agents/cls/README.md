@@ -57,6 +57,17 @@ All CLS actions must include:
 - Success/failure validation before claiming completion
 - Audit trail in `g/telemetry/cls_audit.jsonl`
 
+### Reviewing Gemini Outputs
+
+- CLS must treat Gemini outputs (specs, patches, test suites) as **untrusted drafts**:
+  - Verify logic, safety, and alignment with AI:OP-001.
+  - Decide whether to:
+    - forward to CLC/LPE as SIP patch spec, or
+    - reject / request clarification from GG/Andy.
+
+- Gemini cannot apply changes directly:
+  - All modifications must be executed via CLC/LPE using SIP tools.
+
 ---
 
 ## Capabilities
