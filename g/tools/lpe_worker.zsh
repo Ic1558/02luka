@@ -14,35 +14,10 @@ LEDGER_HELPER="$BASE/g/tools/append_mls_ledger.py"
 
 POLL_INTERVAL=${LPE_POLL_INTERVAL:-5}
 RUN_ONCE=false
-DRY_RUN=false
 
-# Absolute allowed roots for patch operations (normalized later)
-typeset -a GLOBAL_ALLOWED_ROOTS=(
-  "$BASE/g/tools"
-  "$BASE/g/apps"
-  "$BASE/g/config"
-  "$BASE/LaunchAgents"
-  "$BASE/tools"
-  "$BASE/apps"
-  "$BASE/config"
-  "$BASE/core"
-  "$BASE/bridge"
-  "$BASE/analytics"
-  "$BASE/mls"
-  "$BASE/knowledge"
-)
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --once)
-      RUN_ONCE=true
-      ;;
-    --dry-run)
-      DRY_RUN=true
-      ;;
-  esac
-  shift
-done
+if [[ "${1:-}" == "--once" ]]; then
+  RUN_ONCE=true
+fi
 
 mkdir -p "$INBOX" "$PROCESSED" "$OUTBOX" "${LOG_FILE:h}" "$BASE/mls/ledger"
 
@@ -50,11 +25,6 @@ log() {
   local ts
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "[$ts] $*" | tee -a "$LOG_FILE" >/dev/null
-}
-
-log_warn() {
-  echo "$*" >&2
-  log "$*"
 }
 
 parse_work_order() {
@@ -80,6 +50,26 @@ def normalize_patch_path(path_str: str) -> str:
 with wo_file.open("r", encoding="utf-8") as handle:
     data = yaml.safe_load(handle) or {}
 
+def coerce_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+def coerce_path_acl(value):
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list):
+        items = []
+        for entry in value:
+            if isinstance(entry, str):
+                items.append(entry)
+        return items
+    return []
+
 wo_id = data.get("id") or wo_file.stem
 if not isinstance(wo_id, str) or not wo_id.strip():
     raise SystemExit("missing work order id")
@@ -88,9 +78,6 @@ patch_path = None
 cleanup = False
 source = ""
 patch_spec = data.get("lpe_patch") or {}
-path_acl = []
-allow_create = bool(data.get("allow_create") or (patch_spec.get("allow_create") if isinstance(patch_spec, dict) else False))
-allow_delete = bool(data.get("allow_delete") or (patch_spec.get("allow_delete") if isinstance(patch_spec, dict) else False))
 
 candidates = [
     data.get("lpe_patch_file"),
@@ -124,13 +111,6 @@ if patch_path is None and ops:
 if patch_path is None:
     raise SystemExit("no LPE patch provided (use lpe_patch_file or lpe_patch_inline or lpe_patch_ops)")
 
-acl_candidates = []
-if isinstance(data.get("path_acl"), list):
-    acl_candidates.extend(data.get("path_acl"))
-if isinstance(patch_spec, dict) and isinstance(patch_spec.get("path_acl"), list):
-    acl_candidates.extend(patch_spec.get("path_acl") or [])
-path_acl = [str(item) for item in acl_candidates if str(item).strip()]
-
 task_type = None
 task = data.get("task") or {}
 if isinstance(task, dict):
@@ -143,6 +123,33 @@ if isinstance(route_hints, dict):
     if isinstance(fallback_raw, list):
         fallback = [str(item).lower() for item in fallback_raw]
 
+acl_spec = {}
+for key in ("lpe_acl", "acl", "path_guard"):
+    candidate = data.get(key)
+    if isinstance(candidate, dict):
+        acl_spec = candidate
+        break
+
+path_acl = (
+    data.get("path_acl")
+    or patch_spec.get("path_acl")
+    or acl_spec.get("paths")
+    or []
+)
+path_acl = coerce_path_acl(path_acl)
+
+allow_create = coerce_bool(
+    (acl_spec.get("allow_create") if isinstance(acl_spec, dict) else None)
+    or data.get("allow_create")
+    or patch_spec.get("allow_create")
+)
+
+allow_delete = coerce_bool(
+    (acl_spec.get("allow_delete") if isinstance(acl_spec, dict) else None)
+    or data.get("allow_delete")
+    or patch_spec.get("allow_delete")
+)
+
 print(json.dumps({
     "wo_id": wo_id,
     "patch_path": patch_path,
@@ -154,83 +161,6 @@ print(json.dumps({
     "allow_create": allow_create,
     "allow_delete": allow_delete,
 }, ensure_ascii=False))
-PY
-}
-
-lpe_check_patch_acl() {
-  local patch_file="$1" wo_id="$2" allow_create="$3" allow_delete="$4"
-  shift 4
-  local path_acl=("$@")
-
-  local allowed_roots_str path_acl_str
-  allowed_roots_str="$(printf "%s\n" "${GLOBAL_ALLOWED_ROOTS[@]}")"
-  path_acl_str="$(printf "%s\n" "${path_acl[@]}")"
-
-  ALLOWED_ROOTS="$allowed_roots_str" PATH_ACL="$path_acl_str" \
-    ALLOW_CREATE="$allow_create" ALLOW_DELETE="$allow_delete" \
-    python3 - "$patch_file" "$BASE" <<'PY'
-import os
-import pathlib
-import sys
-import yaml
-
-patch_path = pathlib.Path(sys.argv[1]).expanduser().resolve()
-base = pathlib.Path(sys.argv[2]).resolve()
-
-allowed_roots = [pathlib.Path(p).resolve() for p in os.environ.get("ALLOWED_ROOTS", "").splitlines() if p.strip()]
-path_acl = [pathlib.Path(p).resolve() for p in os.environ.get("PATH_ACL", "").splitlines() if p.strip()]
-allow_create = os.environ.get("ALLOW_CREATE", "false").lower() == "true"
-allow_delete = os.environ.get("ALLOW_DELETE", "false").lower() == "true"
-
-def normalize_target(path_str: str) -> pathlib.Path:
-    candidate = pathlib.Path(path_str)
-    resolved = (base / candidate).resolve() if not candidate.is_absolute() else candidate.resolve()
-    try:
-        resolved.relative_to(base)
-    except ValueError:
-        raise ValueError(f"path escapes repo: {resolved}")
-    return resolved
-
-def check_acl(resolved: pathlib.Path) -> None:
-    if not allowed_roots:
-        raise ValueError("no allowed roots configured")
-    if not any(resolved == root or root in resolved.parents for root in allowed_roots):
-        raise ValueError(f"path outside allowed roots: {resolved}")
-    if path_acl:
-        for acl in path_acl:
-            try:
-                resolved.relative_to(acl)
-                break
-            except ValueError:
-                continue
-        else:
-            raise ValueError(f"path {resolved} denied by work-order path_acl")
-
-def detect_deletion(op: dict) -> bool:
-    mode = str(op.get("mode", "")).lower()
-    return mode in {"delete", "remove", "rm"}
-
-with patch_path.open("r", encoding="utf-8") as handle:
-    patch_data = yaml.safe_load(handle) or {}
-
-if not isinstance(patch_data, dict) or not isinstance(patch_data.get("ops"), list):
-    raise ValueError("patch missing ops list for ACL evaluation")
-
-for op in patch_data["ops"]:
-    if not isinstance(op, dict) or "path" not in op:
-        raise ValueError("invalid op entry in patch")
-    resolved = normalize_target(str(op["path"]))
-    check_acl(resolved)
-
-    creating = not resolved.exists()
-    deleting = detect_deletion(op)
-
-    if creating and not allow_create:
-        raise ValueError(f"creation blocked by ACL: {resolved}")
-    if deleting and not allow_delete:
-        raise ValueError(f"delete blocked by ACL: {resolved}")
-
-print("ok")
 PY
 }
 
@@ -249,8 +179,7 @@ append_result() {
 }
 
 process_work_order() {
-  local wo_file="$1" parsed wo_id patch_path cleanup result_status ledger_id message allow_create allow_delete
-  local -a path_acl
+  local wo_file="$1" parsed wo_id patch_path cleanup result_status ledger_id message
 
   if ! parsed=$(parse_work_order "$wo_file" 2>/tmp/lpe_parse_err.$$); then
     local err_msg
@@ -266,33 +195,18 @@ process_work_order() {
   wo_id="$(echo "$parsed" | jq -r '.wo_id')"
   patch_path="$(echo "$parsed" | jq -r '.patch_path')"
   cleanup="$(echo "$parsed" | jq -r '.cleanup')"
-  allow_create="$(echo "$parsed" | jq -r '.allow_create // false')"
-  allow_delete="$(echo "$parsed" | jq -r '.allow_delete // false')"
-  path_acl=($(echo "$parsed" | jq -r '.path_acl[]?'))
+  path_acl="$(echo "$parsed" | jq -c '.path_acl // []')"
+  allow_create="$(echo "$parsed" | jq -r 'if (.allow_create // false) then "1" else "0" end')"
+  allow_delete="$(echo "$parsed" | jq -r 'if (.allow_delete // false) then "1" else "0" end')"
 
   log "📥 $wo_id using patch $patch_path"
 
-  local acl_output=""
-  if ! acl_output=$(lpe_check_patch_acl "$patch_path" "$wo_id" "$allow_create" "$allow_delete" "${path_acl[@]}" 2>&1); then
-    message="$acl_output"
-    result_status="denied"
-    ledger_id="$(python3 "$LEDGER_HELPER" --wo-id "$wo_id" --status "$result_status" --patch-file "$patch_path" --message "$message" --source "lpe_worker")"
-    append_result "$wo_id" "$result_status" "$patch_path" "$ledger_id" "$message"
-    mv "$wo_file" "$PROCESSED/$(basename "$wo_file")"
-    if [[ "$cleanup" == "true" || "$patch_path" == "$INBOX"* ]]; then
-      rm -f "$patch_path"
-    fi
-    return
-  fi
-
-  if $DRY_RUN; then
-    result_status="dry_run"
-    message="dry-run: ACL passed; patch not applied"
-  elif ! [[ -x "$LUKA_CLI" ]]; then
+  if ! [[ -x "$LUKA_CLI" ]]; then
     message="luka_cli.zsh not executable at $LUKA_CLI"
     result_status="error"
   else
-    if "$LUKA_CLI" lpe-apply --file "$patch_path" >>"$LOG_FILE" 2>&1; then
+    if LPE_PATH_ACL="$path_acl" LPE_ALLOW_CREATE="$allow_create" LPE_ALLOW_DELETE="$allow_delete" \
+      "$LUKA_CLI" lpe-apply --file "$patch_path" >>"$LOG_FILE" 2>&1; then
       result_status="success"
       message="patch applied"
     else
@@ -310,7 +224,7 @@ process_work_order() {
   fi
 }
 
-log "🚀 LPE worker starting (poll every ${POLL_INTERVAL}s; run_once=${RUN_ONCE}; dry_run=${DRY_RUN})"
+log "🚀 LPE worker starting (poll every ${POLL_INTERVAL}s; run_once=${RUN_ONCE})"
 
 while true; do
   next_file=""
@@ -324,7 +238,7 @@ while true; do
     continue
   fi
 
-  process_work_order "$next_file" || log_warn "⚠️ processing error for $next_file"
+  process_work_order "$next_file" || log "⚠️ processing error for $next_file"
 
   if $RUN_ONCE; then
     log "✅ run_once completed"
