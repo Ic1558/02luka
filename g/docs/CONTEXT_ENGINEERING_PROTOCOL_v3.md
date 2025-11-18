@@ -296,10 +296,24 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
   - only for non-locked zones (apps/tools), never `/CLC` or governance files
   - **WO Lane:** `bridge/inbox/GEMINI` → `bridge/handlers/gemini_handler.py` (source: Kim/GG/Liam via `engine: gemini`)
 
-**🔹 Two Operational Modes:**
+**🔹 Three Operational Modes:**
 
 1. **Gemini IDE** (Code Assist) - IDE-integrated writer for normal development
 2. **Gemini API** (Heavy Compute) - API-based offloader for bulk operations (NEW - Phase 2)
+3. **Gemini CLI** (Direct FS Access) - Command-line writer for patch application and direct file system operations.
+
+---
+
+**Gemini CLI Mode:**
+
+**Thinking Capability:**
+- **CAN** read the whole repository using direct file system access.
+- **MUST** adhere to all rules defined in `g/docs/GEMINI_CLI_RULES.md`.
+
+**Writing Capability:**
+- **SHOULD** avoid full-file overwrites unless a diff is explicitly provided and approved.
+- **MAY** apply patches directly to the file system.
+- **MUST** follow all safety and operational rules in its dedicated protocol.
 
 ---
 
@@ -578,6 +592,7 @@ In Override Mode:
 ### 2.3.3 Scope & Safety
 
 - The override does not bypass system-level prohibitions in `AI:OP-001`.
+- CLI agents (Gemini CLI, Codex CLI) **MUST** request explicit `@g/tools/validate_launchagent_paths.zsh` validation from Boss before writing to LaunchAgent files.
 
 - Once the task is complete, the agent **MUST** return to its normal operational mode.
 
@@ -592,6 +607,7 @@ In Override Mode:
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Privileged/locked zones | Self-approved | Configurable Budget |
 | **Gemini IDE** (Split-Mode Agent) | ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
 | **Gemini API** (Heavy Compute) | ✅ MUST (operational) | ✅ CAN (via work order) | Bulk operations (non-locked) | GG/Kim routing | API Quota (~1500/day) |
+| **Gemini CLI** (Codex CLI) | ✅ MUST (operational) | ⚠️ MAY (diff-only) | non-locked zones | Boss override or routing engine | Subscription Quota |
 | **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override) | Code suggestions, small fixes | Boss override for writes | N/A |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
