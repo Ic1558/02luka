@@ -20,13 +20,30 @@ from typing import Dict, Any, Optional
 # Add parent directories to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "g" / "connectors"))
 
-try:
-    from gemini_connector import GeminiConnector
-except ImportError:
-    logging.error("Cannot import gemini_connector. Ensure it's in g/connectors/")
-    sys.exit(1)
+from gemini_connector import GeminiConnector, run_gemini_task
 
 logger = logging.getLogger(__name__)
+
+
+def handle(task: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normalize incoming Gemini tasks and call gemini_connector.
+    """
+    task_type = task.get("task_type", "code_transform")
+    payload = {
+        "files": task.get("files", []),
+        "instructions": task.get("instructions", ""),
+        "context": task.get("context", {}),
+    }
+
+    result = run_gemini_task(task_type, payload)
+
+    return {
+        "ok": bool(result.get("ok")),
+        "task_type": task_type,
+        "result": result,
+        # TODO: Phase 3 WO routing will integrate inbox/outbox bridging here.
+    }
 
 
 class GeminiHandler:
