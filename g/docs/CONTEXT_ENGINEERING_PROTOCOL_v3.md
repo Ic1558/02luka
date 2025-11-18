@@ -107,6 +107,12 @@ For programmatic access, use `CONTEXT_ENGINEERING_PROTOCOL_v3.schema.json`:
 
 ---
 
+## Related Documents
+
+- **Philosophy & Design Principles:** `02LUKA_PHILOSOPHY.md` (why the system exists and how decisions align)
+
+---
+
 **💡 Tip:** If you're an AI agent (Liam/Andy/Gemini), load the JSON schema first for fast capability lookups, then reference specific sections of the markdown as needed.
 
 ---
