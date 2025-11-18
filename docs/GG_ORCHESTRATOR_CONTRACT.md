@@ -101,6 +101,7 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
 | `local_fix` | low/medium | Gemini                         | For non-locked zones |
 | `pr_change` | any        | GG → PR Prompt → Gemini        | For non-locked zones |
 | `agent_action` | any     | Luka CLI                       | System commands, Docker, etc. |
+| `heavy_compute` | high   | Gemini API                     | Bulk operations, test generation, heavy analysis |
 | governance/memory/bridges | any | GG → CLC (spec only) | For privileged zones |
 
 ### 5.2 Agent Roles
@@ -109,6 +110,17 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
   - **Primary operational writer** สำหรับ `apps`, `tools`, `docs`, etc. (non-locked zones).
   - รับผิดชอบ `local_fix` และ `pr_change` ทั้งหมด
   - ทำงานผ่าน "Safety-Belt Mode" (patch-based output).
+- **Gemini API**
+  - **Heavy compute offloader** สำหรับงานที่ต้องการ processing power สูง
+  - Use cases: Bulk test generation, multi-file analysis, heavy code generation
+  - ทำงานผ่าน work order system (`/bridge/inbox/GEMINI/` → `/bridge/outbox/GEMINI/`)
+  - Model: `gemini-2.5-flash` (fast, cost-effective for bulk operations)
+  - Quota-aware: ติดตาม API limits และ token usage
+  - Routing rules:
+    - `complexity=high` + `task_type=heavy_compute`
+    - Bulk operations (>10 files or >5000 tokens output)
+    - Test generation, script scaffolding, documentation generation
+  - **ไม่แตะ locked zones** (same restrictions as Gemini IDE)
 - **CLS**
   - Code review, design review, CI pipeline review
   - ตรวจ logic, ขอ evidence, หาจุดผิด
@@ -150,12 +162,12 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
 
 ```yaml
 gg_decision:
-  task_type: "<qa|local_fix|pr_change|agent_action>"
+  task_type: "<qa|local_fix|pr_change|agent_action|heavy_compute>"
   complexity: "<low|medium|high>"
   risk_level: "<safe|guarded|critical>"
   impact_zone: "<normal_code|governance|memory|bridges>"
   route: # Based on CONTEXT_ENGINEERING_PROTOCOL_v3.2
-    primary: "<GG|Gemini|CLC|Luka>"
+    primary: "<GG|Gemini|Gemini_API|CLC|Luka>"
     secondary:
       - "<optional extra validator, e.g. CLS>"
   next_step_for_agent: |
@@ -236,6 +248,16 @@ GG ต้องออก "PR Prompt Contract" ให้ Gemini ในโคร�
 - impact_zone = governance
 - route → GG สร้าง spec → CLC
 - ห้ามสร้าง PR ตรง ๆ
+
+### Example 4 – Heavy Compute Task
+
+"สร้าง unit tests ครบทุก function ใน apps/dashboard/ (30+ files)"
+
+- task_type = heavy_compute
+- complexity = high
+- impact_zone = normal_code (apps/)
+- route → Gemini API (via work order)
+- ผลลัพธ์: Gemini API generates test scaffolding for all files, CLS reviews
 
 ---
 

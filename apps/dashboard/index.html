@@ -74,7 +74,8 @@
       .tabs a:hover,
       .tabs button:hover,
       .tabs a:focus,
-      .tabs button:focus {
+      .tabs button:focus,
+      .tab-button--active {
         background: rgba(56, 189, 248, 0.12);
         color: #f8fafc;
       }
@@ -160,7 +161,6 @@
         background: #f3f4f6;
         color: #4b5563;
         margin-left: 0.25rem;
->>>>>>> origin/main
       }
 
       .summary-bar {
@@ -1049,6 +1049,94 @@
         margin: 0;
       }
 
+      .wo-history-subtitle {
+        margin: 0.15rem 0 0;
+        font-size: 0.8rem;
+        color: #9ca3af;
+      }
+
+      .wo-history-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        font-size: 0.8rem;
+      }
+
+      .wo-history-controls select {
+        background: #020617;
+        color: #e5e7eb;
+        border: 1px solid #4b5563;
+        border-radius: 0.25rem;
+        padding: 0.15rem 0.4rem;
+      }
+
+      .wo-history-summary {
+        font-size: 0.8rem;
+        margin-bottom: 0.75rem;
+        color: #e5e7eb;
+      }
+
+      .wo-history-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .wo-history-day {
+        border-left: 2px solid #374151;
+        padding-left: 0.75rem;
+      }
+
+      .wo-history-day-header {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #9ca3af;
+        margin-bottom: 0.25rem;
+      }
+
+      .wo-history-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.8rem;
+        padding: 0.15rem 0;
+      }
+
+      .wo-history-item-main {
+        display: flex;
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+
+      .wo-history-item-status {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        border-radius: 999px;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid #4b5563;
+      }
+
+      .wo-history-item-status--completed {
+        border-color: #22c55e;
+        color: #22c55e;
+      }
+
+      .wo-history-item-status--failed {
+        border-color: #ef4444;
+        color: #ef4444;
+      }
+
+      .wo-history-item-title {
+        font-weight: 500;
+      }
+
+      .wo-history-item-meta {
+        font-size: 0.7rem;
+        color: #9ca3af;
+      }
+
       /* WO filters */
       #wo-filters {
         display: flex;
@@ -1626,6 +1714,12 @@
         color: #9ca3af;
       }
 
+      .wo-timeline-button {
+        padding: 0.15rem 0.5rem;
+        font-size: 0.75rem;
+        color: #9ca3af;
+      }
+
       .wo-timeline-close {
         border-radius: 999px;
         border: 1px solid #1f2937;
@@ -1711,8 +1805,6 @@
         color: #6b7280;
       }
 
-=======
->>>>>>> origin/main
       footer {
         padding: 2rem;
         text-align: center;
@@ -1968,14 +2060,14 @@
         </nav>
 
         <!-- Existing sections -->
-        <section id="view-overview">
+        <section id="tab-overview" class="tab-panel">
           <p>
             Use this view to see aggregate WO metrics and high-level signals. Additional
             visualizations will land here as the WO command center evolves.
           </p>
         </section>
 
-        <section id="view-wos" class="hidden">
+        <section id="tab-wos" class="tab-panel" hidden>
           <header class="wos-header">
             <h2>Work Orders</h2>
 
@@ -2062,48 +2154,42 @@
         </section>
 
         <!-- NEW: Global WO History view -->
-        <section id="view-wo-history" class="hidden">
+        <section id="tab-history" class="tab-panel" hidden>
           <header class="wo-history-header">
             <h2>Work Order History</h2>
-            <div class="wo-history-filters">
-              <label>
-                Status:
-                <select id="wo-history-status-filter">
-                  <option value="">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="running">Running</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </label>
-              <label>
-                Max rows:
-                <select id="wo-history-limit">
-                  <option value="50">50</option>
-                  <option value="100" selected>100</option>
-                  <option value="200">200</option>
-                </select>
-              </label>
-            </div>
+            <p class="wo-history-subtitle">
+              Grouped by day, showing completed / failed runs and their durations.
+            </p>
           </header>
 
-          <table class="wo-history-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Started</th>
-                <th>Status</th>
-                <th>Agent</th>
-                <th>Type</th>
-                <th>Summary</th>
-                <th>Timeline</th>
-              </tr>
-            </thead>
-            <tbody id="wo-history-body">
-              <!-- filled by JS -->
-            </tbody>
-          </table>
+          <div class="wo-history-controls">
+            <label>
+              Show:
+              <select id="wo-history-range">
+                <option value="50">Last 50 WOs</option>
+                <option value="100">Last 100 WOs</option>
+                <option value="200">Last 200 WOs</option>
+              </select>
+            </label>
+
+            <label>
+              Status:
+              <select id="wo-history-status">
+                <option value="completed,failed,error">Completed + Failed</option>
+                <option value="">All statuses</option>
+                <option value="completed">Completed only</option>
+                <option value="failed,error">Failed only</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="wo-history-summary" class="wo-history-summary">
+            <!-- filled by JS: totals, success rate, avg duration -->
+          </div>
+
+          <div id="wo-history-timeline" class="wo-history-timeline">
+            <!-- filled by JS: date groups + WOs -->
+          </div>
         </section>
 
         <section id="view-reality" class="hidden">

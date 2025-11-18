@@ -349,3 +349,29 @@
   "verified": false,
   "usefulness_score": 0
 }
+{
+  "id": "MLS-1763421000",
+  "type": "test",
+  "title": "Manual Test Entry 061000",
+  "description": "Testing MLS capture to verify write path",
+  "context": "Boss investigation 2025-11-18",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "session_20251115_163443.md",
+  "timestamp": "2025-11-17T23:10:00Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
+{
+  "id": "MLS-1763421481",
+  "type": "improvement",
+  "title": "Gemini API Integration Plan (5 Phases + Conservative Additive Pattern)",
+  "description": "Complete Gemini API integration plan for offloading heavy compute from CLC/Codex. 5 implementation phases: (1) Foundation Setup - gemini_connector.py + bridge handlers, (2) Routing Logic - Liam/GG integration with Layer 4.5, (3) Work Order Integration - bridge inbox/outbox + Kim routing, (4) Quota Tracking - multi-engine token monitoring + dashboard, (5) Documentation & Deployment - manuals + testing + rollout. Conservative additive approach (no workflow replacement), quota-based budgeting, versatile use cases. Timeline: ~10 days. Full details in linked report.",
+  "context": "Plan document: g/reports/system/GEMINI_INTEGRATION_PLAN_20251118.md | Approved by: GG (2025-11-18) | Protocol: v3.2 compliant | Risk: Zero disruption (additive-only) | Files impact: 13 new + 11 modified | Pattern: Conservative additive multi-engine integration | Use cases: Heavy compute, testing, bulk ops, script generation",
+  "related_wo": "WO-251031-GHA-ALL-IN-ONE-EXTENDED.zsh",
+  "related_session": "session_20251115_163443.md",
+  "timestamp": "2025-11-17T23:18:01Z",
+  "tags": [],
+  "verified": false,
+  "usefulness_score": 0
+}
