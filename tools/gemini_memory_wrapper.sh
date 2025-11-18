@@ -12,7 +12,16 @@ AGENTS=$(echo "$CONTEXT" | jq -r '.agents | to_entries[] | "\(.key): \(.value.st
 WORK=$(echo "$CONTEXT" | jq -r '.current_work' 2>/dev/null || echo "{}")
 
 # Build system prompt
-SYSTEM_PROMPT="You are part of 02luka system.
+MLS_SECTION="$(
+  python3 "$LUKA_SOT/g/tools/mls_cli_prompt.py" --feed "$LUKA_SOT/g/knowledge/mls_lessons_cli.jsonl" --limit 30 2>/dev/null || true
+)"
+if [[ -n "$MLS_SECTION" ]]; then
+  SYSTEM_PROMPT="${MLS_SECTION}"
+  SYSTEM_PROMPT+=$'\n\n'
+else
+  SYSTEM_PROMPT=""
+fi
+SYSTEM_PROMPT+="You are part of 02luka system.
 Active agents: $AGENTS
 Current work: $WORK
 Please maintain consistency with other agents."
