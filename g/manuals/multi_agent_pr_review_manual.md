@@ -1,53 +1,53 @@
-# Multi-Agent PR Review CLI Manual
+# Multi-Agent PR Review CLI
 
 ## Overview
-`tools/multi_agent_pr_review.zsh` collects GitHub PR context, inlines the governance contract, and fan-outs review tasks to multiple agents through `tools/claude_subagents/orchestrator.zsh`. Each execution emits Markdown/JSON reports under `g/reports/system/` with the required classification footer so governance evidence stays consistent.
+`tools/multi_agent_pr_review.zsh` collects GitHub PR metadata, diffs, and the governance contract, packages them into a contract-aware payload, and launches the Claude subagent orchestrator (`tools/claude_subagents/orchestrator.zsh`). The orchestrator runs one or more reviewers, collates their outputs, and emits Markdown/JSON reports under `g/reports/system/`.
 
 ## Requirements
-- Run from the repo root (`~/02luka` or `~/02luka/g`).
-- Authenticated `gh` CLI for fetching PR metadata/diffs.
-- `jq` for JSON parsing.
-- Executable `tools/claude_subagents/orchestrator.zsh` plus whatever agent runner you want (defaults to `cat`).
-- Governance contract at `docs/MULTI_AGENT_PR_CONTRACT.md` (referenced in payloads).
+- `gh` authenticated against the repository
+- `jq` available on the PATH for JSON parsing
+- Executable `tools/claude_subagents/orchestrator.zsh`
+- Governance contract at `../docs/MULTI_AGENT_PR_CONTRACT.md`
 
 ## Usage
+Run from the repo root or `~/02luka/g`:
+
 ```bash
-cd ~/02luka/g
-# Basic two-agent cooperative review
+# Default two-agent review
 tools/multi_agent_pr_review.zsh 289
 
-# Competing review with custom runner template
+# Competing three-agent review with custom runner
 MULTI_AGENT_REVIEW_CMD='cls_shell_request.zsh "codex_cli review --task {TASK_FILE}"' \
   tools/multi_agent_pr_review.zsh 289 --agents 3 --mode compete
 
-# Collaborate alias
+# Collaborate mode alias
 tools/multi_agent_pr_review.zsh 289 --mode collab
 
-# Explicit agent command template (auto-appends {TASK_FILE} if omitted)
+# Explicit agent command template
 tools/multi_agent_pr_review.zsh 289 --agent-command 'codex_cli --mode pr-review --input {TASK_FILE}'
 ```
 
 ### Arguments & Modes
-- `PR_NUMBER` (required): Target GitHub PR.
-- `--agents N` (default 2, max 10): number of reviewers.
-- `--mode review|compete|collab`: maps directly to orchestrator strategies (collab ⇒ `collaborate`).
-- `--agent-command TEMPLATE`: overrides the runner; `{TASK_FILE}` placeholder is replaced with the generated payload path. The `MULTI_AGENT_REVIEW_CMD` env var offers the same capability.
+- `PR_NUMBER` (required): GitHub pull request number.
+- `--agents N` (1-10, default 2): number of reviewers.
+- `--mode MODE`: `review` (default cooperative), `compete`, or `collab` (alias of orchestrator `collaborate`).
 
-## How it Works
-1. Fetch metadata and diffs via `gh pr view` / `gh pr diff`.
-2. Inline `docs/MULTI_AGENT_PR_CONTRACT.md` to remind reviewers of governance rules.
-3. Build a JSON payload with metadata, files, diff, and contract pointer.
-4. Launch the orchestrator: `zsh tools/claude_subagents/orchestrator.zsh <mode> <task> <agents>` (with `{TASK_FILE}` passed through your runner).
-5. Parse `g/reports/system/claude_orchestrator_summary.json` for agent stdout/stderr.
-6. Convert the summary into Markdown + JSON reports and drop them in `g/reports/system/`.
+### Agent command resolution
+`--agent-command` or `MULTI_AGENT_REVIEW_CMD` accepts a template string. The literal token `{TASK_FILE}` is replaced with the generated payload path; if omitted it is appended automatically.
 
-## Outputs
-- Markdown: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.md`
-- JSON mirror: `g/reports/system/code_review_pr<PR>_<TIMESTAMP>.json`
-- Scratch payloads under `g/tmp/multi_agent_pr_review.*.md` (cleaned up automatically)
+## How it works
+1. Fetch PR snapshot (metadata, files, diff) via `gh`.
+2. Inline the governance contract to remind reviewers of constraints.
+3. Build a JSON payload referencing the contract and collected data.
+4. Invoke the orchestrator: `zsh tools/claude_subagents/orchestrator.zsh <mode> <task> <agents>`.
+5. Capture `g/reports/system/claude_orchestrator_summary.json` for stdout/stderr.
+6. Emit two artifacts per run under `g/reports/system/`:
+   - `code_review_pr<PR>_<timestamp>.md`
+   - `code_review_pr<PR>_<timestamp>.json`
 
-Every Markdown report ends with:
-```yaml
+The Markdown report includes PR metadata, raw agent outputs, a synthesized strategy summary, and ends with the required classification block:
+
+```
 classification:
   task_type: PR_FIX | PR_FEAT | PR_DOCS
   primary_tool: codex_cli
@@ -55,14 +55,15 @@ classification:
   security_sensitive: true|false
   reason: "Why the classification was selected"
 ```
-Use the JSON mirror when ingesting the results programmatically or archiving the orchestrator summary alongside the rendered report.
 
-## Failure Modes
-- Missing prerequisites (`gh`, `jq`, contract, orchestrator) ⇒ exits early with actionable messaging.
-- Invalid PR number / GitHub lookup failure ⇒ aborts before starting agents.
-- Orchestrator non-zero exit ⇒ still collates whatever output exists so you can inspect partial results.
+Use the JSON mirror for programmatic ingestion or archival of the orchestrator summary.
+
+## Failure modes
+- Missing prerequisites (`gh`, `jq`, contract, orchestrator) → immediate error.
+- Invalid PR number / GH failure → abort before orchestrator runs.
+- Orchestrator non-zero exit → CLI logs failure but still collates any output.
 
 ## Tips
-- Reports use UTC timestamps—handy for governance timelines.
-- Increase `--agents` or switch to `--mode compete` for contentious changes; keep `review` for quick audits.
-- Pair the CLI with `tools/reality_hooks/pr_reality_check.zsh` if you want orchestration evidence captured alongside runtime reality hooks.
+- Reports use UTC timestamps; keep them with other governance evidence.
+- Use `--mode compete` and higher agent counts for contentious reviews; fall back to `review` for lighter audits.
+- Filter or rerun agents by adjusting `{TASK_FILE}` templates—any executable command is allowed as long as it consumes the payload path.
