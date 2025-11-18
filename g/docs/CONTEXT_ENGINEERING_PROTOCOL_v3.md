@@ -309,6 +309,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 **Thinking Capability:**
 - **CAN** read the whole repository using direct file system access.
 - **MUST** adhere to all rules defined in `g/docs/GEMINI_CLI_RULES.md`.
+- **MUST** load `g/knowledge/mls_lessons_cli.jsonl` when present, display the “MLS Recent Lessons (Read-Only)” block, and treat it as authoritative guidance for LaunchAgents, bridge/handlers, watchers, Redis, and filesystem work—MLS wins whenever generic instincts disagree, and the canonical ledger stays read-only.
 
 **Writing Capability:**
 - **SHOULD** avoid full-file overwrites unless a diff is explicitly provided and approved.
