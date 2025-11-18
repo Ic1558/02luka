@@ -294,6 +294,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 - **Routing:**
   - invoked via Liam decision (`route_to: gemini`)
   - only for non-locked zones (apps/tools), never `/CLC` or governance files
+  - **WO Lane:** `bridge/inbox/GEMINI` → `bridge/handlers/gemini_handler.py` (source: Kim/GG/Liam via `engine: gemini`)
 
 **🔹 Two Operational Modes:**
 
