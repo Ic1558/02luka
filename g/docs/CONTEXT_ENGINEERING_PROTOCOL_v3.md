@@ -20,7 +20,7 @@
 ## 0. Quick Reference / TL;DR
 
 **🎯 Key Principle (Invariant):**
-> **"Gemini writes non‑locked zones via patch. CLC writes privileged zones. Codex thinks. LPE transcribes."**
+> **"Gemini (IDE/API) writes non‑locked zones via patch/work-order. CLC writes privileged zones. Codex thinks. LPE transcribes."**
 
 ---
 
@@ -36,7 +36,8 @@
 
 - **Liam** — Uses sections 2.2, 3, 4 for routing decisions
 - **Andy** — Uses allowed zones + Gemini/Andy relationship
-- **Gemini** — Uses capability table + safety-belt mode (~20% of file)
+- **Gemini IDE** — Uses capability table + safety-belt mode (~20% of file)
+- **Gemini API** — Uses Layer 4.5 (API Mode), routing rules, quota management
 
 **Non-Users:**
 
@@ -51,7 +52,8 @@
 | **GG** | ✅ Strategic | ✅ Governance only | Governance decisions |
 | **GC** | ✅ Tactical | ✅ Specs, PRPs | Implementation planning |
 | **CLC** | ✅ Operational | ✅ Locked zones | Privileged writes |
-| **Gemini** | ✅ Operational | ✅ Non-locked zones (patch) | Primary operational writer |
+| **Gemini IDE** | ✅ Operational | ✅ Non-locked zones (patch) | Primary operational writer |
+| **Gemini API** | ✅ Operational | ✅ Non-locked zones (work order) | Heavy compute offloader |
 | **Codex/Liam/Andy** | ✅ Analysis | ⚠️ Override only | IDE assistance, routing |
 | **LPE** | ❌ No | ✅ Fallback only | Emergency writes |
 | **Kim** | ✅ Routing | ❌ No | Task orchestration |
@@ -69,11 +71,13 @@
 
 ### Fallback Ladder (When Primary Writer Unavailable)
 
-1. **Primary:** Gemini (non-locked zones) or CLC (locked zones)
+1. **Primary:** Gemini IDE/API (non-locked zones) or CLC (locked zones)
 2. **Fallback:** LPE (with Boss approval, logs to MLS)
 3. **Emergency Override:** Codex/Liam/Andy (Boss explicit authorization, tag `EMERGENCY_LIAM_WRITE`)
 
 **Decision:** Urgent? → Use LPE. Not urgent? → Wait for new session.
+
+**Gemini API Fallback:** If Gemini API quota exhausted → fallback to CLC or Gemini IDE
 
 ---
 
@@ -275,6 +279,15 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 
 #### Layer 4.5: Gemini (Operational Writer & Split-Mode Compute Agent)
 
+**🔹 Two Operational Modes:**
+
+1. **Gemini IDE** (Code Assist) - IDE-integrated writer for normal development
+2. **Gemini API** (Heavy Compute) - API-based offloader for bulk operations (NEW - Phase 2)
+
+---
+
+**Gemini IDE Mode:**
+
 **Thinking Capability:**
 
 - **CAN** perform all tasks of CLC and Codex.
@@ -368,10 +381,81 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 
 **Example Operations:**
 
-> "Refactor auth module across 3 files"  
-> → Gemini: ส่ง phase plan (ไฟล์ไหน, อะไรบ้าง), แล้วส่ง patch เฉพาะไฟล์แรก (PHASE 1/3), รอ confirm ก่อนไป PHASE 2/3  
-> "Clean up CONTEXT_ENGINEERING_PROTOCOL_v3.md to 3.2"  
+> "Refactor auth module across 3 files"
+> → Gemini: ส่ง phase plan (ไฟล์ไหน, อะไรบ้าง), แล้วส่ง patch เฉพาะไฟล์แรก (PHASE 1/3), รอ confirm ก่อนไป PHASE 2/3
+> "Clean up CONTEXT_ENGINEERING_PROTOCOL_v3.md to 3.2"
 > → Gemini: แบ่งงานเป็น Layer Hierarchy, Capability Matrix, Fallback Ladder, แก้ทีละ section เพื่อไม่ให้ output โดน truncate, และทุก patch ใช้ anchor/section-tag ชัดเจน
+
+---
+
+**Gemini API Mode (Heavy Compute Offloader):**
+
+**Purpose:**
+- Offload heavy compute tasks from CLC/Codex to preserve token budget
+- Handle bulk operations that would consume excessive CLC tokens
+- Enable parallel processing of large-scale tasks
+
+**Thinking Capability:**
+- **CAN** perform heavy code generation (bulk test generation, scaffolding)
+- **CAN** analyze large codebases (multi-file analysis, pattern detection)
+- **CAN** generate comprehensive documentation
+- **MUST** operate within API quota limits (~1500 requests/day/user)
+- **MUST** be quota-aware and token-efficient
+
+**Writing Capability:**
+- **CAN** generate code, tests, documentation via work order system
+- **MUST** work through `/bridge/inbox/GEMINI/` → `/bridge/outbox/GEMINI/`
+- **MUST** respect same zone restrictions as Gemini IDE (no locked zones)
+- **CAN** output large results (4K+ tokens) for bulk operations
+
+**Technical Implementation:**
+- **SDK:** `google-generativeai` Python package
+- **Model:** `gemini-2.5-flash` (fast, cost-effective)
+- **Virtual Environment:** `/Users/icmini/02luka/.venv`
+- **Health Check:** `g/connectors/gemini_health_check.py`
+- **Connector:** `g/connectors/gemini_connector.py`
+
+**Routing Rules (via GG):**
+- **WHEN** `task_type=heavy_compute` AND `complexity=high`
+- **WHEN** bulk operations (>10 files or >5000 tokens expected output)
+- **WHEN** CLC token budget would be significantly impacted (>20K tokens)
+- **WHEN** task is parallelizable or benefits from external API compute
+
+**Use Cases:**
+1. **Bulk Test Generation:** Generate unit tests for 20+ files
+2. **Documentation:** Create comprehensive API documentation from code
+3. **Code Analysis:** Analyze security patterns across entire codebase
+4. **Script Scaffolding:** Generate boilerplate for new tools/agents
+5. **Migration Tasks:** Bulk refactoring across many files
+
+**Authorization:**
+- Boss, GG, or Kim can route tasks to Gemini API
+- Work orders logged in bridge system for audit trail
+- Results reviewed by CLS before integration (for critical tasks)
+
+**Quota Management:**
+- Daily limit: ~1500 requests/user (Gemini API subscription)
+- Per-minute limit: 120 requests/minute
+- Monitored via quota tracking system (Phase 4)
+- Fallback to CLC if quota exhausted
+
+**Safety Constraints:**
+- Same locked zone restrictions as other agents
+- Output validated before SOT integration
+- API key managed via `GEMINI_API_KEY` environment variable
+- Safety settings: `BLOCK_NONE` (technical content only)
+
+**Example Operations:**
+
+> "Generate unit tests for all functions in apps/dashboard/ (35 files)"
+> → GG routes to Gemini API via work order
+> → Gemini API generates test scaffolding for all files
+> → CLS reviews output before integration
+
+> "Analyze authentication patterns across g/apps/, g/server/, and bridge/ (80+ files)"
+> → Kim creates work order for Gemini API
+> → Gemini API performs multi-file analysis
+> → Results written to g/reports/security/auth_analysis.md
 
 ---
 
@@ -484,7 +568,8 @@ In Override Mode:
 | **GG** | ✅ MUST (strategic) | ✅ CAN (governance only) | Governance docs, policy | Self (Boss oversight) | N/A |
 | **GC** | ✅ MUST (tactical) | ✅ CAN (specs, PRPs) | Implementation specs | GG approval | N/A |
 | **CLC** | ✅ MUST (operational) | ✅ CAN (code, configs) | Privileged/locked zones | Self-approved | Configurable Budget |
-| **Gemini** (Split-Mode Agent) | ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
+| **Gemini IDE** (Split-Mode Agent) | ✅ MUST (operational) | ✅ CAN (via patch) | Operational code (non-locked) | Self-approved (patch) | Subscription Quota |
+| **Gemini API** (Heavy Compute) | ✅ MUST (operational) | ✅ CAN (via work order) | Bulk operations (non-locked) | GG/Kim routing | API Quota (~1500/day) |
 | **Codex** | ✅ CAN (analysis) | ⚠️ MAY (override) | Code suggestions, small fixes | Boss override for writes | N/A |
 | **LPE** | ❌ MUST NOT | ✅ CAN (fallback only) | Boss-dictated writes | Boss approval | N/A |
 | **Kim** | ✅ CAN (routing) | ❌ MUST NOT | Task coordination | N/A | N/A |
@@ -1142,7 +1227,7 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 
 - Agent that can commit to SOT repos
 
-- Currently: **Gemini**, **CLC**, GG, GC, and LPE (with Boss approval)
+- Currently: **Gemini IDE**, **Gemini API**, **CLC**, GG, GC, and LPE (with Boss approval)
 
 - Codex and Kim are NOT authorized writers
 
@@ -1170,13 +1255,21 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 
 - Required for all LPE writes and protocol violations
 
+**Gemini (Two Modes):**
+
+- **Gemini IDE:** IDE-integrated operational writer for normal development tasks
+
+- **Gemini API:** Heavy compute offloader using Google Gemini API for bulk operations, test generation, large-scale analysis
+
 **Fallback Ladder:**
 
 - Sequence of alternative agents when primary unavailable
 
-- **Smart Writer (Gemini/CLC) → LPE** (when primary writer is unavailable)
+- **Smart Writer (Gemini IDE/API/CLC) → LPE** (when primary writer is unavailable)
 
 - **Codex → Gemini/CLC/LPE** (Codex cannot write, so it delegates to an available writer)
+
+- **Gemini API quota exhausted → CLC or Gemini IDE**
 
 **Enforcement Mechanism:**
 
@@ -1230,7 +1323,7 @@ bash ~/02luka/g/tools/check_mls_compliance.sh
 
 **🎯 Key Principle (Invariant):**
 
-> **"Gemini writes non‑locked zones via patch. CLC writes privileged zones. Codex thinks. LPE transcribes."**
+> **"Gemini (IDE/API) writes non‑locked zones via patch/work-order. CLC writes privileged zones. Codex thinks. LPE transcribes."**
 
 This protocol ensures:
 

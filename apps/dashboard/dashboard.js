@@ -17,10 +17,12 @@ let woAutorefreshTimer = null;
 let woAutorefreshEnabled = false;
 let woAutorefreshIntervalMs = 30000;
 let currentWoSearch = '';
+let serviceData = [];
 let currentWoStatusFilter = '';
 let currentWoSortKey = 'started_at';
 let currentWoSortDir = 'desc';
 let currentTimelineWoId = null;
+let woHistoryLoadedOnce = false;
 const WO_STATUS_SORT_ORDER = {
   running: 4,
   pending: 3,
@@ -41,6 +43,66 @@ async function fetchJSON(url) {
   }
 
   return response.json();
+}
+
+function toLocalDateString(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  });
+}
+
+function computeDurationMs(wo) {
+  const started = wo?.started_at ? new Date(wo.started_at) : null;
+  const finished = wo?.finished_at ? new Date(wo.finished_at) : null;
+  if (!started || Number.isNaN(started.getTime())) return null;
+  if (!finished || Number.isNaN(finished.getTime())) return null;
+  return finished - started;
+}
+
+function formatDuration(ms) {
+  if (ms == null || Number.isNaN(ms) || ms < 0) return '';
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  const rem = sec % 60;
+  if (min < 60) {
+    return `${min}m${rem ? ` ${rem}s` : ''}`;
+  }
+  const hr = Math.floor(min / 60);
+  const remMin = min % 60;
+  return `${hr}h${remMin ? ` ${remMin}m` : ''}`;
+}
+
+function groupWosByDay(wos) {
+  const groups = {};
+  wos.forEach((wo) => {
+    const day = toLocalDateString(wo?.started_at || wo?.finished_at || wo?.id);
+    const key = day || 'Unknown';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(wo);
+  });
+
+  const entries = Object.entries(groups).map(([day, list]) => {
+    list.sort((a, b) => {
+      const ta = a?.started_at || a?.finished_at || a?.id;
+      const tb = b?.started_at || b?.finished_at || b?.id;
+      return (tb || '').localeCompare(ta || '');
+    });
+    return { day, list };
+  });
+
+  entries.sort((a, b) => {
+    if (a.day === 'Unknown') return 1;
+    if (b.day === 'Unknown') return -1;
+    return new Date(b.day) - new Date(a.day);
+  });
+
+  return entries;
 }
 
 function initTabs() {
@@ -95,7 +157,11 @@ function initTabs() {
   const tabConfigs = [
     { button: tabOverview, view: viewOverview },
     { button: tabWos, view: viewWos },
-    { button: tabWoHistory, view: viewWoHistory, onShow: loadWoHistory },
+    { button: tabWoHistory, view: viewWoHistory, onShow: () => {
+      if (!woHistoryLoadedOnce && typeof loadWoHistory === 'function') {
+        loadWoHistory();
+      }
+    }},
   ];
 
   if (tabReality && viewReality) {
@@ -800,15 +866,121 @@ function createMLSCard(entry) {
 
 // --- WO History ---
 
-async function loadWoHistory() {
-  const statusFilter = document.getElementById('wo-history-status-filter');
-  const limitSelect = document.getElementById('wo-history-limit');
+function renderWoHistoryTimeline(wos) {
+  const container = document.getElementById('wo-history-timeline');
+  const summaryEl = document.getElementById('wo-history-summary');
+  if (!container || !summaryEl) return;
 
-  const status = statusFilter ? statusFilter.value : '';
-  const limit = limitSelect ? parseInt(limitSelect.value, 10) : 100;
+  container.innerHTML = '';
+
+  if (!Array.isArray(wos) || !wos.length) {
+    summaryEl.textContent = 'No work orders in this range.';
+    return;
+  }
+
+  let completed = 0;
+  let failed = 0;
+  let totalDuration = 0;
+  let countDuration = 0;
+
+  wos.forEach((wo) => {
+    const status = wo?.status || '';
+    if (status === 'completed') completed += 1;
+    if (status === 'failed' || status === 'error') failed += 1;
+    const dur = computeDurationMs(wo);
+    if (dur != null) {
+      totalDuration += dur;
+      countDuration += 1;
+    }
+  });
+
+  const total = wos.length;
+  const successRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const avgDuration = countDuration > 0 ? formatDuration(totalDuration / countDuration) : '—';
+
+  summaryEl.textContent =
+    `Total: ${total} | Completed: ${completed} | Failed: ${failed} | ` +
+    `Success rate: ${successRate}% | Avg duration: ${avgDuration}`;
+
+  const dayGroups = groupWosByDay(wos);
+  dayGroups.forEach((group) => {
+    const dayDiv = document.createElement('div');
+    dayDiv.className = 'wo-history-day';
+
+    const header = document.createElement('div');
+    header.className = 'wo-history-day-header';
+    header.textContent = group.day;
+    dayDiv.appendChild(header);
+
+    group.list.forEach((wo) => {
+      const item = document.createElement('div');
+      item.className = 'wo-history-item';
+
+      const main = document.createElement('div');
+      main.className = 'wo-history-item-main';
+
+      const statusBadge = document.createElement('span');
+      const status = wo?.status || 'unknown';
+      statusBadge.className = 'wo-history-item-status';
+      if (status === 'completed') {
+        statusBadge.classList.add('wo-history-item-status--completed');
+      } else if (status === 'failed' || status === 'error') {
+        statusBadge.classList.add('wo-history-item-status--failed');
+      }
+      statusBadge.textContent = status;
+
+      const title = document.createElement('span');
+      title.className = 'wo-history-item-title';
+      title.textContent = wo?.title || wo?.id || '(no title)';
+
+      main.appendChild(statusBadge);
+      main.appendChild(title);
+
+      const meta = document.createElement('div');
+      meta.className = 'wo-history-item-meta';
+
+      const startedDate = wo?.started_at ? new Date(wo.started_at) : null;
+      const finishedDate = wo?.finished_at ? new Date(wo.finished_at) : null;
+
+      const started =
+        startedDate && !Number.isNaN(startedDate.getTime())
+          ? startedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : '';
+      const finished =
+        finishedDate && !Number.isNaN(finishedDate.getTime())
+          ? finishedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : '';
+
+      const duration = formatDuration(computeDurationMs(wo));
+
+      meta.textContent =
+        [
+          started && finished ? `${started} → ${finished}` : started || finished,
+          duration && `(${duration})`,
+          wo?.id && `ID: ${wo.id}`
+        ]
+          .filter(Boolean)
+          .join('  ·  ');
+
+      item.appendChild(main);
+      item.appendChild(meta);
+
+      dayDiv.appendChild(item);
+    });
+
+    container.appendChild(dayDiv);
+  });
+}
+
+async function loadWoHistory() {
+  const rangeSelect = document.getElementById('wo-history-range');
+  const statusSelect = document.getElementById('wo-history-status');
+
+  const limit = rangeSelect ? parseInt(rangeSelect.value, 10) || 100 : 100;
+  const statusValue = statusSelect ? statusSelect.value : 'completed,failed,error';
 
   const params = new URLSearchParams();
-  if (status) params.set('status', status);
+  if (statusValue) params.set('status', statusValue);
 
   const query = params.toString();
   const url = `/api/wos${query ? `?${query}` : ''}`;
@@ -820,10 +992,10 @@ async function loadWoHistory() {
       }
     });
     if (!res.ok) {
-      console.error('Failed to fetch WO history', res.status, await res.text());
+      console.error('Failed to load WO history:', res.status, res.statusText);
       return;
     }
-    const data = await res.json();
+    let data = await res.json();
     let wos = [];
     if (Array.isArray(data)) {
       wos = data;
@@ -832,52 +1004,32 @@ async function loadWoHistory() {
     } else if (Array.isArray(data?.results)) {
       wos = data.results;
     }
-    renderWoHistory(wos, limit);
+
+    const sorted = wos
+      .slice()
+      .sort((a, b) => {
+        const ta = a?.started_at || a?.finished_at || a?.id;
+        const tb = b?.started_at || b?.finished_at || b?.id;
+        return (tb || '').localeCompare(ta || '');
+      })
+      .slice(0, limit);
+
+    renderWoHistoryTimeline(sorted);
+    woHistoryLoadedOnce = true;
   } catch (error) {
     console.error('Error loading WO history', error);
   }
 }
 
-function renderWoHistory(wos, limit) {
-  const tbody = document.getElementById('wo-history-body');
-  if (!tbody) return;
+function initWoHistoryTab() {
+  const rangeSelect = document.getElementById('wo-history-range');
+  const statusSelect = document.getElementById('wo-history-status');
 
-  const maxRows = Number.isFinite(limit) ? limit : 100;
-
-  if (!Array.isArray(wos) || !wos.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No work orders found.</td></tr>';
-    return;
-  }
-
-  const sorted = [...wos].sort((a, b) => {
-    const aKey = a?.started_at || a?.id || 0;
-    const bKey = b?.started_at || b?.id || 0;
-    if (aKey > bKey) return -1;
-    if (aKey < bKey) return 1;
-    return 0;
+  rangeSelect?.addEventListener('change', () => {
+    loadWoHistory();
   });
-
-  const slice = sorted.slice(0, maxRows);
-  tbody.innerHTML = '';
-
-  slice.forEach((wo) => {
-    const tr = document.createElement('tr');
-    const started = wo?.started_at || '';
-    const status = wo?.status || '';
-    const agent = wo?.agent || wo?.worker || '';
-    const type = wo?.type || '';
-    const summary = wo?.summary || wo?.description || '';
-
-    tr.innerHTML = `
-      <td><code>${escapeHtml(wo?.id ?? '')}</code></td>
-      <td>${escapeHtml(started)}</td>
-      <td>${escapeHtml(status)}</td>
-      <td>${escapeHtml(agent)}</td>
-      <td>${escapeHtml(type)}</td>
-      <td>${escapeHtml(summary)}</td>
-    `;
-
-    tbody.appendChild(tr);
+  statusSelect?.addEventListener('change', () => {
+    loadWoHistory();
   });
 }
 
@@ -1068,9 +1220,7 @@ function renderWosTable(wos) {
     if (currentTimelineWoId && woId === currentTimelineWoId) {
       tr.classList.add('wo-timeline-active-row');
     }
-
-    tbody.appendChild(tr);
-  });
+  }
 
   highlightActiveTimelineRow();
 }
@@ -1586,7 +1736,8 @@ function initMLSPanel() {
 
 function initDashboard() {
   initTabs();
-  initWoHistoryFilters();
+  initWorkOrderTabs();
+  initWoHistoryTab();
   initWoFilters();
   initWoSearch();
   initWoSorting();
