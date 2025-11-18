@@ -69,6 +69,7 @@ def render_lessons_block(
         lines.append("")
         lines.append("MLS lessons are read-only; do not edit the canonical ledger directly.")
         lines.append("Rephrase work plans so MLS guidance is satisfied before applying patches.")
+        lines.append("If you discover a new pattern, use the optional `mls_suggestion` block instead of editing MLS directly.")
 
     return "\n".join(lines)
 

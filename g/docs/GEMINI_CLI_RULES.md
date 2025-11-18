@@ -66,6 +66,7 @@ This document defines the operational rules, safety requirements, and protocols 
 - **MUST** read `g/knowledge/mls_lessons_cli.jsonl` (if present) before building a prompt for patch work and treat the lessons as authoritative guidance, especially when touching LaunchAgents, bridge/handlers, watchers, Redis, or the filesystem.
 - **MUST** surface the “MLS Recent Lessons (Read-Only)” block at the top of the system prompt (our `g/tools/mls_cli_prompt.py` helper and Gemini CLI wrapper already do this) and defer to MLS guidance whenever it conflicts with generic instincts.
 - **MUST NOT** write to `g/knowledge/mls_lessons.jsonl` or other canonical MLS ledgers—CLC remains the sole writer. If Gemini CLI discovers a new actionable pattern, emit only the optional `mls_suggestion` block for human review (no automatic ledger writes).
+- **SHOULD** arrange for `g/tools/mls_build_cli_feed.py` to run whenever MLS receives new entries (for example, via the MLS worker or the ledger watch) so the CLI feed stays up to date.
 
 Optional `mls_suggestion` structure:
 
