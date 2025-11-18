@@ -2326,6 +2326,60 @@ function renderRealitySnapshot() {
   }
 }
 
+// =============================
+// QUOTA METRICS WIDGET
+// =============================
+async function fetchQuotaMetrics() {
+  try {
+    const res = await fetch("/api/quota");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn("quota fetch failed", e);
+    return null;
+  }
+}
+
+function renderQuotaWidget(container, quota) {
+  if (!quota || !quota.engines) {
+    container.innerHTML = "<div class='quota-widget-empty'>Quota metrics unavailable</div>";
+    return;
+  }
+  const engines = quota.engines;
+  const items = Object.keys(engines).map((k) => {
+    const e = engines[k];
+    const pct = e.limit > 0 ? Math.round((e.used / e.limit) * 100) : 0;
+    return { key: k, label: e.label || k, pct, status: e.status || "unknown" };
+  });
+
+  container.innerHTML = `
+    <div class="quota-widget">
+      <div class="quota-title">Token Distribution (${quota.month || ""})</div>
+      <ul class="quota-list">
+        ${items
+          .map(
+            (it) => `
+          <li class="quota-item quota-status-${it.status}">
+            <span class="quota-label">${it.label}</span>
+            <span class="quota-bar">
+              <span class="quota-bar-fill" style="width:${Math.min(it.pct, 100)}%"></span>
+            </span>
+            <span class="quota-pct">${it.pct}%</span>
+          </li>`
+          )
+          .join("")}
+      </ul>
+    </div>
+  `;
+}
+
+async function refreshQuotaWidget() {
+  const quotaContainer = document.getElementById("quota-widget");
+  if (!quotaContainer) return;
+  const quota = await fetchQuotaMetrics();
+  renderQuotaWidget(quotaContainer, quota);
+}
+
 // Refresh all dashboard data
 async function refreshAllData() {
   const timestamp = new Date().toLocaleTimeString();
@@ -2340,7 +2394,8 @@ async function refreshAllData() {
     loadServices(),
     loadWOs(),
     loadMLS(),
-    loadRealitySnapshot()
+    loadRealitySnapshot(),
+    refreshQuotaWidget()
   ]);
 
   // Update health indicator

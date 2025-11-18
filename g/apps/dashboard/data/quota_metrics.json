@@ -1,0 +1,42 @@
+{
+  "updated_at": "2025-11-18T12:38:18.849835+00:00",
+  "month": "2025-11",
+  "engines": {
+    "gpt": {
+      "label": "GPT (GG/CLC)",
+      "used": 250000.0,
+      "limit": 1000000.0,
+      "ratio": 0.25,
+      "status": "ok",
+      "warn_ratio": 0.8,
+      "stop_ratio": 0.95
+    },
+    "gemini": {
+      "label": "Gemini",
+      "used": 650000.0,
+      "limit": 800000.0,
+      "ratio": 0.8125,
+      "status": "warn",
+      "warn_ratio": 0.8,
+      "stop_ratio": 0.95
+    },
+    "codex": {
+      "label": "Codex (Cursor)",
+      "used": 590000.0,
+      "limit": 600000.0,
+      "ratio": 0.9833333333333333,
+      "status": "stop",
+      "warn_ratio": 0.8,
+      "stop_ratio": 0.95
+    },
+    "clc": {
+      "label": "CLC (Claude)",
+      "used": 120000.0,
+      "limit": 400000.0,
+      "ratio": 0.3,
+      "status": "ok",
+      "warn_ratio": 0.8,
+      "stop_ratio": 0.95
+    }
+  }
+}

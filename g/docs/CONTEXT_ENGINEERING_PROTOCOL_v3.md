@@ -454,6 +454,11 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 - Per-minute limit: 120 requests/minute
 - Monitored via quota tracking system (Phase 4)
 - Fallback to CLC if quota exhausted
+- Quota tracker writes `g/apps/dashboard/data/quota_metrics.json` using
+  `g/tools/quota_tracker.py` and `g/config/quota_config.yaml`.
+- Dashboard reads `/api/quota` to show multi-engine usage (GPT/Gemini/Codex/CLC).
+- Routing/fallback decisions **may** consult these metrics but are not yet
+  enforced automatically in this phase.
 
 **Safety Constraints:**
 - Same locked zone restrictions as other agents
