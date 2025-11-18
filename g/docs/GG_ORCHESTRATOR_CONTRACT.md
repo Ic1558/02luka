@@ -42,3 +42,4 @@ When GG needs to choose between CLC, Gemini, and Gemini CLI:
 - “Fix security bug in auth core, protocol-linked” → CLC (locked / sensitive).
 - “Build one-off bulk script over 20 files” + CLC usage at 65% → Gemini (Quota Guard).
 - “`/02luka/gemini-cli apply patch <patch_file>`” → Gemini CLI (direct patch application).
+- Gemini CLI reads the filtered `g/knowledge/mls_lessons_cli.jsonl` feed before each patch, keeps that guidance read-only, and routes any new patterns back as `mls_suggestion` proposals instead of writing directly to the canonical ledger.
