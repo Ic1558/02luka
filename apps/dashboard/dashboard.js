@@ -1348,7 +1348,7 @@ function renderWosTable(wos) {
     if (currentTimelineWoId && woId === currentTimelineWoId) {
       tr.classList.add('wo-timeline-active-row');
     }
-  }
+  });  // Closes both arrow function and forEach call
 
   highlightActiveTimelineRow();
 }
