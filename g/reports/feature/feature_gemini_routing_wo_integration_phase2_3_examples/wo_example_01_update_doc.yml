@@ -1,0 +1,24 @@
+# WO Example 1: Simple Doc Update
+# This WO instructs the system to add a note to a quick reference document.
+# It is a harmless, non-destructive operation compliant with path-guard rules.
+wo_id: "wo_gemini_dryrun_001"
+origin: "gemini"
+created_at: "2025-11-19T10:00:00Z"
+intent: "update_doc"
+target_inbox: "bridge/inbox/DRY_RUN/gemini"
+
+metadata:
+  dry_run: true
+  source_request: "User asked to add a note about the new Gemini routing feature to the quick reference."
+  schema_version: "1.0"
+
+payload:
+  file_path: "docs/QUICK_REFERENCE.md"
+  action: "append"
+  content: |
+    
+    ---
+    ### Gemini Routing (Phase 2 - Dry Run)
+    *   Gemini-generated commands can now be routed as Work Orders.
+    *   In Phase 2, these are for validation only and are NOT executed.
+    *   See `g/reports/feature/feature_gemini_routing_wo_integration_phase2_3_PLAN.md` for details.

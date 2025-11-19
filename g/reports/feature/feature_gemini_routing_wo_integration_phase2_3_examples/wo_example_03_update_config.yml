@@ -1,0 +1,22 @@
+# WO Example 3: LaunchAgent Config Change
+# This WO modifies a non-critical key in a LaunchAgent plist file.
+# The change adjusts the throttle interval, a safe and reversible modification.
+wo_id: "wo_gemini_dryrun_003"
+origin: "gemini"
+created_at: "2025-11-19T10:10:00Z"
+intent: "update_launchagent_config"
+target_inbox: "bridge/inbox/DRY_RUN/gemini"
+
+metadata:
+  dry_run: true
+  source_request: "User asked to adjust the telemetry agent's throttle interval to 90 seconds."
+  schema_version: "1.0"
+
+payload:
+  file_path: "g/config/launchd/com.02luka.telemetry.plist"
+  # This is a hypothetical path that would be compliant with path-guard.
+  # The action would use a plist-aware tool to safely edit the key.
+  action: "set_key_value"
+  key: "ThrottleInterval"
+  value: 90
+  value_type: "integer"
