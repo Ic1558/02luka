@@ -1,42 +1,54 @@
 {
-  "updated_at": "2025-11-18T12:38:18.849835+00:00",
+  "updated_at": "2025-11-19T02:09:47.190678+00:00",
   "month": "2025-11",
-  "engines": {
+  "agents": {
+    "gemini": {
+      "label": "Gemini (Google)",
+      "daily_total": 0.0,
+      "monthly_total": 0.0,
+      "daily_limit": 150000.0,
+      "monthly_limit": 2000000.0,
+      "status": "healthy",
+      "daily_pct": 0,
+      "monthly_pct": 0,
+      "remaining_monthly": 2000000.0,
+      "cost_today_usd": 0.0
+    },
     "gpt": {
       "label": "GPT (GG/CLC)",
-      "used": 250000.0,
-      "limit": 1000000.0,
-      "ratio": 0.25,
-      "status": "ok",
-      "warn_ratio": 0.8,
-      "stop_ratio": 0.95
-    },
-    "gemini": {
-      "label": "Gemini",
-      "used": 650000.0,
-      "limit": 800000.0,
-      "ratio": 0.8125,
-      "status": "warn",
-      "warn_ratio": 0.8,
-      "stop_ratio": 0.95
+      "daily_total": 0.0,
+      "monthly_total": 0.0,
+      "daily_limit": 120000.0,
+      "monthly_limit": 1500000.0,
+      "status": "healthy",
+      "daily_pct": 0,
+      "monthly_pct": 0,
+      "remaining_monthly": 1500000.0,
+      "cost_today_usd": 0.0
     },
     "codex": {
       "label": "Codex (Cursor)",
-      "used": 590000.0,
-      "limit": 600000.0,
-      "ratio": 0.9833333333333333,
-      "status": "stop",
-      "warn_ratio": 0.8,
-      "stop_ratio": 0.95
+      "daily_total": 0.0,
+      "monthly_total": 0.0,
+      "daily_limit": 100000.0,
+      "monthly_limit": 1200000.0,
+      "status": "healthy",
+      "daily_pct": 0,
+      "monthly_pct": 0,
+      "remaining_monthly": 1200000.0,
+      "cost_today_usd": 0.0
     },
     "clc": {
       "label": "CLC (Claude)",
-      "used": 120000.0,
-      "limit": 400000.0,
-      "ratio": 0.3,
-      "status": "ok",
-      "warn_ratio": 0.8,
-      "stop_ratio": 0.95
+      "daily_total": 0.0,
+      "monthly_total": 0.0,
+      "daily_limit": 80000.0,
+      "monthly_limit": 1000000.0,
+      "status": "healthy",
+      "daily_pct": 0,
+      "monthly_pct": 0,
+      "remaining_monthly": 1000000.0,
+      "cost_today_usd": 0.0
     }
   }
 }

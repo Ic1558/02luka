@@ -13,6 +13,7 @@ from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import subprocess
+import importlib.util
 
 # Paths
 ROOT = Path.home() / "02luka"
@@ -20,6 +21,20 @@ BRIDGE = ROOT / "bridge"
 TELEMETRY = ROOT / "telemetry"
 LOGS = ROOT / "logs"
 REPORTS_SYSTEM = ROOT / "g" / "reports" / "system"
+QUOTA_TRACKER_PATH = ROOT / "g" / "tools" / "quota_tracker.py"
+_QUOTA_TRACKER_INSTANCE = None
+
+
+def get_quota_tracker():
+    global _QUOTA_TRACKER_INSTANCE
+    if _QUOTA_TRACKER_INSTANCE is None:
+        spec = importlib.util.spec_from_file_location("quota_tracker", QUOTA_TRACKER_PATH)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Unable to load quota tracker from {QUOTA_TRACKER_PATH}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _QUOTA_TRACKER_INSTANCE = module.QuotaTracker()
+    return _QUOTA_TRACKER_INSTANCE
 
 class WOCollector:
     """Collects and normalizes WO data from all sources"""
@@ -287,8 +302,12 @@ class APIHandler(BaseHTTPRequestHandler):
             self.handle_get_logs(query)
         elif path == '/api/reality/snapshot':
             self.handle_reality_snapshot(query)
-        elif path == '/api/quota':
-            self.handle_quota_metrics()
+        elif path in ['/api/quota', '/api/quota/status']:
+            self.handle_quota_status()
+        elif path == '/api/quota/history':
+            self.handle_quota_history(query)
+        elif path == '/api/quota/limits':
+            self.handle_quota_limits()
         else:
             self.send_error(404, "Not found")
 
@@ -755,21 +774,45 @@ class APIHandler(BaseHTTPRequestHandler):
             print(f"Error reading Reality Hooks snapshot: {exc}")
             self.send_error(500, f"Failed to read Reality Hooks snapshot: {str(exc)}")
 
-    def handle_quota_metrics(self):
-        """Handle GET /api/quota - return multi-engine quota metrics"""
-        metrics_path = ROOT / "g" / "apps" / "dashboard" / "data" / "quota_metrics.json"
+    def handle_quota_status(self):
+        """Handle GET /api/quota/status - normalized quota metrics"""
+        try:
+            tracker = get_quota_tracker()
+            self.send_json_response(tracker.get_status())
+        except Exception as exc:
+            print(f"Error loading quota status: {exc}")
+            self.send_error(500, "Failed to load quota status")
 
-        if not metrics_path.exists():
-            self.send_json_response({"error": "quota metrics not available"}, status=404)
-            return
+    def handle_quota_history(self, query):
+        """Handle GET /api/quota/history - return recent usage history"""
+        agent = query.get("agent", [None])[0]
+        try:
+            days = max(1, int(query.get("days", [7])[0]))
+        except (ValueError, TypeError):
+            days = 7
 
         try:
-            data = json.loads(metrics_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            self.send_json_response({"error": "invalid metrics format"}, status=500)
-            return
+            tracker = get_quota_tracker()
+            records = tracker.get_history(agent=agent, days=days)
+            payload = {
+                "agent": agent,
+                "days": days,
+                "records": records,
+            }
+            self.send_json_response(payload)
+        except Exception as exc:
+            print(f"Error loading quota history: {exc}")
+            self.send_error(500, "Failed to load quota history")
 
-        self.send_json_response(data)
+    def handle_quota_limits(self):
+        """Handle GET /api/quota/limits - configured quota limits"""
+        try:
+            tracker = get_quota_tracker()
+            limits = tracker.get_limits()
+            self.send_json_response({"agents": limits})
+        except Exception as exc:
+            print(f"Error loading quota limits: {exc}")
+            self.send_error(500, "Failed to load quota limits")
 
     def send_json_response(self, data, status=200):
         """Send JSON response"""

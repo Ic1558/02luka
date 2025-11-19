@@ -5,12 +5,43 @@ from typing import Any, Dict
 
 
 HEAVY_INTENTS = {"bulk_test_generation", "large_refactor", "spec_to_tests"}
+LOCKED_IMPACT_ZONES = {
+    "locked",
+    "governance",
+    "bridge_core",
+    "/clc",
+    "/cls",
+}
+
+
+def _normalize_zones(value: Any) -> list[str]:
+    """Return a list of normalized zone strings for comparison."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        return [str(zone) for zone in value if zone]
+    return []
+
+
+def _is_locked_zone(payload: Dict[str, Any]) -> bool:
+    """Detect whether a payload targets a locked/governance zone."""
+    if payload.get("locked_zone"):
+        return True
+
+    for zone in _normalize_zones(payload.get("impact_zone")):
+        if zone.lower() in LOCKED_IMPACT_ZONES:
+            return True
+
+    return False
 
 
 def route_engine(intent: str, payload: Dict[str, Any]) -> str:
     """Return the execution engine for a given Kim intent and payload."""
 
-    if payload.get("locked_zone"):
+    if _is_locked_zone(payload):
+        return "CLC"
+
+    if not intent or not isinstance(intent, str):
         return "CLC"
 
     if intent in HEAVY_INTENTS:

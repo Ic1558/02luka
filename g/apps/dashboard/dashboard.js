@@ -2331,7 +2331,7 @@ function renderRealitySnapshot() {
 // =============================
 async function fetchQuotaMetrics() {
   try {
-    const res = await fetch("/api/quota");
+    const res = await fetch("/api/quota/status");
     if (!res.ok) return null;
     return await res.json();
   } catch (e) {
@@ -2341,34 +2341,60 @@ async function fetchQuotaMetrics() {
 }
 
 function renderQuotaWidget(container, quota) {
-  if (!quota || !quota.engines) {
+  if (!quota || !quota.agents) {
     container.innerHTML = "<div class='quota-widget-empty'>Quota metrics unavailable</div>";
     return;
   }
-  const engines = quota.engines;
-  const items = Object.keys(engines).map((k) => {
-    const e = engines[k];
-    const pct = e.limit > 0 ? Math.round((e.used / e.limit) * 100) : 0;
-    return { key: k, label: e.label || k, pct, status: e.status || "unknown" };
+
+  const entries = Object.entries(quota.agents).map(([key, data]) => {
+    const monthlyLimit = data.monthly_limit || 0;
+    const monthlyPct = data.monthly_pct ?? (monthlyLimit > 0 ? Math.round((data.monthly_total / monthlyLimit) * 100) : 0);
+    const dailyLimit = data.daily_limit || 0;
+    const dailyPct = data.daily_pct ?? (dailyLimit > 0 ? Math.round((data.daily_total / dailyLimit) * 100) : 0);
+    return {
+      key,
+      label: data.label || key,
+      status: data.status || "unknown",
+      monthlyPct: Math.min(monthlyPct, 100),
+      monthlyTotal: data.monthly_total || 0,
+      monthlyLimit,
+      dailyTotal: data.daily_total || 0,
+      dailyLimit,
+      dailyPct: Math.min(dailyPct, 100),
+      costToday: data.cost_today_usd,
+    };
   });
 
+  const updatedAt = quota.updated_at ? new Date(quota.updated_at).toLocaleString() : "";
   container.innerHTML = `
     <div class="quota-widget">
-      <div class="quota-title">Token Distribution (${quota.month || ""})</div>
+      <div class="quota-title">Quota Overview ${quota.month ? `(${quota.month})` : ""}</div>
       <ul class="quota-list">
-        ${items
+        ${entries
           .map(
             (it) => `
           <li class="quota-item quota-status-${it.status}">
-            <span class="quota-label">${it.label}</span>
-            <span class="quota-bar">
-              <span class="quota-bar-fill" style="width:${Math.min(it.pct, 100)}%"></span>
-            </span>
-            <span class="quota-pct">${it.pct}%</span>
+            <div class="quota-row">
+              <span class="quota-label">${it.label}</span>
+              <span class="quota-pct">${it.monthlyPct}%</span>
+            </div>
+            <div class="quota-bar">
+              <span class="quota-bar-fill" style="width:${it.monthlyPct}%"></span>
+            </div>
+            <div class="quota-hint">
+              <span>Month: ${it.monthlyTotal}/${it.monthlyLimit || "∞"} tokens</span>
+              ${
+                it.dailyLimit
+                  ? `<span>Day: ${it.dailyTotal}/${it.dailyLimit} tokens (${it.dailyPct}%)</span>`
+                  : ""
+              }
+              ${typeof it.costToday === "number" ? `<span>Cost today: $${it.costToday.toFixed(4)}</span>` : ""}
+            </div>
           </li>`
           )
           .join("")}
       </ul>
+      ${updatedAt ? `<div class="quota-meta">Last updated: ${updatedAt}</div>` : ""}
     </div>
   `;
 }
