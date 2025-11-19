@@ -135,8 +135,8 @@ function search_pattern_in_files() {
   local chunk_matches
   local matches=""
   for file_path in "${FILE_CANDIDATES[@]}"; do
-    # Exempt workflow files from superuser_exec (sudo) check
-    # GitHub Actions workflows legitimately use sudo for package installation
+    # Exempt workflow files from the superuser_exec check
+    # GitHub Actions workflows legitimately require privileged install commands
     if [[ "$pattern_id" == "superuser_exec" ]] && [[ "$file_path" == .github/workflows/* ]]; then
       continue
     fi

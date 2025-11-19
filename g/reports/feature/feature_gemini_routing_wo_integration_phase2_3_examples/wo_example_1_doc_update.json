@@ -1,0 +1,12 @@
+{
+  "wo_id": "gemini-wo-001-doc-update",
+  "origin": "gemini",
+  "safety_mode": "dry-run",
+  "description": "Update the CI docs to mention the sandbox rule for rm -rf.",
+  "action": {
+    "type": "patch_file",
+    "target_file": "docs/CI_GUIDE.md",
+    "patch_content": "```diff\n--- a/docs/CI_GUIDE.md\n+++ b/docs/CI_GUIDE.md\n@@ -10,3 +10,6 @@\n \n This document outlines the Continuous Integration (CI) guidelines.\n \n+### Codex Sandbox Rules\n+Ensure that no `rm -rf` or similar destructive commands are directly used in documentation. Refer to `docs/CODEX_SANDBOX_MODE.md` for details.\n+\n```",
+    "risky_commands_present": false
+  }
+}

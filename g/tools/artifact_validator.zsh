@@ -54,5 +54,5 @@ fi
 echo "[artifact] Prompt content:"
 cat "$PROMPT_FILE"
 
-rm -rf "$ARTIFACT_DIR"
+rm -R -- "$ARTIFACT_DIR"
 exit 0

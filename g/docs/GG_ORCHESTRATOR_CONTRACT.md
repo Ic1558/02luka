@@ -44,29 +44,36 @@ When GG needs to choose between CLC, Gemini, and Gemini CLI:
 -- “`/02luka/gemini-cli apply patch <patch_file>`” → Gemini CLI (direct patch application).
 -- Gemini CLI reads the filtered `g/knowledge/mls_lessons_cli.jsonl` feed before each patch, keeps that guidance read-only, and routes any new patterns back as `mls_suggestion` proposals instead of writing directly to the canonical ledger.
 
+---
+
 ### 4.4 Layer 4.5 — Gemini (Heavy Compute / Non-Locked Zones)
 
 **Role:**
+
 - Heavy compute offloader for multi-file bulk operations, tests, and analysis.
 - Handling non-locked refactors that would tax CLC tokens or time.
 - Producing patch/spec output for GG to review before canonical apply.
 
 **Input:**
+
 - Work Order tagged `engine: gemini` and delivered through `bridge/inbox/GEMINI/`.
 - Target files contained entirely in non-locked zones (`apps`, `tools`, `tests`, `docs`).
 - Constraints for tokens, temperature, timeout, and write mode (patch-only).
 
 **Output:**
+
 - Patch/spec artifacts placed in `bridge/outbox/GEMINI/`.
 - Review notes delivered to Andy/CLS prior to any SOT write.
 - No direct writes to SOT; Gemini output is always diff/patch based.
 
 **Constraints:**
+
 - **May NOT touch:** `/CLC`, `/CLS`, governance docs, or bridge/core directories.
 - **Must NOT bypass:** SIP/WO system or review guardrails (Andy/CLS review required).
 - **Must:** Respect Protocol v3.2 locked-zone rules, log all operations into MLS, and publish revision metadata (tags, `review_required_by`, `locked_zone_allowed: false`).
 - **Must produce:** Unified patch artifacts and an implementation review note referencing the WO ID.
 
 **Fallback:**
+
 - If Gemini quota is exhausted or blocked → route to CLC or Gemini IDE (with clear rationale).
 - If a locked zone sneaks in → fall back to CLC specs immediately, never route to Gemini.
