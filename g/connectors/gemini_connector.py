@@ -9,7 +9,7 @@ Protocol: v3.2 compliant
 Created: 2025-11-18
 """
 
-import importlib
+import importlib.util
 import os
 import json
 import logging

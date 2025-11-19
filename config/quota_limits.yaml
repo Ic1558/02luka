@@ -1,0 +1,30 @@
+version: 1
+agents:
+  gemini:
+    label: "Gemini (Google)"
+    daily_limit: 150000
+    monthly_limit: 2000000
+    warn_ratio: 0.8
+    critical_ratio: 0.95
+    cost_per_token_usd: 0.0000025
+  gpt:
+    label: "GPT (GG/CLC)"
+    daily_limit: 120000
+    monthly_limit: 1500000
+    warn_ratio: 0.8
+    critical_ratio: 0.95
+    cost_per_token_usd: 0.000003
+  codex:
+    label: "Codex (Cursor)"
+    daily_limit: 100000
+    monthly_limit: 1200000
+    warn_ratio: 0.8
+    critical_ratio: 0.95
+    cost_per_token_usd: 0.000002
+  clc:
+    label: "CLC (Claude)"
+    daily_limit: 80000
+    monthly_limit: 1000000
+    warn_ratio: 0.8
+    critical_ratio: 0.95
+    cost_per_token_usd: 0.0000035

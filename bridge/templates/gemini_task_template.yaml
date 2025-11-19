@@ -1,23 +1,42 @@
-wo_id: "GEMINI_YYYYMMDD_0001"
+wo_id: "GEMINI_YYYYMMDD_HHMMSS_xxx"
 engine: "gemini"
-task_type: "bulk_test_generation"  # หรือ "code_transform"
+task_type: "bulk_test_generation"  # or "code_transform", "non_locked_refactor"
+impact_zone: "apps"  # apps, tools, tests, docs (locked zones prohibited)
 priority: "normal"
 
-input:
+routing:
+  prefer_agent: "gemini"
+  review_required_by: "andy"  # or "cls"
+  locked_zone_allowed: false
+  note: "Gemini receives the WO only when Liam/GG/Kim agree on heavy, non-locked routing."
+
+target_files:
+  - "g/apps/dashboard/**/*.js"
+
+context:
+  title: "Generate Jest tests for dashboard handlers"
   instructions: |
-    Generate tests for the following module with at least 80% branch coverage.
-  target_files:
-    - "g/apps/dashboard/api_server.py"
-  context:
-    repo_root: "/Users/icmini/02luka"
-    impact_zone: "apps"
-    locked_zone: false
+    Generate comprehensive Jest tests with 80%+ coverage. Cover success, failure, and edge cases.
+  impact_zone: "apps"
+  locked_zone: false
 
-output:
-  expected_format: "patch"
-  reviewer: "andy"     # หรือ "cls"
+constraints:
+  max_tokens: 4096
+  temperature: 0.2
+  allow_write: false  # Gemini produces patches/specs only
+  output_format: "patch_unified"
+  timeout_seconds: 300
 
-meta:
+artifacts:
+  expected_outputs:
+    - "patches/dashboard_tests.diff"
+    - "notes/dashboard_tests_review.md"
+
+metadata:
   created_by: "gg"
-  source: "kim_telegram"
-  notes: []
+  requested_via: "liam/feature-dev"
+  tags:
+    - "engine:gemini"
+    - "kind:test_generation"
+    - "zone:apps"
+    - "protocol:v3.2"
