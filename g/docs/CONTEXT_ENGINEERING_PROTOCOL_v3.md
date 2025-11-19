@@ -296,6 +296,16 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
   - only for non-locked zones (apps/tools), never `/CLC` or governance files
   - **WO Lane:** `bridge/inbox/GEMINI` → `bridge/handlers/gemini_handler.py` (source: Kim/GG/Liam via `engine: gemini`)
 
+- **WO Integration:**
+  - Every Phase 2-3 Gemini action must arrive as a Work Order with `engine: gemini`, `review_required_by` (Andy/CLS), and `locked_zone_allowed: false`.
+  - Use the canonical `bridge/templates/gemini_task_template.yaml` routing/constraints/artifacts fields before dispatch.
+  - Dispatcher verifies metadata (tags, `prefer_agent`, `impact_zone`) and writes reviewable patches to `bridge/outbox/GEMINI/`.
+
+- **Fallback Ladder:**
+  - Primary: Gemini API duplicates heavy compute/multi-file work.
+  - Quota or timeouts → fallback to CLC or Gemini IDE with explicit WO rationale.
+  - Locked-zone detection reroutes directly to CLC specs, never Gemini.
+
 **🔹 Three Operational Modes:**
 
 1. **Gemini IDE** (Code Assist) - IDE-integrated writer for normal development
@@ -307,12 +317,14 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 **Gemini CLI Mode:**
 
 **Thinking Capability:**
+
 - **CAN** read the whole repository using direct file system access.
 - **MUST** adhere to all rules defined in `g/docs/GEMINI_CLI_RULES.md`.
 - **MUST** load `g/knowledge/mls_lessons_cli.jsonl` when present, display the “MLS Recent Lessons (Read-Only)” block, and treat it as authoritative guidance for LaunchAgents, bridge/handlers, watchers, Redis, and filesystem work—MLS wins whenever generic instincts disagree, and the canonical ledger stays read-only.
 - **SHOULD** treat `g/tools/mls_build_cli_feed.py` as the canonical refresh job and coordinate with MLS workers or job schedulers so it runs after ledger updates, keeping the CLI prompt block aligned with the latest lessons.
 
 **Writing Capability:**
+
 - **SHOULD** avoid full-file overwrites unless a diff is explicitly provided and approved.
 - **MAY** apply patches directly to the file system.
 - **MUST** follow all safety and operational rules in its dedicated protocol.
@@ -416,6 +428,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 
 > "Refactor auth module across 3 files"
 > → Gemini: ส่ง phase plan (ไฟล์ไหน, อะไรบ้าง), แล้วส่ง patch เฉพาะไฟล์แรก (PHASE 1/3), รอ confirm ก่อนไป PHASE 2/3
+>
 > "Clean up CONTEXT_ENGINEERING_PROTOCOL_v3.md to 3.2"
 > → Gemini: แบ่งงานเป็น Layer Hierarchy, Capability Matrix, Fallback Ladder, แก้ทีละ section เพื่อไม่ให้ output โดน truncate, และทุก patch ใช้ anchor/section-tag ชัดเจน
 
@@ -424,11 +437,13 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 **Gemini API Mode (Heavy Compute Offloader):**
 
 **Purpose:**
+
 - Offload heavy compute tasks from CLC/Codex to preserve token budget
 - Handle bulk operations that would consume excessive CLC tokens
 - Enable parallel processing of large-scale tasks
 
 **Thinking Capability:**
+
 - **CAN** perform heavy code generation (bulk test generation, scaffolding)
 - **CAN** analyze large codebases (multi-file analysis, pattern detection)
 - **CAN** generate comprehensive documentation
@@ -436,12 +451,14 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 - **MUST** be quota-aware and token-efficient
 
 **Writing Capability:**
+
 - **CAN** generate code, tests, documentation via work order system
 - **MUST** work through `/bridge/inbox/GEMINI/` → `/bridge/outbox/GEMINI/`
 - **MUST** respect same zone restrictions as Gemini IDE (no locked zones)
 - **CAN** output large results (4K+ tokens) for bulk operations
 
 **Technical Implementation:**
+
 - **SDK:** `google-generativeai` Python package
 - **Model:** `gemini-2.5-flash` (fast, cost-effective)
 - **Virtual Environment:** `/Users/icmini/02luka/.venv`
@@ -449,12 +466,14 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 - **Connector:** `g/connectors/gemini_connector.py`
 
 **Routing Rules (via GG):**
+
 - **WHEN** `task_type=heavy_compute` AND `complexity=high`
 - **WHEN** bulk operations (>10 files or >5000 tokens expected output)
 - **WHEN** CLC token budget would be significantly impacted (>20K tokens)
 - **WHEN** task is parallelizable or benefits from external API compute
 
 **Use Cases:**
+
 1. **Bulk Test Generation:** Generate unit tests for 20+ files
 2. **Documentation:** Create comprehensive API documentation from code
 3. **Code Analysis:** Analyze security patterns across entire codebase
@@ -462,11 +481,13 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 5. **Migration Tasks:** Bulk refactoring across many files
 
 **Authorization:**
+
 - Boss, GG, or Kim can route tasks to Gemini API
 - Work orders logged in bridge system for audit trail
 - Results reviewed by CLS before integration (for critical tasks)
 
 **Quota Management:**
+
 - Daily limit: ~1500 requests/user (Gemini API subscription)
 - Per-minute limit: 120 requests/minute
 - Monitored via quota tracking system (Phase 4)
@@ -478,6 +499,7 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
   enforced automatically in this phase.
 
 **Safety Constraints:**
+
 - Same locked zone restrictions as other agents
 - Output validated before SOT integration
 - API key managed via `GEMINI_API_KEY` environment variable
@@ -489,7 +511,6 @@ This is a **conceptual hierarchy of authority and capability**, not a strict lin
 > → GG routes to Gemini API via work order
 > → Gemini API generates test scaffolding for all files
 > → CLS reviews output before integration
-
 > "Analyze authentication patterns across g/apps/, g/server/, and bridge/ (80+ files)"
 > → Kim creates work order for Gemini API
 > → Gemini API performs multi-file analysis
