@@ -21,3 +21,6 @@ httpx>=0.27.0  # Async dashboard calls from Kim bot
 # faiss-gpu==1.7.4
 PyYAML>=6.0.1
 redis>=5.0.1
+
+python-dotenv
+google-generativeai
