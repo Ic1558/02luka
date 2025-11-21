@@ -1,0 +1,73 @@
+{
+  "gmx_plan": {
+    "intent": "liam-selftest",
+    "description": "A self-test specification for LiamAgent to verify its core capabilities, including AP/IO v3.1 ledger writing and dispatching Work Orders to the Bridge."
+  },
+  "task_spec": {
+    "source": "gmx",
+    "intent": "liam-selftest",
+    "target_files": [
+      "g/wo_specs/gmx_liam_selftest.json"
+    ],
+    "command": null,
+    "ui_action": null,
+    "context": {
+      "description": "Liam AP/IO v3.1 end-to-end self-test via GMX",
+      "ap_io_version": "v3.1",
+      "parent_id": "liam-selftest-001",
+      "steps": [
+        {
+          "step": 1,
+          "action": "write_ledger_entry",
+          "description": "Log the beginning of the self-test.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "liam-selftest-001",
+            "event": "selftest_task_start",
+            "data": {
+              "task": "selftest",
+              "source": "GMX"
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": "write_to_bridge",
+          "description": "Write a smoke test Work Order to the LIAM inbox.",
+          "details": {
+            "inbox": "LIAM",
+            "filename": "WO-LIAM-SMOKETEST.json",
+            "content": {
+              "task_spec": {
+                "source": "liam",
+                "intent": "smoke",
+                "target_files": [
+                  "test.txt"
+                ],
+                "context": {
+                  "note": "liam smoke test via GMX",
+                  "ap_io_version": "v3.1"
+                }
+              }
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": "write_ledger_entry",
+          "description": "Log the successful completion of the self-test.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "liam-selftest-001",
+            "event": "selftest_complete",
+            "data": {
+              "bridge_write": "ok",
+              "ledger": "ok",
+              "note": "end-to-end Liam -> Ledger -> Bridge self-test finished"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

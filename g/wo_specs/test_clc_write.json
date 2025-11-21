@@ -1,0 +1,14 @@
+{
+  "task_id": "clc-write-test-001",
+  "version": "v4",
+  "lane": "test",
+  "intent": "write_file",
+  "target_files": ["g/reports/clc_test_output.txt"],
+  "operations": [
+    {
+      "op": "write_file",
+      "file": "g/reports/clc_test_output.txt",
+      "content": "CLC Local Executor write test successful."
+    }
+  ]
+}

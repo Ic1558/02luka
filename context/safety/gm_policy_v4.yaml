@@ -1,0 +1,53 @@
+# 02luka V4 - Gemini/GPT Advisor Trigger Policy (gm_policy_v4)
+#
+# ใช้กำหนดว่าเมื่อไร Overseer ควรเรียก gm/GPT เป็นที่ปรึกษาเพิ่ม
+
+version: "gmx-v1"
+
+gm_trigger_policy:
+  # I1: Multi-file Refactor → ถ้าแตะไฟล์ >= ค่านี้ → ใช้ gm
+  files_changed_threshold: 2
+
+  # I2: Sensitive Paths
+  sensitive_paths:
+    - "02luka/core/"
+    - "02luka/bridge/"
+    - "02luka/agents/"
+    - "02luka/context/"
+    - "02luka/tools/"
+
+  # I3: High-Risk File Extensions
+  file_extensions:
+    - ".yaml"
+    - ".yml"
+    - ".json"
+    - ".py"
+    - ".sh"
+    - ".zsh"
+    - ".plist"
+    - ".toml"
+    - "Makefile"
+
+  # I4: Fragile Logic Keywords (ในเนื้อไฟล์)
+  critical_keywords:
+    - "redis"
+    - "dispatcher"
+    - "overseer"
+    - "hybrid"
+    - "playwright"
+    - "routing"
+    - "memory"
+    - "context loader"
+
+  # I5: High-Risk Shell Commands
+  shell_keywords:
+    - "docker"
+    - "kubectl"
+    - "helm"
+    - "launchctl"
+    - "systemctl"
+    - "brew install"
+    - "brew uninstall"
+    - "git clean"
+    - "find -delete"
+    - "rm -rf"

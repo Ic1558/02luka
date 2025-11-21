@@ -1,0 +1,33 @@
+# 02luka V4 - Safe Zones Configuration
+#
+# Overseer ใช้ไฟล์นี้ตรวจว่าคำสั่ง/patch แตะ path ที่อนุญาตหรือไม่
+
+root_project: "/Users/icmini/02luka"
+
+write_allowed:
+  # โซนหลัก
+  - "/Users/icmini/02luka"
+
+  # เพิ่มเติมได้ภายหลัง เช่น:
+  # - "/Users/icmini/LocalProjects/02luka_local_g"
+
+# path ที่บล็อกถาวร ไม่ให้แตะ
+write_denied:
+  - "/"
+  - "/System"
+  - "/usr"
+  - "/bin"
+  - "/sbin"
+  - "/etc"
+  - "/var"
+  - "/Applications"
+  - "/Users"
+
+# allow-list เฉพาะบาง subdir ถ้าจำเป็น
+# ให้ใช้ร่วมกับ write_allowed
+allowlist_subdirs:
+  - "/Users/icmini/02luka/agents"
+  - "/Users/icmini/02luka/core"
+  - "/Users/icmini/02luka/governance"
+  - "/Users/icmini/02luka/context"
+  - "/Users/icmini/02luka/tools"

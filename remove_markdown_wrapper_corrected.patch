@@ -1,0 +1,19 @@
+--- a/g/connectors/gemini_connector.py
++++ b/g/connectors/gemini_connector.py
+@@ -102,7 +102,15 @@
+                 logger.error(f"Response blocked. Finish reason: {response.candidates[0].finish_reason if response.candidates else 'unknown'}")
+                 return None
+ 
++            # Remove markdown code block wrappers if present
++            cleaned_text = response.text.strip()
++            if cleaned_text.startswith("```json") and cleaned_text.endswith("```"):
++                cleaned_text = cleaned_text[len("```json"):-len("```")].strip()
++            elif cleaned_text.startswith("```") and cleaned_text.endswith("```"): # Generic code block
++                cleaned_text = cleaned_text[len("```"):-len("```")].strip()
++
+             result = {
+-                "text": response.text,
++                "text": cleaned_text,
+                 "model": self.model_name,
+                 "usage": {
+                     "prompt_tokens": getattr(response, "prompt_token_count", 0),

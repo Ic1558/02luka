@@ -1,0 +1,83 @@
+{
+  "gmx_plan": {
+    "intent": "add-feature",
+    "description": "Generate a plan for LiamAgent to implement AP/IO v3.1 logging for specific MLS CLI tools: mls_build_cli_feed.py and mls_cli_prompt.py."
+  },
+  "task_spec": {
+    "source": "gmx",
+    "intent": "add-mls-logging",
+    "target_files": [
+      "g/wo_specs/gmx_liam_mls_logging.json"
+    ],
+    "command": null,
+    "ui_action": null,
+    "context": {
+      "description": "This spec outlines a task for Liam to add AP/IO v3.1 logging to MLS CLI tools.",
+      "ap_io_version": "v3.1",
+      "parent_id": "mls-logging-task-001",
+      "steps": [
+        {
+          "step": 1,
+          "action": "write_ledger_entry",
+          "description": "Log that the MLS logging task has been received.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "mls-logging-task-001",
+            "event": "task_received",
+            "data": {
+              "note": "GMX has generated spec for MLS logging implementation."
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": "write_to_bridge",
+          "description": "Dispatch the actual Work Order for Liam to implement the logging.",
+          "details": {
+            "inbox": "LIAM",
+            "filename": "WO-MLS-LOGGING-20251120-001.json",
+            "content": {
+              "task_spec": {
+                "source": "GMX",
+                "intent": "implement-mls-logging",
+                "target_files": [
+                  "apps/mls/mls_build_cli_feed.py",
+                  "apps/mls/mls_cli_prompt.py"
+                ],
+                "context": {
+                  "description": "Implement AP/IO v3.1 logging in MLS CLI tools. Add 'mls_feed_built' event on successful run of `mls_build_cli_feed.py` and 'mls_prompt_used' on `mls_cli_prompt.py` call.",
+                  "ap_io_version": "v3.1",
+                  "logging_events": [
+                    {
+                      "file": "apps/mls/mls_build_cli_feed.py",
+                      "condition": "successful_run",
+                      "event": "mls_feed_built"
+                    },
+                    {
+                      "file": "apps/mls/mls_cli_prompt.py",
+                      "condition": "called",
+                      "event": "mls_prompt_used"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": "write_ledger_entry",
+          "description": "Log that the MLS logging Work Order has been dispatched.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "mls-logging-task-001",
+            "event": "task_scheduled",
+            "data": {
+              "note": "Work Order for MLS logging dispatched to LIAM."
+            }
+          }
+        }
+      ]
+    }
+  }
+}

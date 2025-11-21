@@ -1,0 +1,68 @@
+# 02luka V4 - Unified Prompt Protocol (UPP) - Task Spec Schema
+# ใช้เป็นสัญญากลางระหว่าง GG / GM / Overseer / Cursor / Hybrid / Kim
+
+task_spec:
+  # optional: id สั้นหรือ uuid
+  id: null
+
+  # ใครเป็นคนสั่ง / auto
+  # ตัวอย่าง: "kim", "chatgpt", "cursor", "system"
+  source: null
+
+  # แกนหลักของงาน
+  # allowed:
+  #   - fix-bug
+  #   - refactor
+  #   - add-feature
+  #   - generate-file
+  #   - review
+  #   - run-command
+  #   - ui-action
+  #   - analyze
+  intent: null
+
+  # รายการไฟล์ที่เกี่ยวข้อง (relative path)
+  target_files: []
+
+  # ใช้เมื่อ intent == run-command
+  # ตัวอย่าง: "docker compose up -d service_x"
+  command: null
+
+  # ใช้เมื่อ intent == ui-action
+  # ตัวอย่าง:
+  #   type: "click"
+  #   selector: "#delete-user"
+  #   url: "https://example.com/admin/users/1"
+  ui_action: null
+
+  context:
+    # คำอธิบายสั้น ๆ ว่าต้องการให้เกิดอะไร
+    description: null
+
+    # ที่มา / สภาพปัจจุบัน / error log ถ้ามี
+    background: null
+
+    # กติกา / ข้อห้าม
+    # ตัวอย่าง:
+    #   - "no breaking changes"
+    #   - "follow naming_convention.json"
+    constraints: []
+
+    # ref ไปยัง context อื่น เช่น:
+    #   - "ref:arch_v4"
+    #   - "ref:naming_convention"
+    links: []
+
+  output:
+    # รูปแบบ output จาก LLM / engine
+    # allowed:
+    #   - unified_patch      # diff แบบเดียวจบ
+    #   - file_replacement   # เนื้อไฟล์เต็ม
+    #   - plan_only          # แผน/step ยังไม่แก้จริง
+    format: "unified_patch"
+
+    # การ apply
+    #   - manual             # ให้คนกดเอง
+    #   - auto               # ระบบ apply ได้ (แต่ยังผ่าน Overseer)
+    #   - overseer-approved  # apply ได้ถ้า Overseer ok
+    apply_mode: "overseer-approved"

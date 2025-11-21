@@ -20,30 +20,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from g.connectors import gemini_connector
+from bridge.handlers.gemini_logic import handle_wo
 
 logger = logging.getLogger(__name__)
-
-
-def handle_wo(wo: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize a work order payload and execute it via the Gemini connector."""
-
-    task_type = wo.get("task_type", "code_transform")
-    input_block = wo.get("input", {}) if isinstance(wo, dict) else {}
-
-    payload = {
-        "instructions": input_block.get("instructions", ""),
-        "target_files": input_block.get("target_files", []),
-        "context": input_block.get("context", {}),
-    }
-
-    result = gemini_connector.run_gemini_task(task_type, payload)
-    return {
-        "ok": True,
-        "engine": "gemini",
-        "task_type": task_type,
-        "result": result,
-    }
 
 
 def handle(task: Dict[str, Any]) -> Dict[str, Any]:
@@ -85,7 +64,19 @@ class GeminiHandler:
             response = handle_wo(wo)
 
             if not response.get("ok"):
-                self._write_error_result(wo_id, "Gemini execution failed")
+                # Centralized error message extraction
+                # Priority: error -> reason -> default
+                detailed_error = (
+                    response.get("error")
+                    or response.get("reason")
+                    or "Processing failed: no reason provided"
+                )
+                
+                # Build unified error message with status
+                status = response.get("status", "FAILED")
+                unified_error = f"{status}: {detailed_error}"
+                
+                self._write_error_result(wo_id, unified_error)
                 return False
 
             self._write_success_result(wo_id, response)
