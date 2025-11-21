@@ -132,3 +132,7 @@ bridge/outbox/**
 *.old
 tmp_*.yaml
 /knowledge/mls_lessons.jsonl
+
+.env.local
+.venv/
+*.bak
