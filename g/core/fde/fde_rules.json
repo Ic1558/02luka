@@ -1,0 +1,41 @@
+{
+    "version": "1.0",
+    "last_updated": "2025-11-21",
+    "enforcement_mode": "strict",
+    "rules": {
+        "feature_development": {
+            "description": "Enforces Spec-First Development for all feature work.",
+            "required_artifacts": [
+                "spec_v*.md",
+                "plan_v*.md"
+            ],
+            "artifact_location_pattern": "g/reports/feature-dev/{feature_name}/",
+            "blocking": true,
+            "exceptions": [
+                "hotfix/*",
+                "docs/*"
+            ]
+        },
+        "memory_validation": {
+            "description": "Enforces Proof-of-Use validation before any action.",
+            "required_before_action": true,
+            "validation_method": "internal_monologue",
+            "blocking": true
+        },
+        "main_branch_protection": {
+            "description": "Prevents direct commits to main branch.",
+            "allow_direct_commit": false,
+            "required_review": true,
+            "blocking": true
+        },
+        "legacy_zone_protection": {
+            "description": "Prevents writes to legacy/forbidden zones.",
+            "forbidden_paths": [
+                "g/g/",
+                "~/02luka/",
+                "legacy_parent/"
+            ],
+            "blocking": true
+        }
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "liam": {
+        "memory_system": "v4_universal_contract",
+        "enforcement": "fde_validator",
+        "capabilities": [
+            "spec_first_development",
+            "proof_of_use_validation",
+            "memory_hub_api",
+            "deploy_impact_assessment"
+        ],
+        "persona_path": "agents/liam/PERSONA_PROMPT.md",
+        "memory_ledger": "g/memory/ledger/liam_memory.jsonl",
+        "migration_status": "complete",
+        "migration_date": "2025-11-21"
+    },
+    "gmx": {
+        "memory_system": "v4_universal_contract",
+        "auto_enforcement": "deploy_impact_assessment",
+        "capabilities": [
+            "work_order_planning",
+            "auto_trigger_safeguards",
+            "memory_hub_api",
+            "fde_aware_planning"
+        ],
+        "persona_path": "agents/gmx/PERSONA_PROMPT.md",
+        "memory_ledger": "g/memory/ledger/gmx_memory.jsonl",
+        "migration_status": "complete",
+        "migration_date": "2025-11-21"
+    },
+    "andy": {
+        "memory_system": "legacy",
+        "migration_status": "pending",
+        "notes": "Not critical for V4 core"
+    },
+    "gmx_cli": {
+        "memory_system": "legacy",
+        "migration_status": "pending",
+        "notes": "Not critical for V4 core"
+    },
+    "gemini_agent": {
+        "memory_system": "legacy",
+        "migration_status": "pending",
+        "notes": "Not critical for V4 core"
+    }
+}
