@@ -136,3 +136,4 @@ tmp_*.yaml
 .env.local
 .venv/
 *.bak
+.n8n/
