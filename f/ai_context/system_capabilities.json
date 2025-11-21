@@ -1,0 +1,62 @@
+{
+    "v4_enforcement": {
+        "fde_validator": {
+            "enabled": true,
+            "path": "g/core/fde/fde_validator.py",
+            "rules_path": "g/core/fde/fde_rules.json",
+            "rules": [
+                "feature_development",
+                "legacy_zone_protection",
+                "memory_validation",
+                "main_branch_protection"
+            ],
+            "enforcement_level": "blocking"
+        },
+        "memory_hub": {
+            "api": "agents.memory_hub.memory_hub",
+            "functions": [
+                "load_memory",
+                "save_memory"
+            ],
+            "ledger_path": "g/memory/ledger/{agent}_memory.jsonl",
+            "protocol": "V4 Universal Memory Contract"
+        },
+        "universal_contract": {
+            "mandatory": true,
+            "agents_migrated": [
+                "liam",
+                "gmx"
+            ],
+            "protocol": "load -> validate -> save",
+            "proof_of_use": true
+        },
+        "writer_policy_v4": {
+            "zones": {
+                "memory-write": "g/memory/ledger/**",
+                "contract-write": [
+                    "g/core/fde/**",
+                    "agents/*/PERSONA_PROMPT.md"
+                ]
+            },
+            "documentation": "docs/WRITER_POLICY_V4_EXTENSIONS.md"
+        },
+        "ap_io_events": {
+            "path": "g/tools/ap_io_events.py",
+            "event_classes": [
+                "v4_fde_validation_passed",
+                "v4_fde_validation_failed",
+                "v4_memory_loaded",
+                "v4_memory_saved",
+                "v4_persona_migrated"
+            ]
+        }
+    },
+    "deployment": {
+        "version": "V4.0",
+        "date": "2025-11-21T05:40:00Z",
+        "type": "FULL",
+        "risk_level": "HIGH",
+        "test_status": "14/14 passing",
+        "rollback_plan": "g/reports/system/V4-ROLLBACK-PLAN.md"
+    }
+}
