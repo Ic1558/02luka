@@ -1,0 +1,60 @@
+{
+  "gmx_plan": {
+    "intent": "REPLACE_WITH_YOUR_INTENT",
+    "description": "A template for a standard LiamAgent task."
+  },
+  "task_spec": {
+    "source": "gmx",
+    "intent": "REPLACE_WITH_YOUR_INTENT",
+    "target_files": [],
+    "command": null,
+    "ui_action": null,
+    "context": {
+      "description": "This is a template. Please fill in the details.",
+      "ap_io_version": "v3.1",
+      "parent_id": "TEMPLATE-PARENT-ID-YYYYMMDD-001",
+      "steps": [
+        {
+          "step": 1,
+          "action": "write_ledger_entry",
+          "description": "Log that the task has been received and is starting.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "TEMPLATE-PARENT-ID-YYYYMMDD-001",
+            "event": "task_received",
+            "data": {
+              "note": "Fill me: A brief description of the task's goal."
+            }
+          }
+        },
+        {
+          "step": 2,
+          "action": "write_to_bridge",
+          "description": "Dispatch the actual Work Order to the appropriate agent.",
+          "details": {
+            "inbox": "LIAM",
+            "filename": "WO-TEMPLATE-YYYYMMDD-001.json",
+            "content": {
+              "task_spec": {
+                "fill": "your real task_spec for the next agent here"
+              }
+            }
+          }
+        },
+        {
+          "step": 3,
+          "action": "write_ledger_entry",
+          "description": "Log that the task has been successfully scheduled or dispatched.",
+          "details": {
+            "agent": "Liam",
+            "parent_id": "TEMPLATE-PARENT-ID-YYYYMMDD-001",
+            "event": "task_scheduled",
+            "data": {
+              "note": "Work Order dispatched to Bridge inbox: LIAM"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

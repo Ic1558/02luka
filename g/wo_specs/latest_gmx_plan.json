@@ -1,0 +1,18 @@
+{
+  "gmx_plan": {
+    "intent": "add-feature",
+    "description": "Implement the plan outlined in WO-V4-SYS-P4: Documentation & Enforcement."
+  },
+  "task_spec": {
+    "source": "gmx",
+    "intent": "add-feature",
+    "target_files": [],
+    "command": null,
+    "ui_action": null,
+    "context": {
+      "description": "The user has requested to implement the plan detailed in 'WO-V4-SYS-P4: Documentation & Enforcement'. Your first step is to locate and thoroughly understand the contents of this plan. Once understood, identify all necessary tasks, including specific files to be created or modified, and the exact changes required to fulfill both the documentation and enforcement aspects of WO-V4-SYS-P4. Subsequently, execute these identified tasks to fully implement the plan.",
+      "ap_io_version": "v3.1",
+      "parent_id": null
+    }
+  }
+}

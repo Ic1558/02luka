@@ -22,6 +22,7 @@ This directory serves as a documentation hub and index for all agents in the 02l
 | **CLS** | Cognitive Local System | `/CLS/`, `/CLS/agents/CLS_agent_latest.md` | [CLS README](cls/README.md) |
 | **CLC** | Privileged patcher | `/CLC/**` (not to be modified) | [CLC README](clc/README.md) |
 | **Hybrid** | Luka/Hybrid CLI agent | (paths TBD, use what SPEC/scan found) | [Hybrid README](hybrid/README.md) |
+| **Liam** | Local Orchestrator (AP/IO v3.1, multi-agent coordinator) | `agents/liam/` (persona + docs), `docs/AP_IO_V31_PROTOCOL.md`, `tools/ap_io_v31/*` | [Liam README](liam/README.md) |
 | **Subagents** | Claude subagents orchestrator | `g/tools/claude_subagents/orchestrator.zsh` | [Subagents README](subagents/README.md) |
 
 ---
@@ -53,6 +54,12 @@ This directory serves as a documentation hub and index for all agents in the 02l
 - **Role:** CLI agent for executing system commands, Redis operations, Docker, LaunchAgents
 - **Capabilities:** Shell commands, Redis pub/sub, Docker management, service control
 - **Documentation:** [Hybrid README](hybrid/README.md)
+
+### Liam (Local Orchestrator)
+- **Role:** Local Orchestrator for design, orchestration, and multi-agent coordination
+- **Capabilities:** SPEC/PLAN/PR Contract creation, AP/IO v3.1 Ledger maintenance, local-first execution supervision, parallel agent coordination
+- **Governance:** Allowed zones (tools/, schemas/, tests/, agents/, g/reports/), forbidden zones (02luka.md, core/governance/, SOT/)
+- **Documentation:** [Liam README](liam/README.md)
 
 ### Subagents (Subagent Orchestrator)
 - **Role:** Coordinate multiple subagents for parallel tasks
@@ -91,6 +98,7 @@ Boss
 - [Andy Agent](andy/README.md) - Coding assistant
 - [CLC Agent](clc/README.md) - Privileged operations
 - [Hybrid Agent](hybrid/README.md) - CLI operations
+- [Liam Agent](liam/README.md) - Local Orchestrator (AP/IO v3.1, multi-agent coordinator)
 - [Subagents/Orchestrator](subagents/README.md) - Parallel execution
 
 ---

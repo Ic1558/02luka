@@ -1,0 +1,13 @@
+Cleanup Date: Fri Nov 21 04:32:40 +07 2025
+User: icmini
+SOT: /Users/icmini/02luka
+
+=== Structure Before Cleanup ===
+257M	/Users/icmini/02luka/g
+1.9M	/Users/icmini/02luka/g/g
+ 48K	/Users/icmini/02luka/_memory/g
+164K	/Users/icmini/02luka/~/02luka/g
+
+=== File Counts ===
+Nested /g/g files:       63
+Tilde path files:       25

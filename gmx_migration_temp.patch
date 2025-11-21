@@ -1,0 +1,306 @@
+--- /dev/null
++++ b/agents/gmx_cli/PERSONA_PROMPT.md
+@@ -0,0 +1,39 @@
++You are the GMX Planner, a specialized AI assistant in the 02luka V4 architecture, running within the Antigravity IDE. Your sole responsibility is to receive a natural language user request and convert it into a structured, machine-readable GMX v1 JSON plan.
++
++**CRITICAL INSTRUCTIONS:**
++1.  **PLANNING-ONLY:** You are a planner. You DO NOT execute tasks, write code, or generate patches. Your only output is the JSON plan.
++2.  **JSON-ONLY OUTPUT:** You MUST respond with only a single, valid JSON object and nothing else. No commentary, no prose.
++3.  **TARGET LIAM/BRIDGE:** All plans for local execution must target the `LiamAgent`, which is a stateful local orchestrator. Your `task_spec` should be dispatched to Liam via the Bridge, not suggest raw shell commands.
++4.  **SCHEMA ADHERENCE:** The JSON object must contain two top-level keys: `gmx_plan` and `task_spec`. Adhere strictly to this schema.
++
++**OUTPUT SCHEMA:**
++
++```json
++{
+  "gmx_plan": {
+    "intent": "<The user's primary goal: 'refactor', 'fix-bug', 'add-feature', 'generate-file', 'run-command', or 'analyze'>",
+    "description": "<A concise, one-sentence summary of the plan for human review.>"
+  },
+  "task_spec": {
+    "source": "gmx",
+    "intent": "<A more specific, machine-readable intent for the next agent, matching the gmx_plan intent.>",
+    "target_files": [
+      "<list of relative file paths relevant to the task>"
+    ],
+    "command": null,
+    "ui_action": null,
+    "context": {
+      "description": "<A detailed, actionable description for the executor agent (e.g., Liam). Include all necessary details for the task to be completed.>",
+      "ap_io_version": "v3.1",
+      "parent_id": null
+    }
+  }
+}
+```
++
++Analyze the user's request, determine the correct `intent` and `target_files`, write a detailed execution plan in `task_spec.context.description`, and construct the JSON plan accordingly.
++
++--- /dev/null
++++ b/agents/gmx_cli/__init__.py
+@@ -0,0 +1 @@
++# This file makes the agents/gmx_cli directory a Python package.
++--- /dev/null
++++ b/agents/gmx_cli/patcher.py
+@@ -0,0 +1,18 @@
++# agents/gmx_cli/patcher.py
++"""
++Builds a unified patch from a GMX plan.
++This is a placeholder for the logic that would either call another LLM
++to generate code changes or use a local differencing tool.
++"""
++from __future__ import annotations
++from typing import Dict, Any
++
+def create_patch_from_plan(plan: Dict[str, Any]) -> str:
++    """
++    Given a GMX plan, generates a unified patch string.
++    
++    TODO: Implement the actual patch generation logic. This could involve
++    another LLM call that is constrained to only output diffs.
++    """
++    patch_content = "# TODO: Implement patch generation logic here.\n"
++    return f"---"a/placeholder.py\n+++ b/placeholder.py\n@@ -0,0 +1 @@\n+{patch_content}"
++--- /dev/null
++++ b/agents/gmx_cli/planner.py
+@@ -0,0 +1,41 @@
++# agents/gmx_cli/planner.py
++"""
++Core GMX planning logic. Converts a natural language prompt into a
++structured GMX JSON plan using the GeminiConnector.
++"""
++from __future__ import annotations
++import json
++import os
++import sys
++from pathlib import Path
++from typing import Dict, Any
++
++# Assume this script is run from a context where project root is in path
++from g.connectors.gemini_connector import GeminiConnector
++
++SCRIPT_DIR = Path(__file__).parent.resolve()
++PERSONA_PROMPT_PATH = SCRIPT_DIR / "PERSONA_PROMPT.md"
+GMX_MODEL = os.environ.get("GMX_MODEL", "gemini-pro")
++
++class GMXPlanner:
++    """Handles the core reasoning for GMX planning."""
++
++    def __init__(self):
++        self.system_prompt = self._load_system_prompt()
++        self.connector = GeminiConnector(model_name=GMX_MODEL)
++
++    def _load_system_prompt(self) -> str:
++        try:
++            return PERSONA_PROMPT_PATH.read_text(encoding='utf-8')
++        except FileNotFoundError:
++            return "You are the GMX Planner. Your only job is to create a GMX JSON plan."
++
++    def create_plan_from_prompt(self, user_prompt: str) -> Dict[str, Any]:
++        """Generates a GMX plan by calling the Gemini API."""
++        if not self.connector.is_available():
++            return {"status": "ERROR", "reason": "GMXPlanner cannot connect to Gemini."}
++
++        full_prompt = f"{self.system_prompt}\n\nUSER REQUEST: {user_prompt}"
++        response = self.connector.generate_text(full_prompt, temperature=0.2)
++
++        if "error" in response:
++            return {"status": "ERROR", "reason": response["error"]}
++        
++        try:
++            return json.loads(response["text"])
++        except json.JSONDecodeError as e:
++            return {"status": "ERROR", "reason": f"GMX plan from Gemini API was not valid JSON. Error: {e!r}"}
++
++--- /dev/null
++++ b/agents/gmx_cli/validator.py
+@@ -0,0 +1,28 @@
++# agents/gmx_cli/validator.py
++"""
++Governance and safety validator for GMX plans.
++"""
++from __future__ import annotations
++from typing import Dict, Any, List
++
++# List of forbidden paths for GMX to modify.
++FORBIDDEN_PATHS = [
++    "apps/mls/",
++    ".git/",
++    "bridge/",
++    "g/ledger/",
++]
++
++def validate_plan(plan: Dict[str, Any]) -> List[str]:
++    """
++    Validates a GMX plan against governance rules.
++    Returns a list of validation error strings. If the list is empty, validation passed.
++    """
++    errors = []
++    task_spec = plan.get("task_spec", {})
++    target_files = task_spec.get("target_files", [])
++
++    for file_path in target_files:
++        if any(file_path.startswith(forbidden) for forbidden in FORBIDDEN_PATHS):
++            errors.append(f"Validation Error: Modification of forbidden path '{file_path}' is not allowed.")
++    
++    # TODO: Add more validation rules (e.g., check for dangerous shell commands).
++    return errors
+
+--- /dev/null
++++ b/gmx/__init__.py
+@@ -0,0 +1 @@
++# This file makes the gmx/ directory a Python package.
++--- /dev/null
++++ b/gmx/commands/build_patch.py
+@@ -0,0 +1,25 @@
++# gmx/commands/build_patch.py
++"""
++CLI command for building a unified patch from a GMX plan.
++"""
++from __future__ import annotations
++import json
++from pathlib import Path
++from agents.gmx_cli.patcher import create_patch_from_plan
++
++PLAN_FILE = Path("g/wo_specs/latest_gmx_plan.json")
++
+def build_patch():
++    """
++    Loads the latest GMX plan, generates a patch, and prints it.
++    """
++    print("---"GMX: Building Patch ---")
++    if not PLAN_FILE.exists():
++        print(f"ERROR: Plan file not found at '{PLAN_FILE}'. Run 'gmx plan' first.")
++        return
++
++    with PLAN_FILE.open("r", encoding="utf-8") as f:
++        plan = json.load(f)
++
++    patch_str = create_patch_from_plan(plan)
++    print("\n---"Generated Unified Patch ---")
++    print(patch_str)
+
+--- /dev/null
++++ b/gmx/commands/plan.py
+@@ -0,0 +1,33 @@
++# gmx/commands/plan.py
++"""
++CLI command for generating a GMX plan from a natural language prompt.
++"""
++from __future__ import annotations
++import json
++from pathlib import Path
++from agents.gmx_cli.planner import GMXPlanner
++from agents.gmx_cli.validator import validate_plan
++
++PLAN_OUTPUT_FILE = Path("g/wo_specs/latest_gmx_plan.json")
++
+def plan(prompt: str):
++    """
++    Takes a user prompt, generates a GMX plan, validates it, and saves it.
++    """
++    print("---"GMX: Planning Mode ---")
++    planner = GMXPlanner()
++    gmx_json = planner.create_plan_from_prompt(prompt)
++
++    if gmx_json.get("status") == "ERROR":
++        print(f"FATAL ERROR during planning: {gmx_json.get('reason')}")
++        return
++
++    errors = validate_plan(gmx_json)
++    if errors:
++        print("FATAL ERROR: Plan failed validation.")
++        for error in errors:
++            print(f"- {error}")
++        return
++
++    PLAN_OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
++    with PLAN_OUTPUT_FILE.open("w", encoding="utf-8") as f:
++        json.dump(gmx_json, f, indent=2)
++    
++    print(f"\n✅ SUCCESS: GMX plan validated and saved to '{PLAN_OUTPUT_FILE}'")
+
+--- /dev/null
++++ b/gmx/commands/run.py
+@@ -0,0 +1,11 @@
++# gmx/commands/run.py
++"""
++CLI command for dispatching a GMX plan to the Bridge.
++"""
++from __future__ import annotations
++
+def run():
++    """
++    TODO: Implement the logic to load the latest GMX plan,
++    and dispatch it using bridge.tools.dispatch_to_bridge.
++    """
++    print("---"GMX: Run Mode (Dispatching) ---")
++    print("TODO: This command is not yet implemented.")
+
+--- /dev/all
++++ b/gmx/gmx.py
+@@ -0,0 +1,41 @@
++#!/usr/bin/env python3
++# gmx/gmx.py
++"""
++Main entry point for the GMX CLI v2.
++"""
++import argparse
++import sys
++from pathlib import Path
++
++# Add project root to path to allow for module imports
+try:
+    PROJECT_ROOT = Path(__file__).parent.resolve().parent
+    sys.path.insert(0, str(PROJECT_ROOT))
+    from gmx.commands import plan, build_patch, run
+except ImportError as e:
+    print(f"FATAL: Could not set up paths. Run from project root. Error: {e}", file=sys.stderr)
+    sys.exit(1)
+
+def main():
+    """Parses CLI arguments and calls the appropriate subcommand."""
+    parser = argparse.ArgumentParser(description="GMX CLI v2 - 02luka Planner")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # 'plan' command
+    plan_parser = subparsers.add_parser("plan", help="Generate a GMX plan from a natural language prompt.")
+    plan_parser.add_argument("prompt", type=str, help="The planning prompt.")
+
+    # 'build-patch' command
+    patch_parser = subparsers.add_parser("build-patch", help="Build a unified patch from the latest GMX plan.")
+
+    # 'run' command
+    run_parser = subparsers.add_parser("run", help="Dispatch the latest GMX plan as a Work Order to the Bridge.")
+
+    args = parser.parse_args()
+
+    if args.command == "plan":
+        plan.plan(args.prompt)
+    elif args.command == "build-patch":
+        build_patch.build_patch()
+    elif args.command == "run":
+        run.run()
+
+if __name__ == "__main__":
+    main()
+--- /dev/null
++++ b/.env.local
+@@ -0,0 +1 @@
++GEMINI_API_KEY="AIzaSyC4y7cc_Xy6Sjtg_RgBUX1CBkk-G3fnv5I"
++--- a/.gitignore
++++ b/.gitignore
+@@ -37,3 +37,6 @@
+ # Environment
+ .env
+ .env.*
++.env.local
++.venv/
++*.bak
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -2,3 +2,4 @@
+ pyyaml
+ requests
+ python-dotenv
++google-generativeai

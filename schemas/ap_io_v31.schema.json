@@ -1,0 +1,60 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "AP/IO v3.1 Ledger Entry",
+    "type": "object",
+    "required": [
+        "ledger_id",
+        "timestamp",
+        "agent",
+        "event",
+        "data"
+    ],
+    "properties": {
+        "ledger_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique ID for this log entry."
+        },
+        "parent_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "ID of the parent task/action that triggered this."
+        },
+        "correlation_id": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "ID linking a chain of related events."
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp of the event (ISO8601)."
+        },
+        "agent": {
+            "type": "string",
+            "description": "Name of the agent (e.g., 'Liam', 'Andy', 'User')."
+        },
+        "event": {
+            "type": "string",
+            "description": "Type of event (e.g., 'task_start', 'tool_call', 'decision')."
+        },
+        "data": {
+            "type": "object",
+            "description": "Context-specific payload."
+        },
+        "execution_duration_ms": {
+            "type": [
+                "integer",
+                "null"
+            ],
+            "description": "Duration of the action in milliseconds."
+        }
+    },
+    "additionalProperties": false
+}

@@ -1,0 +1,59 @@
+diff --git a/g/tools/mls_build_cli_feed.py b/g/tools/mls_build_cli_feed.py
+index 0642b8b2b..0ff426c22 100644
+--- a/g/tools/mls_build_cli_feed.py
++++ b/g/tools/mls_build_cli_feed.py
+@@ -17,6 +17,8 @@ from datetime import datetime, timezone
+ from pathlib import Path
+ from typing import Iterable
+ 
++from tools.ap_io_v31.writer import write_ledger_entry
++
+ BASE = Path(__file__).resolve().parents[1]
+ DEFAULT_SOURCE = BASE / "knowledge" / "mls_lessons.jsonl"
+ DEFAULT_DEST = BASE / "knowledge" / "mls_lessons_cli.jsonl"
+@@ -204,8 +206,20 @@ def main() -> int:
+     )
+ 
+     args = parser.parse_args()
++
++    write_ledger_entry(
++        event="mls_feed_build_start",
++        data={"source": str(args.source), "dest": str(args.dest), "limit": args.limit},
++    )
++
+     lessons = build_filtered_feed(args.source, args.limit)
+     write_feed(args.dest, lessons)
++
++    write_ledger_entry(
++        event="mls_feed_build_complete",
++        data={"status": "success", "count": len(lessons), "dest": str(args.dest)},
++    )
++
+     print(f"Generated {len(lessons)} CLI lessons → {args.dest}")
+     return 0
+ 
+diff --git a/g/tools/mls_cli_prompt.py b/g/tools/mls_cli_prompt.py
+index 0bc193c7c..75fbc51ea 100644
+--- a/g/tools/mls_cli_prompt.py
++++ b/g/tools/mls_cli_prompt.py
+@@ -13,6 +13,8 @@ import json
+ from pathlib import Path
+ from typing import Iterable
+ 
++from tools.ap_io_v31.writer import write_ledger_entry
++
+ DEFAULT_LIMIT = 30
+ DEFAULT_FEED = Path(__file__).resolve().parents[1] / "knowledge" / "mls_lessons_cli.jsonl"
+ 
+@@ -46,6 +48,11 @@ def render_lessons_block(
+ ) -> str:
+     """Render the MLS lessons block for the Gemini CLI system prompt."""
+     lessons_list = list(lessons)
++    if lessons_list:
++        write_ledger_entry(
++            event="mls_suggestion_generated",
++            data={"count": len(lessons_list), "context": "cli_prompt_render"},
++        )
+     if not lessons_list:
+         return ""
+ 
