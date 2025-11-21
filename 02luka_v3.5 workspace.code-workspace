@@ -1,21 +1,24 @@
 {
-	"folders": [
-		{
-			"path": "."
-		},
-		{
-			"path": "../LocalProjects/02luka-memory"
-		}
-	],
-	"settings": {
-		"terminal.integrated.env.osx": {
-			"LUKA_SOT": "/Users/icmini/02luka",
-			"LUKA_HOME": "/Users/icmini/02luka/g",
-			"SOT_PATH": "/Users/icmini/02luka/g"
-		},
-		"files.associations": {
-			"*.zsh": "shellscript",
-			"*.env": "properties"
-		}
-	}
+  "folders": [
+    {
+      "path": "/Users/icmini/LocalProjects/02luka_local_g"
+    },
+    {
+      "path": "/Users/icmini/LocalProjects/02luka"
+    },
+    {
+      "path": "/Users/icmini/LocalProjects/02luka-memory"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.env.osx": {
+      "LUKA_SOT": "/Users/icmini/02luka",
+      "LUKA_HOME": "/Users/icmini/02luka/g",
+      "SOT_PATH": "/Users/icmini/02luka/g"
+    },
+    "files.associations": {
+      "*.zsh": "shellscript",
+      "*.env": "properties"
+    }
+  }
 }

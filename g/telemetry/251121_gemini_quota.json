@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-11-21T16:53:00.455389Z",
+  "status": "error",
+  "error_code": null,
+  "message": "Unknown error - no valid response",
+  "model": "gemini-2.5-flash",
+  "test_call_ok": false
+}

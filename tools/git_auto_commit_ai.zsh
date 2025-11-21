@@ -10,6 +10,13 @@ REPO_DIR="${LUKA_HOME:-$HOME/02luka/g}"
 LOG_DIR="$HOME/02luka/g/logs/git_sync"
 LOG_FILE="$LOG_DIR/auto_commit_$(date +%Y%m%d).log"
 DRY_RUN="${DRY_RUN:-0}"
+PAUSE_FLAG="$HOME/02luka/g/.git_auto_sync_paused"
+
+# Check if auto-sync is paused
+if [[ -f "$PAUSE_FLAG" ]]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Auto-sync is PAUSED. Remove $PAUSE_FLAG to re-enable." | tee -a "$LOG_DIR/auto_commit_$(date +%Y%m%d).log"
+    exit 0
+fi
 
 # Ensure log directory exists
 mkdir -p "$LOG_DIR"
