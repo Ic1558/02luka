@@ -41,5 +41,15 @@
         "memory_system": "legacy",
         "migration_status": "pending",
         "notes": "Not critical for V4 core"
+    },
+    "clc_local": {
+        "version": "v0.2",
+        "executor": "agents.clc_local.executor",
+        "mode": "local",
+        "supports_patch": true,
+        "supports_plan": false,
+        "supports_validation": true,
+        "safety_layer": "governance.overseerd",
+        "routing_via": "liam"
     }
 }

@@ -7,6 +7,9 @@ authentication, and quota availability.
 from __future__ import annotations
 import sys
 import os
+import json
+import argparse
+from datetime import datetime
 from pathlib import Path
 
 # --- Robust Path Setup ---
@@ -19,11 +22,26 @@ except (ImportError, IndexError) as e:
     print(f"FATAL: Could not set up paths. Run this script from the project root. Error: {e}", file=sys.stderr)
     sys.exit(1)
 
-def check_api_health():
+def check_api_health(json_out=None):
     """
     Performs a small, lightweight API call to check the health and quota status.
+    
+    Args:
+        json_out: Optional path to write JSON status output
+    
+    Returns:
+        tuple: (success: bool, status_data: dict)
     """
     print("--- Antigravity Quota & Health Check ---")
+
+    status_data = {
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "status": "unknown",
+        "error_code": None,
+        "message": "",
+        "model": "",
+        "test_call_ok": False
+    }
 
     # 1. Load environment from .env.local
     env_local_path = PROJECT_ROOT / ".env.local"
@@ -34,8 +52,9 @@ def check_api_health():
         print(f"⚠️  Warning: .env.local not found. Relying on shell environment for GEMINI_API_KEY.")
 
     # 2. Initialize the connector
-    # Using a fast, lightweight model for this check
-    model_to_test = os.environ.get("GMX_MODEL", "gemini-flash-latest") 
+    # Use gemini-2.5-flash (known working model)
+    model_to_test = os.environ.get("GMX_MODEL", "gemini-2.5-flash")
+    status_data["model"] = model_to_test
     print(f"Initializing connector with model: {model_to_test}...")
     connector = GeminiConnector(model_name=model_to_test)
 
@@ -45,7 +64,12 @@ def check_api_health():
         print("   Troubleshooting:")
         print("   - Ensure 'google-generativeai' and 'python-dotenv' are installed in your venv.")
         print("   - Ensure GEMINI_API_KEY is set in your .env.local file or shell environment.")
-        return False
+        status_data["status"] = "error"
+        status_data["message"] = "Connector not available"
+        if json_out:
+            Path(json_out).parent.mkdir(parents=True, exist_ok=True)
+            Path(json_out).write_text(json.dumps(status_data, indent=2))
+        return False, status_data
 
     print("✅ Connector initialized.")
 
@@ -60,7 +84,13 @@ def check_api_health():
         print("   - Successfully connected to the Gemini API.")
         print("   - Authentication is working.")
         print("   - You are currently under the API request quota.")
-        return True
+        status_data["status"] = "ok"
+        status_data["message"] = "Connector healthy"
+        status_data["test_call_ok"] = True
+        if json_out:
+            Path(json_out).parent.mkdir(parents=True, exist_ok=True)
+            Path(json_out).write_text(json.dumps(status_data, indent=2))
+        return True, status_data
     
     if response and "error" in response:
         error_message = response["error"].lower()
@@ -68,17 +98,41 @@ def check_api_health():
             print("\n❌ API HEALTH CHECK FAILED: QUOTA EXCEEDED")
             print(f"   Reason: The API returned a quota-related error.")
             print(f"   Details: {response['error']}")
+            status_data["status"] = "error"
+            status_data["error_code"] = "429"
+            status_data["message"] = "Quota exceeded"
+        elif "403" in error_message or "leaked" in error_message or "expired" in error_message:
+            print("\n❌ API HEALTH CHECK FAILED: AUTH ERROR")
+            print(f"   Reason: The API returned an authentication error.")
+            print(f"   Details: {response['error']}")
+            status_data["status"] = "error"
+            status_data["error_code"] = "403"
+            status_data["message"] = "Authentication failed (key leaked/expired)"
         else:
             print("\n❌ API HEALTH CHECK FAILED: GENERIC API ERROR")
             print(f"   Reason: The API returned an error that was not quota-related.")
             print(f"   Details: {response['error']}")
-        return False
+            status_data["status"] = "error"
+            status_data["message"] = response.get("error", "Unknown error")
+        if json_out:
+            Path(json_out).parent.mkdir(parents=True, exist_ok=True)
+            Path(json_out).write_text(json.dumps(status_data, indent=2))
+        return False, status_data
 
     print("\n❌ API HEALTH CHECK FAILED: UNKNOWN REASON")
     print("   Reason: The API did not return a valid response or an error.")
     print(f"   Raw Response: {response}")
-    return False
+    status_data["status"] = "error"
+    status_data["message"] = "Unknown error - no valid response"
+    if json_out:
+        Path(json_out).parent.mkdir(parents=True, exist_ok=True)
+        Path(json_out).write_text(json.dumps(status_data, indent=2))
+    return False, status_data
 
 if __name__ == "__main__":
-    success = check_api_health()
+    parser = argparse.ArgumentParser(description="Check Gemini API quota and health")
+    parser.add_argument('--json-out', help='Write JSON status to file')
+    args = parser.parse_args()
+    
+    success, _ = check_api_health(json_out=args.json_out)
     exit(0 if success else 1)

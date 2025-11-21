@@ -1,0 +1,36 @@
+# CLS Guard — Critical Operational Constraints
+# Created: 2025-01-21
+# Status: ACTIVE
+
+## CRITICAL RULES
+
+1. **NEVER Auto-Sync/Auto-Commit/Auto-Run Git Commands**
+   - CLS MUST NOT automatically sync, commit, or run any git commands
+   - All git operations require explicit Work Order (WO)
+
+2. **Work Order (WO) Required for Operations**
+   - CLS ONLY executes operations when receiving a Work Order
+   - No autonomous operations without WO authorization
+
+3. **No System-Wide Workflow Triggers**
+   - CLS MUST NOT trigger system-wide workflows
+   - No automatic CI/CD, deployment, or batch operations
+
+4. **Guard File Active Behavior**
+   - When `.cls_guard` exists (this file):
+     - CLS MUST ONLY execute patch operations
+     - CLS MUST NEVER perform Git sync operations
+     - All other operations require explicit WO
+
+## Enforcement
+
+This guard file is checked before any operation:
+- If present → Patch operations only, NO Git sync
+- All operations require Work Order authorization
+- System-wide workflows are prohibited
+
+## Governance Compliance
+
+- Rule 91: Guard file in SOT root (read-only for CLS)
+- Rule 92: All changes via WO only
+- Rule 93: This guard is evidence of operational constraints

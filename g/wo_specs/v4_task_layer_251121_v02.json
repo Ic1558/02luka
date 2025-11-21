@@ -1,0 +1,16 @@
+{
+    "id": "v4_task_layer_251121_v02",
+    "lane": "clc_local",
+    "executor": "agents.clc_local.executor",
+    "route_via": "liam",
+    "supports": {
+        "patch": true,
+        "plan": false,
+        "validation": true
+    },
+    "model_config": {
+        "source": "env",
+        "variable": "CLC_MODEL"
+    },
+    "description": "Generic, model-agnostic patch executor for V4 Task Layer."
+}

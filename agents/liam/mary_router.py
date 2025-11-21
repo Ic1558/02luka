@@ -163,6 +163,35 @@ def route_to_hybrid_shell(task_meta: dict) -> dict:
         "result": None,  # placeholder - replace with actual result
     }
 
+
+def route_to_clc_local(task_spec: dict, patch_meta: dict) -> dict:
+    """
+    Route patch generation to CLC Local.
+    Call this after overseer approval for patch intents.
+    """
+    intent = task_spec.get("intent", "")
+    
+    if intent in ("refactor", "fix-bug", "add-feature", "generate-file"):
+        # Log the routing event
+        write_ledger_entry(
+            agent="Liam",
+            event="route_to_clc_local",
+            data={"task_spec": task_spec},
+            parent_id=task_spec.get("parent_id")
+        )
+        
+        return {
+            "status": "PATCH_READY_CLC",
+            "executor": "clc_local",
+            "task_spec": task_spec,
+            "patch_meta": patch_meta,
+        }
+    
+    return {
+        "status": "SKIPPED",
+        "reason": f"Intent '{intent}' not a patch operation",
+    }
+
 def init_task_state(task_spec: dict) -> str:
     """
     Initialize the task state in task.md.
