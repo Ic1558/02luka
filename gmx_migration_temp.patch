@@ -287,7 +287,7 @@ if __name__ == "__main__":
 --- /dev/null
 +++ b/.env.local
 @@ -0,0 +1 @@
-+GEMINI_API_KEY="AIzaSyC4y7cc_Xy6Sjtg_RgBUX1CBkk-G3fnv5I"
++GEMINI_API_KEY="${GEMINI_API_KEY}"
 +--- a/.gitignore
 +++ b/.gitignore
 @@ -37,3 +37,6 @@
