@@ -1,25 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-25T09:24:14.263Z",
+    "created_at": "2025-11-25T09:45:26.877Z",
     "source": "hub_autoindex.cjs",
     "total": 22,
     "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
   },
   "items": [
     {
-      "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
-      "bytes": 146,
-      "kind": "md",
-      "title": "Integration Ping",
-      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:39:37Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
-      "meta": {},
-      "sha256": "dec324bcee7fbfd520b16d91dca0b4586e529a95e9c95b53f0f09652fab0ca94"
-    },
-    {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -36,7 +26,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -52,7 +42,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -62,7 +52,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -77,7 +67,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -93,7 +83,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -110,7 +100,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -126,7 +116,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -136,7 +126,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -146,7 +136,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -164,7 +154,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -182,7 +172,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -199,7 +189,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -216,7 +206,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -233,7 +223,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -250,7 +240,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -267,7 +257,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -284,7 +274,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-25T09:24:07.394Z",
+      "mtime": "2025-11-25T09:45:20.894Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -294,7 +284,7 @@
     },
     {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-25T09:24:07.393Z",
+      "mtime": "2025-11-25T09:45:20.893Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
@@ -304,7 +294,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-11-25T09:24:07.393Z",
+      "mtime": "2025-11-25T09:45:20.893Z",
       "bytes": 229,
       "kind": "md",
       "title": "Integration Test Ping",
@@ -314,13 +304,23 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-11-25T09:24:07.393Z",
+      "mtime": "2025-11-25T09:45:20.893Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
       "summary": "# Integration Ping\n\n- when: 2025-11-11T17:36:19Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
       "meta": {},
       "sha256": "670d9ecd0b435aeba65283cb5e3cf48a4506fb61eff711bba94d97adbc32979d"
+    },
+    {
+      "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
+      "mtime": "2025-11-25T09:45:20.893Z",
+      "bytes": 146,
+      "kind": "md",
+      "title": "Integration Ping",
+      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:39:37Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
+      "meta": {},
+      "sha256": "dec324bcee7fbfd520b16d91dca0b4586e529a95e9c95b53f0f09652fab0ca94"
     }
   ]
 }
