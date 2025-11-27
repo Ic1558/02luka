@@ -158,3 +158,8 @@ backups/*cursor_20*/
 # Governance backups like boss_archive/, boss_workspace/, context_migration_*
 # must remain visible in git status
 config/secrets/
+
+# Temporary debug/test files
+debug_policy.py
+test_smoke.py
+flat_refactor.json
