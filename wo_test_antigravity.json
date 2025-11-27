@@ -1,0 +1,15 @@
+{
+    "task_id": "TASK-ANTIGRAVITY-TEST",
+    "operations": [
+        {
+            "op": "write_file",
+            "file": "/Users/icmini/02luka/g/src/antigravity/test_citizen.txt",
+            "content": "Antigravity is a citizen of 02luka."
+        },
+        {
+            "op": "write_file",
+            "file": "/Users/icmini/02luka/02luka.md",
+            "content": "This should be blocked."
+        }
+    ]
+}

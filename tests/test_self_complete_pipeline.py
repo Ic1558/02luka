@@ -51,6 +51,19 @@ def test_complex_work_order_routes_to_clc():
     assert wo.get("status") != "COMPLETE"
 
 
+def test_multi_file_routes_to_clc_via_router():
+    manager = AIManager()
+    wo = {"wo_id": "WO-2b", "self_apply": True, "complexity": "simple", "file_count": 5}
+
+    state = manager.transition(wo, "DOCS_DONE", None)
+    assert state == "ROUTE_TO_CLC"
+
+    result = manager.handle_docs_completion(wo, files_touched=["g/src/a.py"])
+    assert result["status"] == "routed"
+    assert result["next_state"] == "ROUTE_TO_CLC"
+    assert wo.get("status") != "COMPLETE"
+
+
 def test_qa_fail_returns_to_dev():
     manager = AIManager()
     wo = {"wo_id": "WO-3"}

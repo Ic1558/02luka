@@ -1,0 +1,6 @@
+paid_lanes:
+  enabled: false          # DEFAULT OFF
+  require_approval: true  # Boss must explicitly approve
+  emergency_budget_thb: 50
+  warn_ratio: 0.8
+  reset_daily: true

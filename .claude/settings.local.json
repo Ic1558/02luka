@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./tools/codex_cleanup_backups.zsh:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
