@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["wo_id", "objective", "routing_hint", "priority"],
+  "properties": {
+    "wo_id": { "type": "string" },
+    "objective": { "type": "string" },
+    "routing_hint": { "type": "string", "enum": ["oss", "gmxcli", "gptdeep"] },
+    "priority": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] },
+    "self_apply": { "type": "boolean", "default": true },
+    "complexity": { "type": "string", "enum": ["simple", "complex"], "default": "simple" },
+    "requires_paid_lane": { "type": "boolean", "default": false },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": { "type": "string" },
+          "description": { "type": "string" },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": { "type": "string", "enum": ["write_file", "apply_patch"] },
+                "file": { "type": "string" },
+                "content": { "type": "string" }
+              },
+              "required": ["op", "file", "content"]
+            }
+          }
+        },
+        "required": ["task_id", "description"]
+      }
+    }
+  }
+}
