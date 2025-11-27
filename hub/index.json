@@ -1,110 +1,15 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-11-27T17:40:14.454Z",
+    "created_at": "2025-11-27T17:51:18.128Z",
     "source": "hub_autoindex.cjs",
     "total": 22,
     "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
   },
   "items": [
     {
-      "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-08",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:50 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-09",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "c21383614f87ac4c47719682295b6ce1da3c358cd8ccbb89295ed18e903de353"
-    },
-    {
-      "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 3005,
-      "kind": "md",
-      "title": "CLC Session Summary",
-      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-11\n**Timestamp**: 2025-11-11 05:46:01 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
-      "meta": {
-        "title": "CLC Session Summary",
-        "date": "2025-11-11",
-        "type": "session",
-        "category": "conversation",
-        "auto_generated": "true",
-        "tags": "[clc, session, conversation-log]"
-      },
-      "sha256": "0e83d792dd6906e6d8103986f6387f3e2a22fb34659343cdffd8c0f72d515261"
-    },
-    {
-      "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-11-27T17:40:10.103Z",
-      "bytes": 261,
-      "kind": "md",
-      "title": "Manual Git Setup Test",
-      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
-      "meta": {},
-      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
-    },
-    {
       "rel": ".cursor/mcp.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 23,
       "kind": "json",
       "title": "",
@@ -114,7 +19,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 229,
       "kind": "md",
       "title": "Integration Test Ping",
@@ -124,7 +29,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -134,7 +39,7 @@
     },
     {
       "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -144,7 +49,7 @@
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -161,7 +66,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -177,7 +82,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -187,7 +92,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -202,7 +107,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -218,7 +123,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -235,7 +140,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -251,7 +156,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -261,7 +166,7 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
@@ -271,7 +176,7 @@
     },
     {
       "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 10267,
       "kind": "md",
       "title": "MCP Configuration Crisis Resolution",
@@ -289,7 +194,7 @@
     },
     {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -307,7 +212,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-11-27T17:40:10.102Z",
+      "mtime": "2025-11-27T17:51:09.608Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -321,6 +226,101 @@
         "tags": "[clc, session, conversation-log]"
       },
       "sha256": "3c4feaecc9c83aa673833077a24f302dd689858d3e05fdf5ca05c0a8ae4ecfe6"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251108_102049.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-08\n**Timestamp**: 2025-11-08 10:20:49 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-08",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ac600b81b99fe37702332f22b91b1b27e698610609a86f952805ac28402ad480"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215231.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:52:31 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "ab6fe20b98e997abd4db68e1b8b489bef1bc402c30b2e4e69594fc9712976896"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215448.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:48 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "7699ca699d788ee85c3f060e0c460d58ed6de5d56a00789b12e46cb2a26f6b96"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251109_215450.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-09\n**Timestamp**: 2025-11-09 21:54:50 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-09",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "c21383614f87ac4c47719682295b6ce1da3c358cd8ccbb89295ed18e903de353"
+    },
+    {
+      "rel": "g/reports/sessions/session_20251111_054601.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 3005,
+      "kind": "md",
+      "title": "CLC Session Summary",
+      "summary": "# CLC Session Summary\n\n**Date**: 2025-11-11\n**Timestamp**: 2025-11-11 05:46:01 UTC\n**Agent**: CLC (Claude Code)\n\n## Session Highlights\n\n### Major Accomplishments\n- MCP Configuration Crisis Resolution\n  - Fixed configuration format errors\n  - Reduced tool count from 149 → 55 tools (63% reduction)\n  - Created locked config snapshots for stability\n  - Eliminated MCP_DOCKER duplication across 3 config",
+      "meta": {
+        "title": "CLC Session Summary",
+        "date": "2025-11-11",
+        "type": "session",
+        "category": "conversation",
+        "auto_generated": "true",
+        "tags": "[clc, session, conversation-log]"
+      },
+      "sha256": "0e83d792dd6906e6d8103986f6387f3e2a22fb34659343cdffd8c0f72d515261"
+    },
+    {
+      "rel": "test/manual_setup/git_manual_test.md",
+      "mtime": "2025-11-27T17:51:09.608Z",
+      "bytes": 261,
+      "kind": "md",
+      "title": "Manual Git Setup Test",
+      "summary": "# Manual Git Setup Test\n\n**Timestamp:** Tue Aug 26 03:30:29 +07 2025\n**Status:** Git authentication working manually\n**Repository:** Successfully initialized and connected to GitHub\n\nThis file was created by manual Git setup to verify the authentication works.\n",
+      "meta": {},
+      "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
     }
   ]
 }
