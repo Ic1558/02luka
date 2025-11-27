@@ -137,3 +137,23 @@ tmp_*.yaml
 .venv/
 *.bak
 .n8n/
+
+# ========================================
+# Codex/Tool-Generated Backup Noise (SPECIFIC ONLY)
+# ========================================
+# Apply patch artifacts (tool-generated, ~12k files)
+backups/apply_patch/
+backups/*apply_patch*/
+
+# Pre-unify snapshots (tool-generated, large)
+backups/02luka-pre-unify-snapshot/
+backups/*_pre-unify*/
+backups/*cursor_20*/
+
+# Codex internal state
+.codex/undo/
+.codex/cache/
+
+# NOTE: DO NOT ignore entire backups/ tree
+# Governance backups like boss_archive/, boss_workspace/, context_migration_*
+# must remain visible in git status
