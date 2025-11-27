@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+# Clear RAM cache (requires sudo password)
+
+echo "🧹 Clearing RAM cache..."
+echo "This will purge inactive memory and may require your sudo password."
+
+# Purge inactive memory (requires sudo)
+sudo purge
+
+if [[ $? -eq 0 ]]; then
+    echo "✅ RAM cache cleared successfully"
+    echo ""
+    echo "Current RAM status:"
+    ~/02luka/bin/check-ram
+else
+    echo "❌ Failed to clear RAM cache (sudo may have been cancelled)"
+    exit 1
+fi
+
