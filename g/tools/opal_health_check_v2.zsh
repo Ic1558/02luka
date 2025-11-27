@@ -184,9 +184,9 @@ echo "   📡 Redis Channels:"
 echo "      • shell subscribers: ${SHELL_QUEUE:-0}"
 echo "      • wo:incoming:opal subscribers: ${WO_QUEUE:-0}"
 
-# Bridge inbox backlog
-ENTRY_BACKLOG=$(find "$ROOT/bridge/inbox/ENTRY" -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
-CLC_BACKLOG=$(find "$ROOT/bridge/inbox/CLC" -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
+# Bridge inbox backlog (exclude archive directories)
+ENTRY_BACKLOG=$(find "$ROOT/bridge/inbox/ENTRY" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
+CLC_BACKLOG=$(find "$ROOT/bridge/inbox/CLC" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
 
 echo "   📥 Bridge Inbox Backlog:"
 
