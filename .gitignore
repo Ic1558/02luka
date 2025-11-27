@@ -157,3 +157,4 @@ backups/*cursor_20*/
 # NOTE: DO NOT ignore entire backups/ tree
 # Governance backups like boss_archive/, boss_workspace/, context_migration_*
 # must remain visible in git status
+config/secrets/

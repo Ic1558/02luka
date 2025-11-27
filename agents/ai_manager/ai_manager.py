@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from agents.ai_manager.actions.direct_merge import direct_merge
+from agents.clc.model_router import should_route_to_clc
 
 
 class AIManager:
@@ -41,8 +42,18 @@ class AIManager:
         return current_state
 
     def _docs_done_transition(self, wo: Dict) -> str:
+        route = should_route_to_clc(wo)
+
+        # Default: simple + self_apply → direct merge unless router says otherwise
         if wo.get("self_apply", True) and wo.get("complexity", "simple") == "simple":
+            if route:
+                return "ROUTE_TO_CLC"
             return "DIRECT_MERGE"
+
+        # Non-self-apply or complex → route to CLC when indicated, otherwise keep CLC path
+        if route:
+            return "ROUTE_TO_CLC"
+
         return "ROUTE_TO_CLC"
 
     def handle_docs_completion(self, wo: Dict, files_touched: Optional[List[str]] = None) -> Dict:

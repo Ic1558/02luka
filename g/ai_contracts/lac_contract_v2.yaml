@@ -1,0 +1,124 @@
+# LAC Contract V2 - Source of Truth
+# Date: 2025-11-28
+# Status: LOCKED
+# Description: Local-First, Free-First, Self-Governing Autonomous Dev Team
+
+lac_contract_v2:
+  version: "2.0"
+  locked_date: "2025-11-28"
+  
+  principle:
+    description: >
+      Local-First, Free-First, Self-Governing. 
+      "ทำคนเดียวแต่ดูเหมือนมีทีมงาน 30 คน".
+      CLC is a role/tool, not a gateway. Agents self-complete by default.
+    cost_target: "$70 for 100M tokens (major project)"
+    philosophy: "API lanes = use only when forced"
+
+  routing:
+    default_lane: "local_free"
+    paid_lanes:
+      enabled: false        # OFF by default
+      require_approval: true
+      emergency_budget_thb: 50
+      approval_required_for:
+        - "Any paid API call"
+        - "Budget increase request"
+
+  pipeline:
+    main_flow: ["DEV", "QA", "DOCS", "DIRECT_MERGE"]
+    escalation_paths:
+      - "CLC_LOCAL"   # complex patches only
+      - "PAID_LANE"   # emergency only, with approval
+    rules:
+      - "If complexity == simple and QA passed → DIRECT_MERGE, no CLC"
+      - "If complexity == complex or flagged → may route_to_clc_local"
+      - "Paid lanes never used without explicit Boss approval"
+    qa_fail_handling:
+      - "If QA fails → return to DEV with feedback"
+      - "If QA fails 3x → escalate to CLC or flag for manual review"
+      - "Never auto-merge without QA pass"
+
+  execution_rights:
+    agents_can_write:
+      - "dev_oss"
+      - "dev_gmxcli"
+      - "qa_v4"
+      - "docs_v4"
+    policy_module: "shared.policy"
+    forbidden_paths:
+      - ".git/"
+      - "bridge/"
+      - "governance/"
+      - "secrets/"
+      - ".env*"
+      - "config/secure/"
+    allowed_roots:
+      - "g/src/"
+      - "g/apps/"
+      - "g/tools/"
+      - "tests/"
+
+  clc_role:
+    description: >
+      CLC (API or local) is a specialist executor for complex or multi-file patches.
+      It has no veto power and is never a mandatory hop in the normal pipeline.
+    usage:
+      - "Only when agent marks task as complex or requires assistance"
+      - "Never required after QA_PASSED in simple cases"
+    prohibited:
+      - "CLC cannot veto or approve work"
+      - "CLC is not a governance layer"
+      - "CLC is not in default critical path"
+
+  agents:
+    dev_oss:
+      type: "full_developer"
+      capabilities: ["reason", "plan", "write", "apply_patch", "self_merge"]
+      cost: "free"
+    dev_gmxcli:
+      type: "full_developer"
+      capabilities: ["reason", "plan", "write", "apply_patch", "self_merge"]
+      cost: "free"
+    qa_v4:
+      type: "qa"
+      capabilities: ["test", "auto_feedback_loop", "create_fix_task", "write_test_files"]
+      cost: "free"
+    docs_v4:
+      type: "docs"
+      capabilities: ["generate_docs", "changelog", "merge_report", "write_doc_files"]
+      cost: "free"
+    ai_manager:
+      type: "orchestrator"
+      capabilities: ["task_split", "routing", "progress_tracking"]
+      cost: "free"
+    architect_v4:
+      type: "architect"
+      capabilities: ["design", "wo_split", "pattern_selection"]
+      cost: "free"
+
+  work_order:
+    fields_mandatory:
+      - "wo_id"
+      - "objective"
+      - "routing_hint"
+      - "priority"
+    fields_optional:
+      - "self_apply"         # if true and QA passed → direct merge by agent
+      - "complexity"         # simple | complex
+      - "requires_paid_lane" # explicit flag for paid API
+    defaults:
+      self_apply: true
+      complexity: "simple"
+      requires_paid_lane: false
+
+  validation:
+    any_spec_or_plan_must:
+      - "Not place CLC in mandatory pipeline"
+      - "Allow agents to write files directly via policy"
+      - "Default paid_lanes.enabled to false"
+      - "Include self_apply field in WO schema"
+    drift_detection:
+      - "If CLC is in critical path → DRIFT"
+      - "If agents cannot write files → DRIFT"
+      - "If paid budget > 50 THB/day default → DRIFT"

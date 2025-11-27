@@ -1,41 +1,19 @@
 # agents/clc_local/policy.py
 """
-Writer Policy v3.5 — Minimal Local Implementation (v0.1)
+CLC Local Policy wrapper — delegates to shared.policy (single source of truth).
 """
 from __future__ import annotations
+
 from typing import Tuple
 
-# A hardcoded list of forbidden path fragments.
-# In a more advanced version, this could be loaded from a central config file.
-FORBIDDEN_PATH_FRAGMENTS = [
-    "02luka.md",
-    "AI:OP-001",
-    "CLAUDE.md",
-    "/.git/",
-    "/bridge/",
-    "/governance/",
-    "/CLC/",
-    "/CLS/",
-    "/.venv/",
-]
+from shared.policy import apply_patch, check_write_allowed
+
 
 def check_file_allowed(file_path: str) -> Tuple[bool, str]:
     """
-    Checks if a given file path is allowed to be modified based on a
-    hardcoded list of forbidden path fragments.
-
-    Returns:
-        A tuple containing (allowed: bool, reason: str).
+    Backward-compatible wrapper for legacy CLC code paths.
     """
-    if not file_path or not isinstance(file_path, str):
-        return False, "No file path provided or invalid type."
+    return check_write_allowed(file_path)
 
-    # Normalize path for consistent checking
-    normalized_path = file_path.replace("\\", "/")
 
-    for fragment in FORBIDDEN_PATH_FRAGMENTS:
-        if fragment in normalized_path:
-            return False, f"Path contains a forbidden fragment: '{fragment}'"
-
-    return True, "OK"
-
+__all__ = ["check_file_allowed", "check_write_allowed", "apply_patch"]

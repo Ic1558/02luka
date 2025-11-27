@@ -1,0 +1,396 @@
+# Path Refactoring Patch - WO-UNIFY-ROOT-02LUKA Phase 4
+# Date: 2025-11-26
+# Description: Replace all legacy path references with canonical unified path
+#
+# Legacy Path: /Users/icmini/LocalProjects/02luka_local_g
+# Canonical Path: /Users/icmini/02luka
+#
+# Note: Legacy path is currently a symlink to canonical path (created Nov 3, 2024)
+# This refactoring improves code clarity and enables path enforcement.
+
+================================================================================
+PRIORITY 1: DOCKER INFRASTRUCTURE (3 files)
+================================================================================
+
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -62,7 +62,7 @@
+       - BRIDGE_TOKEN=${BRIDGE_TOKEN}
+     volumes:
+-      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g:ro  # Read-only
++      - /Users/icmini/02luka/g:/app/g:ro  # Read-only
+     working_dir: /app/g/tools/services
+     command: node http_redis_bridge.cjs
+     networks:
+@@ -99,7 +99,7 @@
+     environment:
+       - NODE_ENV=production
+     volumes:
+-      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g
++      - /Users/icmini/02luka/g:/app/g
+     working_dir: /app/g/tools/services
+     command: node redis_export_mode_listener.cjs
+     depends_on:
+@@ -136,7 +136,7 @@
+     environment:
+       - NODE_ENV=production
+     volumes:
+-      - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g
++      - /Users/icmini/02luka/g:/app/g
+     working_dir: /app/g/tools/services
+     command: node ops_health_watcher.cjs
+     depends_on:
+@@ -205,7 +205,7 @@
+ #
+ # 3. Application directory must exist:
+-#    ls -la /Users/icmini/LocalProjects/02luka_local_g/g
++#    ls -la /Users/icmini/02luka/g
+ #
+ # 4. For production deployment, review:
+ #    - Resource limits (mem_limit, cpus)
+
+--- a/compose-up.sh
++++ b/compose-up.sh
+@@ -19,7 +19,7 @@
+
+ REQUIRED_VOLUME="luka-ops_redis_data"
+ REQUIRED_IMAGE="02luka-node-services:latest"
+-APP_DIR="/Users/icmini/LocalProjects/02luka_local_g/g"
++APP_DIR="/Users/icmini/02luka/g"
+
+ # Colors
+ RED='\\033[0;31m'
+
+================================================================================
+PRIORITY 2: MONITORING STACK (3 files)
+================================================================================
+
+--- a/config/prometheus/prometheus.yml
++++ b/config/prometheus/prometheus.yml
+@@ -3,8 +3,8 @@
+   evaluation_interval: 15s
+
+ rule_files:
+-  - /Users/icmini/LocalProjects/02luka_local_g/g/config/prometheus/rules/bossapi.rules.yml
+-  - /Users/icmini/LocalProjects/02luka_local_g/g/config/prometheus/rules/trading.rules.yml
++  - /Users/icmini/02luka/g/config/prometheus/rules/bossapi.rules.yml
++  - /Users/icmini/02luka/g/config/prometheus/rules/trading.rules.yml
+ scrape_configs:
+   - job_name: prometheus
+     static_configs:
+
+--- a/config/grafana/provisioning/dashboards/provider.yaml
++++ b/config/grafana/provisioning/dashboards/provider.yaml
+@@ -7,7 +7,7 @@
+     type: file
+     editable: true
+     options:
+-      path: /Users/icmini/LocalProjects/02luka_local_g/g/config/grafana/dashboards
++      path: /Users/icmini/02luka/g/config/grafana/dashboards
+
+--- a/config/grafana/provisioning/dashboards/provider_v2.yaml
++++ b/config/grafana/provisioning/dashboards/provider_v2.yaml
+@@ -6,7 +6,7 @@
+     type: file
+     editable: true
+     options:
+-      path: /Users/icmini/LocalProjects/02luka_local_g/g/config/grafana/dashboards
++      path: /Users/icmini/02luka/g/config/grafana/dashboards
+       foldersFromFilesStructure: true
+
+================================================================================
+PRIORITY 3: ACTIVE LAUNCHAGENT (1 file) - REQUIRES SERVICE RESTART
+================================================================================
+
+--- a/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
++++ b/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
+@@ -9,7 +9,7 @@
+ 	<array>
+ 		<string>/bin/zsh</string>
+ 		<string>-c</string>
+-		<string>cd ~/LocalProjects/02luka_local_g && PROJECT_ROOT=$PWD ./g/tools/sot_dashboard_sync.zsh</string>
++		<string>cd ~/02luka && PROJECT_ROOT=$PWD ./g/tools/sot_dashboard_sync.zsh</string>
+ 	</array>
+
+ 	<key>EnvironmentVariables</key>
+@@ -16,10 +16,10 @@
+
+ 	<key>StandardOutPath</key>
+-	<string>~/LocalProjects/02luka_local_g/g/logs/sot_dashboard_sync.out</string>
++	<string>~/02luka/g/logs/sot_dashboard_sync.out</string>
+
+ 	<key>StandardErrorPath</key>
+-	<string>~/LocalProjects/02luka_local_g/g/logs/sot_dashboard_sync.err</string>
++	<string>~/02luka/g/logs/sot_dashboard_sync.err</string>
+
+ 	<key>RunAtLoad</key>
+ 	<true/>
+
+SERVICE RESTART COMMANDS:
+# Before updating:
+launchctl list | grep com.02luka.sot_dashboard_sync
+launchctl unload ~/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
+
+# After updating file (apply patch above):
+# ... edit file ...
+
+# Reload service:
+launchctl load ~/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
+launchctl list | grep com.02luka.sot_dashboard_sync
+
+# Verify logs:
+tail -20 ~/02luka/g/logs/sot_dashboard_sync.out
+
+================================================================================
+PRIORITY 4: LAUNCHAGENT TEMPLATES (5 files)
+================================================================================
+
+--- a/deploy/launchagents/com.02luka.agent_listener.plist
++++ b/deploy/launchagents/com.02luka.agent_listener.plist
+@@ -5,7 +5,7 @@
+ 	<key>EnvironmentVariables</key>
+ 	<dict>
+ 		<key>LUKA_HOME</key>
+-		<string>/Users/icmini/LocalProjects/02luka_local_g/g</string>
++		<string>/Users/icmini/02luka/g</string>
+ 		<key>PATH</key>
+ 		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+ 	</dict>
+@@ -20,7 +20,7 @@
+ 	<key>ProgramArguments</key>
+ 	<array>
+ 		<string>/usr/bin/python3</string>
+-		<string>/Users/icmini/LocalProjects/02luka_local_g/g/agent_listener.py</string>
++		<string>/Users/icmini/02luka/g/agent_listener.py</string>
+ 	</array>
+ 	<key>RunAtLoad</key>
+ 	<true/>
+@@ -29,7 +29,7 @@
+ 	<key>StandardErrorPath</key>
+ 	<string>/Users/icmini/02luka/logs/agent/listener.log</string>
+ 	<key>WorkingDirectory</key>
+-	<string>/Users/icmini/LocalProjects/02luka_local_g/g</string>
++	<string>/Users/icmini/02luka/g</string>
+ </dict>
+ </plist>
+
+--- a/deploy/launchagents/com.02luka.daily_health.plist
++++ b/deploy/launchagents/com.02luka.daily_health.plist
+@@ -8,7 +8,7 @@
+ 	<array>
+ 		<string>/bin/zsh</string>
+ 		<string>-lc</string>
+-		<string>/Users/icmini/LocalProjects/02luka_local_g/g/tools/02luka_system_check.zsh || true</string>
++		<string>/Users/icmini/02luka/g/tools/02luka_system_check.zsh || true</string>
+ 	</array>
+ 	<key>RunAtLoad</key>
+ 	<false/>
+
+--- a/g/launchagents/com.02luka.vault_dev.plist
++++ b/g/launchagents/com.02luka.vault_dev.plist
+(Contents will vary - replace all instances of legacy path with canonical path)
+
+--- a/g/launchagents/com.02luka.vault_health_check.plist
++++ b/g/launchagents/com.02luka.vault_health_check.plist
+(Contents will vary - replace all instances of legacy path with canonical path)
+
+--- a/etc/launchagents/com.02luka.prometheus.plist
++++ b/etc/launchagents/com.02luka.prometheus.plist
+(Contents will vary - replace all instances of legacy path with canonical path)
+
+================================================================================
+PRIORITY 5: DOCUMENTATION (10+ files) - LOW RISK
+================================================================================
+
+--- a/02luka.md
++++ b/02luka.md
+@@ -1376,7 +1376,7 @@
+
+ ```bash
+ # Core skill patched for macOS compatibility
+-/Users/icmini/LocalProjects/02luka_local_g/g/skills/run_shell.zsh
++/Users/icmini/02luka/g/skills/run_shell.zsh
+   - Line 12: START timestamp (Python-based)
+   - Line 46: END timestamp (Python-based)
+ ```
+
+--- a/README.docker-compose.md
++++ b/README.docker-compose.md
+@@ -184,7 +184,7 @@
+
+ 4. **Application Directory**
+    ```bash
+-   ls -la /Users/icmini/LocalProjects/02luka_local_g/g
++   ls -la /Users/icmini/02luka/g
+    ```
+
+@@ -276,7 +276,7 @@
+
+ ```yaml
+ volumes:
+-  - /Users/icmini/LocalProjects/02luka_local_g/g:/app/g
++  - /Users/icmini/02luka/g:/app/g
+ ```
+
+--- a/context/safety/safe_zones.yaml
++++ b/context/safety/safe_zones.yaml
+@@ -9,7 +9,7 @@
+   - "/Users/icmini/02luka"
+
+   # เพิ่มเติมได้ภายหลัง เช่น:
+-  # - "/Users/icmini/LocalProjects/02luka_local_g"
++  # - "/Users/icmini/LocalProjects/02luka_local_g"  # Legacy (now symlink)
+
+ # path ที่บล็อกถาวร ไม่ให้แตะ
+
+--- a/config/services_tokens.md
++++ b/config/services_tokens.md
+@@ -42,7 +42,7 @@
+ Export them in your shell:
+
+ ```bash
+-source ~/LocalProjects/02luka_local_g/.env.services
++source ~/02luka/.env.services
+ ```
+
+--- a/reports/phase_5_5_deployment_report.md
++++ b/reports/phase_5_5_deployment_report.md
+@@ -16,7 +16,7 @@
+
+ ### 1. Fixed: run_shell.zsh (macOS Compatibility)
+
+-**File:** `/Users/icmini/LocalProjects/02luka_local_g/g/skills/run_shell.zsh`
++**File:** `/Users/icmini/02luka/g/skills/run_shell.zsh`
+
+ **Issue:** Used `date +%s%3N` which is not supported on macOS (GNU date only)
+
+@@ -129,7 +129,7 @@
+
+ ### Production Files
+-1. `/Users/icmini/LocalProjects/02luka_local_g/g/skills/run_shell.zsh`
++1. `/Users/icmini/02luka/g/skills/run_shell.zsh`
+    - Lines 12, 46 modified (timestamp generation)
+
+(Continue for remaining documentation files: manuals, g/reports, g/manuals, g/tools, etc.)
+
+================================================================================
+SUMMARY OF CHANGES
+================================================================================
+
+Files to Update by Priority:
+
+Priority 1 (CRITICAL - Docker Infrastructure): 3 files
+  - docker-compose.yml (4 changes)
+  - compose-up.sh (1 change)
+  - README.docker-compose.md (2 changes - documentation)
+
+Priority 2 (HIGH - Monitoring Stack): 3 files
+  - config/prometheus/prometheus.yml (2 changes)
+  - config/grafana/provisioning/dashboards/provider.yaml (1 change)
+  - config/grafana/provisioning/dashboards/provider_v2.yaml (1 change)
+
+Priority 3 (HIGH - Active Service): 1 file
+  - ~/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist (3 changes)
+  ** REQUIRES SERVICE RESTART **
+
+Priority 4 (MEDIUM - Templates): 5 files
+  - deploy/launchagents/com.02luka.agent_listener.plist (3 changes)
+  - deploy/launchagents/com.02luka.daily_health.plist (1 change)
+  - g/launchagents/com.02luka.vault_dev.plist (unknown changes)
+  - g/launchagents/com.02luka.vault_health_check.plist (unknown changes)
+  - etc/launchagents/com.02luka.prometheus.plist (unknown changes)
+
+Priority 5 (LOW - Documentation): 10+ files
+  - 02luka.md (1 change)
+  - context/safety/safe_zones.yaml (1 change + note)
+  - config/services_tokens.md (1 change)
+  - reports/*.md (multiple files, multiple changes)
+  - manuals/*.md (multiple files, multiple changes)
+  - g/reports/system/*.md (7+ files)
+  - g/manuals/*.md (3+ files)
+  - g/tools/*.zsh (2+ files)
+  - misc/learning_db.jsonl (1 change)
+
+Total Changes:
+  - Files: 25+ files
+  - Replacements: 50+ occurrences
+  - Pattern: "/Users/icmini/LocalProjects/02luka_local_g" → "/Users/icmini/02luka"
+  - Alternate: "~/LocalProjects/02luka_local_g" → "~/02luka"
+
+================================================================================
+IMPLEMENTATION PLAN
+================================================================================
+
+Round 1: Documentation Only (SAFE - Low Risk)
+  - Update 10+ documentation files
+  - Test: None required (documentation only)
+  - Risk: NONE
+
+Round 2: LaunchAgent Templates (SAFE - Not Active)
+  - Update 5 template files in deploy/ and g/launchagents/
+  - Test: Validate XML syntax
+  - Risk: LOW (templates only, not active services)
+
+Round 3: Monitoring Stack (MEDIUM Risk)
+  - Update prometheus.yml, grafana provider yamls
+  - Test: Validate YAML syntax, restart services if running
+  - Risk: MEDIUM (services may need restart)
+
+Round 4: Docker Infrastructure (MEDIUM Risk)
+  - Update docker-compose.yml, compose-up.sh
+  - Test: docker-compose config validation
+  - Risk: MEDIUM (requires docker restart if running)
+
+Round 5: Active LaunchAgent (HIGH Risk)
+  - Update com.02luka.sot_dashboard_sync.plist
+  - Test: Unload → Edit → Reload → Verify logs
+  - Risk: HIGH (active service restart required)
+
+================================================================================
+VALIDATION CHECKLIST
+================================================================================
+
+Before Applying Changes:
+  [ ] Backup complete (Phase 2) - ✅ DONE
+  [ ] Symlink verified functional
+  [ ] Review this patch file completely
+  [ ] Boss approval obtained
+
+After Each Round:
+  [ ] Syntax validation passed
+  [ ] Git diff reviewed
+  [ ] Services tested (if applicable)
+  [ ] No unexpected side effects
+
+After All Changes:
+  [ ] All files updated successfully
+  [ ] All services functional
+  [ ] Symlink still works
+  [ ] Path enforcer rule added
+  [ ] Tests pass (pytest, path_enforcer)
+
+================================================================================
+ROLLBACK PLAN
+================================================================================
+
+If changes cause issues:
+
+1. Restore from snapshot:
+   rsync -ah --delete backups/02luka-pre-unify-snapshot/ /Users/icmini/02luka/
+
+2. Revert specific file from git:
+   git checkout HEAD -- path/to/file
+
+3. Revert LaunchAgent:
+   cp backups/com.02luka.sot_dashboard_sync.plist.bak ~/Library/LaunchAgents/
+   launchctl unload ~/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
+   launchctl load ~/Library/LaunchAgents/com.02luka.sot_dashboard_sync.plist
+
+================================================================================
+END OF PATCH FILE
+================================================================================
+
+Generated: 2025-11-26
+WO: WO-UNIFY-ROOT-02LUKA
+Phase: 4 - Path Refactoring
+Status: Ready for review and application
