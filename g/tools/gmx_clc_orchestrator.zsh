@@ -203,9 +203,18 @@ process_plan() {
     local parsed_work_orders_json
     local parse_result
 
-    # Call Python helper for robust YAML parsing and basic WO validation
-    parsed_work_orders_json=$(python3 "$PROJECT_ROOT/g/tools/gmx_clc_parse_plan.py" "$plan_file")
+    # Call Python helper for robust YAML/JSON parsing and basic WO validation
+    # v1.2: Fixed to use --input flag correctly
+    local parser_output
+    parser_output=$(python3 "$PROJECT_ROOT/g/tools/gmx_clc_parse_plan.py" --input "$plan_file" --quiet 2>&1)
     parse_result=$?
+    
+    # Extract candidates from parser output (it returns JSON with candidate_count, candidates, etc.)
+    if [[ "$parse_result" -eq 0 ]]; then
+        # Parser succeeded - extract candidates array
+        parsed_work_orders_json=$(echo "$parser_output" | jq -c '.candidates // []')
+    else
+        parsed_work_orders_json="[]"
 
     if [[ "$parse_result" -ne 0 ]]; then
         log "ERROR: Failed to parse or validate GMX plan from $plan_file. Error: $(echo "$parsed_work_orders_json" | tr -d '\n')" # Log Python script's error output
