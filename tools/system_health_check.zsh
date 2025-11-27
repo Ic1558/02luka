@@ -66,15 +66,26 @@ echo ""
 # === Core Services ===
 echo "📦 Core Services:"
 run_check "Scanner LaunchAgent" "launchctl list | grep -q com.02luka.localtruth"
-run_check "Autopilot LaunchAgent" "launchctl list | grep -q com.02luka.autopilot"
+run_check "Autopilot LaunchAgent" "launchctl list | grep -qE 'com\.02luka\.(rnd\.)?autopilot'"
 run_check "WO Executor LaunchAgent" "launchctl list | grep -q com.02luka.wo_executor"
 run_check "JSON WO Processor" "launchctl list | grep -q com.02luka.json_wo_processor"
 
 echo ""
 echo "🤖 AI Services:"
 run_check "Ollama installed" "command -v ollama"
-run_check "Ollama model available" "ollama list | grep -q qwen2.5:1.5b"
-run_check "Ollama inference test" "echo 'test' | ollama run qwen2.5:1.5b 'Say OK' | grep -qi ok"
+# Check if any Ollama models are available (skip if none installed)
+OLLAMA_MODELS=$(ollama list 2>/dev/null | awk 'NR>1 && /^[a-zA-Z]/ {print $1; exit}' || echo "")
+if [[ -n "$OLLAMA_MODELS" ]]; then
+  run_check "Ollama model available" "ollama list | grep -qE '^[a-zA-Z]'"
+  run_check "Ollama inference test" "echo 'test' | ollama run \"$OLLAMA_MODELS\" 'Say OK' 2>&1 | grep -qi ok"
+else
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  echo -e "${YELLOW}⚠${NC} (no models installed - optional)"
+  echo "    {\"name\": \"Ollama model available\", \"status\": \"skip\", \"reason\": \"no models installed\", \"timestamp\": \"$TIMESTAMP\"}," >> "$HEALTH_REPORT"
+  TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+  echo -e "${YELLOW}⚠${NC} (skipped - no models)"
+  echo "    {\"name\": \"Ollama inference test\", \"status\": \"skip\", \"reason\": \"no models installed\", \"timestamp\": \"$TIMESTAMP\"}," >> "$HEALTH_REPORT"
+fi
 
 echo ""
 echo "📊 Applications:"

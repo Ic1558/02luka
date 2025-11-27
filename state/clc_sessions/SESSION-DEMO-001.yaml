@@ -1,0 +1,35 @@
+# CLC Session State File (Example)
+# This file tracks the state of a long-running, multi-WO operation orchestrated by GMX.
+
+session_id: "SESSION-DEMO-001"
+
+# Timestamps for tracking session lifecycle
+created_at: "2025-11-27T10:00:00Z"
+updated_at: "2025-11-27T10:30:00Z"
+
+# The high-level goal of this entire session
+goal: "Refactor the OPAL health check system into a library and a separate CLI tool."
+
+# List of Work Order IDs that are part of this session
+related_wo_ids:
+  - "WO-CLC-GMX-ORCH-SPEC-V1" # The initial spec WO
+  - "WO-CLC-REFACTOR-LIB-001" # A hypothetical WO for the library part
+  - "WO-CLC-REFACTOR-CLI-002" # A hypothetical WO for the CLI part
+
+# A list of files that have been modified by the CLC worker during this session.
+# This helps the GMX planner understand the scope of changes without re-reading all files.
+files_touched:
+  - "g/tools/lib_opal_health.sh"
+  - "g/tools/opal_health_check_v3.zsh"
+  - "tests/test_opal_health.sh"
+
+# A brief, human-readable summary of the last significant action or result.
+# This is updated by the orchestrator after a WO is completed.
+last_result_summary: "Successfully created the lib_opal_health.sh library. Next step is to create the v3 CLI tool."
+
+# The current status of the session.
+# - active: The session is in progress.
+# - paused: The session is waiting for external input or manual intervention.
+# - completed: The session's goal has been achieved.
+# - failed: The session was terminated due to an unrecoverable error.
+status: active
