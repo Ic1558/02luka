@@ -1369,7 +1369,7 @@ ps aux | grep "python3.*02luka" | grep -v grep             # Active processes
 **📁 Modified Files:**
 ```bash
 # Core skill patched for macOS compatibility
-/Users/icmini/LocalProjects/02luka_local_g/g/skills/run_shell.zsh
+/Users/icmini/02luka/g/skills/run_shell.zsh
   - Line 12: START timestamp (Python-based)
   - Line 46: END timestamp (Python-based)
 
