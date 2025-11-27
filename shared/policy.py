@@ -74,8 +74,12 @@ def check_write_allowed(file_path: str) -> Tuple[bool, str]:
     relative_str = relative_path.as_posix()
     for allowed in ALLOWED_ROOTS:
         allowed_path = allowed.rstrip("/").replace("\\", "/")
+        # Check if path starts with allowed root AND has path separator boundary
+        # This prevents prefix collision attacks (e.g., g/srcfoo/ matching g/src/)
         if relative_str.startswith(allowed_path):
-            return True, "ALLOWED"
+            # Check boundary: either end of string or path separator follows
+            if len(relative_str) == len(allowed_path) or relative_str[len(allowed_path)] == "/":
+                return True, "ALLOWED"
 
     return False, "PATH_NOT_IN_ALLOWED_ROOTS"
 

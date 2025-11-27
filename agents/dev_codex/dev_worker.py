@@ -92,6 +92,12 @@ class DevCodexWorker:
                     "reason": result["reason"],
                     "partial_results": results,
                 }
+            if result["status"] == "error":
+                return {
+                    "status": "failed",
+                    "reason": result.get("reason", "FILE_WRITE_ERROR"),
+                    "partial_results": results,
+                }
 
         return {
             "status": "success",

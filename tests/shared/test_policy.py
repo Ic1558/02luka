@@ -45,6 +45,21 @@ class TestCheckWriteAllowed:
         assert not allowed
         assert "OUTSIDE_BASE" in reason
 
+    def test_prefix_collision_blocked(self):
+        """Test that prefix collision attacks are blocked (e.g., g/srcfoo/ should not match g/src/)."""
+        # These should be blocked because they use prefix collision
+        collision_cases = [
+            "g/srcfoo/bar.py",  # Should not match g/src/
+            "g/appsfoo/test.py",  # Should not match g/apps/
+            "g/toolsfoo/script.py",  # Should not match g/tools/
+            "g/docsfoo/readme.md",  # Should not match g/docs/
+            "testsfoo/test_foo.py",  # Should not match tests/
+        ]
+        for path in collision_cases:
+            allowed, reason = check_write_allowed(path)
+            assert not allowed, f"Prefix collision not blocked: {path}"
+            assert "PATH_NOT_IN_ALLOWED_ROOTS" in reason or "NOT_IN_ALLOWED" in reason
+
 
 class TestApplyPatch:
     def test_blocked_write(self):
