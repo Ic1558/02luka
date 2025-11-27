@@ -4,6 +4,7 @@ import os
 import pytest
 
 from agents.ai_manager.ai_manager import AIManager
+from agents.qa_v4.qa_worker import QAWorkerV4
 
 
 @pytest.fixture(autouse=True)
@@ -83,3 +84,41 @@ def test_qa_fail_three_times_escalates():
 
     assert next_state == "ESCALATE"
     assert wo["qa_fail_count"] == 3
+
+
+def test_qa_worker_runs_tests_and_passes(monkeypatch):
+    called = {"tests": 0, "lint": 0}
+
+    class FakeActions:
+        def run_lint(self, targets):
+            called["lint"] += 1
+            return {"status": "success"}
+
+        def run_tests(self, target):
+            called["tests"] += 1
+            return {"status": "success"}
+
+    worker = QAWorkerV4(actions=FakeActions())
+    task = {"run_tests": True, "lint_targets": ["g/src/antigravity/core/hello.py"]}
+    result = worker.execute_task(task)
+
+    assert result["status"] == "success"
+    assert called["tests"] == 1
+    assert called["lint"] == 1
+    assert result.get("qa_actions")  # should include action results
+
+
+def test_qa_worker_runs_tests_and_fails(monkeypatch):
+    class FakeActions:
+        def run_lint(self, targets):
+            return {"status": "success"}
+
+        def run_tests(self, target):
+            return {"status": "failed", "reason": "TEST_FAILED", "exit_code": 1}
+
+    worker = QAWorkerV4(actions=FakeActions())
+    task = {"run_tests": True}
+    result = worker.execute_task(task)
+
+    assert result["status"] == "failed"
+    assert result["reason"] == "TEST_FAILED"

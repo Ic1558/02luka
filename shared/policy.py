@@ -25,6 +25,7 @@ ALLOWED_ROOTS = [
     "g/tools/",
     "g/docs/",
     "tests/",
+    "system/antigravity/",
 ]
 
 
