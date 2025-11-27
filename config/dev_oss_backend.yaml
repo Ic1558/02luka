@@ -1,0 +1,12 @@
+# OSS Dev Lane Backend Configuration
+# model: backend model name or identifier
+# command: CLI executable to invoke (e.g., "ollama", "deepseek_cli", or "echo" for local dev)
+# extra_args: optional list of args passed before the prompt
+model: "oss-dev"
+command: "echo"
+extra_args:
+  - "--model"
+  - "oss-dev"
+# Optional: override health check args (default: ["--version"])
+# health_args:
+#   - "--version"

@@ -1,0 +1,12 @@
+# Gemini CLI Dev Lane Backend Configuration
+# model: Gemini model identifier
+# command: CLI executable (e.g., "gmx" or "gci"); default "echo" for local dev
+# extra_args: optional list of args passed before the prompt
+model: "gemini-dev"
+command: "echo"
+extra_args:
+  - "--model"
+  - "gemini-dev"
+# Optional: override health check args (default: ["--version"])
+# health_args:
+#   - "--version"
