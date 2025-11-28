@@ -24,8 +24,19 @@ def read_jsonl(path: Path, limit: int = 200) -> List[Dict[str, Any]]:
 
 
 def collect_events(base_dir: Path, telemetry_path: str | None = None, conversations_path: str | None = None, limit: int = 200) -> Dict[str, List[Dict[str, Any]]]:
-    telemetry_file = Path(telemetry_path or base_dir / "g/telemetry/lac/events.jsonl")
-    conversations_file = Path(conversations_path or base_dir / "g/telemetry/agent_conversations.jsonl")
+    if telemetry_path:
+        telemetry_file = Path(telemetry_path)
+        if not telemetry_file.is_absolute():
+            telemetry_file = base_dir / telemetry_file
+    else:
+        telemetry_file = base_dir / "g/telemetry/lac/events.jsonl"
+    
+    if conversations_path:
+        conversations_file = Path(conversations_path)
+        if not conversations_file.is_absolute():
+            conversations_file = base_dir / conversations_file
+    else:
+        conversations_file = base_dir / "g/telemetry/agent_conversations.jsonl"
 
     return {
         "events": read_jsonl(telemetry_file, limit=limit),
