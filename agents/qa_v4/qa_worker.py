@@ -70,6 +70,7 @@ class QAWorkerV4:
                 "status": "failed",
                 "reason": "CHECKLIST_FAILED",
                 "checklist": checklist_result,
+                "qa_actions": qa_actions_results,
                 "partial_results": results,
             }
 
@@ -82,6 +83,7 @@ class QAWorkerV4:
                 return {
                     "status": "failed",
                     "reason": lint_result.get("reason", "LINT_FAILED"),
+                    "checklist": checklist_result,
                     "qa_actions": qa_actions_results,
                     "partial_results": results,
                 }
@@ -95,6 +97,7 @@ class QAWorkerV4:
                 return {
                     "status": "failed",
                     "reason": test_result.get("reason", "TEST_FAILED"),
+                    "checklist": checklist_result,
                     "qa_actions": qa_actions_results,
                     "partial_results": results,
                 }
