@@ -23,7 +23,10 @@ def run_all() -> List[dict]:
     scheduler.register("structure_scan", lambda: structure_scan.run(expected_files=[]))
     scheduler.register("pattern_learning", pattern_learning.run)
     scheduler.register("health_check", health_check.run)
-    results = scheduler.run_all()
+    try:
+        results = scheduler.run_all()
+    except Exception as exc:  # defensive: should not crash background loop
+        results = [{"task": "scheduler_entrypoint", "status": "error", "reason": str(exc)}]
     _write_telemetry(base_dir, results)
     return results
 
