@@ -154,7 +154,8 @@ class QAWorkerV4:
         structure_result = self._structure_compliance(architect_spec)
         patterns = self._load_patterns()
         structure_result["pattern_warnings"] = patterns.get("known_reasons", [])
-        return {"status": "success", "lint": lint_result, "structure": structure_result}
+        status = "warn" if structure_result.get("pattern_warnings") else "success"
+        return {"status": status, "lint": lint_result, "structure": structure_result}
 
     def _structure_compliance(self, architect_spec: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         if not architect_spec:

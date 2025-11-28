@@ -48,6 +48,15 @@ class ArchitectAgent:
 
         if pattern_warnings:
             spec["pattern_warnings"] = pattern_warnings
+            # Optional checklist note for QA/Docs awareness
+            spec["qa_checklist"].append(
+                {
+                    "id": "pattern_warn_001",
+                    "description": f"Review known pattern warnings: {', '.join(pattern_warnings)}",
+                    "type": "manual_review",
+                    "required": False,
+                }
+            )
 
         examples = self._generate_examples(patterns)
         if examples:
