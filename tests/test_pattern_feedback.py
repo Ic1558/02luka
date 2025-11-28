@@ -43,5 +43,5 @@ def test_qa_basic_checks_include_patterns(tmp_path, monkeypatch):
     )
 
     assert result["status"] == "success"
-    patterns = result["basic_checks"].get("patterns", [])
-    assert "TEST_FAILED" in patterns
+    warnings = result["basic_checks"]["structure"].get("pattern_warnings", [])
+    assert "TEST_FAILED" in warnings

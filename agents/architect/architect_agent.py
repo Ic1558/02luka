@@ -106,7 +106,7 @@ class ArchitectAgent:
             return []
         try:
             data = yaml.safe_load(self.pattern_db_path.read_text(encoding="utf-8")) or {}
-        except Exception:
+        except (yaml.YAMLError, OSError):
             return []
         return list(data.get("known_reasons", []))
 
