@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 from agents.qa_v4.actions import QaActions
 from agents.qa_v4.checklist_engine import evaluate_checklist
 from shared.policy import apply_patch, check_write_allowed
+from agents.rnd.pattern_learner import load_patterns
 
 
 class QAWorkerV4:
@@ -150,10 +151,12 @@ class QAWorkerV4:
         if lint_result.get("status") != "success":
             return {"status": "failed", "reason": lint_result.get("reason", "LINT_FAILED"), "lint": lint_result}
 
-        structure_result = self._structure_compliance(existing_files, architect_spec)
-        return {"status": "success", "lint": lint_result, "structure": structure_result}
+        structure_result = self._structure_compliance(architect_spec)
+        patterns = self._load_patterns()
+        structure_result["pattern_warnings"] = patterns.get("known_reasons", [])
+        return {"status": "success", "lint": lint_result, "structure": structure_result, "patterns": patterns.get("known_reasons", [])}
 
-    def _structure_compliance(self, existing_files: List[str], architect_spec: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _structure_compliance(self, architect_spec: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         if not architect_spec:
             return {"status": "skipped"}
 
@@ -185,6 +188,10 @@ class QAWorkerV4:
     def _base_dir(self) -> Path:
         base_dir = os.getenv("LAC_BASE_DIR")
         return Path(base_dir).resolve() if base_dir else Path.cwd().resolve()
+
+    def _load_patterns(self) -> Dict[str, Any]:
+        base_dir = self._base_dir()
+        return load_patterns(base_dir / "agents/rnd/pattern_db.yaml")
 
 
 __all__ = ["QAWorkerV4", "check_write_allowed", "apply_patch"]
