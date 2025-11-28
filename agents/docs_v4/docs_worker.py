@@ -134,7 +134,10 @@ class DocsWorkerV4:
             path = (base_dir / f).resolve()
             if not path.exists():
                 continue
-            stat = path.stat()
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
             catalog_entries.append(
                 {"path": path.relative_to(base_dir).as_posix(), "size": stat.st_size, "mtime": int(stat.st_mtime)}
             )
