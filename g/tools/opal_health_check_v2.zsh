@@ -1,314 +1,90 @@
-#!/usr/bin/env zsh
-# ═══════════════════════════════════════════════════════════════════════
-# OPAL V4 Health Check v2 - Production Observability Tool
-# ═══════════════════════════════════════════════════════════════════════
-# Created: 2025-11-27 by CLC Worker
-# WO: WO-HEALTH-CHECK-V2-0001
-# Features:
-#   - Latency metrics (API, Redis, Workers)
-#   - Queue/backlog depth monitoring
-#   - LaunchAgent restart detection
-#   - Dual output: Text + JSON
-#   - Auto-restart hooks (disabled by default)
-# ═══════════════════════════════════════════════════════════════════════
+## 6. Implementation Status (v1.1 – Sensing Mode)
 
-setopt +o nomatch
+The GMX CLC Orchestrator is now running in **"sensing" mode** rather than a pure non-functional skeleton.
 
-# ═══════════════════════════════════════════
-# Configuration
-# ═══════════════════════════════════════════
-ROOT="${HOME}/02luka"
-TIMESTAMP=$(date '+%Y-%m-%dT%H:%M:%S%z')
-OUTPUT_JSON="$ROOT/g/telemetry/health_check_latest.json"
-OUTPUT_LOG="$ROOT/g/telemetry/health_check.log"
-REDIS_PASS="gggclukaic"
-API_HOST="127.0.0.1"
-API_PORT="7001"
+**Current capabilities (v1.1):**
+- The LaunchAgent `com.02luka.gmx-clc-orchestrator` is installed under `~/Library/LaunchAgents/` and runs the orchestrator script on a fixed interval.
+- The orchestrator script `g/tools/gmx_clc_orchestrator.zsh`:
+  - Normalizes its working directory to the project root (`/Users/icmini/02luka`).
+  - Reads current system/OPS context, including:
+    - OPAL Health JSON: `g/telemetry/health_check_latest.json` (if present)
+    - CLC/LIAM ACK directory metadata: `bridge/outbox/LIAM` (count, latest files)
+    - Session state directory presence: `state/clc_sessions`
+  - Builds a **structured context JSON** on disk (under `tmp/`) as input to GMX.
+  - Calls the **GMX (Gemini CLI) profile** dedicated to the orchestrator (e.g. `clc-orchestrator`) and captures its response as a "plan".
+  - Parses the GMX response and logs a summary line showing `GMX_Call_Status`, `WOs_Created`, and `WO_IDs`.
+- The orchestrator currently runs in **read-only / no-side-effect mode**:
+  - It does **not** create any new Work Orders in `bridge/inbox/CLC/`.
+  - It only logs what it observes and what GMX suggests (if anything), so the rest of the system remains stable.
 
-# Auto-restart settings (DISABLED by default)
-AUTO_RESTART_ENABLED=false
+**Key limitations of v1.1:**
+- **No WO generation yet:**
+  - The code path that would transform a GMX plan into one or more `WO-*.yaml` files for CLC is intentionally disabled.
+  - This prevents accidental writes to the bridge inbox while GMX prompts and safety policies are still being refined.
+- **Session / ACK enrichment still WIP:**
+  - ACK summarization and detailed session-state snapshots are intentionally minimized; future versions will safely enrich the context with recent changes and CLC activity.
+- **Error handling for external tools is minimal:**
+  - If GMX or dependencies such as `jq`/`yq` are missing, the orchestrator currently treats this as a sensing failure and logs the error, but does not attempt automatic repair.
 
-# Thresholds
-LATENCY_WARN_MS=500
-LATENCY_CRIT_MS=2000
-BACKLOG_WARN=10
-BACKLOG_CRIT=50
+The primary purpose of v1.1 is to have a **live, low-risk sensing loop**: GMX is wired in, context is built, and logs show how the system would behave, without yet allowing the orchestrator to mutate CLC state.
 
-# ═══════════════════════════════════════════
-# JSON Builder
-# ═══════════════════════════════════════════
-declare -A JSON_DATA
-JSON_CHECKS=()
-OVERALL_STATUS="healthy"
-ISSUES=()
+## 7. Verification Plan (v1.1 – Sensing Mode)
 
-add_check() {
-    local name="$1"
-    local check_status="$2"
-    local latency_ms="$3"
-    local details="$4"
-    
-    JSON_CHECKS+=("{\"name\":\"$name\",\"status\":\"$check_status\",\"latency_ms\":$latency_ms,\"details\":\"$details\"}")
-    
-    if [[ "$check_status" == "critical" ]]; then
-        OVERALL_STATUS="critical"
-        ISSUES+=("$name: $details")
-    elif [[ "$check_status" == "warning" && "$OVERALL_STATUS" != "critical" ]]; then
-        OVERALL_STATUS="warning"
-        ISSUES+=("$name: $details")
-    fi
-}
+This plan verifies the health of the **sensing-mode** orchestrator without requiring it to create any Work Orders.
 
-# ═══════════════════════════════════════════
-# Header
-# ═══════════════════════════════════════════
-echo "╔═══════════════════════════════════════════════════════════════════╗"
-echo "║          🔍 OPAL V4 Health Check v2 - Observability               ║"
-echo "╚═══════════════════════════════════════════════════════════════════╝"
-echo "📅 Timestamp: $TIMESTAMP"
-echo "🔧 Auto-restart: $(if $AUTO_RESTART_ENABLED; then echo 'ENABLED'; else echo 'disabled'; fi)"
-echo ""
+### Manual Verification Steps
 
-# ═══════════════════════════════════════════
-# 1. Redis Health + Latency
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [1/6] Redis Health                                              │"
-echo "└─────────────────────────────────────────────────────────────────┘"
+1. **Ensure LaunchAgent is installed and loaded**
 
-REDIS_START=$(perl -MTime::HiRes=time -e 'printf "%.3f", time')
-REDIS_PING=$(redis-cli -a "$REDIS_PASS" ping 2>/dev/null)
-REDIS_END=$(perl -MTime::HiRes=time -e 'printf "%.3f", time')
-REDIS_LATENCY=$(echo "($REDIS_END - $REDIS_START) * 1000" | bc | cut -d'.' -f1)
+   ```bash
+   cp LaunchAgents/com.02luka.gmx-clc-orchestrator.plist ~/Library/LaunchAgents/
+   launchctl unload ~/Library/LaunchAgents/com.02luka.gmx-clc-orchestrator.plist 2>/dev/null || true
+   launchctl load ~/Library/LaunchAgents/com.02luka.gmx-clc-orchestrator.plist
+   ```
 
-if [[ "$REDIS_PING" == "PONG" ]]; then
-    REDIS_INFO=$(redis-cli -a "$REDIS_PASS" info memory 2>/dev/null | grep used_memory_human | cut -d: -f2 | tr -d '\r')
-    REDIS_CLIENTS=$(redis-cli -a "$REDIS_PASS" info clients 2>/dev/null | grep connected_clients | cut -d: -f2 | tr -d '\r')
-    
-    if [[ "$REDIS_LATENCY" -gt "$LATENCY_CRIT_MS" ]]; then
-        echo "   ⚠️  Redis: SLOW (${REDIS_LATENCY}ms > ${LATENCY_CRIT_MS}ms)"
-        add_check "redis" "warning" "$REDIS_LATENCY" "High latency"
-    else
-        echo "   ✅ Redis: PONG"
-    fi
-    echo "   📊 Latency: ${REDIS_LATENCY}ms | Memory: ${REDIS_INFO:-N/A} | Clients: ${REDIS_CLIENTS:-N/A}"
-    [[ -z "${REDIS_LATENCY}" || "$REDIS_LATENCY" -le "$LATENCY_CRIT_MS" ]] && add_check "redis" "healthy" "${REDIS_LATENCY:-0}" "OK"
-else
-    echo "   ❌ Redis: NOT RESPONDING"
-    add_check "redis" "critical" "0" "Connection failed"
-fi
-echo ""
+   - **Expected:** `launchctl list | grep gmx-clc-orchestrator` returns a line with a non-`-` PID and `LastExitStatus = 0`.
 
-# ═══════════════════════════════════════════
-# 2. OPAL API Health + Latency
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [2/6] OPAL API Health                                           │"
-echo "└─────────────────────────────────────────────────────────────────┘"
+2. **Trigger the orchestrator manually**
 
-API_RESULT=$(curl -s -w "\n%{time_total}" "http://${API_HOST}:${API_PORT}/api/budget" 2>/dev/null)
-API_BODY=$(echo "$API_RESULT" | head -n1)
-API_TIME=$(echo "$API_RESULT" | tail -n1)
-API_LATENCY=$(echo "$API_TIME * 1000" | bc | cut -d'.' -f1)
+   ```bash
+   cd /Users/icmini/02luka
+   zsh g/tools/gmx_clc_orchestrator.zsh
+   ```
 
-if [[ -n "$API_BODY" && "$API_BODY" != *"error"* && "$API_BODY" != *"Failed"* ]]; then
-    if [[ "$API_LATENCY" -gt "$LATENCY_CRIT_MS" ]]; then
-        echo "   ⚠️  API: SLOW (${API_LATENCY}ms > ${LATENCY_CRIT_MS}ms)"
-        add_check "opal_api" "warning" "$API_LATENCY" "High latency"
-    else
-        echo "   ✅ API: Running on :${API_PORT}"
-        add_check "opal_api" "healthy" "$API_LATENCY" "OK"
-    fi
-    echo "   📊 Latency: ${API_LATENCY}ms"
-else
-    echo "   ❌ API: NOT RESPONDING"
-    add_check "opal_api" "critical" "0" "Connection failed"
-fi
-echo ""
+   - **Expected:** The command exits with code `0` and does not print error stack traces.
 
-# ═══════════════════════════════════════════
-# 3. LaunchAgents Status + Restart Detection
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [3/6] LaunchAgents Status                                       │"
-echo "└─────────────────────────────────────────────────────────────────┘"
+3. **Inspect the orchestrator log**
 
-AGENTS=("shell-executor" "mary-bridge" "clc-worker")
-typeset -A AGENT_STATUS_MAP
+   ```bash
+   tail -n 20 logs/gmx_clc_orchestrator.log
+   ```
 
-for agent in "${AGENTS[@]}"; do
-    result=$(launchctl list 2>/dev/null | grep "$agent" || echo "")
-    if [[ -n "$result" ]]; then
-        pid=$(echo "$result" | awk '{print $1}')
-        exit_code=$(echo "$result" | awk '{print $2}')
-        
-        if [[ "$pid" != "-" && "$exit_code" == "0" ]]; then
-            echo "   ✅ $agent (PID: $pid)"
-            add_check "agent_$agent" "healthy" "0" "Running"
-            AGENT_STATUS_MAP["$agent"]="running"
-        elif [[ "$pid" != "-" ]]; then
-            echo "   ⚠️  $agent (PID: $pid, last exit: $exit_code)"
-            add_check "agent_$agent" "warning" "0" "Exit code $exit_code"
-            AGENT_STATUS_MAP["$agent"]="warning"
-        else
-            echo "   ❌ $agent (not running, last exit: $exit_code)"
-            add_check "agent_$agent" "critical" "0" "Not running"
-            AGENT_STATUS_MAP["$agent"]="stopped"
-            
-            # Auto-restart hook (disabled by default)
-            if $AUTO_RESTART_ENABLED; then
-                echo "   🔄 Auto-restarting $agent..."
-                launchctl start "com.02luka.$agent" 2>/dev/null
-            fi
-        fi
-    else
-        echo "   ⚪ $agent (not loaded)"
-        add_check "agent_$agent" "critical" "0" "Not loaded"
-        AGENT_STATUS_MAP["$agent"]="not_loaded"
-    fi
-done
-echo ""
+   - **Expected log patterns:**
+     - `--- Orchestrator loop started ---`
+     - `INFO: Gathering context...`
+     - `INFO: Skipping ACK summary (WIP).` (or equivalent WIP messages)
+     - `INFO: Plan is empty. No new Work Orders to create. System is idle.` (or a summary of a non-empty GMX plan)
+     - `SUMMARY: Timestamp=..., GMX_Call_Status=OK, WOs_Created=0, WO_IDs=[]`
 
-# ═══════════════════════════════════════════
-# 4. Queue/Backlog Depth
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [4/6] Queue & Backlog Status                                    │"
-echo "└─────────────────────────────────────────────────────────────────┘"
+4. **Confirm that no Work Orders are created**
 
-# Redis pub/sub channels
-SHELL_QUEUE=$(redis-cli -a "$REDIS_PASS" PUBSUB NUMSUB shell 2>/dev/null | tail -1 || echo "0")
-WO_QUEUE=$(redis-cli -a "$REDIS_PASS" PUBSUB NUMSUB "wo:incoming:opal" 2>/dev/null | tail -1 || echo "0")
+   ```bash
+   ls -la bridge/inbox/CLC
+   ```
 
-echo "   📡 Redis Channels:"
-echo "      • shell subscribers: ${SHELL_QUEUE:-0}"
-echo "      • wo:incoming:opal subscribers: ${WO_QUEUE:-0}"
+   - **Expected:** Only static files such as `.DS_Store` and `templates/` exist. No new `WO-*.yaml` files should appear as a result of the orchestrator run.
 
-# Bridge inbox backlog (exclude archive directories)
-ENTRY_BACKLOG=$(find "$ROOT/bridge/inbox/ENTRY" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
-CLC_BACKLOG=$(find "$ROOT/bridge/inbox/CLC" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | tr -d ' ')
+5. **Validate behavior when GMX or dependencies are unavailable (optional)**
 
-echo "   📥 Bridge Inbox Backlog:"
+   - Temporarily move `gmx` out of `PATH` or run with a profile that is not configured.
+   - Re-run the orchestrator:
 
-if [[ "$ENTRY_BACKLOG" -gt "$BACKLOG_CRIT" ]]; then
-    echo "      • ENTRY: ${ENTRY_BACKLOG} ❌ (> $BACKLOG_CRIT critical)"
-    add_check "backlog_entry" "critical" "0" "$ENTRY_BACKLOG items"
-elif [[ "$ENTRY_BACKLOG" -gt "$BACKLOG_WARN" ]]; then
-    echo "      • ENTRY: ${ENTRY_BACKLOG} ⚠️ (> $BACKLOG_WARN warning)"
-    add_check "backlog_entry" "warning" "0" "$ENTRY_BACKLOG items"
-else
-    echo "      • ENTRY: ${ENTRY_BACKLOG} ✅"
-    add_check "backlog_entry" "healthy" "0" "$ENTRY_BACKLOG items"
-fi
+     ```bash
+     cd /Users/icmini/02luka
+     zsh g/tools/gmx_clc_orchestrator.zsh
+     tail -n 20 logs/gmx_clc_orchestrator.log
+     ```
 
-if [[ "$CLC_BACKLOG" -gt "$BACKLOG_CRIT" ]]; then
-    echo "      • CLC: ${CLC_BACKLOG} ❌ (> $BACKLOG_CRIT critical)"
-    add_check "backlog_clc" "critical" "0" "$CLC_BACKLOG items"
-elif [[ "$CLC_BACKLOG" -gt "$BACKLOG_WARN" ]]; then
-    echo "      • CLC: ${CLC_BACKLOG} ⚠️ (> $BACKLOG_WARN warning)"
-    add_check "backlog_clc" "warning" "0" "$CLC_BACKLOG items"
-else
-    echo "      • CLC: ${CLC_BACKLOG} ✅"
-    add_check "backlog_clc" "healthy" "0" "$CLC_BACKLOG items"
-fi
-echo ""
+   - **Expected:** The script logs an error about the missing tool / failed GMX call, sets `GMX_Call_Status` accordingly in the summary, and still exits cleanly without creating any Work Orders.
 
-# ═══════════════════════════════════════════
-# 5. Recent Activity
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [5/6] Recent Activity                                           │"
-echo "└─────────────────────────────────────────────────────────────────┘"
-
-ACK_DIR="$ROOT/bridge/outbox/LIAM"
-if [[ -d "$ACK_DIR" ]]; then
-    ACK_COUNT=$(find "$ACK_DIR" -name "*.ack.json" 2>/dev/null | wc -l | tr -d ' ')
-    RECENT_ACKS=$(find "$ACK_DIR" -name "*.ack.json" -mmin -60 2>/dev/null | wc -l | tr -d ' ')
-    echo "   📊 Total ACKs: $ACK_COUNT | Last hour: $RECENT_ACKS"
-    echo "   📄 Latest 3:"
-    find "$ACK_DIR" -name "*.ack.json" -print 2>/dev/null | xargs ls -t 2>/dev/null | head -3 | while read f; do
-        echo "      • $(basename $f)"
-    done
-else
-    echo "   ⚠️  ACK directory not found"
-fi
-echo ""
-
-# ═══════════════════════════════════════════
-# 6. System Resources
-# ═══════════════════════════════════════════
-echo "┌─────────────────────────────────────────────────────────────────┐"
-echo "│ [6/6] System Resources                                          │"
-echo "└─────────────────────────────────────────────────────────────────┘"
-
-# CPU Load
-LOAD=$(uptime | awk -F'load averages:' '{print $2}' | xargs)
-echo "   📈 Load Average: $LOAD"
-
-# Memory
-MEM_FREE=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.')
-MEM_INACTIVE=$(vm_stat | grep "Pages inactive" | awk '{print $3}' | tr -d '.')
-TOTAL_FREE=$(( (MEM_FREE + MEM_INACTIVE) * 4096 / 1024 / 1024 ))
-echo "   💾 Free Memory: ~${TOTAL_FREE} MB"
-
-# Disk
-DISK_FREE=$(df -h "$ROOT" 2>/dev/null | tail -1 | awk '{print $4}')
-echo "   💿 Disk Free (02luka): $DISK_FREE"
-echo ""
-
-# ═══════════════════════════════════════════
-# Summary
-# ═══════════════════════════════════════════
-echo "╔═══════════════════════════════════════════════════════════════════╗"
-if [[ "$OVERALL_STATUS" == "healthy" ]]; then
-    echo "║  ✅ OVERALL STATUS: HEALTHY                                       ║"
-elif [[ "$OVERALL_STATUS" == "warning" ]]; then
-    echo "║  ⚠️  OVERALL STATUS: WARNING                                       ║"
-else
-    echo "║  ❌ OVERALL STATUS: CRITICAL                                       ║"
-fi
-echo "╚═══════════════════════════════════════════════════════════════════╝"
-
-if [[ ${#ISSUES[@]} -gt 0 ]]; then
-    echo ""
-    echo "📋 Issues Found:"
-    for issue in "${ISSUES[@]}"; do
-        echo "   • $issue"
-    done
-fi
-echo ""
-
-# ═══════════════════════════════════════════
-# Generate JSON Output
-# ═══════════════════════════════════════════
-CHECKS_JSON=$(IFS=,; echo "${JSON_CHECKS[*]}")
-
-cat > "$OUTPUT_JSON" << EOF
-{
-  "timestamp": "$TIMESTAMP",
-  "version": "2.0",
-  "overall_status": "$OVERALL_STATUS",
-  "auto_restart_enabled": $AUTO_RESTART_ENABLED,
-  "checks": [$CHECKS_JSON],
-  "metrics": {
-    "redis_latency_ms": ${REDIS_LATENCY:-0},
-    "api_latency_ms": ${API_LATENCY:-0},
-    "entry_backlog": $ENTRY_BACKLOG,
-    "clc_backlog": $CLC_BACKLOG,
-    "total_acks": ${ACK_COUNT:-0},
-    "recent_acks_1h": ${RECENT_ACKS:-0},
-    "free_memory_mb": $TOTAL_FREE,
-    "disk_free": "$DISK_FREE"
-  },
-  "agents": {
-    "shell_executor": "${AGENT_STATUS_MAP["shell-executor"]:-unknown}",
-    "mary_bridge": "${AGENT_STATUS_MAP["mary-bridge"]:-unknown}",
-    "clc_worker": "${AGENT_STATUS_MAP["clc-worker"]:-unknown}"
-  }
-}
-EOF
-
-echo "📄 JSON output: $OUTPUT_JSON"
-echo "📝 Log appended: $OUTPUT_LOG"
-echo "$TIMESTAMP | $OVERALL_STATUS | Redis:${REDIS_LATENCY:-0}ms API:${API_LATENCY:-0}ms ENTRY:$ENTRY_BACKLOG CLC:$CLC_BACKLOG" >> "$OUTPUT_LOG"
-echo ""
+This verification plan ensures that v1.1 provides a **stable sensing loop** with well-understood logs and no unintended writes to CLC or bridge state.
