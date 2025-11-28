@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.02luka.lac.background</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>-lc</string>
+        <string>~/LocalProjects/02luka_local_g/g/tools/lac_background_runner.zsh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>~/LocalProjects/02luka_local_g/g/logs/lac_background_out.log</string>
+    <key>StandardErrorPath</key>
+    <string>~/LocalProjects/02luka_local_g/g/logs/lac_background_err.log</string>
+</dict>
+</plist>
