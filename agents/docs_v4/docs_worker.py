@@ -41,6 +41,8 @@ class DocsWorkerV4:
             return self._run_catalog(task)
         if task.get("operation") == "listen" or task.get("listen"):
             return self._run_listen(task)
+        if task.get("operation") == "summary":
+            return self._run_summary(task)
 
         plan = self.plan_docs(task)
         patches = self.generate_doc_patches(plan)
@@ -95,6 +97,61 @@ class DocsWorkerV4:
         return {
             "status": "success",
             "files_touched": [write_result.get("file")],
+            "count": catalog.get("count", 0),
+        }
+
+    def _run_summary(self, task: Dict) -> Dict:
+        base_dir = Path(os.getenv("LAC_BASE_DIR") or Path.cwd())
+        summary_path = Path(task.get("summary_path") or (base_dir / "g/docs/pipeline_summary.md"))
+        catalog_path = Path(task.get("catalog_path") or (base_dir / "g/catalog/file_catalog.yaml"))
+
+        requirement_id = task.get("requirement_id", "UNKNOWN")
+        status = task.get("status", "unknown")
+        lane = task.get("lane", "dev_oss")
+        qa_status = task.get("qa_status", "unknown")
+        files_touched = task.get("files_touched") or []
+
+        lines = [
+            "# Pipeline Summary",
+            f"- Requirement: {requirement_id}",
+            f"- Status: {status}",
+            f"- Lane: {lane}",
+            f"- QA Status: {qa_status}",
+            f"- Files Touched: {', '.join(files_touched) if files_touched else 'none'}",
+        ]
+        summary_content = "\n".join(lines)
+
+        summary_result = self.self_write(str(summary_path), summary_content)
+        if summary_result.get("status") != "success":
+            return {
+                "status": "failed",
+                "reason": summary_result.get("reason", "SUMMARY_WRITE_FAILED"),
+                "partial_results": [summary_result],
+            }
+
+        catalog_entries = []
+        for f in files_touched:
+            path = (base_dir / f).resolve()
+            if not path.exists():
+                continue
+            stat = path.stat()
+            catalog_entries.append(
+                {"path": path.relative_to(base_dir).as_posix(), "size": stat.st_size, "mtime": int(stat.st_mtime)}
+            )
+
+        catalog = build_catalog(base_dir, catalog_entries)
+        write_result = write_catalog(catalog_path, catalog)
+
+        if write_result.get("status") != "success":
+            return {
+                "status": "failed",
+                "reason": write_result.get("reason", "CATALOG_WRITE_FAILED"),
+                "partial_results": [summary_result, write_result],
+            }
+
+        return {
+            "status": "success",
+            "files_touched": [summary_result.get("file"), write_result.get("file")],
             "count": catalog.get("count", 0),
         }
 
