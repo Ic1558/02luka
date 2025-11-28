@@ -1,0 +1,31 @@
+# Architect Spec Schema - v1.0 (stub for LAC v4)
+spec_version: "1.0"
+
+required_fields:
+  - requirement_id
+  - architecture.structure
+  - architecture.patterns
+  - architecture.standards
+  - qa_checklist
+
+fields:
+  requirement_id:
+    type: string
+    description: "ID from Requirement.md"
+
+  architecture:
+    type: object
+    properties:
+      structure:
+        type: object
+        description: "Modules, files, and responsibilities"
+      patterns:
+        type: array
+        description: "Design patterns Architect expects to be used"
+      standards:
+        type: object
+        description: "Naming, error handling, testing standards"
+
+  qa_checklist:
+    type: array
+    description: "List of QA checks derived from the spec"
