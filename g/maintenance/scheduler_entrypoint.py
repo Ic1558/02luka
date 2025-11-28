@@ -9,8 +9,15 @@ from g.maintenance import catalog_rebuild, health_check, pattern_learning, struc
 from shared.scheduler import Scheduler
 
 
+def get_base_dir() -> Path:
+    env = os.getenv("LAC_BASE_DIR")
+    if env:
+        return Path(env)
+    return Path.cwd()
+
+
 def run_all() -> List[dict]:
-    base_dir = Path(os.getenv("LAC_BASE_DIR") or Path.cwd())
+    base_dir = get_base_dir()
     scheduler = Scheduler()
     scheduler.register("catalog_rebuild", catalog_rebuild.run)
     scheduler.register("structure_scan", lambda: structure_scan.run(expected_files=[]))
@@ -32,5 +39,9 @@ def _write_telemetry(base_dir: Path, results: List[dict]) -> None:
         return
 
 
-if __name__ == "__main__":
+def main() -> None:
     run_all()
+
+
+if __name__ == "__main__":
+    main()
