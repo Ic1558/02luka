@@ -1,11 +1,17 @@
 """
-Docs V4 Worker with direct-write capability for documentation files.
+Docs V4 Worker with direct-write capability for documentation files and catalog generation.
 """
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Dict, List
 
+from agents.docs_v4.cataloger import build_catalog, write_catalog
+from agents.docs_v4.listener import collect_events
+from agents.docs_v4.scanner import scan_paths
+from agents.docs_v4.summarizer import build_summary, summarize_conversations, summarize_events
 from shared.policy import apply_patch, check_write_allowed
 
 
@@ -31,6 +37,11 @@ class DocsWorkerV4:
         return plan.get("patches", [])
 
     def execute_task(self, task: Dict) -> Dict:
+        if task.get("operation") == "catalog" or task.get("catalog"):
+            return self._run_catalog(task)
+        if task.get("operation") == "listen" or task.get("listen"):
+            return self._run_listen(task)
+
         plan = self.plan_docs(task)
         patches = self.generate_doc_patches(plan)
 
@@ -65,5 +76,53 @@ class DocsWorkerV4:
             ],
         }
 
+    def _run_catalog(self, task: Dict) -> Dict:
+        base_dir = Path(os.getenv("LAC_BASE_DIR") or Path.cwd())
+        roots = task.get("roots") or ["g/src", "g/docs"]
+        catalog_path = Path(task.get("catalog_path") or (base_dir / "g/catalog/file_catalog.json"))
 
-__all__ = ["DocsWorkerV4", "check_write_allowed", "apply_patch"]
+        entries = scan_paths(base_dir, roots)
+        catalog = build_catalog(base_dir, entries)
+        write_result = write_catalog(catalog_path, catalog)
+
+        if write_result.get("status") != "success":
+            return {
+                "status": "failed",
+                "reason": write_result.get("reason", "CATALOG_WRITE_FAILED"),
+                "partial_results": [write_result],
+            }
+
+        return {
+            "status": "success",
+            "files_touched": [write_result.get("file")],
+            "count": catalog.get("count", 0),
+        }
+
+    def _run_listen(self, task: Dict) -> Dict:
+        base_dir = Path(os.getenv("LAC_BASE_DIR") or Path.cwd())
+        events_path = task.get("events_path")
+        conversations_path = task.get("conversations_path")
+        summary_path = Path(task.get("summary_path") or (base_dir / "g/docs/telemetry_summary.md"))
+
+        collected = collect_events(base_dir, telemetry_path=events_path, conversations_path=conversations_path, limit=task.get("limit", 200))
+        events_summary = summarize_events(collected.get("events", []))
+        convo_summary = summarize_conversations(collected.get("conversations", []))
+        summary_content = build_summary(events_summary, convo_summary)
+
+        write_result = self.self_write(str(summary_path), summary_content)
+        if write_result.get("status") != "success":
+            return {
+                "status": "failed",
+                "reason": write_result.get("reason", "SUMMARY_WRITE_FAILED"),
+                "partial_results": [write_result],
+            }
+
+        return {
+            "status": "success",
+            "files_touched": [write_result.get("file")],
+            "events": events_summary,
+            "conversations": convo_summary,
+        }
+
+
+__all__ = ["DocsWorkerV4", "check_write_allowed", "apply_patch", "scan_paths", "build_catalog", "write_catalog"]
