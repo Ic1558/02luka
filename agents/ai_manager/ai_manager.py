@@ -82,8 +82,10 @@ class AIManager:
         wo.setdefault("self_apply", True)
 
         analysis = self.architect.design(wo)
-        spec_obj: ArchitectSpec = self.spec_builder.build_spec(analysis)
-        wo["architect_spec"] = spec_obj.__dict__
+        # Use analysis directly to maintain consistent nested structure
+        # (architecture.structure, architecture.patterns, etc.)
+        # This matches build_work_order_from_requirement() format
+        wo["architect_spec"] = analysis
 
         routing = self._ensure_routing(wo)
         if routing.get("lane") != "dev_oss":
