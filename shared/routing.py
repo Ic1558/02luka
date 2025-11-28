@@ -79,7 +79,7 @@ def determine_lane(complexity: str, file_count: int = 0, hint: Optional[str] = N
     if complexity == "simple" and file_count <= rules["simple"]["file_count_max"]:
         return {"lane": "dev_oss", "model": rules["simple"]["model"], "approved": True, "reason": "complexity_simple"}
     
-    if complexity == "moderate" or file_count <= rules["moderate"]["file_count_max"]:
+    if complexity == "moderate" and file_count <= rules["moderate"]["file_count_max"]:
         return {"lane": "dev_gmxcli", "model": rules["moderate"]["model"], "approved": True, "reason": "complexity_moderate"}
     
     # 3. Complex / Fallback
