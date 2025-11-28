@@ -37,6 +37,10 @@ class QAWorkerV4:
         return plan.get("patches", [])
 
     def execute_task(self, task: Dict[str, Any]) -> Dict:
+        # Evaluate checklist early for consistent response structure
+        qa_actions_results = []
+        checklist_result = evaluate_checklist(task.get("architect_spec"), self.actions)
+
         plan = self.plan_tests(task)
         patches = self.generate_test_patches(plan)
 
@@ -48,23 +52,26 @@ class QAWorkerV4:
                 return {
                     "status": "failed",
                     "reason": result["reason"],
+                    "checklist": checklist_result,
+                    "qa_actions": qa_actions_results,
                     "partial_results": results,
                 }
             if result["status"] == "error":
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "FILE_WRITE_ERROR"),
+                    "checklist": checklist_result,
+                    "qa_actions": qa_actions_results,
                     "partial_results": results,
                 }
             if result["status"] == "failed":
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "VALIDATION_FAILED"),
+                    "checklist": checklist_result,
+                    "qa_actions": qa_actions_results,
                     "partial_results": results,
                 }
-
-        qa_actions_results = []
-        checklist_result = evaluate_checklist(task.get("architect_spec"), self.actions)
         if checklist_result["status"] != "pass":
             return {
                 "status": "failed",
