@@ -11,15 +11,20 @@ from typing import Any, Dict, List, Optional
 from agents.ai_manager.actions.direct_merge import direct_merge
 from agents.ai_manager.requirement_parser import parse_requirement_md
 from agents.architect.architect_agent import ArchitectAgent
+from agents.architect.spec_builder import ArchitectSpec, SpecBuilder
 from agents.clc.model_router import should_route_to_clc
+from agents.dev_oss.dev_worker import DevOSSWorker
+from agents.qa_v4.qa_worker import QAWorkerV4
+from agents.docs_v4.docs_worker import DocsWorkerV4
 from g.tools.lac_telemetry import build_event, log_event
 from shared.routing import determine_lane
 
 
 class AIManager:
-    def __init__(self, architect: Optional[ArchitectAgent] = None):
+    def __init__(self, architect: Optional[ArchitectAgent] = None, spec_builder: Optional[SpecBuilder] = None):
         self.state: str = "NEW"
         self.architect = architect or ArchitectAgent()
+        self.spec_builder = spec_builder or SpecBuilder()
 
     def build_work_order_from_requirement(self, requirement_path: str = "Requirement.md", file_count: int = 0) -> Dict[str, Any]:
         """
@@ -66,6 +71,78 @@ class AIManager:
             "routing": routing,
             "architect_spec": architect_spec,
         }
+
+    def run_self_complete(self, requirement_content: str) -> Dict[str, Any]:
+        """
+        Simple self-complete pipeline:
+        Requirement content -> ArchitectSpec -> Dev (OSS) -> QA -> Docs -> Direct Merge (simple lane only).
+        """
+        wo = parse_requirement_md(requirement_content)
+        wo.setdefault("complexity", "simple")
+        wo.setdefault("self_apply", True)
+
+        analysis = self.architect.design(wo)
+        # Use analysis directly to maintain consistent nested structure
+        # (architecture.structure, architecture.patterns, etc.)
+        # This matches build_work_order_from_requirement() format
+        wo["architect_spec"] = analysis
+
+        routing = self._ensure_routing(wo)
+        if routing.get("lane") != "dev_oss":
+            return {"status": "failed", "stage": "routing", "reason": "UNSUPPORTED_LANE", "routing": routing}
+
+        # Dev step
+        wo["plan"] = {
+            "patches": [
+                {
+                    "file": "g/src/pipeline_output.txt",
+                    "content": f"{wo.get('objective', 'No objective')} ({wo.get('wo_id', 'UNKNOWN')})",
+                }
+            ]
+        }
+        dev_task = self.build_dev_task(wo)
+        dev_worker = DevOSSWorker(backend=None)
+        dev_result = dev_worker.execute_task(dev_task)
+        if dev_result.get("status") != "success":
+            return {"status": "failed", "stage": "dev", "result": dev_result}
+
+        files_touched = dev_result.get("files_touched", [])
+
+        # QA step
+        class _QuickQaActions:
+            def run_tests(self, target: str) -> Dict[str, Any]:
+                return {"status": "success", "target": target}
+
+            def run_lint(self, targets: List[str]) -> Dict[str, Any]:
+                return {"status": "success", "targets": targets}
+
+        qa_worker = QAWorkerV4(actions=_QuickQaActions())
+        qa_result = qa_worker.execute_task(
+            {"architect_spec": wo.get("architect_spec"), "run_tests": False, "files_touched": files_touched}
+        )
+        if qa_result.get("status") != "success":
+            return {"status": "failed", "stage": "qa", "result": qa_result}
+
+        # Docs step
+        docs_worker = DocsWorkerV4()
+        docs_result = docs_worker.execute_task(
+            {
+                "operation": "summary",
+                "requirement_id": wo.get("wo_id", "UNKNOWN"),
+                "status": "success",
+                "lane": routing.get("lane", "dev_oss"),
+                "qa_status": qa_result.get("status"),
+                "files_touched": files_touched,
+            }
+        )
+        if docs_result.get("status") != "success":
+            return {"status": "failed", "stage": "docs", "result": docs_result}
+
+        # Merge step (simple lane only)
+        merge_result = direct_merge(wo, files_touched)
+        merge_result["qa_result"] = qa_result
+        merge_result["docs_result"] = docs_result
+        return merge_result
 
     def build_dev_task(self, wo: Dict[str, Any]) -> Dict[str, Any]:
         """

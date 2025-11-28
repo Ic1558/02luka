@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
+from pathlib import Path
 from typing import Any, Dict, List
 
 from .pattern_library import PatternLibrary
@@ -14,9 +16,10 @@ class ArchitectAgent:
     and a QA checklist that developers and QA can consume.
     """
 
-    def __init__(self, pattern_library: PatternLibrary | None = None, standards_enforcer: StandardsEnforcer | None = None) -> None:
+    def __init__(self, pattern_library: PatternLibrary | None = None, standards_enforcer: StandardsEnforcer | None = None, pattern_db_path: str | None = None) -> None:
         self.pattern_library = pattern_library or PatternLibrary()
         self.standards_enforcer = standards_enforcer or StandardsEnforcer()
+        self.pattern_db_path = Path(pattern_db_path or os.getenv("LAC_PATTERN_DB") or "agents/rnd/pattern_db.yaml")
 
     def design(self, requirement: Dict[str, Any]) -> Dict[str, Any]:
         requirement_id = requirement.get("wo_id") or requirement.get("requirement_id") or "UNKNOWN"
@@ -28,6 +31,7 @@ class ArchitectAgent:
         patterns = self.pattern_library.select(complexity, modules)
         standards = self.standards_enforcer.build_standards(complexity)
         qa_checklist = self.standards_enforcer.build_qa_checklist(patterns)
+        pattern_warnings = self._load_pattern_warnings()
 
         spec = {
             "spec_version": "1.0",
@@ -41,6 +45,18 @@ class ArchitectAgent:
             },
             "qa_checklist": qa_checklist,
         }
+
+        if pattern_warnings:
+            spec["pattern_warnings"] = pattern_warnings
+            # Optional checklist note for QA/Docs awareness
+            spec["qa_checklist"].append(
+                {
+                    "id": "pattern_warn_001",
+                    "description": f"Review known pattern warnings: {', '.join(pattern_warnings)}",
+                    "type": "manual_review",
+                    "required": False,
+                }
+            )
 
         examples = self._generate_examples(patterns)
         if examples:
@@ -88,6 +104,20 @@ class ArchitectAgent:
                     "        raise NotImplementedError\n"
                 )
         return examples
+
+    def _load_pattern_warnings(self) -> List[str]:
+        try:
+            import yaml  # type: ignore
+        except ImportError:
+            return []
+
+        if not self.pattern_db_path.exists():
+            return []
+        try:
+            data = yaml.safe_load(self.pattern_db_path.read_text(encoding="utf-8")) or {}
+        except (yaml.YAMLError, OSError):
+            return []
+        return list(data.get("known_reasons", []))
 
 
 __all__ = ["ArchitectAgent"]

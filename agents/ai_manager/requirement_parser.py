@@ -67,12 +67,14 @@ def parse_requirement_md(content: str) -> Dict[str, Any]:
             data[current_section] += line + "\n"
 
     # Map parsed keys to standard schema
+    complexity = (data.get("complexity") or "moderate").lower()
+
     structured = {
         "wo_id": data.get("id", "UNKNOWN"),
         "objective": data.get("objective", "").strip(),
         "priority": data.get("priority", "P2"),
-        "complexity": data.get("complexity", "moderate").lower(),
-        "routing_hint": _infer_hint(data.get("complexity", "")),
+        "complexity": complexity,
+        "routing_hint": _infer_hint(complexity),
         "raw_content": content
     }
     
