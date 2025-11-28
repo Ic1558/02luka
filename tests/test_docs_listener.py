@@ -42,3 +42,28 @@ def test_docs_worker_listens_and_summarizes(tmp_path, monkeypatch):
     assert "QA_COMPLETED" in content
     assert "dev_oss" in content
     assert "qa_v4" in content
+
+
+def test_collect_events_resolves_relative_paths_from_base_dir(tmp_path, monkeypatch):
+    """Test that relative paths in collect_events resolve relative to base_dir, not CWD."""
+    from agents.docs_v4.listener import collect_events
+    import os
+
+    base_dir = tmp_path / "project"
+    base_dir.mkdir()
+
+    # Create telemetry file in base_dir with relative path
+    custom_telemetry = base_dir / "g" / "telemetry" / "custom.jsonl"
+    custom_telemetry.parent.mkdir(parents=True)
+    custom_telemetry.write_text('{"event_type":"CUSTOM","lane":"test"}\n', encoding="utf-8")
+
+    # Change to a different directory to verify path resolution
+    original_cwd = os.getcwd()
+    try:
+        os.chdir("/tmp")  # Different directory
+        result = collect_events(base_dir, telemetry_path="g/telemetry/custom.jsonl", limit=10)
+        # Should find the file even though CWD is /tmp
+        assert len(result["events"]) == 1
+        assert result["events"][0]["event_type"] == "CUSTOM"
+    finally:
+        os.chdir(original_cwd)
