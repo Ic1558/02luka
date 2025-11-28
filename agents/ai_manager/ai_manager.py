@@ -115,7 +115,9 @@ class AIManager:
                 return {"status": "success", "targets": targets}
 
         qa_worker = QAWorkerV4(actions=_QuickQaActions())
-        qa_result = qa_worker.execute_task({"architect_spec": wo.get("architect_spec"), "run_tests": False})
+        qa_result = qa_worker.execute_task(
+            {"architect_spec": wo.get("architect_spec"), "run_tests": False, "files_touched": files_touched}
+        )
         if qa_result.get("status") != "success":
             return {"status": "failed", "stage": "qa", "result": qa_result}
 
@@ -123,14 +125,12 @@ class AIManager:
         docs_worker = DocsWorkerV4()
         docs_result = docs_worker.execute_task(
             {
-                "plan": {
-                    "patches": [
-                        {
-                            "file": "g/docs/pipeline_summary.md",
-                            "content": f"Pipeline completed for {wo.get('wo_id', 'UNKNOWN')}",
-                        }
-                    ]
-                }
+                "operation": "summary",
+                "requirement_id": wo.get("wo_id", "UNKNOWN"),
+                "status": "success",
+                "lane": routing.get("lane", "dev_oss"),
+                "qa_status": qa_result.get("status"),
+                "files_touched": files_touched,
             }
         )
         if docs_result.get("status") != "success":
