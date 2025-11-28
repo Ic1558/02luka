@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from agents.qa_v4.actions import QaActions
+from agents.qa_v4.checklist_engine import evaluate_checklist
 from shared.policy import apply_patch, check_write_allowed
 
 
@@ -63,6 +64,15 @@ class QAWorkerV4:
                 }
 
         qa_actions_results = []
+        checklist_result = evaluate_checklist(task.get("architect_spec"), self.actions)
+        if checklist_result["status"] != "pass":
+            return {
+                "status": "failed",
+                "reason": "CHECKLIST_FAILED",
+                "checklist": checklist_result,
+                "partial_results": results,
+            }
+
         # Optional lint
         lint_targets = task.get("lint_targets") or []
         if lint_targets:
@@ -96,6 +106,7 @@ class QAWorkerV4:
                 r["file"] for r in results if r.get("status") == "success"
             ],
             "qa_actions": qa_actions_results,
+            "checklist": checklist_result,
         }
 
 
