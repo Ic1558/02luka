@@ -38,22 +38,32 @@ def choose_dev_lane(source: str = "unknown", complexity: str = "moderate", cost_
     if not rules:
         # Built-in defaults when config is missing or empty
         if source == "liam":
-            return "dev_gmx"
+            return _normalize_lane("dev_gmx")
         if source == "cls":
-            return "dev_codex"
-        return default_lane
+            return _normalize_lane("dev_codex")
+        return _normalize_lane(default_lane)
 
     for rule in rules:
         when = rule.get("when", {})
         if when.get("source") and when["source"] == source:
-            return rule.get("lane", default_lane)
+            return _normalize_lane(rule.get("lane", default_lane))
 
     # Optional: promote complex tasks to gmx unless cost sensitive
     if complexity in {"moderate", "complex"} and cost_sensitivity != "low":
         # Lane key is the identifier (dev_gmx), not a nested name field
-        return "dev_gmx"
+        return _normalize_lane("dev_gmx")
 
-    return default_lane
+    return _normalize_lane(default_lane)
+
+
+def _normalize_lane(lane: str) -> str:
+    """
+    Normalize lane identifiers to align with determine_lane hints.
+    dev_gmx -> dev_gmxcli
+    """
+    if lane == "dev_gmx":
+        return "dev_gmxcli"
+    return lane
 
 
 __all__ = ["choose_dev_lane"]
