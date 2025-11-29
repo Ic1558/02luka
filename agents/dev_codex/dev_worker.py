@@ -8,13 +8,14 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
-from agents.dev_common.reasoner_backend import ReasonerBackend
+from agents.dev_common.spec_consumer import summarize_architect_spec, validate_architect_spec
+from agents.dev_common.reasoner_backend import CodexBackend, ReasonerBackend
 from shared.policy import apply_patch, check_write_allowed
 
 
 class DevCodexWorker:
     def __init__(self, backend: Optional[ReasonerBackend] = None):
-        self.backend = backend
+        self.backend = backend or CodexBackend()
 
     def self_write(self, file_path: str, content: str) -> dict:
         """Direct write via shared policy."""
@@ -51,6 +52,15 @@ class DevCodexWorker:
             f"Routing: {task.get('routing_hint', '')}",
             f"Priority: {task.get('priority', '')}",
         ]
+        spec = task.get("architect_spec")
+        spec_summary = summarize_architect_spec(spec) if spec and validate_architect_spec(spec) else ""
+        if spec_summary:
+            parts.append("ArchitectSpec:")
+            parts.append(spec_summary)
+            warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
+            if warnings:
+                parts.append("PatternWarnings:")
+                parts.append(", ".join(warnings))
         return "\n".join(parts)
 
     def _parse_answer(self, answer: Any) -> Optional[Dict[str, Any]]:
@@ -96,6 +106,12 @@ class DevCodexWorker:
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "FILE_WRITE_ERROR"),
+                    "partial_results": results,
+                }
+            if result["status"] == "failed":
+                return {
+                    "status": "failed",
+                    "reason": result.get("reason", "VALIDATION_FAILED"),
                     "partial_results": results,
                 }
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional
 
+from agents.dev_common.spec_consumer import summarize_architect_spec, validate_architect_spec
 from agents.dev_common.reasoner_backend import GeminiCLIBackend, ReasonerBackend
 from shared.policy import apply_patch, check_write_allowed
 
@@ -51,6 +52,15 @@ class DevGMXCLIWorker:
             f"Priority: {task.get('priority', '')}",
             f"Task_Content: {task.get('content', '')}",
         ]
+        spec = task.get("architect_spec")
+        spec_summary = summarize_architect_spec(spec) if spec and validate_architect_spec(spec) else ""
+        if spec_summary:
+            parts.append("ArchitectSpec:")
+            parts.append(spec_summary)
+            warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
+            if warnings:
+                parts.append("PatternWarnings:")
+                parts.append(", ".join(warnings))
         return "\n".join(parts)
 
     def _parse_response(self, response: Any) -> Optional[Dict[str, Any]]:
