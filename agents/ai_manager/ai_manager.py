@@ -5,6 +5,7 @@ Now integrates Requirement.md parsing and free-first routing.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,7 +20,7 @@ from agents.docs_v4.docs_worker import DocsWorkerV4
 from g.tools.lac_telemetry import build_event, log_event
 from shared.routing import determine_lane
 from shared.lac_lane_router import choose_dev_lane
-from shared.governance_router_v41 import evaluate_request as evaluate_governance
+from shared.governance_router_v41 import evaluate_request as evaluate_governance, to_telemetry_dict
 
 
 class AIManager:
@@ -262,6 +263,16 @@ class AIManager:
         gov_result = evaluate_governance(wo)
         wo["zone"] = gov_result.get("zone")
         wo["governance"] = gov_result
+
+        # Phase 7.x: Log governance decision to dedicated JSONL
+        try:
+            gov_telemetry = to_telemetry_dict(gov_result)
+            gov_telemetry["wo_id"] = wo.get("wo_id", "unknown")
+            gov_telemetry["timestamp"] = datetime.now(timezone.utc).isoformat()
+            log_event(gov_telemetry)
+        except Exception:
+            # Non-blocking: telemetry failures should not affect routing
+            pass
 
         if not gov_result.get("ok", False):
             routing["approved"] = False
