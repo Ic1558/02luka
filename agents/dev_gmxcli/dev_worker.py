@@ -57,10 +57,10 @@ class DevGMXCLIWorker:
         if spec_summary:
             parts.append("ArchitectSpec:")
             parts.append(spec_summary)
-            warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
-            if warnings:
-                parts.append("PatternWarnings:")
-                parts.append(", ".join(warnings))
+        warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
+        if warnings:
+            parts.append("PatternWarnings:")
+            parts.append(", ".join(warnings))
         return "\n".join(parts)
 
     def _parse_response(self, response: Any) -> Optional[Dict[str, Any]]:
