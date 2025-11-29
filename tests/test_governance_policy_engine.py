@@ -3,6 +3,7 @@ from shared.governance_router_v41 import (
     evaluate_request,
     normalize_writer,
     policy_allow_lane,
+    to_telemetry_dict,
     resolve_zone,
 )
 
@@ -23,6 +24,19 @@ def test_check_writer_permission_open():
     assert check_writer_permission("Liam", "open_zone") is True
     assert check_writer_permission("GMX", "open_zone") is True
     assert check_writer_permission("unknown", "open_zone") is False
+
+
+def test_unknown_writer_denied_everywhere():
+    result = evaluate_request(
+        {
+            "files": ["agents/liam/core.py"],
+            "source": "unknown_writer",
+            "routing_hint": "dev_oss",
+        }
+    )
+    assert result["ok"] is False
+    assert result["reason"] == "writer_not_allowed"
+    assert result["normalized_writer"] == "UNKNOWN"
 
 
 def test_policy_allow_lane_locked_denies_dev():
@@ -58,6 +72,7 @@ def test_evaluate_request_deny_writer():
     assert result["ok"] is False
     assert result["zone"] == "locked_zone"
     assert result["reason"] == "writer_not_allowed"
+    assert result["normalized_writer"] == "LIAM"
 
 
 def test_evaluate_request_deny_lane_in_locked():
@@ -74,3 +89,20 @@ def test_evaluate_request_deny_lane_in_locked():
 def test_resolve_zone_unknown_is_locked():
     assert resolve_zone(["unknown/path/file.txt"]) == "locked_zone"
 
+
+def test_to_telemetry_dict_fields():
+    base = {
+        "ok": False,
+        "zone": "locked_zone",
+        "writer": "UNKNOWN",
+        "normalized_writer": "UNKNOWN",
+        "lane": "dev_oss",
+        "reason": "writer_not_allowed",
+        "details": "Writer UNKNOWN not allowed",
+    }
+    tel = to_telemetry_dict(base)
+    assert tel["allowed"] is False
+    assert tel["zone"] == "locked_zone"
+    assert tel["writer"] == "UNKNOWN"
+    assert tel["normalized_writer"] == "UNKNOWN"
+    assert tel["reason"] == "writer_not_allowed"

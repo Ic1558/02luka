@@ -25,12 +25,20 @@ CANON_WRITERS: Dict[str, str] = {
 OPEN_ZONE_LANES = {"dev_oss", "dev_gmxcli", "dev_codex"}
 
 
+def _log_governance_event(event: str, **data: Any) -> None:
+    """Lightweight structured logging for governance decisions."""
+    if log.isEnabledFor(logging.INFO):
+        log.info("governance.%s", event, extra={"governance": data})
+
+
 def normalize_writer(writer: Any) -> str:
-    """Return a canonical, upper-cased writer id; UNKNOWN if missing."""
+    """Return a canonical writer id; UNKNOWN if missing or unmapped."""
     if writer is None:
         return "UNKNOWN"
     key = str(writer).strip().lower()
-    return CANON_WRITERS.get(key, key.upper())
+    if not key:
+        return "UNKNOWN"
+    return CANON_WRITERS.get(key, "UNKNOWN")
 
 
 def _definitions_path() -> Path:
@@ -101,8 +109,7 @@ def resolve_zone(files: List[str]) -> str:
             has_open = True
         else:
             # Unknown paths are treated as locked for safety.
-            # Log this occurrence as it might indicate a missing zone definition.
-            log.warning("Governance: Unknown path resolved to locked_zone: %s", p)
+            _log_governance_event("unknown_path_locked", path=p)
             has_locked = True
 
         if has_locked:
@@ -114,6 +121,8 @@ def resolve_zone(files: List[str]) -> str:
 
 def check_writer_permission(writer: str, zone: str) -> bool:
     writer_norm = normalize_writer(writer)
+    if writer_norm == "UNKNOWN":
+        return False
     if zone == "locked_zone":
         return writer_norm == "CLC"
 
@@ -169,10 +178,18 @@ def evaluate_request(wo: Dict[str, Any]) -> Dict[str, Any]:
             zone = "locked_zone"
 
         if not check_writer_permission(writer, zone):
+            _log_governance_event(
+                "writer_denied",
+                writer_raw=writer_raw,
+                writer_norm=writer,
+                zone=zone,
+                lane=lane,
+            )
             return {
                 "ok": False,
                 "zone": zone,
                 "writer": writer,
+                "normalized_writer": writer,
                 "lane": lane,
                 "reason": "writer_not_allowed",
                 "details": f"Writer {writer} not allowed for {zone}",
@@ -183,6 +200,7 @@ def evaluate_request(wo: Dict[str, Any]) -> Dict[str, Any]:
                 "ok": False,
                 "zone": zone,
                 "writer": writer,
+                "normalized_writer": writer,
                 "lane": lane,
                 "reason": "lane_not_allowed",
                 "details": f"Lane {lane} not allowed for {zone}",
@@ -192,6 +210,7 @@ def evaluate_request(wo: Dict[str, Any]) -> Dict[str, Any]:
             "ok": True,
             "zone": zone,
             "writer": writer,
+            "normalized_writer": writer,
             "lane": lane,
             "reason": "allowed",
             "details": "",
@@ -203,10 +222,26 @@ def evaluate_request(wo: Dict[str, Any]) -> Dict[str, Any]:
             "ok": False,
             "zone": "locked_zone",
             "writer": "UNKNOWN",
+            "normalized_writer": "UNKNOWN",
             "lane": wo.get("routing_hint"),
             "reason": "governance_error",
             "details": str(exc),
         }
+
+
+def to_telemetry_dict(result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert an evaluate_request result to a telemetry-friendly dict.
+    """
+    return {
+        "zone": result.get("zone"),
+        "allowed": bool(result.get("ok")),
+        "writer": result.get("writer"),
+        "normalized_writer": result.get("normalized_writer", result.get("writer")),
+        "lane": result.get("lane"),
+        "reason": result.get("reason"),
+        "details": result.get("details", ""),
+    }
 
 
 __all__ = [
@@ -215,4 +250,5 @@ __all__ = [
     "check_writer_permission",
     "policy_allow_lane",
     "evaluate_request",
+    "to_telemetry_dict",
 ]
