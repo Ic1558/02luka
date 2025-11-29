@@ -18,6 +18,7 @@ from agents.qa_v4.qa_worker import QAWorkerV4
 from agents.docs_v4.docs_worker import DocsWorkerV4
 from g.tools.lac_telemetry import build_event, log_event
 from shared.routing import determine_lane
+from shared.lac_lane_router import choose_dev_lane
 
 
 class AIManager:
@@ -80,6 +81,10 @@ class AIManager:
         wo = parse_requirement_md(requirement_content)
         wo.setdefault("complexity", "simple")
         wo.setdefault("self_apply", True)
+        wo.setdefault("source", "unknown")
+        wo["routing_hint"] = choose_dev_lane(
+            source=wo.get("source", "unknown"), complexity=wo.get("complexity", "moderate"), cost_sensitivity=wo.get("cost_sensitivity", "normal")
+        )
 
         analysis = self.architect.design(wo)
         # Use analysis directly to maintain consistent nested structure
@@ -149,6 +154,13 @@ class AIManager:
         """
         Build a task payload for dev workers, ensuring ArchitectSpec is attached.
         """
+        # Set routing hint if not already provided using multi-lane router
+        if not wo.get("routing_hint"):
+            wo["routing_hint"] = choose_dev_lane(
+                source=wo.get("source", "unknown"),
+                complexity=wo.get("complexity", "moderate"),
+                cost_sensitivity=wo.get("cost_sensitivity", "normal"),
+            )
         routing = self._ensure_routing(wo)
         task: Dict[str, Any] = {
             "wo_id": wo.get("wo_id", "unknown"),
