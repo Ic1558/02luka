@@ -1,0 +1,36 @@
+version: "4.0"
+default_lane: "dev_oss"
+
+lanes:
+  dev_oss:
+    engine: "oss"
+    cost: "low"
+    speed: "fast"
+    priority: 2
+    allowed_roles: ["ai_manager", "architect", "qa", "docs", "r&d"]
+  dev_gmx:
+    engine: "gmx_cli"
+    cost: "medium"
+    speed: "medium"
+    priority: 1
+    allowed_roles: ["ai_manager", "architect", "r&d"]
+  dev_codex:
+    engine: "codex_cli"
+    cost: "medium"
+    speed: "medium"
+    priority: 3
+    allowed_roles: ["ai_manager", "cls", "liam"]
+
+routing_rules:
+  - name: "liam_request"
+    when:
+      source: "liam"
+    lane: "dev_gmx"
+  - name: "cls_or_cursor"
+    when:
+      source: "cls"
+    lane: "dev_codex"
+  - name: "fallback_default"
+    when:
+      source: "unknown"
+    lane: "dev_oss"

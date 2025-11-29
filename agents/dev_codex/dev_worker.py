@@ -57,10 +57,12 @@ class DevCodexWorker:
         if spec_summary:
             parts.append("ArchitectSpec:")
             parts.append(spec_summary)
-            warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
-            if warnings:
-                parts.append("PatternWarnings:")
-                parts.append(", ".join(warnings))
+        # Pattern warnings shown whenever present, regardless of spec_summary availability
+        # This ensures Dev sees risk signals even when architect spec validation fails
+        warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
+        if warnings:
+            parts.append("PatternWarnings:")
+            parts.append(", ".join(warnings))
         return "\n".join(parts)
 
     def _parse_answer(self, answer: Any) -> Optional[Dict[str, Any]]:
