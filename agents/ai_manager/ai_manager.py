@@ -98,9 +98,16 @@ class AIManager:
                 "stage": "governance",
                 "reason": routing.get("reason", "GOVERNANCE_DENY"),
                 "routing": routing,
+                "routing_hint": routing.get("lane", wo.get("routing_hint")),
             }
         if routing.get("lane") != "dev_oss":
-            return {"status": "failed", "stage": "routing", "reason": "UNSUPPORTED_LANE", "routing": routing}
+            return {
+                "status": "failed",
+                "stage": "routing",
+                "reason": "UNSUPPORTED_LANE",
+                "routing": routing,
+                "routing_hint": routing.get("lane", wo.get("routing_hint")),
+            }
 
         # Dev step
         wo["plan"] = {
