@@ -81,10 +81,8 @@ class AIManager:
         wo = parse_requirement_md(requirement_content)
         wo.setdefault("complexity", "simple")
         wo.setdefault("self_apply", True)
-        wo.setdefault("source", "unknown")
-        wo["routing_hint"] = choose_dev_lane(
-            source=wo.get("source", "unknown"), complexity=wo.get("complexity", "moderate"), cost_sensitivity=wo.get("cost_sensitivity", "normal")
-        )
+        # Self-complete is intentionally limited to OSS lane for safety
+        wo["routing_hint"] = "dev_oss"
 
         analysis = self.architect.design(wo)
         # Use analysis directly to maintain consistent nested structure
