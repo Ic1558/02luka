@@ -57,6 +57,8 @@ class DevCodexWorker:
         if spec_summary:
             parts.append("ArchitectSpec:")
             parts.append(spec_summary)
+        # Pattern warnings shown whenever present, regardless of spec_summary availability
+        # This ensures Dev sees risk signals even when architect spec validation fails
         warnings = spec.get("pattern_warnings") if isinstance(spec, dict) else None
         if warnings:
             parts.append("PatternWarnings:")
