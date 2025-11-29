@@ -285,6 +285,7 @@ class DocsWorkerV4:
         lane = task.get("lane", "dev_oss")
         qa_status = task.get("qa_status", "unknown")
         files_touched = task.get("files_touched") or []
+        pattern_warnings = task.get("pattern_warnings") or []
 
         lines = [
             "# Pipeline Summary",
@@ -294,6 +295,8 @@ class DocsWorkerV4:
             f"- QA Status: {qa_status}",
             f"- Files Touched: {', '.join(files_touched) if files_touched else 'none'}",
         ]
+        if pattern_warnings:
+            lines.append(f"- Pattern Warnings: {', '.join(pattern_warnings)}")
         summary_content = "\n".join(lines)
 
         summary_result = self.self_write(str(summary_path), summary_content)
