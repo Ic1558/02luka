@@ -50,7 +50,8 @@ def choose_dev_lane(source: str = "unknown", complexity: str = "moderate", cost_
 
     # Optional: promote complex tasks to gmx unless cost sensitive
     if complexity in {"moderate", "complex"} and cost_sensitivity != "low":
-        return cfg.get("lanes", {}).get("dev_gmx", {}).get("name", "dev_gmx")
+        # Lane key is the identifier (dev_gmx), not a nested name field
+        return "dev_gmx"
 
     return default_lane
 
