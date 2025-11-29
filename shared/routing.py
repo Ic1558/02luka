@@ -67,6 +67,8 @@ def determine_lane(complexity: str, file_count: int = 0, hint: Optional[str] = N
             return {"lane": "dev_oss", "model": rules["simple"]["model"], "approved": True, "reason": "hint_oss"}
         if hint == "dev_gmxcli":
             return {"lane": "dev_gmxcli", "model": rules["moderate"]["model"], "approved": True, "reason": "hint_gmx"}
+        if hint == "dev_gmx":
+            return {"lane": "dev_gmxcli", "model": rules["moderate"]["model"], "approved": True, "reason": "hint_gmx"}
         if hint == "dev_codex":
             return {"lane": "dev_codex", "model": rules["moderate"]["model"], "approved": True, "reason": "hint_codex"}
         if hint == "dev_paid":
