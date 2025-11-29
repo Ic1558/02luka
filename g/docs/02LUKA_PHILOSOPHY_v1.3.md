@@ -1,4 +1,4 @@
-# 02luka Philosophy & Design Principles (v1.0)
+# 02luka Philosophy & Design Principles (v1.3)
 
 ## 1. Intro: Why 02luka Exists
 - **Problem we solve:** Reduce chaos from many agents, IDEs, and LLMs acting without shared ground rules.
@@ -13,32 +13,33 @@
 - ✅ **Human remains the owner** — Boss is final decision-maker; agents provide execution and evidence.
 
 ## 3. Design Principles
-- **P1 – Context First, Action Later**  
+- **P1 – Context First, Action Later**
   Every agent reads SOT + current context before running commands or writing files.
-- **P2 – One Writer at a Time**  
-  CLC/LPE operate as single-writer channels; all privileged writes flow through SIP and MLS logging.
-- **P3 – Governance over Convenience**  
+- **P2 – Multi-Writer Model (v4)**
+  - **Open Zones:** Gemini, LAC, Codex, GG, GC can write directly (one writer per lane).
+  - **Locked Zones:** CLC/LPE are the exclusive writers.
+- **P3 – Governance over Convenience**
   No shortcuts that bypass Mary, GG, MLS, or required approvals, even for urgent fixes.
-- **P4 – Multi-Engine Harmony**  
+- **P4 – Multi-Engine Harmony**
   GPT/Codex, Gemini, CLC/LPE, and GC/GG have distinct roles that complement rather than compete.
-- **P5 – Small, Reviewable Changes**  
+- **P5 – Small, Reviewable Changes**
   Prefer small PRs with tests/checks and explicit risk notes; keep diffs review-friendly.
 
 ## 4. Agents & Their Philosophy
-- **GG — Orchestrator**  
+- **GG — Orchestrator**
   Designs and routes; does not touch files directly except governance docs.
-- **GC / Liam / Andy / Cursor**  
+- **GC / Liam / Andy / Cursor**
   Logical reasoning, plan creation/review, and philosophy enforcement; propose changes, do not self-apply without authorization.
-- **Codex IDE (GPT-5)**  
+- **Codex IDE (GPT-5)**
   Drafting and refactoring support inside the IDE; generates snippets, not commits in locked zones.
-- **CLC / LPE**  
+- **CLC / LPE**
   Single writers that apply SIP patches; must respect ACLs and MLS logging with zero shortcuts.
-- **Gemini**  
+- **Gemini**
   Primary operational writer and heavy-compute worker per Gemini Plan; quota-aware and uses patch/work-order modes.
-- **Mary**  
+- **Mary**
   COO gateway; all routing and escalations pass through Mary when human oversight is needed.
-- **Kim / Telegram**  
-  External interface that translates Boss intent into structured tasks/work orders.
+- **Kim / Telegram**
+  External interface that translates Boss intent to structured tasks/work orders.
 
 ## 5. Decision Philosophy (Routing & Fallback)
 - **When to use which engine:**
@@ -61,8 +62,8 @@
   - Skipping tests/checks when claiming completion.
 
 ## 7. How to Contribute (New Humans/AI)
-1. Read `02LUKA_PHILOSOPHY.md` end-to-end.
-2. Review Sections 1–3 of `CONTEXT_ENGINEERING_PROTOCOL_v3.md` for operational rules.
+1. Read `02LUKA_PHILOSOPHY_v1.3.md` end-to-end.
+2. Review Sections 1–3 of `CONTEXT_ENGINEERING_PROTOCOL_v4.md` for operational rules.
 3. Draft a short spec → open a PR → include rubric and risk notes.
 4. If uncertain, escalate to GG/Mary instead of guessing.
 
@@ -79,3 +80,8 @@
 - **Kim:** External interface translating Boss intent to structured work orders.
 - **WO:** Work Order (structured task for agents/executors).
 - **MLS:** Metadata Logging System capturing who/what/when/why for SOT writes.
+
+---
+**Legacy Note:**
+The "One Writer Model" (v1-v3) is deprecated as of v4.0.0.
+See `AI_OP_001_v4.md` for the full Lego Architecture spec.

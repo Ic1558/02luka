@@ -133,6 +133,7 @@ class AIManager:
                 "lane": routing.get("lane", "dev_oss"),
                 "qa_status": qa_result.get("status"),
                 "files_touched": files_touched,
+                "pattern_warnings": wo.get("architect_spec", {}).get("pattern_warnings", []),
             }
         )
         if docs_result.get("status") != "success":
