@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from agents.alter.helpers import polish_and_translate_if_needed, polish_if_needed
 from agents.docs_v4.cataloger import build_catalog, write_catalog
 from agents.docs_v4.listener import collect_events
 from agents.docs_v4.scanner import scan_paths
@@ -54,7 +55,9 @@ class DocsWorkerV4:
 
         results = []
         for patch in patches:
-            result = self.write_doc_file(patch["file"], patch.get("content", ""))
+            content = patch.get("content", "")
+            content = self._polish_content_if_needed(content, task, patch)
+            result = self.write_doc_file(patch["file"], content)
             results.append(result)
             if result["status"] == "blocked":
                 return {
@@ -82,6 +85,22 @@ class DocsWorkerV4:
                 r["file"] for r in results if r.get("status") == "success"
             ],
         }
+
+    def _polish_content_if_needed(self, content: str, task: Dict[str, Any], patch: Dict[str, Any]) -> str:
+        """
+        Apply Alter polish/translation when task or patch opts in.
+        """
+        ctx: Dict[str, Any] = {}
+        for key in ("polish", "alter_polish_enabled", "client_facing", "project", "tone", "target_language"):
+            if key in patch and patch.get(key) is not None:
+                ctx[key] = patch.get(key)
+            elif key in task and task.get(key) is not None:
+                ctx[key] = task.get(key)
+
+        target_lang = ctx.get("target_language")
+        if target_lang:
+            return polish_and_translate_if_needed(content, context=ctx)
+        return polish_if_needed(content, context=ctx)
 
     def _run_catalog(self, task: Dict) -> Dict:
         base_dir = Path(os.getenv("LAC_BASE_DIR") or Path.cwd())
