@@ -5,6 +5,7 @@ Now integrates Requirement.md parsing and free-first routing.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +20,7 @@ from agents.docs_v4.docs_worker import DocsWorkerV4
 from g.tools.lac_telemetry import build_event, log_event
 from shared.routing import determine_lane
 from shared.lac_lane_router import choose_dev_lane
+from shared.governance_router_v41 import evaluate_request as evaluate_governance, to_telemetry_dict
 
 
 class AIManager:
@@ -91,8 +93,22 @@ class AIManager:
         wo["architect_spec"] = analysis
 
         routing = self._ensure_routing(wo)
+        if not routing.get("approved", True):
+            return {
+                "status": "failed",
+                "stage": "governance",
+                "reason": routing.get("reason", "GOVERNANCE_DENY"),
+                "routing": routing,
+                "routing_hint": routing.get("lane", wo.get("routing_hint")),
+            }
         if routing.get("lane") != "dev_oss":
-            return {"status": "failed", "stage": "routing", "reason": "UNSUPPORTED_LANE", "routing": routing}
+            return {
+                "status": "failed",
+                "stage": "routing",
+                "reason": "UNSUPPORTED_LANE",
+                "routing": routing,
+                "routing_hint": routing.get("lane", wo.get("routing_hint")),
+            }
 
         # Dev step
         wo["plan"] = {
@@ -238,6 +254,30 @@ class AIManager:
             hint=wo.get("routing_hint"),
         )
 
+        # Governance / Policy Check (v4.1)
+        if "writer" not in wo:
+            # Default to UNKNOWN if source is missing to prevent accidental privilege escalation.
+            # Previously defaulted to 'GG', which was flagged as a security risk.
+            wo["writer"] = wo.get("source", "UNKNOWN")
+
+        gov_result = evaluate_governance(wo)
+        wo["zone"] = gov_result.get("zone")
+        wo["governance"] = gov_result
+
+        # Phase 7.x: Log governance decision to dedicated JSONL
+        try:
+            gov_telemetry = to_telemetry_dict(gov_result)
+            gov_telemetry["wo_id"] = wo.get("wo_id", "unknown")
+            gov_telemetry["timestamp"] = datetime.now(timezone.utc).isoformat()
+            log_event(gov_telemetry)
+        except Exception:
+            # Non-blocking: telemetry failures should not affect routing
+            pass
+
+        if not gov_result.get("ok", False):
+            routing["approved"] = False
+            routing["reason"] = f"GOVERNANCE_DENY: {gov_result.get('reason')}"
+
         wo["routing"] = routing
         wo["routing_lane"] = routing.get("lane")
         wo.setdefault("routing_hint", routing.get("lane"))
@@ -251,7 +291,12 @@ class AIManager:
             wo,
             routing.get("lane", "unknown"),
             "approved" if routing.get("approved", True) else "pending",
-            extra={"reason": routing.get("reason"), "file_count": file_count},
+            extra={
+                "reason": routing.get("reason"), 
+                "file_count": file_count,
+                "zone": gov_result["zone"],
+                "policy": gov_result.get("reason")
+            },
         )
         return routing
 
