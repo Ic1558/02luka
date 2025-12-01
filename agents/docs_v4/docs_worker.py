@@ -7,9 +7,11 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+from agents.ai_manager.hybrid_router import hybrid_route_text
 from agents.alter.helpers import polish_and_translate_if_needed, polish_if_needed
 from agents.docs_v4.cataloger import build_catalog, write_catalog
 from agents.docs_v4.listener import collect_events
@@ -89,6 +91,7 @@ class DocsWorkerV4:
     def _polish_content_if_needed(self, content: str, task: Dict[str, Any], patch: Dict[str, Any]) -> str:
         """
         Apply Alter polish/translation when task or patch opts in.
+        Patch-level flags override task-level flags.
         """
         ctx: Dict[str, Any] = {}
         for key in ("polish", "alter_polish_enabled", "client_facing", "project", "tone", "target_language"):
@@ -400,6 +403,165 @@ class DocsWorkerV4:
         except OSError:
             return []
         return rows
+
+    # ------------------------------------------------------------------
+    #  New: PD17 client-facing report flow using Hybrid Router + Alter + save.sh
+    # ------------------------------------------------------------------
+    def generate_client_report_with_hybrid_router(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Phase 1 integration example:
+
+        Flow:
+          1) Read task → build base draft (GG/local logic เดิมที่มีอยู่)
+          2) Call hybrid_route_text() ให้เลือก engine (local/GG/Alter)
+          3) Save final text ผ่าน tools/save.sh (Universal Gateway)
+
+        This method intentionally:
+          - ไม่แตะ MLS โดยตรง (ให้ save gateway จัดการ)
+          - ไม่เรียก Alter ตรง ๆ (ผ่าน Hybrid Router เท่านั้น)
+        """
+
+        project_id = task.get("project_id") or "PD17"
+        topic = task.get("topic") or "client_report"
+
+        # 1) สร้าง draft ตาม logic เดิมของ DocsWorker
+        #    NOTE: ให้ CLS เติม implementation ที่เหมาะสม:
+        draft_text = self._build_initial_draft(task)
+
+        # 2) Hybrid Router ตัดสินใจ engine + Alter polish ถ้าจำเป็น
+        router_context: Dict[str, Any] = {
+            "project_id": project_id,
+            "client_facing": True,
+            "sensitivity": task.get("sensitivity", "normal"),
+            "mode": task.get("mode", "polish"),
+            "language": task.get("language", "th-en"),
+            "source_agent": "docs_worker_v4",
+        }
+
+        final_text, meta = hybrid_route_text(draft_text, router_context)
+
+        # 3) Save ผ่าน Universal Save Gateway (tools/save.sh)
+        #    - ให้ gateway/MLS เป็นคนจัดการไฟล์และ latest_status.yaml
+        self._save_via_gateway(
+            content=final_text,
+            agent_id="DOCS_V4",
+            source="docs_worker_v4",
+            project_id=project_id,
+            topic=topic,
+        )
+
+        # 4) คืน result + meta (ให้ layer บนไปใช้ต่อ เช่น Liam / Mary)
+        return {
+            "ok": True,
+            "project_id": project_id,
+            "topic": topic,
+            "engine_used": meta.get("engine_used"),
+            "alter_status": meta.get("alter_status"),
+            "fallback": meta.get("fallback", False),
+            "router_meta": meta,
+            "content": final_text,
+        }
+
+    # ------------------------------------------------------------------
+    #  Internal helpers (ให้ CLS เติมตัวจริง / ปรับ path ตาม 02luka)
+    # ------------------------------------------------------------------
+    def _build_initial_draft(self, task: Dict[str, Any]) -> str:
+        """
+        Hook: สร้าง draft แรกสำหรับรายงานลูกค้า.
+
+        Strategy:
+          1) Try GG (core) via hybrid router hook for a real draft
+          2) Fallback to structured markdown if GG unavailable
+        """
+        title = task.get("title") or "Client Report"
+        project = task.get("project_id") or "PD17"
+        summary = task.get("summary") or task.get("body") or task.get("description") or ""
+        bullets = task.get("bullets") or task.get("highlights") or []
+
+        prompt_lines = [
+            f"You are preparing a client-facing report for project {project}.",
+            f"Title: {title}",
+        ]
+        if summary:
+            prompt_lines.append(f"Summary: {summary}")
+        if bullets:
+            prompt_lines.append("Highlights:")
+            for item in bullets:
+                prompt_lines.append(f"- {item}")
+        prompt_lines.append("Write a concise, professional draft in markdown.")
+        prompt = "\n".join(prompt_lines)
+
+        try:
+            # Avoid circular import at module load
+            from agents.ai_manager.hybrid_router import _call_gg
+
+            return _call_gg(prompt, {"project_id": project, "mode": task.get("mode", "draft")})
+        except Exception:
+            # Fallback: structured markdown
+            lines = [f"# {title}", "", f"Project: {project}", ""]
+            if summary:
+                lines.append(summary)
+            elif bullets:
+                lines.extend([f"- {item}" for item in bullets])
+            else:
+                lines.append("_(no body provided)_")
+            return "\n".join(lines)
+
+    def _save_via_gateway(
+        self,
+        content: str,
+        agent_id: str,
+        source: str,
+        project_id: str,
+        topic: str,
+    ) -> None:
+        """
+        ส่ง content เข้า tools/save.sh (Universal Save Gateway)
+
+        Equivalent CLI:
+          echo "..." | ~/02luka/tools/save.sh \\
+            --agent DOCS_V4 \\
+            --source docs_worker_v4 \\
+            --project PD17 \\
+            --topic client_report
+
+        NOTE:
+          - BASE_DIR ใช้ parent ของ repo; CLS ควรตรวจ path ให้ตรงกับ 02luka_local_g
+        """
+        # หา root ของ repo แบบ generic (agents/docs_v4/docs_worker.py → repo root)
+        root_dir = Path(__file__).resolve().parents[2]
+        save_script = root_dir / "tools" / "save.sh"
+
+        # เผื่อ safety ถ้าไม่มี script
+        if not save_script.exists():
+            # ไม่ raise hard error เพื่อไม่ให้งานหาย – แค่ log/print
+            # ในระบบจริงอาจใช้ logger แทน print
+            print(f"[DocsWorkerV4] save.sh not found at: {save_script}")
+            return
+
+        env = os.environ.copy()
+        env["SESSION_AGENT_ID"] = agent_id
+        env["SESSION_SOURCE_APP"] = source
+        env["SESSION_PROJECT_ID"] = project_id
+        env["SESSION_TOPIC"] = topic
+
+        subprocess.run(
+            [
+                str(save_script),
+                "--agent",
+                agent_id,
+                "--source",
+                source,
+                "--project",
+                project_id,
+                "--topic",
+                topic,
+            ],
+            input=content,
+            text=True,
+            check=False,  # ไม่ให้พัง worker – ให้ layer บนตรวจ stdout/stderr เอง
+            env=env,
+        )
 
 
 __all__ = ["DocsWorkerV4", "check_write_allowed", "apply_patch", "scan_paths", "build_catalog", "write_catalog"]
