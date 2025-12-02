@@ -1,0 +1,41 @@
+version: "4.1"
+
+zones:
+  # NOTE: Pattern matching order is significant.
+  # The router checks 'locked_zone' patterns FIRST.
+  # If a file matches a locked pattern, it is locked regardless of open patterns.
+  locked_zone:
+    patterns:
+      - "CLC/**"
+      - "CLS/**"
+      - "g/docs/AI_OP_001_v4.md"
+      - "g/docs/CONTEXT_ENGINEERING_PROTOCOL_v4.md"
+      - "g/docs/02LUKA_PHILOSOPHY_v1.3.md"
+      - "g/reports/system/**"
+      - "g/ai_contracts/**"
+      - "g/catalog/**"
+      - "launchd/**"
+      - "bridge/core/**"
+      - "bridge/production/**"
+    allowed_writers:
+      - "CLC"
+
+  open_zone:
+    patterns:
+      - "agents/**"
+      - "g/config/**"
+      - "shared/**"
+      - "tests/**"
+      - "g/tools/**"
+      - "g/reports/feature-dev/**"
+      - "g/reports/experimental/**"
+      - "g/reports/dev/**"
+      - "g/manuals/**"
+      - "g/docs/**"
+    allowed_writers:
+      - "GG"
+      - "GC"
+      - "LIAM"
+      - "CLS"
+      - "CODEX"
+      - "GMX"
