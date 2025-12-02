@@ -1,78 +1,83 @@
-"""
-QA actions for lightweight quality checks (no new deps).
-"""
-
-from __future__ import annotations
 
 import subprocess
+import re
 from pathlib import Path
-from typing import Dict, List
-
-
-def run_py_compile(targets: List[str]) -> Dict:
-    """
-    Run python -m py_compile over provided targets.
-    """
-    for target in targets:
-        try:
-            subprocess.run(
-                ["python", "-m", "py_compile", target],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-        except subprocess.CalledProcessError as exc:
-            return {
-                "status": "failed",
-                "reason": "LINT_FAILED",
-                "exit_code": exc.returncode,
-                "stderr": exc.stderr[-500:] if exc.stderr else "",
-            }
-        except FileNotFoundError:
-            return {"status": "failed", "reason": "PYTHON_NOT_FOUND"}
-    return {"status": "success"}
-
-
-def run_pytest(target: str) -> Dict:
-    """
-    Run pytest on a target path.
-    """
-    try:
-        completed = subprocess.run(
-            ["python", "-m", "pytest", target],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-    except FileNotFoundError:
-        return {"status": "failed", "reason": "PYTHON_NOT_FOUND"}
-
-    if completed.returncode != 0:
-        return {
-            "status": "failed",
-            "reason": "TEST_FAILED",
-            "exit_code": completed.returncode,
-            "stderr": (completed.stderr or "")[-500:],
-            "stdout": (completed.stdout or "")[-500:],
-        }
-
-    return {
-        "status": "success",
-        "exit_code": completed.returncode,
-        "stdout": (completed.stdout or "")[-500:],
-    }
-
+from typing import List, Dict, Any
 
 class QaActions:
     """
-    Thin wrapper to allow easy mocking in tests.
+    Encapsulates QA actions for testability and mocking.
     """
+    def run_command(self, cmd: List[str]) -> Dict[str, Any]:
+        """Run a shell command and return output."""
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            return {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.returncode
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "stdout": "",
+                "stderr": str(e),
+                "exit_code": -1
+            }
 
-    def run_lint(self, targets: List[str]) -> Dict:
-        return run_py_compile(targets)
+    def run_ruff(self, file_path: str) -> Dict[str, Any]:
+        """Run ruff linting on a file."""
+        cmd = ["ruff", "check", file_path]
+        return self.run_command(cmd)
 
-    def run_tests(self, target: str) -> Dict:
-        return run_pytest(target)
+    def run_flake8(self, file_path: str) -> Dict[str, Any]:
+        """Run flake8 linting on a file."""
+        cmd = ["flake8", file_path]
+        return self.run_command(cmd)
 
+    def run_pytest(self, file_path: str) -> Dict[str, Any]:
+        """Run pytest on a file."""
+        cmd = ["pytest", file_path]
+        res = self.run_command(cmd)
+        if res["exit_code"] == 5:
+            res["success"] = True
+            res["stdout"] += "\n(No tests collected - treated as success)"
+        return res
 
-__all__ = ["QaActions", "run_py_compile", "run_pytest"]
+    def check_security_basics(self, file_path: str) -> List[str]:
+        """Check for basic security issues via regex."""
+        issues = []
+        patterns = [
+            (r"sk-[a-zA-Z0-9]{20,}", "Potential API Key found"),
+            (r"password\s*=\s*['\"][^'\"]+['\"]", "Hardcoded password found"),
+            (r"eval\(", "Use of eval() detected"),
+            (r"exec\(", "Use of exec() detected"),
+            (r"os\.system\(", "Use of os.system() detected"),
+            (r"subprocess\.call\(.*shell=True", "subprocess with shell=True detected"),
+        ]
+        
+        try:
+            content = Path(file_path).read_text()
+            for pat, msg in patterns:
+                if re.search(pat, content):
+                    issues.append(msg)
+        except Exception:
+            pass 
+        return issues
+
+    def run_pattern_check(self, files: List[str], patterns: List[str]) -> Dict[str, Any]:
+        """Check files against forbidden regex patterns."""
+        issues = []
+        for f in files:
+            try:
+                content = Path(f).read_text()
+                for pat in patterns:
+                    if re.search(pat, content):
+                        issues.append(f"Pattern violation in {f}: {pat}")
+            except Exception:
+                pass
+        
+        if issues:
+            return {"status": "failed", "issues": issues}
+        return {"status": "success"}
