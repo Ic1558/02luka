@@ -1,0 +1,1 @@
+{"wo_id": "WO-ANT-TEST-001", "task_spec": {"task_id": "WO-ANT-TEST-001", "operations": [{"op": "write_file", "file": "g/src/antigravity/TEST_LAC_WO.txt", "content": "Hello from LAC WO Pipeline"}]}}

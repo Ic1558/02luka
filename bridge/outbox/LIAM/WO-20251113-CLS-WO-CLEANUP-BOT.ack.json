@@ -1,0 +1,16 @@
+{
+  "wo_id": "WO-20251113-CLS-WO-CLEANUP-BOT",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-20251113-CLS-WO-CLEANUP-BOT",
+    "status": "success",
+    "message": "No operations to execute",
+    "files_touched": [],
+    "ops_results": [],
+    "duration_ms": 3
+  },
+  "error": null,
+  "summary": "No operations to execute",
+  "completed_at": "2025-11-27T20:03:56.706371+00:00"
+}

@@ -1,0 +1,5 @@
+title: "CLS Self-Test"
+priority: "P3"
+tags: ["cls","selftest"]
+body: |
+  Automated self-test from LaunchAgent.

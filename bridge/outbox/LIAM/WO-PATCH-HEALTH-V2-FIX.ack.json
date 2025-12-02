@@ -1,0 +1,9 @@
+{
+  "wo_id": "WO-PATCH-HEALTH-V2-FIX",
+  "status": "failed",
+  "stage": "clc_worker",
+  "result": null,
+  "error": "Failed to parse YAML",
+  "summary": "",
+  "completed_at": "2025-11-27T08:25:46.521536+00:00"
+}

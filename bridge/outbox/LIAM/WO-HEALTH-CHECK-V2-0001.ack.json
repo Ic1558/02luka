@@ -1,0 +1,42 @@
+{
+  "wo_id": "WO-HEALTH-CHECK-V2-0001",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-HEALTH-CHECK-V2-0001",
+    "status": "success",
+    "message": "3/3 operations succeeded",
+    "files_touched": [
+      "g/tools",
+      "g/telemetry",
+      "g/tools/opal_health_check_v2.zsh"
+    ],
+    "ops_results": [
+      {
+        "op": "create_dir",
+        "file": "g/tools",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "create_dir",
+        "file": "g/telemetry",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "write_file",
+        "file": "g/tools/opal_health_check_v2.zsh",
+        "status": "success",
+        "message": "Written 12229 bytes",
+        "duration_ms": 0
+      }
+    ],
+    "duration_ms": 3
+  },
+  "error": null,
+  "summary": "3/3 operations succeeded",
+  "completed_at": "2025-11-27T08:11:56.764320+00:00"
+}

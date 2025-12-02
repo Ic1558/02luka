@@ -3,6 +3,9 @@
     {
       "path": ".",
       "name": "02luka"
+    },
+    {
+      "path": "../LocalProjects/02luka-memory"
     }
   ],
   "settings": {

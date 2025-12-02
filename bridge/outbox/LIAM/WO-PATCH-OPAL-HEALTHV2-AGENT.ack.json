@@ -1,0 +1,9 @@
+{
+  "wo_id": "WO-PATCH-OPAL-HEALTHV2-AGENT",
+  "status": "partial",
+  "stage": "clc_worker",
+  "result": null,
+  "error": null,
+  "summary": "1/6 operations succeeded",
+  "completed_at": "2025-11-27T09:55:09.062907+00:00"
+}

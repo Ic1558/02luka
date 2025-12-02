@@ -1,0 +1,16 @@
+{
+  "wo_id": "WO-251130-007_zone_guard_v41_impl",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-251130-007",
+    "status": "success",
+    "message": "No operations to execute",
+    "files_touched": [],
+    "ops_results": [],
+    "duration_ms": 3
+  },
+  "error": null,
+  "summary": "No operations to execute",
+  "completed_at": "2025-11-29T19:12:42.465657+00:00"
+}

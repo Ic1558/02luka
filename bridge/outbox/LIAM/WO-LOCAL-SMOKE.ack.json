@@ -1,0 +1,16 @@
+{
+  "wo_id": "WO-LOCAL-SMOKE",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-LOCAL-SMOKE",
+    "status": "success",
+    "message": "No operations to execute",
+    "files_touched": [],
+    "ops_results": [],
+    "duration_ms": 1
+  },
+  "error": null,
+  "summary": "No operations to execute",
+  "completed_at": "2025-11-29T19:39:09.155520+00:00"
+}

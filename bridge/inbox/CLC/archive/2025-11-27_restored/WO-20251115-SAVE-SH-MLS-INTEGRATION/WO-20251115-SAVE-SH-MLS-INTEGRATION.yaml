@@ -1,0 +1,75 @@
+---
+wo_id: "WO-20251115-SAVE-SH-MLS-INTEGRATION"
+agent: "CLS"
+priority: "P2"
+title: "Phase 2: Integrate MLS Logging Hook into save.sh (Opt-in)"
+tags: "save.sh,mls,integration,phase2,opt-in"
+created_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+schema: "AI-OP-001/WO/v1"
+
+problem: |
+  Phase 2 of save.sh full cycle test requires MLS logging integration.
+  
+  Current state:
+  - save.sh completes 4 layers (session, context, memory, verification)
+  - MLS logging is NOT integrated
+  - mls_auto_record.zsh tool exists and is ready
+  - SPEC and PLAN require opt-in hook via LUKA_MLS_AUTO_RECORD environment variable
+  
+  Requirement from SPEC:
+  - Add opt-in hook: `if [ "${LUKA_MLS_AUTO_RECORD:-0}" = "1" ]; then ... fi`
+  - Default: Flag unset/0, so normal runs do not spam MLS
+  - MLS entry includes: timestamp, summary, actions, status, verification status, session file link
+  - Handle failures gracefully (non-blocking)
+
+requirements: |
+  1. Add Layer 5: MLS Logging (opt-in hook) to save.sh
+  2. Integration point: After Layer 4 (verification), before final success message
+  3. Implementation:
+     - Check environment variable: LUKA_MLS_AUTO_RECORD
+     - If set to "1", call mls_auto_record.zsh with:
+       - Activity type: "save_sh_full_cycle"
+       - Title: "Session saved: TIMESTAMP"
+       - Summary: Include session summary, actions, status, verification status
+       - Tags: "save,session,auto-captured"
+       - Context: Include session file path, verification status
+     - Default behavior: No MLS call when flag unset/0
+     - Error handling: Non-blocking (log warning, don't fail save)
+  4. Preserve existing save.sh behavior (all 4 layers unchanged)
+  5. Follow governance: Use mktemp → atomic mv pattern if needed
+
+success_criteria: |
+  - MLS logging hook integrated into save.sh
+  - Opt-in behavior works: No MLS call when LUKA_MLS_AUTO_RECORD unset/0
+  - MLS entry created when LUKA_MLS_AUTO_RECORD=1
+  - MLS entry contains correct data (timestamp, summary, actions, status, verification status)
+  - MLS entry links to session file
+  - No crash or slowdown in main save path (default behavior)
+  - All existing save.sh functionality preserved (4 layers unchanged)
+
+implementation_notes: |
+  Location: After line 218 (after verification, before final success message)
+  
+  Code pattern:
+  ```zsh
+  # Layer 5: MLS Logging (opt-in hook, after Layer 4)
+  if [[ "${LUKA_MLS_AUTO_RECORD:-0}" == "1" ]]; then
+      if [[ -f "$BASE_DIR/tools/mls_auto_record.zsh" ]]; then
+          CONTEXT_PAYLOAD="Summary: $SESSION_SUMMARY | Actions: $SESSION_ACTIONS | Status: $SESSION_STATUS | Verification: $VERIFY_STATUS | Session: $SESSION_FILE"
+          "$BASE_DIR/tools/mls_auto_record.zsh" \
+              "save_sh_full_cycle" \
+              "Session saved: $TIMESTAMP" \
+              "$CONTEXT_PAYLOAD" \
+              "save,session,auto-captured" \
+              "" 2>/dev/null || {
+              echo "⚠️  MLS logging failed (non-blocking)" >&2
+          }
+      fi
+  fi
+  ```
+  
+  Note: mls_auto_record.zsh signature is:
+  Usage: mls_auto_record.zsh <activity_type> <title> <summary> [tags] [wo_id]
+
+evidence_dir: "evidence/"
+

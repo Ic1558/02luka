@@ -1,0 +1,34 @@
+{
+  "wo_id": "WO-HEALTH-CHECK-0001",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-HEALTH-CHECK-0001",
+    "status": "success",
+    "message": "2/2 operations succeeded",
+    "files_touched": [
+      "g/tools",
+      "g/tools/opal_health_check.zsh"
+    ],
+    "ops_results": [
+      {
+        "op": "create_dir",
+        "file": "g/tools",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "write_file",
+        "file": "g/tools/opal_health_check.zsh",
+        "status": "success",
+        "message": "Written 3071 bytes",
+        "duration_ms": 0
+      }
+    ],
+    "duration_ms": 16
+  },
+  "error": null,
+  "summary": "2/2 operations succeeded",
+  "completed_at": "2025-11-27T07:54:09.595393+00:00"
+}

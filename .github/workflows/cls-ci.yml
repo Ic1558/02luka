@@ -309,7 +309,7 @@ jobs:
             [ -z "$line" ] && continue
             if echo "$line" | jq -e . >/dev/null 2>&1; then
               printf '%s\n' "$line" >> "$TMP"
-              ((VALID_LINES++))
+              VALID_LINES=$((VALID_LINES + 1))
             fi
           done < "$LEDGER"
           # Only replace if we have valid lines (preserve file even if all lines invalid)

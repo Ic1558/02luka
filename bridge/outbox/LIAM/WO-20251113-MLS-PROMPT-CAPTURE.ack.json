@@ -1,0 +1,16 @@
+{
+  "wo_id": "WO-20251113-MLS-PROMPT-CAPTURE",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-20251113-MLS-PROMPT-CAPTURE",
+    "status": "success",
+    "message": "No operations to execute",
+    "files_touched": [],
+    "ops_results": [],
+    "duration_ms": 0
+  },
+  "error": null,
+  "summary": "No operations to execute",
+  "completed_at": "2025-11-27T20:03:56.725256+00:00"
+}

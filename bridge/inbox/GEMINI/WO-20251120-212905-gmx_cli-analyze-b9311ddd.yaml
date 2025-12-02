@@ -1,0 +1,13 @@
+wo_id: WO-20251120-212905-gmx_cli-analyze-b9311ddd
+task_type: analyze
+input:
+  instructions: Investigate the current project's API key handling and testing mechanisms.
+    Determine the necessary steps, configuration, or code adjustments to facilitate
+    testing using a second, distinct API key. Provide a detailed report on how to
+    proceed.
+  target_files: []
+  command: null
+  context:
+    reason: The user has indicated a need to test with a second API key, requiring
+      an understanding of the current system's capabilities and necessary modifications.
+    requester: gmx-user

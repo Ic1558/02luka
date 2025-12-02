@@ -1,0 +1,43 @@
+---
+wo_id: "WO-20251113-CLS-WO-CLEANUP-BOT"
+agent: "CLS"
+priority: "P2"
+title: "Work Order Cleanup & Recheck Bot"
+tags: "cls,automation,cleanup,wo-management"
+created_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+schema: "AI-OP-001/WO/v1"
+
+problem: |
+  Work Orders marked as "pending" in wo_status.jsonl are not being rechecked.
+  Old WOs (14+ days) remain in "pending" status even though they may be:
+  - Actually completed (but status not updated)
+  - Abandoned/failed (but not marked)
+  - Test WOs that don't need tracking
+  
+  Current issue: 5 WOs from 2025-10-30 still marked "pending" but likely completed.
+
+requirements: |
+  1. Create automated bot: tools/cls_wo_cleanup.zsh
+  2. Bot should:
+     - Find WOs older than X days (default: 7 days)
+     - Check actual completion status by:
+       a. Checking Redis for results (wo:result:{WO_ID})
+       b. Checking evidence directory for completion markers
+       c. Checking MLS ledger for related completion entries
+       d. Checking if WO file has completion metadata
+     - Update wo_status.jsonl with correct status:
+       - "completed" if evidence found
+       - "abandoned" if >30 days old with no activity
+       - "failed" if error evidence found
+     - Archive old completed WOs (>30 days) to archive/
+     - Generate cleanup report
+  3. Schedule as LaunchAgent (daily at 02:00)
+  4. Log all actions to g/telemetry/cls_wo_cleanup.jsonl
+
+success_criteria: |
+  - Bot successfully identifies and updates stale WO statuses
+  - Old completed WOs archived automatically
+  - Daily cleanup runs without errors
+  - Report generated showing cleanup actions
+
+evidence_dir: "evidence/"

@@ -1,0 +1,15 @@
+{
+  "wo_id": "WO-CLS-20251128-034217-G2KS",
+  "objective": "Test command",
+  "routing_hint": "oss",
+  "priority": "P1",
+  "self_apply": true,
+  "complexity": "simple",
+  "requires_paid_lane": false,
+  "source": "cursor_cls_wrapper",
+  "context": {
+    "project_root": "/Users/icmini/02luka",
+    "cursor_command": "/cls-apply",
+    "cursor_prompt": "Test command"
+  }
+}

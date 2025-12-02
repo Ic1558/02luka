@@ -1,0 +1,14 @@
+{
+  "wo_id": "WO-20251030-TIVJ2XXXXX",
+  "created_at": "2025-10-30T05:13:39+07:00",
+  "checksums": {
+    "wo_yaml": "6253c447a611548b0c74d0eaac61bad3e904bab115e5fb351c523a724fae3432",
+    "body": "9d6e08981af6f763eee9a210acea2085ebe6486d71a1ebb028fab0ded4a10589"
+  },
+  "sizes": {
+    "wo_yaml": 231,
+    "body": 141
+  },
+  "agent": "CLS",
+  "priority": "P3"
+}

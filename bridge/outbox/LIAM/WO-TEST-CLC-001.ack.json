@@ -1,0 +1,42 @@
+{
+  "wo_id": "WO-TEST-CLC-001",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-TEST-CLC-001",
+    "status": "success",
+    "message": "3/3 operations succeeded",
+    "files_touched": [
+      "g/apps/clc_test",
+      "g/apps/clc_test/hello_world.py",
+      "g/apps/clc_test/README.md"
+    ],
+    "ops_results": [
+      {
+        "op": "create_dir",
+        "file": "g/apps/clc_test",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "write_file",
+        "file": "g/apps/clc_test/hello_world.py",
+        "status": "success",
+        "message": "Written 339 bytes",
+        "duration_ms": 0
+      },
+      {
+        "op": "write_file",
+        "file": "g/apps/clc_test/README.md",
+        "status": "success",
+        "message": "Written 255 bytes",
+        "duration_ms": 0
+      }
+    ],
+    "duration_ms": 0
+  },
+  "error": null,
+  "summary": "3/3 operations succeeded",
+  "completed_at": "2025-11-27T07:46:05.208962+00:00"
+}

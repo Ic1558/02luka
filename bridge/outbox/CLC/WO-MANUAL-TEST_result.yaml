@@ -1,0 +1,6 @@
+results:
+- path: /Users/icmini/02luka/g/reports/system/manual_test_result.txt
+  status: success
+status: success
+timestamp: '2025-11-29T19:34:43.523896+00:00'
+wo_id: WO-MANUAL-TEST

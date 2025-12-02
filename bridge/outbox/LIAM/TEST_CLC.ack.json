@@ -1,0 +1,16 @@
+{
+  "wo_id": "TEST_CLC",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "TEST_CLC",
+    "status": "success",
+    "message": "No operations to execute",
+    "files_touched": [],
+    "ops_results": [],
+    "duration_ms": 2
+  },
+  "error": null,
+  "summary": "No operations to execute",
+  "completed_at": "2025-11-29T21:36:37.137160+00:00"
+}

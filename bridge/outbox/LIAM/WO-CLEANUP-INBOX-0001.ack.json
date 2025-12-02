@@ -1,0 +1,50 @@
+{
+  "wo_id": "WO-CLEANUP-INBOX-0001",
+  "status": "success",
+  "stage": "clc_worker",
+  "result": {
+    "wo_id": "WO-CLEANUP-INBOX-0001",
+    "status": "success",
+    "message": "4/4 operations succeeded",
+    "files_touched": [
+      "g/tools",
+      "bridge/archive/CLC",
+      "bridge/archive/ENTRY",
+      "g/tools/bridge_inbox_cleanup.zsh"
+    ],
+    "ops_results": [
+      {
+        "op": "create_dir",
+        "file": "g/tools",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "create_dir",
+        "file": "bridge/archive/CLC",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "create_dir",
+        "file": "bridge/archive/ENTRY",
+        "status": "success",
+        "message": "Directory created",
+        "duration_ms": 0
+      },
+      {
+        "op": "write_file",
+        "file": "g/tools/bridge_inbox_cleanup.zsh",
+        "status": "success",
+        "message": "Written 3060 bytes",
+        "duration_ms": 0
+      }
+    ],
+    "duration_ms": 5
+  },
+  "error": null,
+  "summary": "4/4 operations succeeded",
+  "completed_at": "2025-11-27T08:04:20.245370+00:00"
+}

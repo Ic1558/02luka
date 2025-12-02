@@ -4,12 +4,16 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 source "$SCRIPT_DIR/lib_wo_common.zsh"
 
-INBOX_DIR="$REPO_ROOT/bridge/inbox/CLC"
-STATE_DIR="$REPO_ROOT/followup/state"
+REPO_ROOT="$(resolve_repo_root)"
+DATA_ROOT="$(resolve_data_root "$REPO_ROOT")"
+STATE_DIR="$DATA_ROOT/followup/state"
+INBOX_DIRS=("$DATA_ROOT/bridge/inbox/CLC")
+if [[ "$DATA_ROOT" != "$REPO_ROOT" && -d "$REPO_ROOT/bridge/inbox/CLC" ]]; then
+  INBOX_DIRS+=("$REPO_ROOT/bridge/inbox/CLC")
+fi
 
 json_field() {
   local payload="$1" key="$2"
@@ -17,49 +21,54 @@ json_field() {
 }
 
 main() {
-  ensure_dir "$INBOX_DIR"
+  local inbox_dir
+  for inbox_dir in "${INBOX_DIRS[@]}"; do
+    ensure_dir "$inbox_dir"
+  done
   ensure_dir "$STATE_DIR"
   setopt null_glob
 
   local file processed=0
-  for file in "$INBOX_DIR"/*(.N); do
-    case "$file" in
-      *.yaml|*.yml|*.json) ;;
-      *) continue ;;
-    esac
+  for inbox_dir in "${INBOX_DIRS[@]}"; do
+    log_info "json_wo_processor: scanning $inbox_dir"
+    for file in "$inbox_dir"/*(.N); do
+      case "$file" in
+        *.yaml|*.yml|*.json) ;;
+        *) continue ;;
+      esac
 
-    (( ++processed ))
+      (( ++processed ))
 
-    local meta_json
-    if ! meta_json="$(parse_wo_file "$file" 2>/dev/null)"; then
-      log_warn "json_wo_processor: unable to parse $file"
-      continue
-    fi
+      local meta_json
+      if ! meta_json="$(parse_wo_file "$file" 2>/dev/null)"; then
+        log_warn "json_wo_processor: unable to parse $file"
+        continue
+      fi
 
-    local declared_id
-    declared_id="$(json_field "$meta_json" "id")"
-    local fallthrough_id="$(normalize_wo_id "$file")"
-    local wo_id="$fallthrough_id"
-    [[ -n "$declared_id" ]] && wo_id="$(normalize_wo_id "$declared_id")"
+      local declared_id
+      declared_id="$(json_field "$meta_json" "id")"
+      local fallthrough_id="$(normalize_wo_id "$file")"
+      local wo_id="$fallthrough_id"
+      [[ -n "$declared_id" ]] && wo_id="$(normalize_wo_id "$declared_id")"
 
-    local state_file="$STATE_DIR/$wo_id.json"
-    local fallback_state="$STATE_DIR/$fallthrough_id.json"
+      local state_file="$STATE_DIR/$wo_id.json"
+      local fallback_state="$STATE_DIR/$fallthrough_id.json"
 
-    if [[ "$state_file" != "$fallback_state" && -f "$fallback_state" && ! -f "$state_file" ]]; then
-      log_info "json_wo_processor: renaming state $fallback_state -> $state_file"
-      mv "$fallback_state" "$state_file"
-    fi
+      if [[ "$state_file" != "$fallback_state" && -f "$fallback_state" && ! -f "$state_file" ]]; then
+        log_info "json_wo_processor: renaming state $fallback_state -> $state_file"
+        mv "$fallback_state" "$state_file"
+      fi
 
-    if [[ ! -f "$state_file" ]]; then
-      log_info "json_wo_processor: state missing for $wo_id, creating baseline"
-      local title owner
-      title="$(json_field "$meta_json" "title")"
-      [[ -z "$title" ]] && title="$wo_id"
-      owner="$(json_field "$meta_json" "owner")"
-      write_state_json "$state_file" "$wo_id" "pending" "$title" "$owner"
-    fi
+      if [[ ! -f "$state_file" ]]; then
+        log_info "json_wo_processor: state missing for $wo_id, creating baseline"
+        local title owner
+        title="$(json_field "$meta_json" "title")"
+        [[ -z "$title" ]] && title="$wo_id"
+        owner="$(json_field "$meta_json" "owner")"
+        write_state_json "$state_file" "$wo_id" "pending" "$title" "$owner"
+      fi
 
-    WO_META="$meta_json" "$WO_PIPELINE_PYTHON_BIN" - "$state_file" "$file" <<'PY'
+      WO_META="$meta_json" "$WO_PIPELINE_PYTHON_BIN" - "$state_file" "$file" <<'PY'
 import json, sys, pathlib, datetime, os
 state_path = pathlib.Path(sys.argv[1])
 inbox_file = pathlib.Path(sys.argv[2])
@@ -113,6 +122,7 @@ state.setdefault('owner', '')
 state['updated_at'] = now
 state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 PY
+    done
   done
 
   if (( processed == 0 )); then

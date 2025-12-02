@@ -4,11 +4,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 source "$SCRIPT_DIR/lib_wo_common.zsh"
 
-STATE_DIR="$REPO_ROOT/followup/state"
+REPO_ROOT="$(resolve_repo_root)"
+DATA_ROOT="$(resolve_data_root "$REPO_ROOT")"
+STATE_DIR="$DATA_ROOT/followup/state"
 
 state_value() {
   local file="$1" query="$2"

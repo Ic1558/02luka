@@ -1,0 +1,124 @@
+wo_id: GEMINI_20251119_001_routing_wo_integration
+engine: gemini
+task_type: non_locked_refactor
+impact_zone: agents
+priority: normal
+
+routing:
+  prefer_agent: gemini
+  review_required_by: andy
+  locked_zone_allowed: false
+
+target_files:
+  - "agents/liam/PERSONA_PROMPT.md"
+  - "g/docs/GG_ORCHESTRATOR_CONTRACT.md"
+  - "g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md"
+  - "agents/kim_bot/kim_router.py"
+  - "bridge/templates/gemini_task_template.yaml"
+  - "tools/wo_dispatcher.zsh"
+
+context:
+  title: "Implement Gemini Routing + Work Order Integration (Phase 2-3)"
+  instructions: |
+    You are implementing Phase 2-3 of the Gemini routing and Work Order integration.
+    
+    **Implementation Guide:**
+    - Use the SPEC as your primary reference: `g/reports/feature_gemini_routing_wo_integration_phase2_3_PLAN.md`
+    - Follow the task breakdown in Section 4 (Phase 2 → Phase 3)
+    - All changes must be additive and respect locked/non-locked zone constraints
+    
+    **Phase 2: Routing Logic**
+    
+    1. **Task 2.1: Enhance Liam Routing** (`agents/liam/PERSONA_PROMPT.md`)
+       - Add comprehensive routing matrix with locked-zone guards
+       - Add task-type → engine mapping (bulk_operations, test_generation, heavy_refactor → gemini)
+       - Add explicit fallback chains
+       - Ensure locked zones (governance, /CLC, /CLS, bridge_core) → NEVER route to gemini
+       - Reference: Section 3.2.A in SPEC
+    
+    2. **Task 2.2: Add Layer 4.5 to GG Contract** (`g/docs/GG_ORCHESTRATOR_CONTRACT.md`)
+       - Add new section 4.4 "Layer 4.5 — Gemini (Heavy Compute / Non-Locked Zones)"
+       - Define role, input, output, constraints
+       - Specify: patch-only output, always reviewed, never touches locked zones
+       - Reference: Section 3.2.B in SPEC
+    
+    3. **Task 2.3: Verify Protocol v3.2** (`g/docs/CONTEXT_ENGINEERING_PROTOCOL_v3.md`)
+       - Verify Layer 4.5 section exists and is accurate (lines 286-498)
+       - Check fallback ladder mentions Gemini → CLC/Gemini IDE
+       - Ensure locked-zone rules are explicit
+       - Add note about WO integration if needed
+       - Reference: Section 3.2.C in SPEC
+    
+    **Phase 3: Work Order Integration**
+    
+    4. **Task 3.1: Enhance Kim Router** (`agents/kim_bot/kim_router.py`)
+       - Add explicit locked-zone rejection in `route_engine()` function
+       - Check for `locked_zone: true` or `impact_zone` in ["locked", "governance", "bridge_core", "/CLC", "/CLS"]
+       - If locked zone detected → return "CLC" (never "GEMINI")
+       - Validate task-type before routing to GEMINI
+       - Reference: Section 3.2.E in SPEC
+    
+    5. **Task 3.2: Standardize WO Template** (`bridge/templates/gemini_task_template.yaml`)
+       - Align with canonical WO format from SPEC Section 3.2.F
+       - Add `routing` section (prefer_agent, review_required_by, locked_zone_allowed)
+       - Add `constraints` section (max_tokens, temperature, allow_write, output_format, timeout_seconds)
+       - Add `artifacts` section (expected_outputs)
+       - Add `metadata` section (created_by, requested_via, tags)
+       - Ensure `locked_zone_allowed: false` is explicit
+    
+    6. **Task 3.3: Verify WO Dispatcher** (`tools/wo_dispatcher.zsh`)
+       - Verify GEMINI case exists (line 32)
+       - Confirm logging includes `engine=gemini` in trace
+       - No changes needed if already correct
+    
+    7. **Task 3.4: Directory Structure**
+       - Verify `bridge/inbox/GEMINI/.gitkeep` exists
+       - Verify `bridge/outbox/GEMINI/.gitkeep` exists
+       - No changes needed if already present
+    
+    **Critical Constraints:**
+    - DO NOT modify any files under `/CLC`, `/CLS`, `AI:OP-001`, or `bridge/core`
+    - DO NOT change locked zone logic to allow Gemini access
+    - DO NOT make Gemini the default engine (it's opt-in only)
+    - All changes must be additive (no breaking changes)
+    
+    **Output Format:**
+    - Generate unified diff patches for each file modification
+    - Include review notes explaining changes
+    - Ensure all patches apply cleanly
+    
+    **Validation Checklist (from SPEC Section 5):**
+    After implementation, verify:
+    - [ ] `grep -R "GEMINI" bridge/tools/agents` shows only expected wiring
+    - [ ] No diff under `/CLC`, `/CLS`, `AI:OP-001`, or bridge core
+    - [ ] Liam prompt renders correctly and keeps locked-zone rules
+    - [ ] `bridge/templates/gemini_task_template.yaml` loads with `yq`/`python -c 'yaml.safe_load'`
+    - [ ] Dry-run WO example (manual): GEMINI_… yaml matches template layout
+
+constraints:
+  max_tokens: 4096
+  temperature: 0.15
+  allow_write: false
+  output_format: patch_unified
+  timeout_seconds: 300
+
+artifacts:
+  expected_outputs:
+    - "patches/liam_routing_enhancement.diff"
+    - "patches/gg_contract_layer_4_5.diff"
+    - "patches/protocol_v3_2_verification.diff"
+    - "patches/kim_router_locked_zone_guard.diff"
+    - "patches/gemini_wo_template_standardization.diff"
+    - "notes/implementation_review.md"
+
+metadata:
+  created_by: gg
+  requested_via: "liam/feature-dev"
+  spec_reference: "g/reports/feature_gemini_routing_wo_integration_phase2_3_PLAN.md"
+  pr_reference: "https://github.com/Ic1558/02luka/pull/381"
+  tags:
+    - "engine:gemini"
+    - "kind:routing_integration"
+    - "zone:agents"
+    - "protocol:v3.2"
+    - "phase:2-3"

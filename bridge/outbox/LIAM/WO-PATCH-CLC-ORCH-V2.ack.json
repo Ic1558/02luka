@@ -1,0 +1,9 @@
+{
+  "wo_id": "WO-PATCH-CLC-ORCH-V2",
+  "status": "failed",
+  "stage": "clc_worker",
+  "result": null,
+  "error": "Failed to parse YAML",
+  "summary": "",
+  "completed_at": "2025-11-27T09:13:50.877092+00:00"
+}
