@@ -255,6 +255,13 @@ class AIManager:
         )
 
         # Governance / Policy Check (v4.1)
+        # CRITICAL: Set routing_hint to computed lane BEFORE governance evaluation
+        # This ensures lane-level policy (e.g., "no dev lanes in locked zones") is enforced
+        # Fix for security issue: governance was checking None lane, allowing locked-zone bypass
+        computed_lane = routing.get("lane")
+        if computed_lane and not wo.get("routing_hint"):
+            wo["routing_hint"] = computed_lane
+
         if "writer" not in wo:
             # Default to UNKNOWN if source is missing to prevent accidental privilege escalation.
             # Previously defaulted to 'GG', which was flagged as a security risk.
