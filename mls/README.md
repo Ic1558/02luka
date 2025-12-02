@@ -180,6 +180,27 @@ MLS events are automatically written on strict CI success:
 - **Condition:** `needs.sanity.outputs.ci_strict == '1'`
 - **Location:** After artifact upload, before status summary
 
+### Git Hooks Integration (MLS Trigger Layer v1.0)
+
+MLS events are automatically written on local git operations:
+
+- **Hooks**: `post-commit`, `post-checkout`, `post-merge`
+- **Location**: `.git/hooks/`
+- **Behavior**: Async, fire-and-forget, silent failure
+- **Error Log**: `g/logs/mls_git_hook_errors.log`
+
+**Documentation**: See `manuals/MLS_GIT_HOOKS.md` for installation and usage.
+
+**Verification**:
+```bash
+# Check hooks are installed
+ls -la .git/hooks/ | grep -E "post-(commit|checkout|merge)"
+
+# Test post-commit
+git commit -m "test"
+tail -1 mls/ledger/$(date +%Y-%m-%d).jsonl | jq .
+```
+
 ## Artifacts
 
 ### Available Artifacts
