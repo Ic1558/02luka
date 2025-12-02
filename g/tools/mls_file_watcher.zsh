@@ -107,29 +107,41 @@ watch_files() {
     echo "[MLS Watcher] Starting file watcher..."
     echo "[MLS Watcher] Watching: ${WATCH_DIRS[@]}"
     
-    # Use fswatch with:
-    # -r: recursive
-    # -l: latency (debounce)
-    # --event Created,Updated,Removed: specific events
-    # -0: null-separated output
-    
-    fswatch -r -l "$DEBOUNCE_SECONDS" \
-        --event Created --event Updated --event Removed \
-        -0 \
-        "${WATCH_DIRS[@]}" | \
-    while IFS= read -r -d '' event; do
-        # Parse event (format: <flags> <path>)
-        # For simplicity, treat all as "modified"
-        # (fswatch flags are complex, basic detection for now)
+    # Check if fswatch supports --format (version 1.x+)
+    if fswatch --help 2>&1 | grep -q "format"; then
+        echo "[MLS Watcher] Using --format mode (fswatch 1.x+)"
         
-        if [[ "$event" =~ "Created" ]]; then
-            process_event "$event" "created"
-        elif [[ "$event" =~ "Removed" ]]; then
-            process_event "$event" "deleted"
-        else
-            process_event "$event" "modified"
-        fi
-    done
+        # Use --format to get event type and path separated by |
+        # Format: %f = event flags (Created=0x100, Updated=0x2, Removed=0x200)
+        #         %p = path
+        fswatch -r -l "$DEBOUNCE_SECONDS" \
+            --event Created --event Updated --event Removed \
+            --format '%f|%p' \
+            "${WATCH_DIRS[@]}" | \
+        while IFS='|' read -r flags file_path; do
+            # Parse flags (hex values)
+            case "$flags" in
+                *100*)  # Created
+                    process_event "$file_path" "created"
+                    ;;
+                *200*)  # Removed
+                    process_event "$file_path" "deleted"
+                    ;;
+                *)  # Updated or other
+                    process_event "$file_path" "modified"
+                    ;;
+            esac
+        done
+    else
+        # Fallback for older fswatch (treat all as modified)
+        echo "[MLS Watcher] Using legacy mode (no --format support)"
+        
+        fswatch -r -l "$DEBOUNCE_SECONDS" \
+            "${WATCH_DIRS[@]}" | \
+        while IFS= read -r file_path; do
+            process_event "$file_path" "modified"
+        done
+    fi
 }
 
 # Check dependencies
