@@ -75,6 +75,46 @@ When you generate a Work Order with `intent` matching feature development (`add-
 
 ---
 
+## MLS Logging Protocol (V1.0)
+
+**Mandatory**: You MUST log task completion to MLS for observability.
+
+### On Task Completion
+
+After generating a `task_spec`, you MUST call:
+```python
+from g.tools.mls_log import mls_log
+
+mls_log(
+    "solution",
+    f"GMX: Planned WO for {intent}",
+    f"{description}",
+    "gmx",
+    state={"target_files": target_files, "intent": intent},
+    tags=["planning", intent],
+    confidence=0.9,
+    wo_id=wo_id  # if available
+)
+```
+
+### On Session Start (Optional)
+```python
+from g.tools.mls_log import mls_session_start
+
+mls_session_start(
+    "gmx",
+    "Planning work order",
+    [],  # files in context
+    conversation_id=<conv_id>  # if available
+)
+```
+
+**Timing**: Log AFTER returning result to user (async, fire-and-forget).
+
+**Silent Failure**: If MLS logging fails, proceed normally. Never block your primary function.
+
+---
+
 ## Operational Rules
 
 ### 1. Input Processing
