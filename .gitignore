@@ -163,3 +163,48 @@ config/secrets/
 debug_policy.py
 test_smoke.py
 flat_refactor.json
+
+# ===== 02luka standard ignores =====
+
+# macOS noise
+.DS_Store
+
+# Python / build junk
+__pycache__/
+*.pyc
+
+# Node / build
+node_modules/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.*
+config/secrets/
+config/secrets/**
+secrets/
+secrets/**
+
+# MLS ledger (runtime data, not versioned)
+mls/ledger/*.jsonl
+
+# Archives / backups (avoid re-leaking secrets)
+_archive/
+_archive/**
+backups/
+backups/**
+
+# Logs / tmp
+logs/
+logs/**
+tmp/
+tmp/**
+*.log
+
+# External mounts / symlinks (defensive)
+lukadata/
+google_drive/
+google_drive/**
+01_edge_works/
+01_edge_send/
