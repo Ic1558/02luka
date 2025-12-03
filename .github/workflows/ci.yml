@@ -37,6 +37,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  core-agent-guard:
+    name: "Core Agent Integrity Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check core agent files
+        run: g/tools/ci_check_core_agents.zsh
+
   # ============================================================
   # REQUIRED JOB: validate (phase 4/5/6 smoke)
   # This is the only job required to pass for PRs to be green
