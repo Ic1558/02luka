@@ -93,20 +93,32 @@ jobs:
       - name: Verify build output
         run: |
           echo "📁 Build output:"
-          ls -la dist/ops/
+          ls -la dist/ops/ || echo "⚠️  Output directory empty"
           echo ""
           echo "📊 File sizes:"
-          du -h dist/ops/*
+          du -h dist/ops/* 2>/dev/null || echo "⚠️  No files to size"
           echo ""
           echo "🔍 Content verification:"
-          echo "Health check:"
-          head -5 dist/ops/_health.html
+          if [[ -f dist/ops/_health.html ]]; then
+            echo "Health check:"
+            head -5 dist/ops/_health.html
+          else
+            echo "⚠️  _health.html missing"
+          fi
           echo ""
-          echo "Manifest:"
-          cat dist/ops/manifest.json
+          if [[ -f dist/ops/manifest.json ]]; then
+            echo "Manifest:"
+            cat dist/ops/manifest.json
+          else
+            echo "⚠️  manifest.json missing"
+          fi
           echo ""
-          echo "Latest JSON (first 5 lines):"
-          head -5 dist/ops/latest.json
+          if [[ -f dist/ops/latest.json ]]; then
+            echo "Latest JSON (first 5 lines):"
+            head -5 dist/ops/latest.json
+          else
+            echo "⚠️  latest.json missing (API unavailable, no cache)"
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

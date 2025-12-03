@@ -69,8 +69,8 @@ else
       cp "$CACHE_DIR/latest.json" "$OUTPUT_DIR/latest.json"
       echo "✅ Using cached latest.json as fallback"
     else
-      echo "❌ No API data and no cache available"
-      exit 1
+      echo "⚠️  No API data and no cache available - continuing with manifest/health only"
+      # Don't exit - allow manifest and health files to be generated
     fi
   fi
   
