@@ -47,7 +47,7 @@ jobs:
       - name: Run Mirror Integrity Check
         run: |
           echo "🔍 Running mirror integrity check..."
-          node run/verify_mirror_integrity.cjs
+          node g/tools/workflow_scripts/verify_mirror_integrity.cjs
         env:
           MIRROR_BASE_URL: ${{ github.event.inputs.base_url || 'https://ops.theedges.work' }}
 

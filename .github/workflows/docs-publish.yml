@@ -44,7 +44,7 @@ jobs:
       - name: Publish Documentation
         run: |
           echo "🚀 Publishing documentation..."
-          node run/publish_docs.cjs
+          node g/tools/workflow_scripts/publish_docs.cjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

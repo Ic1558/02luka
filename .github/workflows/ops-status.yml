@@ -47,7 +47,7 @@ jobs:
       - name: Generate Status Board
         run: |
           echo "🚀 Generating Ops Status Board..."
-          node run/generate_ops_status.cjs
+          node g/tools/workflow_scripts/generate_ops_status.cjs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
