@@ -51,6 +51,11 @@ jobs:
           "$SUDO_BIN" apt update
           "$SUDO_BIN" apt install gh
 
+      - name: Install zsh
+        run: |
+          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
+          "$SUDO_BIN" apt install -y zsh
+
       - name: Fetch latest OPS data
         run: |
           # Create cache directory

@@ -18,9 +18,21 @@ resolve_repo_root() {
   [[ -z "$source_path" ]] && source_path="$0"
   local script_dir
   script_dir="$(cd "$(dirname "$source_path")" && pwd)"
-  local repo_root
-  repo_root="$(cd "$script_dir/../.." && pwd)"
-  echo "$repo_root"
+  cd "$script_dir/../.." && pwd
+}
+
+# Prefer the data root under g/ when present so outputs feed dashboard generator
+resolve_data_root() {
+  local repo_root="${1:-$(resolve_repo_root)}"
+  if [[ -n "${WO_PIPELINE_DATA_ROOT:-}" ]]; then
+    echo "${WO_PIPELINE_DATA_ROOT%/}"
+    return
+  fi
+  if [[ -d "$repo_root/g" ]]; then
+    echo "$repo_root/g"
+  else
+    echo "$repo_root"
+  fi
 }
 
 # Basic logging helpers
@@ -169,14 +181,12 @@ mark_status() {
 trigger_followup_regen() {
   local repo_root
   repo_root="$(resolve_repo_root)"
-  local workspace
-  workspace="$(cd "$repo_root/.." && pwd)"
-  local helper="$workspace/tools/regenerate_followup_after_state.zsh"
-  local generator="$workspace/tools/claude_tools/generate_followup_data.zsh"
+  local helper="$repo_root/tools/regenerate_followup_after_state.zsh"
+  local generator="$repo_root/tools/claude_tools/generate_followup_data.zsh"
   if [[ -x "$helper" ]]; then
-    "$helper" >/dev/null 2>&1 || log_warn "regenerate_followup_after_state.zsh exited non-zero"
+    LUKA_SOT="$repo_root" "$helper" >/dev/null 2>&1 || log_warn "regenerate_followup_after_state.zsh exited non-zero"
   elif [[ -x "$generator" ]]; then
-    "$generator" >/dev/null 2>&1 || log_warn "generate_followup_data.zsh exited non-zero"
+    LUKA_SOT="$repo_root" "$generator" >/dev/null 2>&1 || log_warn "generate_followup_data.zsh exited non-zero"
   fi
 }
 

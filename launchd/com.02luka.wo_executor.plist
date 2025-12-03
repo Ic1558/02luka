@@ -8,7 +8,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/icmini/02luka/g/tools/wo_pipeline/wo_executor.zsh</string>
+    <string>/Users/icmini/02luka/tools/wo_pipeline/wo_executor.zsh</string>
   </array>
 
   <key>StartInterval</key>

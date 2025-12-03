@@ -16,6 +16,8 @@ bridge/inbox/CLC/*.yaml|*.json
 
 Each script is idempotent and safe to run manually. The guardrail script validates the end-to-end health and is wired into LaunchAgents for unattended mode.
 
+**Path resolution:** the scripts resolve the repo root automatically and prefer writing state to `g/followup/state`. They scan both `g/bridge/inbox/CLC` and (if present) the root-level `bridge/inbox/CLC` to avoid missing legacy drop locations. LaunchAgent templates point to `/Users/icmini/02luka/tools/wo_pipeline/*.zsh`; update the paths if you run from a different checkout and keep `WO_PIPELINE_DATA_ROOT`/`LUKA_SOT` aligned.
+
 ## State JSON Schema
 
 State files live under `followup/state/<WO-ID>.json` and conform to the schema below (fields omitted by WO data default to empty values):

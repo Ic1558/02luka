@@ -8,7 +8,7 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/icmini/02luka/g/tools/wo_pipeline/followup_tracker.zsh</string>
+    <string>/Users/icmini/02luka/tools/wo_pipeline/followup_tracker.zsh</string>
   </array>
 
   <key>StartInterval</key>
