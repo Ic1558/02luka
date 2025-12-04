@@ -82,6 +82,7 @@
 - Health server: `~/02luka/misc/health_server.cjs`
 - LaunchAgent: `~/Library/LaunchAgents/com.02luka.cloudflared.dashboard.plist`
 - Tunnel script: `~/02luka/tools/cloudflared_dashboard_tunnel.zsh`
+- Transform Rule: See `g/docs/cloudflare_transform_rule_ops.md` for X-Relay-Key header configuration
 
 ## Dashboard Link
 
