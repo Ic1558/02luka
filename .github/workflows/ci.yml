@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check core agent files
-        run: g/tools/ci_check_core_agents.zsh
+        run: bash g/tools/ci_check_core_agents.zsh
 
   system-tools-guard:
     name: "System Tools Integrity Check"
@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check system tools
-        run: g/tools/ci_check_system_tools.zsh
+        run: bash g/tools/ci_check_system_tools.zsh
 
   workspace-guard:
     name: "Workspace Integrity Check"
@@ -59,7 +59,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check workspace files
-        run: g/tools/ci_check_workspace.zsh
+        run: bash g/tools/ci_check_workspace.zsh
+
+  cls-log-guard:
+    name: "CLS Log Usage Guard"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check CLS audit log usage
+        run: bash g/tools/ci_check_cls_log_usage.zsh
 
   # ============================================================
   # REQUIRED JOB: validate (phase 4/5/6 smoke)

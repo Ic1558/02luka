@@ -9,6 +9,7 @@ set -euo pipefail
 
 REPO="${REPO:-$HOME/02luka}"
 cd "$REPO"
+CLS_LOG="$REPO/g/tools/cls_log.zsh"
 
 # ---- Configuration
 RECENT_DIGESTS_LIMIT=7
@@ -21,7 +22,22 @@ log_error() {
   local context="$1"
   local message="$2"
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ERROR [$context] $message" >&2
-  echo "{\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"level\":\"error\",\"context\":\"$context\",\"message\":\"$message\"}" >> "$REPO/g/telemetry/cls_audit.jsonl" 2>/dev/null || true
+  local details_file
+  details_file=$(mktemp)
+  jq -n \
+    --arg ctx "$context" \
+    --arg msg "$message" \
+    --arg script "tools/governance_index_generator.zsh" \
+    '{context:$ctx,message:$msg,script:$script}' >"$details_file"
+  "$CLS_LOG" \
+    --action "governance_index_generation" \
+    --category "maintenance" \
+    --status "failed" \
+    --severity "error" \
+    --source "cls_script" \
+    --message "$message" \
+    --details-file "$details_file" || true
+  rm -f "$details_file"
 }
 
 log_info() {
@@ -403,4 +419,3 @@ log_info "Index JSON generated: $INDEX_OUTPUT"
 generate_html_snapshot "$WEEK_END"
 
 log_info "Governance index generation complete"
-
