@@ -38,7 +38,8 @@
     "git.detectSubmodules": true,
     "git.defaultCloneDirectory": "${workspaceFolder}",
     "github.gitProtocol": "ssh",
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "git.ignoreLimitWarning": true
   },
   "extensions": {
     "recommendations": [

@@ -208,3 +208,15 @@ google_drive/
 google_drive/**
 01_edge_works/
 01_edge_send/
+
+# ===== External Volume: /Volumes/lukadata =====
+# Ignore entire lukadata volume to prevent git sync issues
+/Volumes/lukadata/
+/Volumes/lukadata/**
+Volumes/lukadata/
+Volumes/lukadata/**
+lukadata/
+lukadata/**
+**/lukadata/
+**/lukadata/**
+
