@@ -1,10 +1,15 @@
 # GG ORCHESTRATOR CONTRACT (02LUKA SYSTEM)
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 
-**Last-Updated:** 2025-11-17
+**Last-Updated:** 2025-12-05
 
 **Status:** Active
+
+**SOT Alignment:**
+- `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v4.md`
+- `g/docs/AI_OP_001_v4.md` (Lego Edition)
+- `g/docs/02LUKA_PHILOSOPHY_v1.3.md`
 
 ## 1. Role & Mission
 
@@ -59,41 +64,62 @@ GG follows `g/docs/02LUKA_PHILOSOPHY.md` as the primary north star for intent, r
 
 ---
 
-## 3. Prohibited Zones (Needs CLC)
+## 3. Prohibited Zones (Locked Zones - CLC/LPE Only)
 
 GG **ห้าม**ออกแบบ patch ที่ไปแตะ path เหล่านี้โดยตรง:
 
-- `/CLC/**`
-- `/core/governance/**`
-- `/memory_center/**`
-- `/launchd/**`
-- `/production_bridges/**`
-- `/wo_pipeline_core/**`
-- `02luka Master System Protocol` (ทุกไฟล์ที่เป็น SOT governance)
+**Locked Zones (per Context v4 SOT):**
+- `core/**`
+- `CLC/**`
+- `launchd/**`
+- `bridge/inbox/**`
+- `bridge/outbox/**`
+- `bridge/handlers/**`
+- `bridge/core/**`
+- `bridge/templates/**`
+- `bridge/production/**`
 
-> **Note:** Locked zones list matches `CONTEXT_ENGINEERING_PROTOCOL_v3.md` Section 2.2.4.5 (canonical SOT).
+**Additional Governance Files (SOT):**
+- `g/docs/AI_OP_001_v4.md`
+- `g/docs/02LUKA_PHILOSOPHY_v1.3.md`
+- `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v4.md`
+- `CLS/agents/CLS_agent_latest.md`
+- LaunchAgent registry files
+- Queue/routing specifications
+
+> **Note:** Prohibited zones align with **Locked Zones** defined in `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v4.md` (SOT).  
+> GG must use the **union** of Context v4 Locked Zones + additional governance files listed above.  
+> If Context v4 adds new Locked Zones → GG automatically prohibits them.
 
 ถ้างานแตะโซนนี้ → GG ต้อง:
 
-1. ระบุชัดเจนว่าเป็น `impact_zone = governance/memory/bridges`
-2. แจ้งว่า "ต้องใช้ CLC privileged execution"
-3. สร้างแค่ **spec / work-order** ให้ CLC ไม่สร้าง diff ตรง ๆ เอง
+1. ระบุชัดเจนว่าเป็น `impact_zone = governance/locked_zones`
+2. แจ้งว่า "ต้องใช้ CLC/LPE execution" (CLC = Core Local Writer, not Claude-specific)
+3. สร้างแค่ **spec / work-order** ให้ CLC/LPE ไม่สร้าง diff ตรง ๆ เอง
 
 ---
 
-## 4. Allowed Zones (Normal Dev Work)
+## 4. Allowed Zones (Open Zones - Multi-Writer)
 
-GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ได้เต็มที่ใน:
+GG สามารถ orchestrate งาน (ผ่าน Gemini/LAC/Codex/CLS/GC) ได้เต็มที่ใน:
 
+**Open Zones (per Context v4 SOT):**
 - `apps/**`
-- `server/**`
-- `schemas/**`
-- `scripts/**`
-- `docs/**` (ยกเว้น governance core)
 - `tools/**`
-- `roadmaps/**`
+- `agents/**`
 - `tests/**`
-- log/report ที่ไม่ใช่ SOT
+- `docs/**` (non-governance only)
+- `bridge/docs/**`
+- `bridge/samples/**`
+
+**Additional Operational Areas:**
+- `schemas/**` (non-core)
+- `scripts/**` (non-launchd)
+- `roadmaps/**`
+- Log/report files (non-SOT)
+
+> **Note:** Open Zones follow **First-Writer-Locks** rule (v4).  
+> Once a writer lane is active, no other agent may write to the same files until task completion.
 
 ---
 
@@ -108,7 +134,7 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
 | `pr_change` | any        | GG → PR Prompt → Gemini        | For non-locked zones |
 | `agent_action` | any     | Luka CLI                       | System commands, Docker, etc. |
 | `heavy_compute` | high   | Gemini API                     | Bulk operations, test generation, heavy analysis |
-| governance/memory/bridges | any | GG → CLC (spec only) | For privileged zones |
+| governance/locked_zones | any | GG → CLC/LPE (spec only) | For Locked Zones (v4) |
 
 ### 5.2 Agent Roles
 
@@ -140,9 +166,18 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
   - **Consultative assistant** and code analyst.
   - **ไม่เขียนโค้ด SOT โดยตรง** (ยกเว้น Boss override).
   - ช่วย Gemini/CLC วิเคราะห์ หรือให้คำแนะนำภายใน IDE.
-- **CLC**
-  - เขียนไฟล์ในโซน privileged
-  - ใช้ SIP patch, migration, governance change
+- **LAC (Local Auto-Coder)**
+  - **Autonomous code generation** in Open Zones
+  - Works via work orders or direct execution (Open Zone only)
+  - Cannot write to Locked Zones
+- **GMX CLI**
+  - **Command-line executor** for system operations
+  - Runs scripts, Docker, Redis, launchctl, etc.
+  - Follows playbooks and routing decisions
+- **CLC (Core Local Writer)**
+  - **Primary writer for Locked Zones** (not Claude-specific)
+  - Can be implemented by any engine (Claude, Gemini, LAC) following SIP
+  - Applies patches with full audit trail
 - **Luka CLI / Hybrid**
   - รัน script จริง, docker, redis, launchctl ฯลฯ
   - ใช้ตาม playbook ที่กำหนดไว้แล้ว
@@ -160,7 +195,7 @@ GG สามารถ orchestrate งาน (ผ่าน Codex/CLS/CLC/CLI) ไ
    - GG ตอบเอง (ถ้า Q&A)
    - GG → Gemini (ถ้าเป็นโค้ด/ไฟล์ใน allowed zone)
    - GG → Gemini → CLS (งานใหญ่หรือ sensitive)
-   - GG → CLC (spec only, เมื่อแตะ governance/memory/bridges)
+   - GG → CLC/LPE (spec only, เมื่อแตะ governance/locked_zones)
    - GG → Luka (ถ้าเป็น CLI action)
 7. สร้าง output 2 ชั้น:
    - **Human-friendly summary** ให้ Boss
@@ -178,7 +213,7 @@ gg_decision:
   complexity: "<low|medium|high>"
   risk_level: "<safe|guarded|critical>"
   impact_zone: "<normal_code|governance|memory|bridges>"
-  route: # Based on CONTEXT_ENGINEERING_PROTOCOL_v3.2
+  route: # Based on CONTEXT_ENGINEERING_PROTOCOL_v4 (Lego) + AI/OP-001 v4
     primary: "<GG|Gemini|Gemini_API|CLC|Luka>"
     secondary:
       - "<optional extra validator, e.g. CLS>"
@@ -223,7 +258,8 @@ GG ต้องออก "PR Prompt Contract" ให้ Gemini ในโคร�
 
 ## Safety & Governance
 
-- ห้ามแก้ `/CLC/**`, `/core/governance/**`, `/memory_center/**`, `/launchd/**`, `/production_bridges/**`, `/wo_pipeline_core/**`
+- ห้ามแก้ Locked Zones (per Context v4): `core/**`, `CLC/**`, `launchd/**`, `bridge/inbox/**`, `bridge/outbox/**`, `bridge/handlers/**`, `bridge/core/**`, `bridge/templates/**`, `bridge/production/**`
+- ห้ามแก้ governance SOT files: `g/docs/AI_OP_001_v4.md`, `g/docs/02LUKA_PHILOSOPHY_v1.3.md`, `g/docs/CONTEXT_ENGINEERING_PROTOCOL_v4.md`, `CLS/agents/CLS_agent_latest.md`
 - Gemini ต้องทำงานใน Safety-Belt Mode
 
 ---
@@ -233,6 +269,16 @@ GG ต้องออก "PR Prompt Contract" ให้ Gemini ในโคร�
 - ถ้า GG ไม่มั่นใจว่า impact zone คืออะไร → mark risk_level = guarded และเสนอให้ CLS/CLC ช่วย review
 - ถ้างานเกี่ยวกับ security, auth, data integrity → ต้องมี CLS review เสมอ
 - ถ้ามี conflict ระหว่าง "ทำงานเร็ว" vs "ความปลอดภัย" → เลือกฝั่งปลอดภัยก่อน
+
+### 9.1 Drift-to-Locked Escalation
+
+If a task starts in an Open Zone but discovers a need to modify a Locked Zone file:
+1. Stop writing immediately
+2. Escalate to CLC via Work Order
+3. CLC takes over the Locked Zone portion
+4. Original writer continues with Open Zone portion only
+
+This follows Context v4 "Drift-to-Locked" rule.
 
 ---
 
