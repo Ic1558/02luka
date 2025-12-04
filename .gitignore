@@ -163,3 +163,14 @@ config/secrets/
 debug_policy.py
 test_smoke.py
 flat_refactor.json
+
+# ===== External Volume: /Volumes/lukadata =====
+# Ignore entire lukadata volume to prevent git sync issues
+/Volumes/lukadata/
+/Volumes/lukadata/**
+Volumes/lukadata/
+Volumes/lukadata/**
+lukadata/
+lukadata/**
+**/lukadata/
+**/lukadata/**
