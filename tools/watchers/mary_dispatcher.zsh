@@ -49,7 +49,7 @@ from pathlib import Path
 wo_path = Path(sys.argv[1])
 rules_path = Path(sys.argv[2])
 
-VALID_TARGETS = {"CLC", "LPE", "shell", "Andy", "CLS"}
+VALID_TARGETS = {"CLC", "LPE", "shell", "Andy", "CLS", "LAC"}
 
 def load_yaml(path: Path):
     if not path.exists():
@@ -75,6 +75,14 @@ target_candidates = data.get("target_candidates") or []
 route_hints = data.get("route_hints") or {}
 fallback_order = route_hints.get("fallback_order") or []
 task_type = (data.get("task") or {}).get("type")
+
+# --- NEW: honor strict_target first (highest priority) ---
+if strict_target:
+    strict_upper = str(strict_target).upper()
+    if strict_upper in VALID_TARGETS:
+        print(strict_upper)
+        sys.exit(0)
+# --- END NEW ---
 
 # Match rules: check if fallback_contains is a substring of any fallback_order element
 for rule in rules:
@@ -104,11 +112,15 @@ for rule in rules:
     else:
         print(f"Invalid target '{target}' in rule '{rule.get('name', 'unnamed')}', using default CLC", file=sys.stderr)
 
-# Fallback: check strict_target for shell
-if strict_target and any(str(c).lower() == "shell" for c in target_candidates):
-    print("shell")
-else:
-    print("CLC")
+# Fallback: check target_candidates in order (LAC, CLC, shell, etc.)
+for candidate in target_candidates:
+    candidate_upper = str(candidate).upper()
+    if candidate_upper in VALID_TARGETS:
+        print(candidate_upper)
+        sys.exit(0)
+
+# Final fallback: CLC
+print("CLC")
 PY
 }
 
@@ -154,7 +166,7 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
       mv "$file" "$ROOT/bridge/processed/ENTRY/${id}.yaml"
       log "$id -> LPE"
       ;;
-    shell|CLC)
+    shell|CLC|LAC|CLS|Andy)
       mkdir -p "$ROOT/bridge/inbox/$dest" "$ROOT/bridge/outbox/$dest"
       tmp="$ROOT/bridge/inbox/$dest/.mary_${id}.$$"
       cp "$file" "$tmp"

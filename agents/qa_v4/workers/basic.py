@@ -38,11 +38,15 @@ class QAWorkerBasic:
     - Non-critical domains
     """
     
-    def __init__(self):
+    def __init__(self, actions=None):
         self.telemetry_file = Path("g/telemetry/qa_lane_execution.jsonl")
         self.telemetry_file.parent.mkdir(parents=True, exist_ok=True)
-        self.actions = QaActions()
+        self.actions = actions if actions is not None else QaActions()
 
+    def execute_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Alias for process_task for backward compatibility with ai_manager."""
+        return self.process_task(task_data)
+    
     def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         task_id = task_data.get("task_id", "unknown")
         files_touched = task_data.get("files_touched", [])
