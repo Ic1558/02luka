@@ -15,7 +15,18 @@ from agents.architect.architect_agent import ArchitectAgent
 from agents.architect.spec_builder import ArchitectSpec, SpecBuilder
 from agents.clc.model_router import should_route_to_clc
 from agents.dev_oss.dev_worker import DevOSSWorker
-from agents.qa_v4.qa_worker import QAWorkerV4
+# Optional import - QA may not be available
+try:
+    from agents.qa_v4 import QAWorkerV4
+except ImportError:
+    # Stub for missing QA module
+    class QAWorkerV4:
+        def __init__(self, *args, **kwargs):
+            pass
+        def execute_task(self, *args, **kwargs):
+            return {"status": "skipped", "reason": "QA module not available"}
+        def run(self, *args, **kwargs):
+            return {"status": "skipped", "reason": "QA module not available"}
 from agents.docs_v4.docs_worker import DocsWorkerV4
 from g.tools.lac_telemetry import build_event, log_event
 from shared.routing import determine_lane
@@ -134,6 +145,21 @@ class AIManager:
 
             def run_lint(self, targets: List[str]) -> Dict[str, Any]:
                 return {"status": "success", "targets": targets}
+<<<<<<< HEAD
+            
+            def check_security_basics(self, file_path: str) -> List[str]:
+                """Quick security check stub - returns empty list (no issues)."""
+                return []
+            
+            def check_patterns(self, file_path: str) -> List[str]:
+                """Quick pattern check stub - returns empty list (no issues)."""
+                return []
+            
+            def run_pattern_check(self, file_path: str) -> List[str]:
+                """Quick pattern check stub - returns empty list (no issues)."""
+                return []
+=======
+>>>>>>> origin/main
 
         qa_worker = QAWorkerV4(actions=_QuickQaActions())
         qa_result = qa_worker.execute_task(

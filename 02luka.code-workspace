@@ -1,8 +1,24 @@
 {
   "folders": [
     {
-      "path": ".",
+      "path": "/Users/icmini/02luka",
       "name": "02luka"
+    },
+    {
+      "path": "/Users/icmini/LocalProjects/02luka-memory",
+      "name": "02luka-memory"
+    },
+    {
+      "path": "/Volumes/lukadata",
+      "name": "lukadata"
+    },
+    {
+      "path": "/Users/icmini/My Drive (ittipong.c@gmail.com)/01_edge_works",
+      "name": "01_edge_works"
+    },
+    {
+      "path": "/Users/icmini/My Drive (ittipong.c@gmail.com)/01_edge_send",
+      "name": "01_edge_send"
     }
   ],
   "settings": {

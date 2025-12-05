@@ -1,0 +1,24 @@
+# LAC Lanes Configuration
+# Defines available lanes and routing rules for LAC Manager
+
+lanes:
+  dev_lac_manager:
+    description: "Default LAC lane for development tasks"
+    enabled: true
+  
+  dev_oss:
+    description: "OSS development lane (free)"
+    enabled: true
+  
+  qa:
+    description: "QA lane"
+    enabled: true
+
+routing_rules:
+  - name: default-dev-lane
+    if: "intent contains 'dev' or intent contains 'implement'"
+    target: dev_lac_manager
+  
+  - name: default-qa-lane
+    if: "intent contains 'qa' or intent contains 'test'"
+    target: qa

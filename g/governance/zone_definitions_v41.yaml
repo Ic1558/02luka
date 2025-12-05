@@ -26,6 +26,7 @@ zones:
       - "g/config/**"
       - "shared/**"
       - "tests/**"
+      - "tools/**"  # Added 2025-12-06: allow LAC QA tests/tools; TODO: narrow to tools/test_lac_* if future risk appears
       - "g/tools/**"
       - "g/reports/feature-dev/**"
       - "g/reports/experimental/**"
@@ -39,3 +40,4 @@ zones:
       - "CLS"
       - "CODEX"
       - "GMX"
+      - "LAC"  # Added 2025-12-06: allow LAC to write in open_zone (see governance_lac_allowed_paths_PLAN_20251206)

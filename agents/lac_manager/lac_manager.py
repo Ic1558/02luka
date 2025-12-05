@@ -156,6 +156,13 @@ complexity: "{task.get('complexity', 'simple')}"
                 
             except Exception as e:
                 logging.error(f"Error processing {task_file.name}: {e}")
+                # Move to processed even on error to prevent stuck WOs
+                try:
+                    if proc_path.exists():
+                        proc_path.rename(processed / task_file.name)
+                        logging.warning(f"Moved {task_file.name} to processed/ after error")
+                except Exception as move_error:
+                    logging.error(f"Failed to move {task_file.name} to processed/: {move_error}")
 
 if __name__ == "__main__":
     manager = LACManager()

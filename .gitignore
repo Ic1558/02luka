@@ -24,6 +24,13 @@ tmp/
 *.key
 credentials.json
 
+# Discord credentials (webhooks, tokens)
+**/discord*.json
+**/discord*.md
+**/*discord*_*.json
+**/*discord*_*.md
+memory/cls/discord*
+
 # Python
 __pycache__/
 *.py[cod]
@@ -163,3 +170,14 @@ config/secrets/
 debug_policy.py
 test_smoke.py
 flat_refactor.json
+
+# ===== External Volume: /Volumes/lukadata =====
+# Ignore entire lukadata volume to prevent git sync issues
+/Volumes/lukadata/
+/Volumes/lukadata/**
+Volumes/lukadata/
+Volumes/lukadata/**
+lukadata/
+lukadata/**
+**/lukadata/
+**/lukadata/**

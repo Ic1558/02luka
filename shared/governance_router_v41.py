@@ -19,6 +19,7 @@ CANON_WRITERS: Dict[str, str] = {
     "codex": "CODEX",
     "gmx": "GMX",
     "clc": "CLC",
+    "lac": "LAC",  # Added 2025-12-06: enable LAC as first-class writer (see WO-20251206-GOV-LAC-WRITER-V1)
 }
 
 # Allowed dev lanes in the open zone.
