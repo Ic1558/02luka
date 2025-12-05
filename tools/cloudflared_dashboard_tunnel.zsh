@@ -24,7 +24,17 @@ fi
 
 # Expand environment variables in config (for ${RELAY_KEY} etc.)
 TEMP_CONFIG=$(mktemp)
-envsubst < "$CONFIG" > "$TEMP_CONFIG"
+if ! envsubst < "$CONFIG" > "$TEMP_CONFIG" 2>/dev/null; then
+  echo "[cloudflared-dashboard] WARNING: envsubst failed, using original config" >&2
+  cp "$CONFIG" "$TEMP_CONFIG"
+fi
+
+# Verify RELAY_KEY is set (for debugging)
+if [[ -z "${RELAY_KEY:-}" ]]; then
+  echo "[cloudflared-dashboard] ERROR: RELAY_KEY is not set in environment!" >&2
+  echo "[cloudflared-dashboard] Check that .env.local contains RELAY_KEY=" >&2
+fi
 
 echo "[cloudflared-dashboard] starting tunnel with $CONFIG (expanded env vars)"
+echo "[cloudflared-dashboard] RELAY_KEY length: ${#RELAY_KEY:-0}" >>"$LOG_DIR/dashboard.tunnel.log" 2>&1
 exec cloudflared tunnel --config "$TEMP_CONFIG" run >>"$LOG_DIR/dashboard.tunnel.log" 2>&1

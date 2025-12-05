@@ -6,16 +6,30 @@
 
 const http = require('http');
 
-// Relay key for origin validation (matches cloudflared config)
-const RELAY_KEY = 'e3fc194816b2dfc1b1a74ef16bd40091a7941a9f2dbb0eba3cd8500ac514bfd1';
+// Relay key for origin validation (must be provided via environment)
+const RELAY_KEY = process.env.RELAY_KEY;
+
+const isLocalHost = (host) =>
+  host === 'localhost:4000' || host === '127.0.0.1:4000';
 
 const server = http.createServer((req, res) => {
-  // Verify origin is from cloudflared tunnel (check Host header)
-  const host = req.headers.host;
-  if (host !== 'ops.theedges.work' && host !== 'localhost:4000' && host !== '127.0.0.1:4000') {
-    res.writeHead(401, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Unauthorized - Invalid host' }));
-    return;
+  const host = req.headers.host || '';
+  const relayKeyHeader = req.headers['x-relay-key'];
+
+  // For non-local requests, require valid relay key
+  if (!isLocalHost(host)) {
+    if (!RELAY_KEY) {
+      console.error('[health_server] RELAY_KEY is not set in environment');
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Server misconfigured: RELAY_KEY missing' }));
+      return;
+    }
+
+    if (!relayKeyHeader || relayKeyHeader !== RELAY_KEY) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized - Invalid relay key' }));
+      return;
+    }
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -50,8 +64,9 @@ process_memory_bytes{type="heapUsed"} ${process.memoryUsage().heapUsed}
 });
 
 const PORT = parseInt(process.env.HEALTH_PORT || process.env.PORT || '4000', 10);
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Health server running on http://0.0.0.0:${PORT}`);
+const HOST = process.env.HEALTH_HOST || '127.0.0.1';
+server.listen(PORT, HOST, () => {
+  console.log(`✅ Health server running on http://${HOST}:${PORT}`);
   console.log(`   /ping    - Health check`);
   console.log(`   /state   - System state`);
   console.log(`   /metrics - Prometheus metrics`);
