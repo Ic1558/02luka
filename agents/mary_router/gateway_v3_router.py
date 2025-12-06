@@ -249,27 +249,48 @@ class GatewayV3Router:
                     # File still at original location, rename failed - move to error/
                     wo_path.rename(error_path)
                     log.info(f"Moved {wo_id} from original location to error/")
+                    # Log telemetry after successful move
+                    self.log_telemetry({
+                        "wo_id": wo_id,
+                        "source_inbox": "MAIN",
+                        "target_inbox": target,
+                        "action": "move",
+                        "status": "error",
+                        "error": str(e),
+                        "moved_to": str(error_path)
+                    })
                 # Check target location (rename succeeded but later operation failed)
                 elif target_path.exists():
                     # File was successfully moved but error occurred later (e.g., telemetry)
                     # Move from target location to error/
                     target_path.rename(error_path)
                     log.info(f"Moved {wo_id} from target location to error/")
+                    # Log telemetry after successful move
+                    self.log_telemetry({
+                        "wo_id": wo_id,
+                        "source_inbox": "MAIN",
+                        "target_inbox": target,
+                        "action": "move",
+                        "status": "error",
+                        "error": str(e),
+                        "moved_to": str(error_path)
+                    })
                 else:
                     # File doesn't exist at either location - this should not happen
                     # but handle gracefully to avoid secondary exceptions
                     log.warning(f"WO file {wo_id} not found at {wo_path} or {target_path}, cannot move to error/")
+                    # Log telemetry even if file move failed (for tracking)
+                    self.log_telemetry({
+                        "wo_id": wo_id,
+                        "source_inbox": "MAIN",
+                        "target_inbox": target,
+                        "action": "move",
+                        "status": "error",
+                        "error": str(e),
+                        "moved_to": None,
+                        "note": "File not found at either location"
+                    })
                     return False
-                
-                self.log_telemetry({
-                    "wo_id": wo_id,
-                    "source_inbox": "MAIN",
-                    "target_inbox": target,
-                    "action": "move",
-                    "status": "error",
-                    "error": str(e),
-                    "moved_to": str(error_path)
-                })
             except Exception as move_error:
                 log.error(f"Failed to move {wo_id} to error/: {move_error}")
             return False
