@@ -50,17 +50,48 @@ class ReviewEngine:
     def _system_prompt(self) -> str:
         return (
             "You are an expert senior software engineer performing a code review. "
-            "Your goal is to catch bugs, security vulnerabilities, and performance issues. "
-            "Be concise and output valid JSON."
+            "Your goal is to catch bugs, security vulnerabilities, and performance issues.\n\n"
+            "**Critical Issues to Detect:**\n"
+            "- Unreachable code (code after return/raise/break/continue statements)\n"
+            "- Control flow errors (dead code, unreachable branches)\n"
+            "- Logic errors (incorrect conditionals, missing edge cases)\n"
+            "- Security vulnerabilities (injection, XSS, unsafe operations)\n"
+            "- Performance issues (inefficient algorithms, unnecessary operations)\n"
+            "- Code quality issues (maintainability, readability problems)\n\n"
+            "**Output Format:**\n"
+            "Return valid JSON with this structure:\n"
+            '{\n'
+            '  "summary": "Brief overview of review findings",\n'
+            '  "issues": [\n'
+            '    {\n'
+            '      "file": "path/to/file.py",\n'
+            '      "line": 42,\n'
+            '      "severity": "critical|warning|suggestion|info",\n'
+            '      "category": "unreachable_code|logic_error|security|performance|quality",\n'
+            '      "description": "Clear description of the issue",\n'
+            '      "suggestion": "Optional fix suggestion"\n'
+            '    }\n'
+            '  ],\n'
+            '  "metrics": {}\n'
+            '}\n\n'
+            "Be thorough and specific. Flag unreachable code, control flow issues, and logic errors as 'critical' or 'warning' severity."
         )
 
     def _user_prompt(self, diff_text: str, context: str) -> str:
         focus = ", ".join(self.focus_areas)
         return (
-            f"Review the following git diff.\n"
+            f"Review the following git diff for bugs, security issues, and code quality problems.\n\n"
+            f"**Pay special attention to:**\n"
+            f"- Code after return/raise/break/continue statements (unreachable code)\n"
+            f"- Control flow issues (dead code paths, unreachable branches)\n"
+            f"- Logic errors in conditionals and exception handling\n"
+            f"- Security vulnerabilities (injection, unsafe operations)\n"
+            f"- Performance bottlenecks\n\n"
             f"Context: {context}\n"
             f"Focus Areas: {focus}\n\n"
-            f"DIFF:\n{diff_text}"
+            f"DIFF:\n{diff_text}\n\n"
+            f"Analyze each change carefully. If you find unreachable code or control flow issues, "
+            f"mark them as 'critical' or 'warning' severity with category 'unreachable_code' or 'logic_error'."
         )
 
     def _parse_response(self, payload: Dict[str, Any]) -> ReviewResult:
