@@ -47,17 +47,56 @@ echo "   - git-clean → auto-backup before clean"
 echo "   - qc → quick commit all changes"
 
 # --- Lightweight Save: session_save.zsh only ---
-alias save='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/session_save.zsh "$@"'
+function dev_save() {
+    (
+        cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
+        if [[ -f "./tools/session_save.zsh" ]]; then
+            ./tools/session_save.zsh "$@"
+        else
+            echo "❌ session_save.zsh not found in $(pwd)/tools/"
+            return 1
+        fi
+    )
+}
+alias save='dev_save'
 
 # --- Workflow Chain: Review -> GitDrop -> Save (Seal) ---
-alias seal='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/workflow_dev_review_save.zsh "$@"'
+function dev_seal() {
+    (
+        cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
+        if [[ -f "./tools/workflow_dev_review_save.py" ]]; then
+            python3 ./tools/workflow_dev_review_save.py "$@"
+        elif [[ -f "./tools/workflow_dev_review_save.zsh" ]]; then
+            # Fallback to .zsh if .py not available
+            ./tools/workflow_dev_review_save.zsh "$@"
+        else
+            echo "❌ Workflow script not found in $(pwd)/tools/"
+            return 1
+        fi
+    )
+}
+alias seal='dev_seal'
 
 # --- Legacy alias (backward compatibility) ---
-alias drs='seal'
+function dev_review_save() {
+    dev_seal "$@"
+}
+alias drs='dev_review_save'
 
 # --- Status viewer ---
-alias drs-status='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/workflow_dev_review_save_status.zsh "$@"'
-alias seal-status='drs-status'
+function dev_review_save_status() {
+    (
+        cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
+        if [[ -f "./tools/workflow_dev_review_save_status.zsh" ]]; then
+            ./tools/workflow_dev_review_save_status.zsh "$@"
+        else
+            echo "❌ Status script not found in $(pwd)/tools/"
+            return 1
+        fi
+    )
+}
+alias drs-status='dev_review_save_status'
+alias seal-status='dev_review_save_status'
 
 echo "   - save → lightweight save (session_save.zsh only)"
 echo "   - seal → full chain (Review->GitDrop->Save)"
