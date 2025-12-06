@@ -1827,6 +1827,60 @@ cat /Users/icmini/My\ Drive\ (ittipong.c@gmail.com)\ (1)/02luka/run/calendar/gca
 /Users/icmini/My\ Drive\ (ittipong.c@gmail.com)\ (1)/02luka/g/tools/calendar_sync_gcal.sh check
 ```
 
+---
+
+## 💾 **Save & Seal Commands** (2025-12-07)
+
+**Quick Reference:**
+- `save` → Lightweight save (session_save.zsh only)
+- `seal` → Full chain (Review → GitDrop → Save)
+
+### **`save` - Lightweight Save**
+**Purpose:** Quick state preservation, memory/diary updates  
+**Weight:** Light ⚡  
+**Use When:** Mid-session saves, frequent updates
+
+```bash
+save
+# → Runs session_save.zsh
+# → Updates 02luka.md, commits memory repo
+# → Fast, no review overhead
+```
+
+### **`seal` - Full Workflow Chain**
+**Purpose:** Final safety check before push/merge/deployment  
+**Weight:** Heavy 🔒  
+**Use When:** End of session, before push/merge
+
+```bash
+seal
+# → Review → GitDrop → Save
+# → Complete workflow with safety checks
+
+# Options:
+seal --mode staged --strict
+seal --offline --skip-gitdrop
+seal --mode branch --base main --target feature
+```
+
+### **Status Commands**
+```bash
+seal-status          # View recent chain runs
+seal-status --summary  # Aggregate stats
+drs-status          # Legacy alias (same as seal-status)
+```
+
+### **Legacy Compatibility**
+- `drs` → Same as `seal` (backward compatible)
+- `drs-status` → Same as `seal-status`
+
+**Documentation:** See `g/reports/system/save_vs_seal_aliases_20251207.md` for detailed usage.
+
+**Setup:** Add to `~/.zshrc`:
+```bash
+source ~/02luka/tools/git_safety_aliases.zsh
+```
+
 ### 🎯 **Production Status**
 - ✅ Core Scripts: 3/3 deployed with atomic write pattern
 - ✅ API Endpoints: 3/3 integrated into health_proxy.js (port 3002)

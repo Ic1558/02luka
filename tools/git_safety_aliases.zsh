@@ -46,32 +46,20 @@ echo "   - git-checkout → auto-stash before checkout"
 echo "   - git-clean → auto-backup before clean"
 echo "   - qc → quick commit all changes"
 
-# --- Workflow Chain: Review -> Snapshot -> Save ---
-function dev_review_save() {
-    (
-        cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
-        if [[ -f "./tools/workflow_dev_review_save.zsh" ]]; then
-            ./tools/workflow_dev_review_save.zsh
-        else
-            echo "❌ Workflow script not found in $(pwd)/tools/"
-            return 1
-        fi
-    )
-}
-alias drs='dev_review_save'
+# --- Lightweight Save: session_save.zsh only ---
+alias save='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/session_save.zsh "$@"'
 
-function dev_review_save_status() {
-    (
-        cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
-        if [[ -f "./tools/workflow_dev_review_save_status.zsh" ]]; then
-            ./tools/workflow_dev_review_save_status.zsh "$@"
-        else
-            echo "❌ Status script not found in $(pwd)/tools/"
-            return 1
-        fi
-    )
-}
-alias drs-status='dev_review_save_status'
+# --- Workflow Chain: Review -> GitDrop -> Save (Seal) ---
+alias seal='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/workflow_dev_review_save.zsh "$@"'
 
-echo "   - drs → dev review save chain (Review->Snapshot->Save)"
-echo "   - drs-status → show recent Review->Snapshot->Save runs"
+# --- Legacy alias (backward compatibility) ---
+alias drs='seal'
+
+# --- Status viewer ---
+alias drs-status='cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" && ./tools/workflow_dev_review_save_status.zsh "$@"'
+alias seal-status='drs-status'
+
+echo "   - save → lightweight save (session_save.zsh only)"
+echo "   - seal → full chain (Review->GitDrop->Save)"
+echo "   - drs → legacy alias for seal (backward compatibility)"
+echo "   - seal-status / drs-status → show recent chain runs"
