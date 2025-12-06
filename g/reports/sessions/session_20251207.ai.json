@@ -1,7 +1,7 @@
 {
   "date": "2025-12-07",
-  "ts_utc": "2025-12-06T20:29:43Z",
-  "ts_local": "2025-12-07T03:29:43+0700",
+  "ts_utc": "2025-12-06T20:29:45Z",
+  "ts_local": "2025-12-07T03:29:45+0700",
   "agent": "CLS",
   "summary": {
     "total_entries": 45,
@@ -21,6 +21,6 @@
   },
   "links": {
     "mls_ledger": "mls/ledger/2025-12-07.jsonl",
-    "full_session": "g/reports/sessions/session_20251207_032942.md"
+    "full_session": "g/reports/sessions/session_20251207_032944.md"
   }
 }
