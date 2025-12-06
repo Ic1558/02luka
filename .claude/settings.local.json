@@ -18,7 +18,12 @@
       "Bash(ls:*)",
       "Bash(git -C /Users/icmini/02luka config:*)",
       "Bash(launchctl unload:*)",
-      "Bash(launchctl load:*)"
+      "Bash(launchctl load:*)",
+      "Bash(~/02luka/tools/system_health_check.zsh)",
+      "Bash(source ~/.zshrc)",
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(~/02luka/tools/save.sh:*)"
     ],
     "deny": [],
     "ask": []

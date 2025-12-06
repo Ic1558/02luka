@@ -1,20 +1,93 @@
 #!/usr/bin/env zsh
-# @created_by: CLC (Claude Code) - Updated by CLS 2025-11-13
-# @phase: 20+ (Enhanced for dynamic MLS integration)
-# @purpose: Dynamic session save from MLS ledger
+# tools/session_save.zsh
+# Backend engine for 02luka save system
+# Generates session reports from MLS ledger and updates system state
 
-set -euo pipefail
+set -e
 
-# Load env
-if [ -f ~/02luka/.env.local ]; then
-  source ~/02luka/.env.local
+# --- Telemetry Initialization ---
+TELEMETRY_START_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Use date +%s%N if available (Linux), else date +%s (macOS fallback)
+if date +%s%N >/dev/null 2>&1; then
+    TELEMETRY_START_NS=$(date +%s%N)
+else
+    TELEMETRY_START_NS=$(($(date +%s) * 1000000000))
 fi
 
-MEM_REPO="${LUKA_MEM_REPO_ROOT:-$HOME/LocalProjects/02luka-memory}"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-SESSION_FILE="$MEM_REPO/g/reports/sessions/session_$TIMESTAMP.md"
-TODAY=$(date +"%Y-%m-%d")
-MLS_LEDGER="$HOME/02luka/mls/ledger/$(date +%Y-%m-%d).jsonl"
+TELEMETRY_FILES_WRITTEN=0
+TELEMETRY_PROJECT_ID="${PROJECT_ID:-null}"
+TELEMETRY_TOPIC="null"
+
+# Function to safely log telemetry on exit
+log_telemetry() {
+    local exit_code=$?
+    local end_ns
+    if date +%s%N >/dev/null 2>&1; then
+        end_ns=$(date +%s%N)
+    else
+        end_ns=$(($(date +%s) * 1000000000))
+    fi
+    
+    local duration_ms=$(( (end_ns - TELEMETRY_START_NS) / 1000000 ))
+    
+    # Metadata gathering
+    local agent="${GG_AGENT_ID:-${USER:-unknown}}"
+    local source="${SAVE_SOURCE:-manual}"
+    
+    # Resolve Repo Root robustly
+    local repo_root="${LUKA_MEM_REPO_ROOT}"
+    if [[ -z "$repo_root" ]]; then
+        repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "$HOME/02luka")
+    fi
+    
+    # Fallback if still empty or invalid
+    if [[ -z "$repo_root" || "$repo_root" == "/" ]]; then
+        repo_root="$HOME/02luka"
+    fi
+
+    local repo_name=$(basename "$repo_root")
+    local branch=$(git -C "$repo_root" branch --show-current 2>/dev/null || echo "detached")
+    
+    # Safe JSON construction (manual escaping for shell)
+    # Note: project_id and topic might contain user input, should be carefully handled if complex.
+    # For now assuming simple strings or null.
+    
+    local json_fmt='{"ts": "%s", "agent": "%s", "source": "%s", "project_id": "%s", "topic": "%s", "files_written": %d, "save_mode": "full", "repo": "%s", "branch": "%s", "exit_code": %d, "duration_ms": %d, "truncated": false}'
+    
+    # Ensure telemetry directory exists (and ignore errors if readonly etc)
+    mkdir -p "${repo_root}/g/telemetry" 2>/dev/null || true
+    
+    # Write to log file
+    if [[ -d "${repo_root}/g/telemetry" ]]; then
+        printf "$json_fmt\n" \
+            "$TELEMETRY_START_TS" \
+            "$agent" \
+            "$source" \
+            "$TELEMETRY_PROJECT_ID" \
+            "$TELEMETRY_TOPIC" \
+            "$TELEMETRY_FILES_WRITTEN" \
+            "$repo_name" \
+            "$branch" \
+            "$exit_code" \
+            "$duration_ms" \
+            >> "${repo_root}/g/telemetry/save_sessions.jsonl" || true
+    fi
+}
+
+trap log_telemetry EXIT
+
+# --- End Telemetry Init ---
+
+# Set base paths
+LUKA_MEM_REPO_ROOT="${LUKA_MEM_REPO_ROOT:-$HOME/02luka}"
+MEM_REPO="$LUKA_MEM_REPO_ROOT" # Alias for legacy compatibility
+MLS_LEDGER_DIR="$LUKA_MEM_REPO_ROOT/mls/ledger"
+REPORTS_DIR="$LUKA_MEM_REPO_ROOT/g/reports/sessions"
+LUKA_MD="$LUKA_MEM_REPO_ROOT/02luka.md"
+MEMORY_SYSTEM_MD="$LUKA_MEM_REPO_ROOT/memory/CLAUDE_MEMORY_SYSTEM.md"
+
+# ... (rest of the script) ...
+
 
 # Ensure directories exist
 mkdir -p "$MEM_REPO/g/reports/sessions"
@@ -160,6 +233,7 @@ EOFOOTER3
 echo "✅ Session saved: $SESSION_FILE"
 echo "   Total entries: $TOTAL_ENTRIES"
 echo "   File size: $(du -h "$SESSION_FILE" | cut -f1)"
+((TELEMETRY_FILES_WRITTEN++))
 
 # Auto-commit to memory repo
 if [[ -d "$MEM_REPO/.git" ]]; then
@@ -234,6 +308,7 @@ cat > "$AI_SUMMARY_FILE" <<EOJSON
 EOJSON
 
 echo "✅ AI summary saved: $AI_SUMMARY_FILE"
+((TELEMETRY_FILES_WRITTEN++))
 
 # ============================================
 # STEP 3: Scan System Reality (System Map)
@@ -245,6 +320,7 @@ echo "🔍 Scanning system reality..."
 if [[ -f ~/02luka/tools/system_map_scan.zsh ]]; then
   ~/02luka/tools/system_map_scan.zsh 2>&1 | head -5
   echo "✅ System map updated"
+  ((TELEMETRY_FILES_WRITTEN++))
 else
   echo "⚠️  system_map_scan.zsh not found (from System Truth Sync feature)"
   echo "   Creating placeholder system map..."
@@ -276,6 +352,7 @@ else
 }
 EOSYSMAP
   echo "✅ Minimal system map created: $SYSTEM_MAP_FILE"
+  ((TELEMETRY_FILES_WRITTEN++))
 fi
 
 # ============================================

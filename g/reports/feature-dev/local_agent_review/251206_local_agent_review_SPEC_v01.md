@@ -3,13 +3,15 @@
 **Feature:** Local Code Review Tool (Cursor Agent Review Clone)
 **Date:** 2025-12-06
 **Status:** Revised
-**Version:** 1.2 (Refined Logic & Safety)
+**Version:** 1.3 (Final System Alignment)
 
 ---
 
 ## 1. System Overview
 
 The Local Agent Review tool is a Python-based CLI utility that uses the Anthropic API to perform AI-powered code reviews on local git repositories. It mimics the functionality of Cursor's Agent Review but operates entirely within the local CLI environment, providing actionable feedback on code changes before they are committed or merged.
+
+> **Note on GitDrop:** Local Agent Review serves as a logic and quality gate. It does not replace **GitDrop**, which remains the primary safety mechanism for file recovery and pre-checkout backups.
 
 ## 2. Architecture
 
@@ -27,11 +29,13 @@ The Local Agent Review tool is a Python-based CLI utility that uses the Anthropi
 1.  **CLI Input**: User invokes `local-review <target>`.
 2.  **Config Load**: `ConfigManager` loads rules and API keys.
 3.  **Git Diff**: `GitInterface` retrieves the diff for the specified target.
+    *   *Check:* If diff is empty, exit immediately (0).
 4.  **Filtering & Safety**: `PrivacyGuard` filters secrets/binaries; `GitInterface` applies size limits.
 5.  **Analysis**: `ReviewEngine` constructs the prompt and sends it to `LLMClient`.
 6.  **Response Parsing**: `ReviewEngine` parses the structured JSON response from the LLM.
 7.  **Report Generation**: `ReportGenerator` creates the output artifact (and manages report rotation).
-8.  **Output**: Result is displayed to stdout or saved to a file. Exit code set based on findings.
+8.  **Telemetry**: Log usage summary to local telemetry file.
+9.  **Output**: Result is displayed to stdout or saved to a file. Exit code set based on findings.
 
 ## 3. Detailed Design
 
@@ -50,10 +54,10 @@ class LocalAgentReview:
 
     def run(self, mode: str, output_format: str, output_file: str = None):
         # 1. Check Acknowledgement (Skip if offline)
-        # 2. Get Diff
+        # 2. Get Diff (Handle empty)
         # 3. Privacy Scan (Secrets/Binaries)
         # 4. API Call (if not dry-run)
-        # 5. Report & Exit
+        # 5. Report, Telemetry & Exit
 ```
 
 #### `tools/lib/privacy_guard.py`
@@ -121,6 +125,7 @@ api:
   model: "claude-3-5-sonnet-20241022"
   max_tokens: 4096
   temperature: 0.2
+  max_review_calls_per_run: 1 # Cost guard: Single-pass only for Phase 1
 
 review:
   focus_areas: ["bugs", "security", "performance"]
@@ -151,7 +156,14 @@ output:
     *   **Filter:** Drop lockfiles, minified code, SVGs, large data files first.
     *   **Prioritize:** Source code (`.py`, `.ts`, `.rs`, etc.) gets highest priority.
     *   **Truncate:** If still over limit, cut off at file boundaries (do not split files).
-3.  **Warning:** Report must explicitly state: "⚠️ PARTIAL REVIEW: Diff exceeded size limit. Only first N files analyzed."
+3.  **Warning:** Report must explicitly state: 
+    *   "⚠️ PARTIAL REVIEW: Diff exceeded size limit."
+    *   "Files Analyzed: X"
+    *   "Files Excluded: Y (List of excluded files)"
+4.  **Empty Diff:** If the diff is empty (or filtered to empty), the tool must:
+    *   Print "No changes to review."
+    *   Exit with code `0`.
+    *   Do **not** generate a report file or call the API.
 
 ## 4. Interface Specifications
 
@@ -160,7 +172,8 @@ output:
 *   `mode`:
     *   `staged` (default): `git diff --cached`
     *   `unstaged`: `git diff` (working tree vs index)
-    *   `branch [base]`: Reviews `base..HEAD`. If `base` omitted, defaults to `origin/main` (or `main/master` if local only).
+    *   `branch [base]`: Reviews `base..HEAD`. 
+        *   **Fallback chain:** if `base` omitted: `origin/main` -> `main` -> `master` -> Error.
     *   `range <base> <target>`: Reviews `base..target`.
 *   `--format`: `markdown`, `json`, `console`
 *   `--output`: Custom path. **Note:** Custom paths are NEVER rotated/deleted.
@@ -218,6 +231,17 @@ output:
 *   **Binary Skip:** Commit a binary file, verify it's excluded from diff.
 *   **Hook Simulation:** Run wrapper script with strict mode on/off.
 *   **Retention:** Verify custom output paths are NOT deleted during rotation.
+
+## 9. Telemetry & Governance
+
+To align with system observability, the tool will append a summary log to a local file.
+
+*   **Path:** `g/telemetry/local_agent_review.jsonl`
+*   **Format:**
+    ```json
+    {"ts": "ISO8601", "mode": "staged", "exit_code": 1, "issues_critical": 0, "issues_warning": 2, "model": "claude-3-5-sonnet"}
+    ```
+*   **Usage:** Enables health monitoring by Mary/Opal dashboards.
 
 ---
 **Approved By:** [Pending]
