@@ -19,18 +19,27 @@ const RELAY_KEY = process.env.RELAY_KEY || '';
 /**
  * Check if request is truly from localhost.
  * Uses remoteAddress + host header, but remoteAddress is the source of truth.
+ * 
+ * Security: Validates exact hostname (not startsWith) to prevent spoofing
+ * attacks like "localhost.attacker.com" or "127.0.0.1.evil.com"
  */
 const isTrueLocalhost = (req) => {
   const remote = req.socket?.remoteAddress || '';
-  const host = req.headers.host || '';
+  const hostHeader = req.headers.host || '';
 
   const isLoopbackIp =
     remote === '127.0.0.1' ||
     remote === '::1' ||
     remote === '::ffff:127.0.0.1';
 
+  // Parse hostname from header (remove port if present)
+  // Example: "localhost:4000" -> "localhost"
+  //          "127.0.0.1:4000" -> "127.0.0.1"
+  const hostname = hostHeader.split(':')[0].toLowerCase();
+
+  // Validate exact hostname match (not startsWith to prevent spoofing)
   const isLocalHostHeader =
-    host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    hostname === 'localhost' || hostname === '127.0.0.1';
 
   return isLoopbackIp && isLocalHostHeader;
 };
