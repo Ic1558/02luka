@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "last_update": "2025-11-12T08:26:27+07:00",
+  "last_update": "2025-12-06T19:36:11+07:00",
   "agents": {
     "gc": {
       "status": "active",
@@ -24,7 +24,7 @@
     },
     "claude": {
       "status": "active",
-      "last_seen": "2025-11-12T08:26:24+07:00"
+      "last_seen": "2025-12-06T19:36:11+07:00"
     }
   },
   "current_work": {},

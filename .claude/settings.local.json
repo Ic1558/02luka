@@ -16,7 +16,9 @@
       "Bash(crontab:*)",
       "Bash(launchctl list:*)",
       "Bash(ls:*)",
-      "Bash(git -C /Users/icmini/02luka config:*)"
+      "Bash(git -C /Users/icmini/02luka config:*)",
+      "Bash(launchctl unload:*)",
+      "Bash(launchctl load:*)"
     ],
     "deny": [],
     "ask": []

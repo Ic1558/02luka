@@ -45,10 +45,5 @@
   },
   "[shellscript]": {
     "editor.defaultFormatter": "foxundermoon.shell-format"
-  },
-  "git.ignoredRepositories": [
-    "/Volumes/lukadata",
-    "/Volumes/lukadata/**"
-  ],
-  "git.autoRepositoryDetection": "openEditors"
+  }
 }
