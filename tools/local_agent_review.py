@@ -27,6 +27,10 @@ from tools.lib.privacy_guard import PrivacyGuard, SecretAllowlist
 DEFAULT_CONFIG = Path("g/config/local_agent_review.yaml")
 
 
+class ConfigError(ValueError):
+    """Raised when configuration validation fails."""
+
+
 @dataclass
 class AppConfig:
     api: Dict[str, Any]
@@ -40,12 +44,113 @@ class AppConfig:
             raise FileNotFoundError(f"Config not found: {path}")
         with path.open("r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-        return cls(
+        
+        config = cls(
             api=data.get("api", {}),
             review=data.get("review", {}),
             output=data.get("output", {}),
             safety=data.get("safety", {}),
         )
+        config._validate()
+        return config
+
+    def _validate(self) -> None:
+        """Validate configuration values."""
+        errors: List[str] = []
+
+        # API validation
+        api = self.api
+        max_tokens = api.get("max_tokens")
+        if max_tokens is not None:
+            try:
+                max_tokens_int = int(max_tokens)
+                if max_tokens_int <= 0:
+                    errors.append(f"api.max_tokens must be > 0, got {max_tokens_int}")
+            except (ValueError, TypeError):
+                errors.append(f"api.max_tokens must be an integer, got {type(max_tokens).__name__}")
+
+        temperature = api.get("temperature")
+        if temperature is not None:
+            try:
+                temp_float = float(temperature)
+                if not (0.0 <= temp_float <= 1.0):
+                    errors.append(f"api.temperature must be in range [0.0, 1.0], got {temp_float}")
+            except (ValueError, TypeError):
+                errors.append(f"api.temperature must be a float, got {type(temperature).__name__}")
+
+        max_calls = api.get("max_review_calls_per_run")
+        if max_calls is not None:
+            try:
+                max_calls_int = int(max_calls)
+                if max_calls_int < 1:
+                    errors.append(f"api.max_review_calls_per_run must be >= 1, got {max_calls_int}")
+            except (ValueError, TypeError):
+                errors.append(f"api.max_review_calls_per_run must be an integer, got {type(max_calls).__name__}")
+
+        # Review validation
+        review = self.review
+        soft_limit = review.get("soft_limit_kb")
+        if soft_limit is not None:
+            try:
+                soft_int = int(soft_limit)
+                if soft_int <= 0:
+                    errors.append(f"review.soft_limit_kb must be > 0, got {soft_int}")
+            except (ValueError, TypeError):
+                errors.append(f"review.soft_limit_kb must be an integer, got {type(soft_limit).__name__}")
+
+        hard_limit = review.get("hard_limit_kb")
+        if hard_limit is not None:
+            try:
+                hard_int = int(hard_limit)
+                if hard_int <= 0:
+                    errors.append(f"review.hard_limit_kb must be > 0, got {hard_int}")
+            except (ValueError, TypeError):
+                errors.append(f"review.hard_limit_kb must be an integer, got {type(hard_limit).__name__}")
+
+        # Validate soft_limit <= hard_limit
+        if soft_limit is not None and hard_limit is not None:
+            try:
+                soft_int = int(soft_limit)
+                hard_int = int(hard_limit)
+                if soft_int > hard_int:
+                    errors.append(f"review.soft_limit_kb ({soft_int}) must be <= hard_limit_kb ({hard_int})")
+            except (ValueError, TypeError):
+                pass  # Already reported above
+
+        # Secret scan validation
+        secret_scan = review.get("secret_scan", {})
+        if isinstance(secret_scan, dict):
+            enabled = secret_scan.get("enabled")
+            if enabled is not None and not isinstance(enabled, bool):
+                errors.append(f"review.secret_scan.enabled must be a boolean, got {type(enabled).__name__}")
+
+            allowlist = secret_scan.get("allowlist", {})
+            if isinstance(allowlist, dict):
+                for key in ["file_patterns", "content_patterns", "file_paths", "safe_patterns"]:
+                    patterns = allowlist.get(key, [])
+                    if not isinstance(patterns, list):
+                        errors.append(f"review.secret_scan.allowlist.{key} must be a list, got {type(patterns).__name__}")
+                    else:
+                        for idx, pattern in enumerate(patterns):
+                            if not isinstance(pattern, str):
+                                errors.append(
+                                    f"review.secret_scan.allowlist.{key}[{idx}] must be a string, got {type(pattern).__name__}"
+                                )
+
+        # Output validation
+        output = self.output
+        retention = output.get("retention_count")
+        if retention is not None:
+            try:
+                retention_int = int(retention)
+                if retention_int <= 0:
+                    errors.append(f"output.retention_count must be > 0, got {retention_int}")
+            except (ValueError, TypeError):
+                errors.append(f"output.retention_count must be an integer, got {type(retention).__name__}")
+
+        if errors:
+            error_msg = "Configuration validation failed:\n  " + "\n  ".join(errors)
+            raise ConfigError(error_msg)
 
 
 class ReportGenerator:
@@ -417,6 +522,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     try:
         config = load_config(args.config)
+    except ConfigError as exc:
+        print(f"[local-review] Configuration error: {exc}", file=sys.stderr)
+        return 2
+    except FileNotFoundError as exc:
+        print(f"[local-review] Config file not found: {exc}", file=sys.stderr)
+        return 2
     except Exception as exc:  # noqa: BLE001
         print(f"[local-review] Failed to load config: {exc}", file=sys.stderr)
         return 2

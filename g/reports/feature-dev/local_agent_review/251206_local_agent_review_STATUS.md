@@ -1,7 +1,7 @@
 # Local Agent Review - Implementation Status
 
 **Date:** 2025-12-06  
-**Status:** ✅ **Phase 1 Complete + Phase 2.1 (Secret Allowlist) Complete**
+**Status:** ✅ **Phase 1 Complete + Phase 2.1 (Secret Allowlist) + Config Validation**
 
 ---
 
@@ -24,7 +24,7 @@
 ### T2: Configuration File
 - ✅ `g/config/local_agent_review.yaml` created
 - ✅ Environment variable overrides supported (`.env.local` pattern)
-- ✅ Config validation on load
+- ✅ Config validation on load (retention_count, temperature, max_tokens, call caps, limits, secret_scan schema)
 
 ### T3: Shell Wrapper
 - ✅ `tools/hooks/pre_commit_local_review.sh` (git hook integration - actual file)
@@ -110,17 +110,19 @@
 ## 🧪 Testing Status
 
 ### Unit Tests
-- ✅ **9 unit tests implemented** in `tests/test_local_agent_review.py`
-- ✅ Exit code mapping (strict vs non-strict) - `test_exit_code_mapping_strict_vs_non_strict()`
-- ✅ Branch/range modes - `test_branch_range_modes()`
-- ✅ Truncation metadata in reports - `test_truncation_metadata_in_reports()`
-- ✅ Privacy guard secret detection - `test_privacy_guard_detects_secret()`
-- ✅ **Secret allowlist** - `test_allowlist_content_and_file_patterns()` (Phase 2)
-- ✅ Truncation logic - `test_truncation_drops_low_priority()`
-- ✅ Empty diff handling - `test_cli_empty_diff_returns_zero()`
-- ✅ Offline mode - `test_cli_offline_truncation_message()`
-- ✅ Environment loading - `test_load_env_local_reads_dotenv()`
-- **Status:** All 9 tests passing (pytest validation confirmed)
+- ✅ **17 unit tests implemented** in `tests/test_local_agent_review.py`
+- Coverage highlights:
+  - Exit code mapping (strict vs non-strict)
+  - Branch/range modes
+  - Truncation metadata in reports
+  - Privacy guard secret detection
+  - Secret allowlist (Phase 2.1)
+  - Truncation logic
+  - Empty diff handling
+  - Offline mode
+  - Environment loading (.env.local)
+  - Config validation (retention, temperature, max_tokens, max_review_calls, soft/hard limits, secret_scan enabled/allowlist types, CLI exit code on invalid config)
+- **Status:** All 17 tests passing (pytest validation confirmed)
 
 ### Integration Tests
 - ✅ Manual testing completed
@@ -139,14 +141,16 @@
 ## 💡 Phase 2 Enhancements
 
 ### ✅ Completed
-- ✅ **Secret allowlist/whitelist** (implemented in Phase 2.1)
+- ✅ **Secret allowlist/whitelist** (Phase 2.1)
   - `SecretAllowlist` class with file/content/safe patterns
   - Integrated into `PrivacyGuard.scan_diff()`
   - Config support in `local_agent_review.yaml`
-  - Unit tests added (9 tests total, all passing)
+  - Unit tests added
+- ✅ **Config validation** (Phase 2.2)
+  - Validates retention_count, temperature range, max_tokens, max_review_calls_per_run, soft/hard limits, secret_scan.enabled (bool), allowlist pattern types
+  - Invalid configs return exit code 2 with clear message
 
 ### 🔄 In Progress / Planned
-- [ ] **Config validation** (retention_count > 0, temperature range, max_tokens bounds)
 - [ ] **Telemetry field completeness** (for unified chain proposal)
 
 ### 📋 Future Enhancements
@@ -180,4 +184,4 @@ All core tasks (T1-T5) are implemented and working. The feature is production-re
 **Last Updated:** 2025-12-06  
 **Corrections:** 
 - 2025-12-06: Fixed STATUS doc to match actual implementation, fixed datetime deprecation warnings
-- 2025-12-06: Updated to reflect 8 unit tests implemented and passing, corrected hook paths
+- 2025-12-06: Updated to reflect secret allowlist, config validation, 17 unit tests passing, and hook paths

@@ -41,6 +41,14 @@ python tools/local_agent_review.py staged --format markdown
 - `2`: system error (git/config/LLM)
 - `3`: security block (PrivacyGuard secret match)
 
+## Config & Safety
+
+- Config validated on load: `retention_count > 0`, `temperature 0.0–1.0`, `max_tokens > 0`, `max_review_calls_per_run >= 1`, `soft_limit_kb/hard_limit_kb > 0` and `soft_limit_kb <= hard_limit_kb`.
+- Secret scan allowlist (Phase 2.1) defaults:
+  - `review.secret_scan.enabled: true`
+  - Allowlist patterns for tests/docs (`**/tests/**`, `sk-test-*`, etc.)
+  - Add more under `review.secret_scan.allowlist` in `g/config/local_agent_review.yaml`.
+
 ## Hooks
 
 `tools/hooks/pre_commit_local_review.sh` (manual opt-in):

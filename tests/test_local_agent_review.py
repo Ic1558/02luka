@@ -4,6 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 from tools.lib.local_review_git import GitInterface
@@ -296,3 +297,162 @@ def test_truncation_metadata_in_reports(tmp_path: Path, monkeypatch) -> None:
         assert "Files Excluded" in report_content or "excluded" in report_content.lower()
     finally:
         Path(output_path).unlink(missing_ok=True)
+
+
+def test_config_validation_retention_count(tmp_path: Path) -> None:
+    """Test config validation: retention_count must be > 0."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+        "review": {"focus_areas": ["bugs"]},
+        "output": {"retention_count": 0},  # Invalid: must be > 0
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "retention_count must be > 0" in str(exc_info.value)
+
+
+def test_config_validation_temperature_range(tmp_path: Path) -> None:
+    """Test config validation: temperature must be in [0.0, 1.0]."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022", "temperature": 1.5},  # Invalid
+        "review": {"focus_areas": ["bugs"]},
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "temperature must be in range [0.0, 1.0]" in str(exc_info.value)
+
+
+def test_config_validation_max_tokens(tmp_path: Path) -> None:
+    """Test config validation: max_tokens must be > 0."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022", "max_tokens": -1},  # Invalid
+        "review": {"focus_areas": ["bugs"]},
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "max_tokens must be > 0" in str(exc_info.value)
+
+
+def test_config_validation_max_review_calls(tmp_path: Path) -> None:
+    """Test config validation: max_review_calls_per_run must be >= 1."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022", "max_review_calls_per_run": 0},  # Invalid
+        "review": {"focus_areas": ["bugs"]},
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "max_review_calls_per_run must be >= 1" in str(exc_info.value)
+
+
+def test_config_validation_soft_hard_limit(tmp_path: Path) -> None:
+    """Test config validation: soft_limit_kb <= hard_limit_kb."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+        "review": {"focus_areas": ["bugs"], "soft_limit_kb": 100, "hard_limit_kb": 50},  # Invalid: soft > hard
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "soft_limit_kb" in str(exc_info.value) and "hard_limit_kb" in str(exc_info.value)
+
+
+def test_config_validation_secret_scan_enabled_bool(tmp_path: Path) -> None:
+    """Test config validation: secret_scan.enabled must be boolean."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+        "review": {"focus_areas": ["bugs"], "secret_scan": {"enabled": "yes"}},  # Invalid: not bool
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "secret_scan.enabled must be a boolean" in str(exc_info.value)
+
+
+def test_config_validation_allowlist_patterns_strings(tmp_path: Path) -> None:
+    """Test config validation: allowlist patterns must be strings."""
+    from tools.local_agent_review import AppConfig, ConfigError
+
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022"},
+        "review": {
+            "focus_areas": ["bugs"],
+            "secret_scan": {
+                "allowlist": {
+                    "file_patterns": ["**/tests/**", 123],  # Invalid: 123 is not string
+                }
+            },
+        },
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    with pytest.raises(ConfigError) as exc_info:
+        AppConfig.load(cfg_path)
+    assert "file_patterns" in str(exc_info.value) and "must be a string" in str(exc_info.value)
+
+
+def test_config_validation_cli_exit_code_2(tmp_path: Path, monkeypatch) -> None:
+    """Test that invalid config causes CLI to exit with code 2."""
+    repo = _init_repo(tmp_path)
+    cfg = {
+        "api": {"provider": "anthropic", "model": "claude-3-5-sonnet-20241022", "max_tokens": -1},
+        "review": {"focus_areas": ["bugs"]},
+        "output": {},
+        "safety": {},
+    }
+    cfg_path = repo / "invalid.yaml"
+    cfg_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
+
+    monkeypatch.chdir(repo)
+    os.environ["LOCAL_REVIEW_CONFIG"] = str(cfg_path)
+
+    rc = main(["staged", "--offline"])
+    assert rc == 2  # Config error should exit with code 2
