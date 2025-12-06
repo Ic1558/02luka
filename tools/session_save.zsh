@@ -4,7 +4,6 @@
 # Generates session reports from MLS ledger and updates system state
 
 set -e
-set -x
 
 # --- Telemetry Initialization ---
 TELEMETRY_START_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
