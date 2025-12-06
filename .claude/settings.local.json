@@ -10,7 +10,13 @@
       "Bash(git submodule:*)",
       "Bash(git fsck:*)",
       "Bash(git rev-parse:*)",
-      "Bash(git count-objects:*)"
+      "Bash(git count-objects:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(crontab:*)",
+      "Bash(launchctl list:*)",
+      "Bash(ls:*)",
+      "Bash(git -C /Users/icmini/02luka config:*)"
     ],
     "deny": [],
     "ask": []

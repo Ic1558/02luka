@@ -1,0 +1,25 @@
+version: "3.0"
+phase: 0
+
+routing:
+  default_target: "CLC"
+  supported_targets:
+    - "CLC"
+  # Phase 0: Only CLC supported
+  routing_hint_mapping:
+    "dev_oss": "CLC"
+    "dev_oss_lane": "CLC"
+    # Phase 0: All routing_hints map to CLC
+
+telemetry:
+  log_file: "g/telemetry/gateway_v3_router.log"
+  log_level: "INFO"
+
+directories:
+  inbox: "bridge/inbox/MAIN"
+  processed: "bridge/processed/MAIN"
+  error: "bridge/error/MAIN"
+
+worker:
+  sleep_interval_seconds: 1.0
+  process_one_by_one: true  # Phase 0: sequential processing

@@ -1,0 +1,10 @@
+wo_id: "WO-TEST-TRULY-INVALID"
+title: "Gateway v3 Test - Truly Invalid YAML"
+priority: "P2"
+status: "pending"
+invalid: [unclosed bracket
+missing_quote: "unclosed string
+bad_indent:
+  - item1
+ - item2
+  - item3
