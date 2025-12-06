@@ -52,7 +52,10 @@ log_telemetry() {
     # Note: project_id and topic might contain user input, should be carefully handled if complex.
     # For now assuming simple strings or null.
     
-    local json_fmt='{"ts": "%s", "agent": "%s", "source": "%s", "project_id": "%s", "topic": "%s", "files_written": %d, "save_mode": "full", "repo": "%s", "branch": "%s", "exit_code": %d, "duration_ms": %d, "truncated": false}'
+    # Enhanced schema with env and schema_version (Phase 1A: Multi-Agent Coordination)
+    local env_field="${AGENT_ENV:-terminal}"
+    local schema_version="${SAVE_SCHEMA_VERSION:-1}"
+    local json_fmt='{"ts": "%s", "agent": "%s", "source": "%s", "env": "%s", "schema_version": %d, "project_id": "%s", "topic": "%s", "files_written": %d, "save_mode": "full", "repo": "%s", "branch": "%s", "exit_code": %d, "duration_ms": %d, "truncated": false}'
     
     # Ensure telemetry directory exists (and ignore errors if readonly etc)
     mkdir -p "${repo_root}/g/telemetry" 2>/dev/null || true
@@ -63,6 +66,8 @@ log_telemetry() {
             "$TELEMETRY_START_TS" \
             "$agent" \
             "$source" \
+            "$env_field" \
+            "$schema_version" \
             "$TELEMETRY_PROJECT_ID" \
             "$TELEMETRY_TOPIC" \
             "$TELEMETRY_FILES_WRITTEN" \

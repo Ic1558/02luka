@@ -50,10 +50,14 @@ echo "   - qc → quick commit all changes"
 function dev_save() {
     (
         cd "${LUKA_MEM_REPO_ROOT:-$HOME/02luka}" || return 1
-        if [[ -f "./tools/session_save.zsh" ]]; then
+        # Phase 1A: Route through gateway for consistent metadata
+        if [[ -f "./tools/save.sh" ]]; then
+            ./tools/save.sh "$@"
+        elif [[ -f "./tools/session_save.zsh" ]]; then
+            # Fallback to direct call if gateway not available
             ./tools/session_save.zsh "$@"
         else
-            echo "❌ session_save.zsh not found in $(pwd)/tools/"
+            echo "❌ save.sh or session_save.zsh not found in $(pwd)/tools/"
             return 1
         fi
     )

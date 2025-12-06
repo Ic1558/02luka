@@ -9,10 +9,23 @@ set -e
 SCRIPT_DIR=$(dirname "$0")
 BACKEND_SCRIPT="$SCRIPT_DIR/session_save.zsh"
 
-# Set source context if not already set
-if [[ -z "${SAVE_SOURCE}" ]]; then
-    export SAVE_SOURCE="manual"
+# Load agent context (Phase 1A: Multi-Agent Coordination)
+if [[ -f "$SCRIPT_DIR/agent_context.zsh" ]]; then
+    source "$SCRIPT_DIR/agent_context.zsh"
+else
+    # Fallback if agent_context.zsh not available
+    export AGENT_ID="${AGENT_ID:-unknown}"
+    export AGENT_ENV="${AGENT_ENV:-terminal}"
 fi
+
+# Set metadata (preserve existing if set)
+export SAVE_AGENT="${SAVE_AGENT:-${AGENT_ID}}"
+export SAVE_SOURCE="${SAVE_SOURCE:-${AGENT_ENV}}"
+export SAVE_TIMESTAMP="${SAVE_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+export SAVE_SCHEMA_VERSION="${SAVE_SCHEMA_VERSION:-1}"
+
+# Log intent (optional, for debugging)
+# echo "🔹 Agent: ${AGENT_ID} | Env: ${AGENT_ENV} | Source: ${SAVE_SOURCE}"
 
 # Pass arguments as topic/summary if provided
 # In the legacy save.sh, $1 might be a flag or text.
