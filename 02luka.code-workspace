@@ -30,7 +30,9 @@
     "files.watcherExclude": {
       "**/node_modules/**": true,
       "**/logs/**": true,
-      "**/.tmp/**": true
+      "**/.tmp/**": true,
+      "/Volumes/lukadata/**/.git": true,
+      "/Volumes/lukadata/**/.git/**": true
     },
     "git.enabled": true,
     "git.path": "git",
@@ -38,7 +40,19 @@
     "git.detectSubmodules": true,
     "git.defaultCloneDirectory": "${workspaceFolder}",
     "github.gitProtocol": "ssh",
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "git.autoRepositoryDetection": "openEditors",
+    "git.ignoredRepositories": [
+      "/Volumes/lukadata",
+      "/Volumes/lukadata/**",
+      "/Volumes/lukadata/**/.git",
+      "/Volumes/lukadata/**/.git/**"
+    ],
+    "search.exclude": {
+      "/Volumes/lukadata/**/.git/**": true,
+      "/Volumes/lukadata/**/__pycache__/**": true,
+      "/Volumes/lukadata/**/node_modules/**": true
+    }
   },
   "extensions": {
     "recommendations": [

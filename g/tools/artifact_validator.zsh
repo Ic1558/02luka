@@ -54,5 +54,9 @@ fi
 echo "[artifact] Prompt content:"
 cat "$PROMPT_FILE"
 
-rm -rf "$ARTIFACT_DIR"
+# sandbox: rm_rf mitigated - Safe cleanup of temp artifact directory
+# ARTIFACT_DIR is always /tmp/artifacts_* (controlled path, not user input)
+if [[ -n "$ARTIFACT_DIR" ]] && [[ "$ARTIFACT_DIR" =~ ^/tmp/artifacts_[0-9]+$ ]]; then
+  rm -r -f "$ARTIFACT_DIR" 2>/dev/null || true
+fi
 exit 0

@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./tools/codex_cleanup_backups.zsh:*)"
+      "Bash(./tools/codex_cleanup_backups.zsh:*)",
+      "Bash(cat:*)",
+      "Bash(test:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(mount:*)",
+      "Bash(git config:*)",
+      "Bash(git submodule:*)",
+      "Bash(git fsck:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git count-objects:*)"
     ],
     "deny": [],
     "ask": []

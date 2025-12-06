@@ -13,14 +13,17 @@
     "**/.git/subtree-cache/**": true,
     "**/node_modules/**": true,
     "**/_safety_snapshots/**": true,
-    "**/logs/**/*.log": true
+    "**/logs/**/*.log": true,
+    "/Volumes/lukadata/**/.git": true,
+    "/Volumes/lukadata/**/.git/**": true
   },
   "search.exclude": {
     "**/node_modules": true,
     "**/bower_components": true,
     "**/*.code-search": true,
     "**/logs/**": true,
-    "**/_safety_snapshots/**": true
+    "**/_safety_snapshots/**": true,
+    "/Volumes/lukadata/**/.git/**": true
   },
   "terminal.integrated.cwd": "${workspaceFolder}/g",
   "terminal.integrated.env.osx": {
