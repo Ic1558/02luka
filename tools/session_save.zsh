@@ -4,6 +4,7 @@
 # Generates session reports from MLS ledger and updates system state
 
 set -e
+set -x
 
 # --- Telemetry Initialization ---
 TELEMETRY_START_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -237,7 +238,7 @@ EOFOOTER3
 echo "✅ Session saved: $SESSION_FILE"
 echo "   Total entries: $TOTAL_ENTRIES"
 echo "   File size: $(du -h "$SESSION_FILE" | cut -f1)"
-((TELEMETRY_FILES_WRITTEN++))
+((TELEMETRY_FILES_WRITTEN++)) || true
 
 # Auto-commit to memory repo
 if [[ -d "$MEM_REPO/.git" ]]; then
@@ -312,7 +313,7 @@ cat > "$AI_SUMMARY_FILE" <<EOJSON
 EOJSON
 
 echo "✅ AI summary saved: $AI_SUMMARY_FILE"
-((TELEMETRY_FILES_WRITTEN++))
+((TELEMETRY_FILES_WRITTEN++)) || true
 
 # ============================================
 # STEP 3: Scan System Reality (System Map)
@@ -324,7 +325,7 @@ echo "🔍 Scanning system reality..."
 if [[ -f ~/02luka/tools/system_map_scan.zsh ]]; then
   ~/02luka/tools/system_map_scan.zsh 2>&1 | head -5
   echo "✅ System map updated"
-  ((TELEMETRY_FILES_WRITTEN++))
+  ((TELEMETRY_FILES_WRITTEN++)) || true
 else
   echo "⚠️  system_map_scan.zsh not found (from System Truth Sync feature)"
   echo "   Creating placeholder system map..."
@@ -356,7 +357,7 @@ else
 }
 EOSYSMAP
   echo "✅ Minimal system map created: $SYSTEM_MAP_FILE"
-  ((TELEMETRY_FILES_WRITTEN++))
+  ((TELEMETRY_FILES_WRITTEN++)) || true
 fi
 
 # ============================================
