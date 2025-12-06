@@ -240,8 +240,27 @@ class GatewayV3Router:
         except Exception as e:
             log.error(f"Failed to move {wo_id} to {target}: {e}")
             # Try to move to error/ as fallback
+            # IMPORTANT: wo_path.rename() may have succeeded even if exception occurred later
+            # Check both locations to ensure we can recover the file
+            error_path = self.error / wo_path.name
             try:
-                wo_path.rename(self.error / wo_path.name)
+                # Check original location first (rename may have failed)
+                if wo_path.exists():
+                    # File still at original location, rename failed - move to error/
+                    wo_path.rename(error_path)
+                    log.info(f"Moved {wo_id} from original location to error/")
+                # Check target location (rename succeeded but later operation failed)
+                elif target_path.exists():
+                    # File was successfully moved but error occurred later (e.g., telemetry)
+                    # Move from target location to error/
+                    target_path.rename(error_path)
+                    log.info(f"Moved {wo_id} from target location to error/")
+                else:
+                    # File doesn't exist at either location - this should not happen
+                    # but handle gracefully to avoid secondary exceptions
+                    log.warning(f"WO file {wo_id} not found at {wo_path} or {target_path}, cannot move to error/")
+                    return False
+                
                 self.log_telemetry({
                     "wo_id": wo_id,
                     "source_inbox": "MAIN",
@@ -249,7 +268,7 @@ class GatewayV3Router:
                     "action": "move",
                     "status": "error",
                     "error": str(e),
-                    "moved_to": str(self.error / wo_path.name)
+                    "moved_to": str(error_path)
                 })
             except Exception as move_error:
                 log.error(f"Failed to move {wo_id} to error/: {move_error}")

@@ -17,6 +17,10 @@
     <key>RunAtLoad</key>
     <false/>  <!-- Don't run immediately on boot -->
     
+    <!-- KeepAlive removed: StartInterval handles periodic execution.
+         Script runs once, exits, then StartInterval restarts it after 3600s.
+         KeepAlive would cause immediate restarts, overriding the intended timing. -->
+    
     <key>StandardOutPath</key>
     <string>/Users/icmini/02luka/logs/auto_commit.log</string>
     
