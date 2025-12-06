@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "scanned_at": "2025-12-06T19:10:28Z",
+  "scanned_at": "2025-12-06T20:29:02Z",
   "host": "Ittipongs-Mac-mini.local",
   "components": {
     "launchagents": {
@@ -8,7 +8,7 @@
       "note": "Run 'launchctl list | grep com.02luka' for details"
     },
     "tools": {
-      "count": 248,
+      "count": 249,
       "path": "~/02luka/tools"
     }
   },
