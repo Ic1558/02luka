@@ -11,14 +11,18 @@ Two distinct commands for different use cases:
 
 | Command | What It Does | When to Use | Weight |
 |---------|--------------|-------------|--------|
-| **`save`** | Only `session_save.zsh` | Mid-session saves, memory/diary updates | Light ⚡ |
-| **`seal`** | Review → GitDrop → Save | Final safety before push/merge/deploy | Heavy 🔒 |
+| **`save-now`** | Only `session_save.zsh` | Mid-session saves, memory/diary updates | Light ⚡ |
+| **`seal-now`** | Review → GitDrop → Save | Final safety before push/merge/deploy | Heavy 🔒 |
+
+**Legacy Aliases (backward compatibility):**
+- `save` → redirects to `save-now`
+- `seal` → redirects to `seal-now`
 
 ---
 
-## `save` - Lightweight Save
+## `save-now` - Lightweight Save
 
-**Command:** `save`  
+**Command:** `save-now` (legacy: `save`)  
 **Function:** `dev_save()`  
 **Script:** `tools/session_save.zsh`
 
@@ -37,18 +41,21 @@ Two distinct commands for different use cases:
 
 ### Usage
 ```bash
-save
+save-now
 # or with arguments
-save --option value
+save-now --option value
+
+# Legacy alias (backward compatible)
+save
 ```
 
 ---
 
-## `seal` - Full Workflow Chain
+## `seal-now` - Full Workflow Chain
 
-**Command:** `seal`  
+**Command:** `seal-now` (legacy: `seal`)  
 **Function:** `dev_seal()`  
-**Script:** `tools/workflow_dev_review_save.py`
+**Script:** `tools/workflow_dev_review_save.py` (or `.zsh` fallback)
 
 ### Purpose
 - Close work session
@@ -70,10 +77,13 @@ save --option value
 
 ### Usage
 ```bash
-seal
+seal-now
 # or with options
-seal --mode staged --strict
-seal --offline --skip-gitdrop
+seal-now --mode staged --strict
+seal-now --offline --skip-gitdrop
+
+# Legacy alias (backward compatible)
+seal
 ```
 
 ### Options
@@ -143,8 +153,10 @@ seal-status --summary
 - `dev_seal()` → runs `tools/workflow_dev_review_save.py` (preferred) or `.zsh` (fallback)
 
 **Aliases:**
-- `alias save='dev_save'`
-- `alias seal='dev_seal'`
+- `alias save-now='dev_save'` (primary)
+- `alias seal-now='dev_seal'` (primary)
+- `alias save='save-now'` (legacy redirect)
+- `alias seal='seal-now'` (legacy redirect)
 - `alias drs='dev_review_save'` (legacy, calls `dev_seal`)
 - `alias seal-status='dev_review_save_status'`
 - `alias drs-status='dev_review_save_status'`

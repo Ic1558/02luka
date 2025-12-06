@@ -58,7 +58,7 @@ function dev_save() {
         fi
     )
 }
-alias save='dev_save'
+alias save-now='dev_save'
 
 # --- Workflow Chain: Review -> GitDrop -> Save (Seal) ---
 function dev_seal() {
@@ -75,13 +75,15 @@ function dev_seal() {
         fi
     )
 }
-alias seal='dev_seal'
+alias seal-now='dev_seal'
 
-# --- Legacy alias (backward compatibility) ---
+# --- Legacy aliases (backward compatibility) ---
 function dev_review_save() {
     dev_seal "$@"
 }
 alias drs='dev_review_save'
+alias save='save-now'  # Legacy: redirect to save-now
+alias seal='seal-now'  # Legacy: redirect to seal-now
 
 # --- Status viewer ---
 function dev_review_save_status() {
@@ -98,7 +100,8 @@ function dev_review_save_status() {
 alias drs-status='dev_review_save_status'
 alias seal-status='dev_review_save_status'
 
-echo "   - save → lightweight save (session_save.zsh only)"
-echo "   - seal → full chain (Review->GitDrop->Save)"
-echo "   - drs → legacy alias for seal (backward compatibility)"
+echo "   - save-now → lightweight save (session_save.zsh only)"
+echo "   - seal-now → full chain (Review->GitDrop->Save)"
+echo "   - save/seal → legacy aliases (redirect to save-now/seal-now)"
+echo "   - drs → legacy alias for seal-now (backward compatibility)"
 echo "   - seal-status / drs-status → show recent chain runs"

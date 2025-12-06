@@ -1832,35 +1832,45 @@ cat /Users/icmini/My\ Drive\ (ittipong.c@gmail.com)\ (1)/02luka/run/calendar/gca
 ## 💾 **Save & Seal Commands** (2025-12-07)
 
 **Quick Reference:**
-- `save` → Lightweight save (session_save.zsh only)
-- `seal` → Full chain (Review → GitDrop → Save)
+- `save-now` → Lightweight save (session_save.zsh only)
+- `seal-now` → Full chain (Review → GitDrop → Save)
 
-### **`save` - Lightweight Save**
+**Legacy Aliases (backward compatible):**
+- `save` → redirects to `save-now`
+- `seal` → redirects to `seal-now`
+
+### **`save-now` - Lightweight Save**
 **Purpose:** Quick state preservation, memory/diary updates  
 **Weight:** Light ⚡  
 **Use When:** Mid-session saves, frequent updates
 
 ```bash
-save
+save-now
 # → Runs session_save.zsh
 # → Updates 02luka.md, commits memory repo
 # → Fast, no review overhead
+
+# Legacy alias
+save
 ```
 
-### **`seal` - Full Workflow Chain**
+### **`seal-now` - Full Workflow Chain**
 **Purpose:** Final safety check before push/merge/deployment  
 **Weight:** Heavy 🔒  
 **Use When:** End of session, before push/merge
 
 ```bash
-seal
+seal-now
 # → Review → GitDrop → Save
 # → Complete workflow with safety checks
 
 # Options:
-seal --mode staged --strict
-seal --offline --skip-gitdrop
-seal --mode branch --base main --target feature
+seal-now --mode staged --strict
+seal-now --offline --skip-gitdrop
+seal-now --mode branch --base main --target feature
+
+# Legacy alias
+seal
 ```
 
 ### **Status Commands**
