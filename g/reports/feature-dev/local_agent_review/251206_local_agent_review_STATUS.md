@@ -157,7 +157,7 @@
   - Optional gitdrop/save; captures run_id, caller, durations, statuses
 
 ### 🔄 In Progress / Planned
-- [ ] **Telemetry field completeness** (future refinement if schema changes)
+- [ ] **Telemetry field completeness** (future refinement if schema changes) - ✅ **Phase 2.3 Complete**
 
 ### 📋 Future Enhancements
 - [ ] Retention details (show which reports were deleted)
@@ -165,7 +165,7 @@
 - [ ] Support for local models (Ollama, LM Studio)
 - [ ] Caching reviews for unchanged code
 - [ ] Batch review multiple commits
-- [ ] Unified chain integration (review → GitDrop → session_save)
+- ✅ Unified chain integration (review → GitDrop → session_save) - **Phase 2.3 Complete**
 
 ---
 
@@ -187,7 +187,8 @@ All core tasks (T1-T5) are implemented and working. The feature is production-re
 
 ---
 
-**Last Updated:** 2025-12-06  
+**Last Updated:** 2025-12-07  
 **Corrections:** 
 - 2025-12-06: Fixed STATUS doc to match actual implementation, fixed datetime deprecation warnings
 - 2025-12-06: Updated to reflect secret allowlist, config validation, 20 unit tests passing, hook paths, telemetry chain script
+- 2025-12-07: Phase 2.3 telemetry chain implementation complete - `tools/workflow_dev_review_save.py`, `tools/lib/workflow_chain_utils.py`, status viewer `drs-status`

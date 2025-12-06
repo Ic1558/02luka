@@ -1,0 +1,6 @@
+{"ts":"2025-12-06T19:00:06Z","event":"wo_status_updated","wo_id":"WO-20251030-H6R94XXXXX","status":"abandoned","reason":"Older than 30 days with no activity"}
+{"ts":"2025-12-06T19:00:07Z","event":"wo_status_updated","wo_id":"WO-20251030-QQID8XXXXX","status":"abandoned","reason":"Older than 30 days with no activity"}
+{"ts":"2025-12-06T19:00:07Z","event":"wo_status_updated","wo_id":"WO-20251030-TBQHMXXXXX","status":"abandoned","reason":"Older than 30 days with no activity"}
+{"ts":"2025-12-06T19:00:07Z","event":"wo_status_updated","wo_id":"WO-20251030-TIVJ2XXXXX","status":"abandoned","reason":"Older than 30 days with no activity"}
+{"ts":"2025-12-06T19:00:08Z","event":"wo_status_updated","wo_id":"WO-20251030-W0YIAXXXXX","status":"abandoned","reason":"Older than 30 days with no activity"}
+{"ts":"2025-12-06T19:00:08Z","event":"cleanup_complete","wo_id":"","status":"success","reason":"Processed 5, updated 5, archived 0"}

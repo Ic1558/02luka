@@ -2,7 +2,7 @@
 
 **Feature:** Telemetry completeness for review → GitDrop → session_save workflow chain  
 **Date:** 2025-12-06  
-**Status:** Spec (Tightened)  
+**Status:** ✅ **Implemented** (Tightened Spec)  
 **Version:** 1.1
 
 ---
