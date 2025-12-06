@@ -65,3 +65,9 @@ Behavior: runs staged review with `--no-interactive --strict`; blocks on critica
 - Default reports: `g/reports/reviews/` (rotates, keep last 20)
 - Telemetry: `g/telemetry/local_agent_review.jsonl` (one JSON line per run)
 - Custom `--output` paths are never rotated.
+
+## Workflow Chain Telemetry (Phase 2.3)
+
+- Chain runner: `python tools/workflow_dev_review_save.py [--mode ...] [--offline] [--strict] [--skip-gitdrop] [--skip-save]`
+- One-record policy: logs to `g/telemetry/dev_workflow_chain.jsonl` with `run_id`, caller, review/gitdrop/save statuses, durations.
+- GitDrop/Save are optional; on security block (exit 3) downstream steps are skipped and logged as such.

@@ -1,7 +1,7 @@
 # Local Agent Review - Implementation Status
 
 **Date:** 2025-12-06  
-**Status:** ✅ **Phase 1 Complete + Phase 2.1 (Secret Allowlist) + Config Validation**
+**Status:** ✅ **Phase 1 Complete + Phase 2.1 (Secret Allowlist) + Phase 2.2 (Config Validation) + Telemetry Chain (Phase 2.3 initial)**
 
 ---
 
@@ -110,7 +110,7 @@
 ## 🧪 Testing Status
 
 ### Unit Tests
-- ✅ **17 unit tests implemented** in `tests/test_local_agent_review.py`
+- ✅ **20 unit tests implemented** (`tests/test_local_agent_review.py`, `tests/test_workflow_chain_utils.py`)
 - Coverage highlights:
   - Exit code mapping (strict vs non-strict)
   - Branch/range modes
@@ -122,7 +122,8 @@
   - Offline mode
   - Environment loading (.env.local)
   - Config validation (retention, temperature, max_tokens, max_review_calls, soft/hard limits, secret_scan enabled/allowlist types, CLI exit code on invalid config)
-- **Status:** All 17 tests passing (pytest validation confirmed)
+  - Run ID generation / caller detection / snapshot ID parsing (telemetry chain helpers)
+- **Status:** All 20 tests passing (pytest validation confirmed)
 
 ### Integration Tests
 - ✅ Manual testing completed
@@ -149,9 +150,14 @@
 - ✅ **Config validation** (Phase 2.2)
   - Validates retention_count, temperature range, max_tokens, max_review_calls_per_run, soft/hard limits, secret_scan.enabled (bool), allowlist pattern types
   - Invalid configs return exit code 2 with clear message
+- ✅ **Telemetry chain (Phase 2.3 - initial)**
+  - One-record policy telemetry appended to `g/telemetry/dev_workflow_chain.jsonl`
+  - Chain runner: `tools/workflow_dev_review_save.py` (review → gitdrop → session_save)
+  - Helper utils: `tools/lib/workflow_chain_utils.py`
+  - Optional gitdrop/save; captures run_id, caller, durations, statuses
 
 ### 🔄 In Progress / Planned
-- [ ] **Telemetry field completeness** (for unified chain proposal)
+- [ ] **Telemetry field completeness** (future refinement if schema changes)
 
 ### 📋 Future Enhancements
 - [ ] Retention details (show which reports were deleted)
@@ -184,4 +190,4 @@ All core tasks (T1-T5) are implemented and working. The feature is production-re
 **Last Updated:** 2025-12-06  
 **Corrections:** 
 - 2025-12-06: Fixed STATUS doc to match actual implementation, fixed datetime deprecation warnings
-- 2025-12-06: Updated to reflect secret allowlist, config validation, 17 unit tests passing, and hook paths
+- 2025-12-06: Updated to reflect secret allowlist, config validation, 20 unit tests passing, hook paths, telemetry chain script

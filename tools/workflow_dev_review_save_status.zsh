@@ -96,11 +96,11 @@ if [[ "$MODE" == "summary" ]]; then
         read -r ts rev snap save <<< "$PARSED"
         STATUS=$(calculate_status "$rev" "$snap" "$save")
         
-        ((TOTAL++))
+        TOTAL=$((TOTAL + 1))
         case "$STATUS" in
-            OK) ((OK++)) ;; 
-            WARN) ((WARN++)) ;; 
-            FAIL) ((FAIL++)) ;; 
+            OK) OK=$((OK + 1)) ;; 
+            WARN) WARN=$((WARN + 1)) ;; 
+            FAIL) FAIL=$((FAIL + 1)) ;; 
         esac
     done < "$TELEMETRY_FILE"
     
