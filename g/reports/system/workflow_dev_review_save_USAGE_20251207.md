@@ -29,6 +29,29 @@ drs
 ~/02luka/tools/workflow_dev_review_save.zsh
 ```
 
+## Status / History
+
+To see the last few runs:
+
+```zsh
+drs-status
+```
+
+To see more runs:
+
+```zsh
+drs-status --last 10
+```
+
+To see a summary:
+
+```zsh
+drs-status --summary
+```
+
+This reads from:
+- `g/telemetry/workflow_dev_review_save.jsonl`
+
 ## Git Hook Integration (Opt-in)
 
 To automatically run this workflow before every `git push`, use the helper script in your pre-push hook.
