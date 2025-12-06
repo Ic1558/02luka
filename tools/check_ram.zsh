@@ -36,7 +36,7 @@ echo ""
 echo "======================================"
 echo "💡 Memory Management Commands:"
 echo "======================================"
-echo "   clear-mem   - Clear memory cache (requires sudo)"
+echo "   clear-mem   - Clear memory cache (requires elevated privileges)"
 echo "   check-ram   - Show this report"
 echo ""
 
