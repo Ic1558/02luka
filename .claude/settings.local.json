@@ -23,7 +23,8 @@
       "Bash(source ~/.zshrc)",
       "Bash(echo:*)",
       "Bash(curl:*)",
-      "Bash(~/02luka/tools/save.sh:*)"
+      "Bash(~/02luka/tools/save.sh:*)",
+      "Bash(git -C /Users/icmini/02luka log:*)"
     ],
     "deny": [],
     "ask": []
