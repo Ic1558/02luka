@@ -13,7 +13,7 @@ if [[ ! -f "${ROOT}/tools/local_agent_review.py" ]]; then
 fi
 
 echo "[local-review-hook] running local agent review (staged, no-interactive)..."
-python "${ROOT}/tools/local_agent_review.py" staged --no-interactive --quiet --strict
+python3 "${ROOT}/tools/local_agent_review.py" staged --no-interactive --quiet --strict
 rc=$?
 
 if [[ $rc -eq 0 ]]; then

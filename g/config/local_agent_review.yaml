@@ -22,6 +22,18 @@ review:
     - "*.key"
     - ".env*"
   redact_secrets: true
+  secret_scan:
+    enabled: true
+    allowlist:
+      file_patterns:
+        - "**/tests/**"
+        - "**/test_*"
+      content_patterns:
+        - "sk-test-.*"
+        - "TEST_API_KEY.*"
+      file_paths: []
+      safe_patterns:
+        - "sk-test-[A-Za-z0-9]+"
   context_lines: 3
   soft_limit_kb: 60
   hard_limit_kb: 100

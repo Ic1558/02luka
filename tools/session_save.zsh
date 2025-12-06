@@ -82,7 +82,11 @@ trap log_telemetry EXIT
 LUKA_MEM_REPO_ROOT="${LUKA_MEM_REPO_ROOT:-$HOME/02luka}"
 MEM_REPO="$LUKA_MEM_REPO_ROOT" # Alias for legacy compatibility
 MLS_LEDGER_DIR="$LUKA_MEM_REPO_ROOT/mls/ledger"
+TODAY=$(date +"%Y-%m-%d")
+MLS_LEDGER="$MLS_LEDGER_DIR/$TODAY.jsonl"
 REPORTS_DIR="$LUKA_MEM_REPO_ROOT/g/reports/sessions"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+SESSION_FILE="$REPORTS_DIR/session_$TIMESTAMP.md"
 LUKA_MD="$LUKA_MEM_REPO_ROOT/02luka.md"
 MEMORY_SYSTEM_MD="$LUKA_MEM_REPO_ROOT/memory/CLAUDE_MEMORY_SYSTEM.md"
 

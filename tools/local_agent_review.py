@@ -6,17 +6,22 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 import subprocess
+
+# Ensure project root is on sys.path when executed as a script
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import yaml
 
 from tools.lib.local_review_engine import ReviewEngine, ReviewResult, build_offline_result
 from tools.lib.local_review_git import DiffResult, GitDiffError, GitInterface
 from tools.lib.local_review_llm import LLMClient, LLMConfig, LLMError
-from tools.lib.privacy_guard import PrivacyGuard
+from tools.lib.privacy_guard import PrivacyGuard, SecretAllowlist
 
 
 DEFAULT_CONFIG = Path("g/config/local_agent_review.yaml")
@@ -58,7 +63,7 @@ class ReportGenerator:
     ) -> str:
         lines: List[str] = []
         lines.append("# Local Agent Review Report")
-        lines.append(f"**Date:** {datetime.utcnow().isoformat()}Z")
+        lines.append(f"**Date:** {datetime.now(timezone.utc).isoformat()}")
         lines.append(f"**Mode:** {mode}")
         lines.append(f"**Files Analyzed:** {len(diff.files_included)}")
         if diff.files_excluded:
@@ -114,7 +119,7 @@ class ReportGenerator:
                 "stats": diff.stats,
             },
             "context": context,
-            "ts": datetime.utcnow().isoformat() + "Z",
+            "ts": datetime.now(timezone.utc).isoformat(),
         }
         return json.dumps(payload, indent=2)
 
@@ -143,6 +148,82 @@ class ReportGenerator:
         else:
             lines.append("No issues found.")
         return "\n".join(lines) + "\n"
+
+    def render_vscode_diagnostics(
+        self,
+        result: ReviewResult,
+        diff: DiffResult,
+        mode: str,
+        truncated: bool,
+        context: str,
+    ) -> str:
+        """
+        Render VS Code Diagnostics format for Problems panel.
+        Format: file -> list of diagnostics
+        """
+        # Map severity to VS Code DiagnosticSeverity
+        severity_map = {
+            "critical": 1,  # Error
+            "warning": 2,   # Warning
+            "suggestion": 3, # Information
+            "info": 4,      # Hint
+        }
+        
+        diagnostics_by_file: Dict[str, List[Dict[str, Any]]] = {}
+        
+        for issue in result.issues:
+            file_path = issue.file
+            if file_path not in diagnostics_by_file:
+                diagnostics_by_file[file_path] = []
+            
+            # VS Code Diagnostic format
+            diagnostic = {
+                "range": {
+                    "start": {"line": max(0, issue.line - 1), "character": 0},
+                    "end": {"line": max(0, issue.line - 1), "character": 1000},
+                },
+                "severity": severity_map.get(issue.severity.lower(), 3),
+                "source": "Local Agent Review",
+                "message": issue.description,
+                "code": issue.category,
+            }
+            
+            if issue.suggestion:
+                diagnostic["relatedInformation"] = [
+                    {
+                        "location": {
+                            "uri": file_path,
+                            "range": diagnostic["range"],
+                        },
+                        "message": f"Suggestion: {issue.suggestion}",
+                    }
+                ]
+            
+            diagnostics_by_file[file_path].append(diagnostic)
+        
+        # VS Code Diagnostics format: { "file:///path": [diagnostics] }
+        output: Dict[str, List[Dict[str, Any]]] = {}
+        for file_path, diags in diagnostics_by_file.items():
+            # Convert to file:// URI format
+            abs_path = Path(file_path).resolve()
+            uri = f"file://{abs_path}"
+            output[uri] = diags
+        
+        # Add summary as workspace-level diagnostic if truncated
+        if truncated:
+            workspace_diag = {
+                "range": {
+                    "start": {"line": 0, "character": 0},
+                    "end": {"line": 0, "character": 0},
+                },
+                "severity": 2,  # Warning
+                "source": "Local Agent Review",
+                "message": f"PARTIAL REVIEW: Input truncated. {len(diff.files_excluded)} files excluded.",
+            }
+            # Use a special key for workspace-level diagnostics
+            output["workspace://summary"] = [workspace_diag]
+        
+        return json.dumps(output, indent=2)
 
     def write_report(self, content: str, output_path: Optional[Path], fmt: str) -> Optional[Path]:
         if output_path is None:
@@ -192,9 +273,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--format",
         dest="fmt",
-        choices=["markdown", "json", "console"],
+        choices=["markdown", "json", "console", "vscode-diagnostics"],
         default="markdown",
-        help="Report format",
+        help="Report format (vscode-diagnostics for Cursor Problems panel)",
     )
     parser.add_argument("--output", help="Path to save report")
     parser.add_argument("--quiet", action="store_true", help="Suppress stdout")
@@ -272,7 +353,7 @@ def maybe_output_path(args: argparse.Namespace, config: AppConfig) -> Optional[P
         return Path(args.output)
     default_dir = Path(config.output.get("save_dir", "g/reports/reviews"))
     default_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     ext = "md" if args.fmt == "markdown" else "json"
     return default_dir / f"review_{timestamp}.{ext}"
 
@@ -291,10 +372,22 @@ def build_llm(config: AppConfig) -> LLMClient:
 
 def build_privacy_guard(config: AppConfig) -> PrivacyGuard:
     review_cfg = config.review
+    secret_cfg = review_cfg.get("secret_scan", {})
+    allowlist_cfg = secret_cfg.get("allowlist", {}) if secret_cfg.get("enabled", True) else {}
+    allowlist = None
+    if allowlist_cfg:
+        allowlist = SecretAllowlist(
+            file_patterns=allowlist_cfg.get("file_patterns", []),
+            content_patterns=allowlist_cfg.get("content_patterns", []),
+            file_paths=allowlist_cfg.get("file_paths", []),
+            safe_patterns=allowlist_cfg.get("safe_patterns", []),
+        )
+
     return PrivacyGuard(
         ignore_patterns=review_cfg.get("ignore_patterns", []),
         exclude_files=review_cfg.get("exclude_files", []),
         redact_secrets=bool(review_cfg.get("redact_secrets", True)),
+        allowlist=allowlist,
     )
 
 
@@ -397,6 +490,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         content = report_gen.render_markdown(review_result, diff, args.mode, truncated, context)
     elif fmt == "json":
         content = report_gen.render_json(review_result, diff, args.mode, truncated, context)
+    elif fmt == "vscode-diagnostics":
+        content = report_gen.render_vscode_diagnostics(review_result, diff, args.mode, truncated, context)
     else:
         content = report_gen.render_console(review_result, diff, args.mode, truncated, context)
 
@@ -404,6 +499,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.output or fmt != "console":
         output_path = maybe_output_path(args, config)
         report_gen.write_report(content, output_path, fmt)
+    
+    # Auto-write VS Code diagnostics for Cursor IDE integration
+    # This creates a diagnostics file that can be read by extensions/watchers
+    if not args.quiet and review_result.issues and fmt != "vscode-diagnostics":
+        diagnostics_content = report_gen.render_vscode_diagnostics(review_result, diff, args.mode, truncated, context)
+        diagnostics_path = PROJECT_ROOT / ".vscode" / "local_agent_review_diagnostics.json"
+        diagnostics_path.parent.mkdir(parents=True, exist_ok=True)
+        diagnostics_path.write_text(diagnostics_content, encoding="utf-8")
+        if not args.quiet:
+            print(f"[local-review] Diagnostics written to: {diagnostics_path}")
+    
+    # For vscode-diagnostics format, also output Problem Matcher format to stdout
+    if fmt == "vscode-diagnostics" and review_result.issues:
+        # Output in format that VS Code Problem Matcher can parse
+        # Format: file:line:col: severity: message
+        for issue in review_result.issues:
+            severity_map = {
+                "critical": "error",
+                "warning": "warning",
+                "suggestion": "info",
+                "info": "hint",
+            }
+            severity = severity_map.get(issue.severity.lower(), "info")
+            file_path = Path(issue.file).resolve()
+            line = max(1, issue.line)
+            col = 1
+            message = issue.description.replace(":", " ").replace("\n", " ")
+            print(f"{file_path}:{line}:{col}: {severity}: {message}", file=sys.stderr)
 
     if not args.quiet and fmt == "console":
         sys.stdout.write(content)
@@ -413,7 +536,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # Telemetry
     telemetry_path = Path(config.safety.get("telemetry_file", "g/telemetry/local_agent_review.jsonl"))
     telemetry_payload = {
-        "ts": datetime.utcnow().isoformat() + "Z",
+        "ts": datetime.now(timezone.utc).isoformat(),
         "mode": args.mode,
         "exit_code": exit_code,
         "issues_critical": review_result.counts["critical"],

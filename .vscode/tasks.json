@@ -1,74 +1,77 @@
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Load Hybrid Memory Context",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                ".codex/load_context.sh"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
-            "problemMatcher": []
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Local Agent Review: Staged Changes",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/tools/local_agent_review.py",
+        "staged",
+        "--format",
+        "vscode-diagnostics",
+        "--output",
+        "${workspaceFolder}/.vscode/local_agent_review_diagnostics.json"
+      ],
+      "problemMatcher": {
+        "owner": "local-agent-review",
+        "fileLocation": ["absolute"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info|hint):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
         },
-        {
-            "label": "Adapt AI Style",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                ".codex/adapt_style.sh"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Save Context",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                ".codex/save_context.sh"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Start Hybrid Memory Session",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Load Hybrid Memory Context",
-                "Adapt AI Style"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "shared"
-            },
-            "problemMatcher": []
+        "background": {
+          "activeOnStart": false,
+          "beginsPattern": "^\\[local-review\\]",
+          "endsPattern": "^\\[local-review\\].*completed"
         }
-    ]
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "showReuseMessage": false
+      },
+      "runOptions": {
+        "runOn": "default"
+      }
+    },
+    {
+      "label": "Local Agent Review: All Unstaged Changes",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/tools/local_agent_review.py",
+        "unstaged",
+        "--format",
+        "vscode-diagnostics",
+        "--output",
+        "${workspaceFolder}/.vscode/local_agent_review_diagnostics.json"
+      ],
+      "problemMatcher": {
+        "owner": "local-agent-review",
+        "fileLocation": ["absolute"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info|hint):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        },
+        "background": {
+          "activeOnStart": false,
+          "beginsPattern": "^\\[local-review\\]",
+          "endsPattern": "^\\[local-review\\].*completed"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    }
+  ]
 }
-
-
-
-
-
