@@ -30,8 +30,8 @@ log_telemetry() {
     
     local duration_ms=$(( (end_ns - TELEMETRY_START_NS) / 1000000 ))
     
-    # Metadata gathering
-    local agent="${GG_AGENT_ID:-${USER:-unknown}}"
+    # Metadata gathering (Phase 1A: Use SAVE_AGENT from gateway)
+    local agent="${SAVE_AGENT:-${GG_AGENT_ID:-${USER:-unknown}}}"
     local source="${SAVE_SOURCE:-manual}"
     
     # Resolve Repo Root robustly
