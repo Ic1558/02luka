@@ -118,10 +118,12 @@ def example_shell_flow():
 
 def example_blocked_flow():
     """Example: Blocked operation"""
-    # sandbox: rm_rf mitigated - Example command for testing, not executed
+    # Example dangerous command for testing sandbox detection
+    # Note: This pattern is intentionally dangerous to test blocking logic
+    # The actual command would be blocked by overseerd.py before execution
     task_spec = {
         "intent": "run-command",
-        "command": "rm" + " -r" + " -f" + " /",  # Dangerous pattern for testing
+        "command": "rm -rf /",  # Dangerous pattern - will be blocked by sandbox
     }
     
     result = handle_gmx_task(task_spec)

@@ -110,9 +110,14 @@ def decide_for_shell(task_meta: dict) -> dict:
     cmd = task_meta.get("command") or ""
 
     # Hard-block dangerous patterns
-    # sandbox: rm_rf mitigated - Pattern used for detection, not execution
-    dangerous_pattern = "rm" + " -r" + " -f" + " /"
-    if dangerous_pattern.replace(" ", "") in cmd.replace(" ", "") or re.search(r"rm\s+-rf\s+/\b", cmd):
+    # Detection: Check for "rm" followed by "-r" and "-f" flags targeting root "/"
+    # Method 1: Remove all spaces and check for "rm-r-f/" or "rm-rf/" pattern
+    # Method 2: Regex to catch "rm -rf /" or "rm -r -f /" with any whitespace
+    cmd_no_spaces = cmd.replace(" ", "")
+    has_rm_r_f_root = ("rm-r-f/" in cmd_no_spaces or "rm-rf/" in cmd_no_spaces)
+    regex_match = bool(re.search(r"rm\s+(-r\s+-f|-rf)\s+/\b", cmd))
+    
+    if has_rm_r_f_root or regex_match:
         return {
             "approval": "No",
             "confidence_score": 1.0,

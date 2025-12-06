@@ -35,8 +35,8 @@ def test_shell_dangerous():
     print("Test 2: Dangerous shell command (recursive delete of root)")
     print("=" * 60)
     
-    # sandbox: rm_rf mitigated - Test pattern split to avoid regex match
-    dangerous_cmd = "rm" + " -r" + " -f" + " /"
+    # Test dangerous command pattern (will be blocked by overseerd)
+    dangerous_cmd = "rm -rf /"
     task_meta = {
         "command": dangerous_cmd,
         "task_spec": {"source": "cursor", "intent": "run-command"}
@@ -55,8 +55,8 @@ def test_shell_risky():
     print("Test 3: Risky shell command (recursive delete in home)")
     print("=" * 60)
     
-    # sandbox: rm_rf mitigated - Test pattern split to avoid regex match
-    risky_cmd = "rm" + " -r" + " -f" + " ~/tmp"
+    # Test risky command pattern (will be blocked by overseerd)
+    risky_cmd = "rm -rf ~/tmp"
     task_meta = {
         "command": risky_cmd,
         "task_spec": {"source": "cursor", "intent": "run-command"}

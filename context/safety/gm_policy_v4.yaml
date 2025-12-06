@@ -50,4 +50,5 @@ gm_trigger_policy:
     - "brew uninstall"
     - "git clean"
     - "find -delete"
-    - "rm -r -f"  # sandbox: rm_rf mitigated - Split tokens to avoid pattern match
+    - "rm -rf"  # Dangerous recursive delete - blocked by sandbox
+    - "rm -r -f"  # Also blocked (same pattern, different spacing)
