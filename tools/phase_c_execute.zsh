@@ -22,18 +22,15 @@ cd "$REPO"
 readlink_safe() {
   local p="$1"
   if [[ -x /usr/bin/readlink ]]; then
-    /usr/bin/readlink "$p" && return 0
+    /usr/bin/readlink "$p"
+    return $?
   fi
   # Fallback: python3 (pass the path as argv)
   /usr/bin/python3 - "$p" <<'PY'
 import os,sys
 p=sys.argv[1]
-try:
-    print(os.readlink(p))
-except OSError:
-    sys.exit(1)
+print(os.readlink(p))
 PY
-  "$p"
 }
 
 echo "=========================================="
@@ -79,7 +76,7 @@ if [[ -L g/data ]]; then
   commit_rc=$?
   set -e
 
-  if [[ $commit_rc -ne 0 ]] && grep -Eq "FAIL|must be symlink|real directory|Workspace guard checks failed" "$tmp_out"; then
+  if [[ $commit_rc -ne 0 ]] && grep_safe -Eq "FAIL|must be symlink|real directory|Workspace guard checks failed" "$tmp_out"; then
     echo "✅ PASS: Pre-commit hook blocked invalid commit"
     test2_passed=1
   else
@@ -121,7 +118,7 @@ else
 fi
 
 # Cleanup: restore symlinks
-for path in "${!backups[@]}"; do
+for path in "${(@k)backups}"; do
   rm_safe -rf "$path"
   ln_safe -sfn "${backups[$path]}" "$path"
 done
