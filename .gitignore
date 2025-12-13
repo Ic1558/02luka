@@ -146,6 +146,22 @@ tmp_*.yaml
 .n8n/
 
 # ========================================
+# Workspace Split: Runtime Data (Never in Git)
+# ========================================
+# These paths are symlinks to ~/02luka_ws/ and must NEVER be tracked
+g/data/
+g/telemetry/
+g/followup/
+mls/ledger/
+bridge/processed/
+
+# Local configs (optional: can be in .git/info/exclude instead)
+.claude/
+.cursor/
+.vscode/
+.DS_Store
+
+# ========================================
 # Codex/Tool-Generated Backup Noise (SPECIFIC ONLY)
 # ========================================
 # Apply patch artifacts (tool-generated, ~12k files)
