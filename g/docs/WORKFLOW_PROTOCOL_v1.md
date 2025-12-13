@@ -44,25 +44,69 @@ This protocol defines the mandatory workflow for all development tasks, ensuring
 
 ## Workflow Phases
 
+### Phase 0: Related Files Discovery (CRITICAL - DO FIRST)
+
+**⚠️ BEFORE planning, ALWAYS identify all related files:**
+
+**0.1 Discover Related Files**
+- Search for files that might be affected
+- Check dependencies and imports
+- Find configuration files
+- Identify test files
+- Locate documentation that references the code
+- Check for similar patterns elsewhere
+
+**0.2 Understand Big Picture Impact**
+- How does this change affect the system?
+- What other components depend on this?
+- Are there related workflows or processes?
+- What documentation needs updating?
+
+**0.3 Create Related Files List**
+- Document all files that will be touched
+- Note files that might be indirectly affected
+- Identify files that need review after changes
+
+**Why This Matters:**
+- Each task affects the big picture
+- Missing related files = breaking things
+- Early discovery = better planning
+- Prevents unintended side effects
+
+**Tools:**
+```bash
+# Find related files
+grep -r "pattern" . --include="*.zsh" --include="*.md"
+find . -name "*related*" -o -name "*similar*"
+git grep "function_name|class_name"
+```
+
+---
+
 ### Phase 1: Planning & Specification
 
 **1.1 Make Plan**
 - Break down the task into clear, actionable steps
+- **Reference related files list from Phase 0**
 - Identify dependencies and prerequisites
 - Estimate complexity and risks
 - Document assumptions and constraints
+- **Ensure plan addresses all related files**
 
 **1.2 Make Spec**
 - Define detailed requirements and acceptance criteria
 - Specify inputs, outputs, and expected behavior
+- **List all files that will be modified**
 - Document edge cases and error handling
 - Create test cases (if applicable)
+- **Note impact on related files**
 
 **1.3 Define Goal**
 - State the clear, measurable objective
 - Define success criteria
 - Identify what "done" looks like
 - Set validation checkpoints
+- **Include verification of related files**
 
 **Deliverables:**
 - Plan document (`.md` file in `g/reports/` or `g/docs/`)

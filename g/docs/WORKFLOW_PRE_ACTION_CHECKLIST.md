@@ -7,11 +7,19 @@
 
 **Before suggesting, proposing, or executing ANY change, verify:**
 
+- [ ] **Related Files Discovered** (CRITICAL - DO FIRST)
+  - All related files identified
+  - Dependencies found
+  - Impact on big picture understood
+  - Related files list documented
+  - **✅ I know what will be affected before I start**
+
 - [ ] **Plan Created**
   - Task broken down into clear steps
   - Dependencies identified
   - Risks assessed
   - **✅ Plan matches requirements exactly (no scope creep)**
+  - **✅ Plan addresses all related files from discovery**
 
 - [ ] **Spec Defined**
   - Requirements clear

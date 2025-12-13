@@ -169,10 +169,17 @@ This is the BASIC, DEFAULT way to work. All code changes and system modification
 
 **Quick Reference:**
 
+**Phase 0: Related Files Discovery** (CRITICAL - DO FIRST)
+0. **Discover Related Files** - Find all files that might be affected
+   - Search for dependencies, imports, configs, tests, docs
+   - Understand big picture impact
+   - Create related files list
+   - **Why:** Each task affects the big picture. Missing files = breaking things.
+
 **Phase 1: Planning & Specification**
-1. **Make Plan** - Break down task into clear steps
-2. **Make Spec** - Define requirements and acceptance criteria
-3. **Define Goal** - State clear, measurable objective
+1. **Make Plan** - Break down task into clear steps (reference related files)
+2. **Make Spec** - Define requirements and acceptance criteria (list all files)
+3. **Define Goal** - State clear, measurable objective (include related files verification)
 
 **Phase 2: Dry-Run & Verification**
 4. **Dry-Run** - Execute in non-destructive mode (`-n`, `--dry-run`, simulation)
