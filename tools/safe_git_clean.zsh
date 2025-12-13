@@ -2,28 +2,43 @@
 set -euo pipefail
 
 # Safe Git Clean - Only removes ignored files (never untracked workspace)
-# Usage: safe_git_clean.zsh [options]
-# Options: -f (force), -d (directories), -X (only ignored), -n (dry-run)
+# Usage:
+#   zsh ~/02luka/tools/safe_git_clean.zsh -n   # Dry-run (ALWAYS DO THIS FIRST)
+#   zsh ~/02luka/tools/safe_git_clean.zsh -f   # Force clean (after reviewing)
+#
+# Options:
+#   -n, --dry-run     Show what would be deleted (DEFAULT, SAFE)
+#   -f, --force       Actually delete files (DESTRUCTIVE)
+#   -d, --dirs        Include directories
+#   -X, --ignored-only  Only remove ignored files (DEFAULT, SAFE)
 
 REPO="${HOME}/02luka"
 
+# Color codes for warnings
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m' # No Color
+
 if [[ ! -d "$REPO/.git" ]]; then
-  echo "ERROR: $REPO is not a git repo" >&2
+  echo "${RED}ERROR: $REPO is not a git repo${NC}" >&2
   exit 1
 fi
 
 cd "$REPO"
 
 # Run guard first (fail if workspace is broken)
-echo "== Pre-clean guard check =="
-if ! zsh tools/guard_workspace_inside_repo.zsh; then
-  echo "ERROR: Workspace guard failed. Aborting clean to protect workspace data." >&2
+echo "${YELLOW}== Pre-clean guard check ==${NC}"
+if ! zsh tools/guard_workspace_inside_repo.zsh 2>/dev/null; then
+  echo "${RED}ERROR: Workspace guard failed. Aborting clean to protect workspace data.${NC}" >&2
   exit 1
 fi
 
 echo ""
-echo "== Safe git clean (only ignored files) =="
-echo "Using: git clean -fdX (removes only ignored files/dirs)"
+echo "${GREEN}✅ Workspace guard passed${NC}"
+echo ""
+echo "${YELLOW}== Safe git clean (only ignored files) ==${NC}"
+echo "Using: git clean -fdX (removes only .gitignore-matched files)"
 echo ""
 
 # Default to dry-run unless -f is provided
@@ -71,14 +86,47 @@ if [[ -z "$CLEAN_OPTS" ]]; then
   CLEAN_OPTS="n"  # Default to dry-run
 fi
 
-echo "Command: git clean -${CLEAN_OPTS}"
-echo ""
+if [[ "$DRY_RUN" -eq 1 ]]; then
+  echo "${YELLOW}🔍 DRY-RUN MODE (Safe - No files will be deleted)${NC}"
+  echo ""
+  echo "Files that would be removed:"
+  echo ""
+  git clean -${CLEAN_OPTS}
+  echo ""
+  echo "${GREEN}✅ Dry-run complete - No files were deleted${NC}"
+  echo ""
+  echo "${YELLOW}Next step:${NC}"
+  echo "  Review the list above carefully."
+  echo "  If you're sure you want to delete these files, run:"
+  echo "    ${GREEN}zsh ~/02luka/tools/safe_git_clean.zsh -f${NC}"
+else
+  echo "${RED}⚠️  FORCE MODE - Files will be PERMANENTLY DELETED${NC}"
+  echo ""
+  echo "Command: git clean -${CLEAN_OPTS}"
+  echo ""
 
-# Execute git clean
-git clean -${CLEAN_OPTS}
+  # Show what will be deleted
+  echo "Files to be deleted:"
+  git clean -${CLEAN_OPTS}n
+  echo ""
 
-echo ""
-echo "✅ Safe clean complete"
-echo ""
-echo "Note: This only removes files matching .gitignore patterns."
-echo "      Workspace data in ~/02luka_ws/ is never touched."
+  # Ask for confirmation
+  echo -n "${RED}Are you sure you want to DELETE these files? (type 'yes' to confirm): ${NC}"
+  read CONFIRM
+
+  if [[ "$CONFIRM" != "yes" ]]; then
+    echo ""
+    echo "${YELLOW}Cancelled - No files were deleted${NC}"
+    exit 0
+  fi
+
+  echo ""
+  echo "${RED}Deleting files...${NC}"
+  git clean -${CLEAN_OPTS}
+
+  echo ""
+  echo "${GREEN}✅ Safe clean complete${NC}"
+  echo ""
+  echo "Note: Only files matching .gitignore patterns were removed."
+  echo "      Workspace data in ~/02luka_ws/ is never touched."
+fi
