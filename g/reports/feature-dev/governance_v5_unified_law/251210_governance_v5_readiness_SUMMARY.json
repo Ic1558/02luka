@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-12-11T02:16:46.538194",
+  "status": "WIRED (Integrated)",
+  "readiness_gates": {
+    "PR-1": {
+      "status": "COMPLETE",
+      "progress": 100
+    },
+    "PR-2": {
+      "status": "IN_PROGRESS",
+      "progress": 50,
+      "note": "Test results documented, pytest needed for full suite"
+    },
+    "PR-3": {
+      "status": "COMPLETE",
+      "progress": 100
+    },
+    "PR-4": {
+      "status": "COMPLETE",
+      "progress": 100
+    },
+    "PR-5": {
+      "status": "COMPLETE",
+      "progress": 100
+    },
+    "PR-6": {
+      "status": "COMPLETE",
+      "progress": 100
+    }
+  },
+  "evidence_files": [
+    "251210_v5_tests_RESULTS.json",
+    "251210_v5_integration_wiring_REPORT.md",
+    "251210_v5_safety_validation_REPORT.md",
+    "251210_governance_v5_readiness_CHECKLIST.md",
+    "251210_governance_v5_readiness_FINAL.md"
+  ],
+  "code_changes": [
+    "agents/mary_router/gateway_v3_router.py (v5 integration)",
+    "g/config/mary_router_gateway_v3.yaml (use_v5_stack: true)"
+  ],
+  "documentation": [
+    "g/docs/V5_ROUTING_RUNBOOK.md"
+  ]
+}

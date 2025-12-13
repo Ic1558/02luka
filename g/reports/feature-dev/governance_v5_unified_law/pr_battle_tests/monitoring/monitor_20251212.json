@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-12-12T08:40:26Z",
+  "v5_activity_24h": "v5:12,legacy:0",
+  "lane_distribution": {"strict":5,"local":6,"rejected":1},
+  "inbox_backlog": {"main":0,"clc":0},
+  "error_stats": {"processed":13,"errors":8,"error_rate":38},
+  "status": "operational"
+}

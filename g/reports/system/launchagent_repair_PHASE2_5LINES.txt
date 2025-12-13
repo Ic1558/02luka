@@ -1,0 +1,17 @@
+═══════════════════════════════════════════════════════════════
+  Phase 2 LaunchAgent Repair - 5-Line Cheat Sheet
+═══════════════════════════════════════════════════════════════
+
+1. START: cd ~/02luka && ./tools/launchagent_quick_start.zsh → 1 (Core Only)
+
+2. DECIDE: For each service → Q1: Needed? (Y/N/DEFER) → Q2: Path ready? → Q3: REMOVE/ARCHIVE?
+
+3. FIX: plutil -replace ProgramArguments.1 -string "/Users/icmini/02luka/tools/<script>" ~/Library/LaunchAgents/<service>.plist && chmod +x /Users/icmini/02luka/tools/<script> && launchctl bootout "gui/$(id -u)/<service>" 2>/dev/null; launchctl bootstrap "gui/$(id -u)" ~/Library/LaunchAgents/<service>.plist
+
+4. REMOVE/ARCHIVE: launchctl bootout "gui/$(id -u)/<service>" 2>/dev/null && mv ~/Library/LaunchAgents/<service>.plist ~/02luka/_plists_archive_20251207/
+
+5. UPDATE + COMMIT: Edit g/reports/system/launchagent_repair_PHASE2_STATUS.md (PENDING → FIXED/REMOVED) && git add STATUS.md && git commit -m "fix(system): Phase 2A - <service> <decision>"
+
+═══════════════════════════════════════════════════════════════
+  STOP RULE: If tired → Mark STATUS as IN_PROGRESS, commit, stop
+═══════════════════════════════════════════════════════════════

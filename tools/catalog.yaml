@@ -1,0 +1,147 @@
+# System Catalog v1 — Single Source of Truth for Tools & Commands
+# Updated: 2025-12-10
+# Purpose: Prevent agents from using outdated tool/alias information
+#
+# Usage: zsh tools/catalog_lookup.zsh <command>
+
+version: 1
+updated: "2025-12-10"
+maintainer: "Boss / Docs Agent"
+
+# =============================================================================
+# COMMANDS — Primary entry points
+# =============================================================================
+commands:
+  save-now:
+    description: "Lightweight session save from MLS ledger"
+    entry: "./tools/save.sh"
+    env: "AGENT_ID=<agent_name>"
+    function: "dev_save"
+    source: "git_safety_aliases.zsh"
+    notes: "Uses save.sh as gateway, NOT session_save.zsh directly"
+    
+  seal-now:
+    description: "Full chain: Review → GitDrop → Save"
+    entry: "./tools/workflow_dev_review_save.zsh"
+    fallback: "./tools/workflow_dev_review_save.py"
+    env: "GG_AGENT_ID=<agent_name>"
+    function: "dev_seal"
+    source: "git_safety_aliases.zsh"
+    
+  seal-status:
+    description: "Show recent seal/review chain runs"
+    entry: "./tools/workflow_dev_review_save_status.zsh"
+    function: "dev_review_save_status"
+    
+  spawn:
+    description: "LAPP Plugin Spawner v2.1"
+    entry: "./tools/spawn.zsh"
+    usage: "zsh spawn.zsh <plugin_name> \"<input>\" [--dry-run] [--verbose]"
+    flags: ["--list", "--dry-run", "--verbose", "--help"]
+    
+  code-review:
+    description: "Fast code review gate: style check, history-aware review, obvious-bug scan"
+    entry: "./tools/code_review_gate.zsh"
+    fallback: "./tools/local_agent_review.py"
+    usage: "zsh tools/run_tool.zsh code-review <target> [--quick] [--json]"
+    flags: ["--staged", "--unstaged", "--diff", "--quick", "--json"]
+    gate: "Gate 2.5 (after DRYRUN, before VERIFY)"
+    output: "✅/⚠️ verdict with risks + diff hotspots"
+    cache: "g/.cache/code_review_cache.json"
+    notes: "Use run_tool.zsh wrapper. Fallback auto-discovery if not in catalog."
+    
+  run-tool:
+    description: "Single entry point for all tools (wrapper)"
+    entry: "./tools/run_tool.zsh"
+    usage: "zsh tools/run_tool.zsh <tool-id> [args...]"
+    notes: "Always use this wrapper. Auto-discovery fallback prevents blocking."
+    
+  feature-dev-validate:
+    description: "Mandatory validation gate for feature development"
+    entry: "./tools/feature_dev_validate.zsh"
+    usage: "zsh tools/run_tool.zsh feature-dev-validate <feature-slug>"
+    gate: "Gate 4 (Production Readiness - MUST PASS before completion)"
+    quality_gate: 90
+    notes: "Runs all tests, calculates score, blocks completion if < 90%. MANDATORY before claiming completion."
+    automation: "Can be run manually or via auto_workflow_executor.zsh"
+    
+  auto-workflow:
+    description: "Fully automatic workflow executor (includes mandatory validation)"
+    entry: "./tools/auto_workflow_executor.zsh"
+    usage: "zsh tools/run_tool.zsh auto-workflow <feature-slug>"
+    notes: "Runs full workflow automatically. Validation runs at end (Gate 4)."
+    
+  catalog-auto-update:
+    description: "Scan tools/ directory and suggest catalog updates"
+    entry: "./tools/catalog_auto_update.zsh"
+    usage: "zsh tools/run_tool.zsh catalog-auto-update --scan"
+    notes: "Catalog is curated manually (not auto-updated). Use --scan to see suggestions."
+    update_frequency: "Manual (on-demand) or daily scan (suggestions only)"
+
+# =============================================================================
+# ALIASES — Shortcuts mapped to commands
+# =============================================================================
+aliases:
+  save: "save-now"
+  seal: "seal-now"
+  drs: "seal-now"
+  drs-status: "seal-status"
+  qc: "git add -A && git commit -m 'quick save: $(date +%H:%M)'"
+  git-checkout: "git-checkout-safe"
+  git-clean: "git-clean-safe"
+  git-uncommitted: "git status --porcelain"
+
+# =============================================================================
+# CORE TOOLS — Important scripts and their roles
+# =============================================================================
+core_tools:
+  gateways:
+    - name: "save.sh"
+      role: "Gateway for session save"
+      do_not_call_directly: false
+      
+    - name: "workflow_dev_review_save.zsh"
+      role: "Seal chain orchestrator"
+      do_not_call_directly: false
+      
+  backends:
+    - name: "session_save.zsh"
+      role: "Backend engine for save"
+      do_not_call_directly: true
+      note: "Use save.sh instead"
+      
+    - name: "local_agent_review.py"
+      role: "Local agent review"
+      do_not_call_directly: true
+      
+  utilities:
+    - name: "spawn.zsh"
+      role: "LAPP Plugin Spawner"
+      
+    - name: "catalog_lookup.zsh"
+      role: "Query this catalog"
+      
+    - name: "mary_preflight.zsh"
+      role: "Mary Router preflight check"
+      
+    - name: "hub_index_now.zsh"
+      role: "Refresh hub index"
+
+# =============================================================================
+# AGENT RULES — How agents should use this catalog
+# =============================================================================
+agent_rules:
+  - rule: "When asked about tools/commands/aliases, query this catalog first"
+    command: "zsh tools/catalog_lookup.zsh <command>"
+    
+  - rule: "Never answer from memory alone for tool questions"
+    
+  - rule: "If catalog doesn't have the answer, search files then update catalog"
+    
+  - rule: "Use entry field as the correct command, not memory"
+    
+  - rule: "Code review is Gate 2.5 in auto workflow (after DRYRUN, before VERIFY)"
+    command: "zsh tools/code_review_gate.zsh <target>"
+    
+  - rule: "All agents must use catalog_lookup.zsh before executing any tool/command"
+    purpose: "Prevent outdated info, misunderstanding, system lag"

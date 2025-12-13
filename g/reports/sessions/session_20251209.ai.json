@@ -1,0 +1,26 @@
+{
+  "date": "2025-12-09",
+  "ts_utc": "2025-12-09T10:00:01Z",
+  "ts_local": "2025-12-09T17:00:01+0700",
+  "agent": "unknown",
+  "summary": {
+    "total_entries": 74,
+    "top_activities": [
+  "File modified: test_mary_router.zsh",
+  "File modified: test_mary_router.zsh",
+  "File modified: test_mary_router.zsh",
+  "File modified: verify_persona_v3.zsh",
+  "File modified: load_persona_v3.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 74,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2025-12-09.jsonl",
+    "full_session": "g/reports/sessions/session_20251209_165959.md"
+  }
+}

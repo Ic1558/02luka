@@ -1,0 +1,35 @@
+version: "3.0"
+phase: 1
+
+routing:
+  default_target: "CLC"
+  supported_targets:
+    - "CLC"
+    - "GMX"
+    - "LOCAL"
+    - "KIM"
+    - "PAULA"
+  routing_hint_mapping:
+    "dev_oss": "GMX"
+    "dev_oss_lane": "CLC"
+    "local_fix": "LOCAL"
+    "trading": "PAULA"
+
+telemetry:
+  log_file: "g/telemetry/gateway_v3_router.log"
+  log_level: "INFO"
+
+directories:
+  inbox: "bridge/inbox/MAIN"
+  processed: "bridge/processed/MAIN"
+  error: "bridge/error/MAIN"
+  targets:
+    CLC: "bridge/inbox/CLC"
+    GMX: "bridge/inbox/GMX"
+    LOCAL: "bridge/inbox/LOCAL"
+    KIM: "bridge/inbox/KIM"
+    PAULA: "bridge/inbox/PAULA"
+
+worker:
+  sleep_interval_seconds: 1.0
+  process_one_by_one: true

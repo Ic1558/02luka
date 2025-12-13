@@ -1,0 +1,102 @@
+{
+  "pr7_progress": {
+    "current": 30,
+    "target": 30,
+    "percentage": 100.0,
+    "remaining": 0,
+    "last_updated": "2025-12-12T15:41:58.824714",
+    "status": "complete"
+  },
+  "recent_operations": [
+    {
+      "wo_id": "WO-PR7-BATCH-10",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:09.665895+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-11",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:10.753029+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-12",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:11.836939+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-13",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:43.992421+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-14",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:45.077135+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-15",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:46.161098+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-16",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:47.252695+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-17",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:48.337652+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-18",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:49.416957+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-19",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:50.500558+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-20",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:51.588849+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-21",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:52.674014+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-22",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:53.768683+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-23",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:54.841899+00:00"
+    },
+    {
+      "wo_id": "WO-PR7-BATCH-24",
+      "local_ops": 1,
+      "strict_ops": 0,
+      "ts": "2025-12-12T08:41:55.924823+00:00"
+    }
+  ]
+}

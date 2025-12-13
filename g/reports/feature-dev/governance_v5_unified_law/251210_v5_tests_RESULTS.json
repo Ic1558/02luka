@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-12-11T02:20:45.798078",
+  "test_method": "unittest + direct execution",
+  "summary": {
+    "total": 5,
+    "passed": 4,
+    "failed": 1,
+    "errors": 0
+  },
+  "security_critical": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0
+  },
+  "test_files": {
+    "tests/v5_router/test_router_world_resolution.py": {
+      "passed": true,
+      "exit_code": 0
+    },
+    "tests/v5_router/test_router_zone_resolution.py": {
+      "passed": true,
+      "exit_code": 0
+    },
+    "tests/v5_router/test_router_primary_writer.py": {
+      "passed": true,
+      "exit_code": 0
+    },
+    "tests/v5_router/test_router_cls_auto_approve.py": {
+      "passed": false,
+      "exit_code": 1
+    },
+    "tests/v5_sandbox/test_forbidden_content.py": {
+      "passed": true,
+      "exit_code": 0
+    }
+  }
+}

@@ -109,7 +109,10 @@ echo ""
 echo "💾 Storage:"
 run_check "Main disk space >10GB" "test $(df -g ~/ | tail -1 | awk '{print $4}') -gt 10"
 run_check "Lukadata mounted" "test -d /Volumes/lukadata"
+run_check "Lukadata active directory exists" "test -d /Volumes/lukadata/02luka_active"
 run_check "Lukadata space >50GB" "test $(df -g /Volumes/lukadata | tail -1 | awk '{print $4}') -gt 50"
+run_check "VSCode ignores lukadata repos" "grep -q 'git.ignoredRepositories' ~/02luka/.vscode/settings.json && grep -q '/Volumes/lukadata' ~/02luka/.vscode/settings.json"
+run_check "No lukadata submodules" "! git -C ~/02luka config --get-regexp 'submodule.*url' | grep -q '/Volumes/lukadata'"
 
 # Close JSON report
 sed -i '' '$ s/,$//' "$HEALTH_REPORT"  # Remove trailing comma

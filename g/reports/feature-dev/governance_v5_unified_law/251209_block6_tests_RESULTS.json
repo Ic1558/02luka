@@ -1,0 +1,159 @@
+{
+  "timestamp": "2025-12-11T02:12:56.227129",
+  "quality_gate": 90,
+  "weighted_score": 0.0,
+  "gate_passed": false,
+  "suites": {
+    "v5_router": {
+      "modules": [
+        {
+          "module": "tests.v5_router.test_router_lanes",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_router.test_router_mission_scope",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    },
+    "v5_sandbox": {
+      "modules": [
+        {
+          "module": "tests.v5_sandbox.test_paths",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_sandbox.test_content",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_sandbox.test_sip_cli",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    },
+    "v5_sip": {
+      "modules": [
+        {
+          "module": "tests.v5_sip.test_single_file_sip",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    },
+    "v5_clc": {
+      "modules": [
+        {
+          "module": "tests.v5_clc.test_wo_validation",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_clc.test_exec_strict",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    },
+    "v5_wo_processor": {
+      "modules": [
+        {
+          "module": "tests.v5_wo_processor.test_lane_routing",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_wo_processor.test_local_exec",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_wo_processor.test_clc_wo_schema",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    },
+    "v5_health": {
+      "modules": [
+        {
+          "module": "tests.v5_health.test_health_json",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        },
+        {
+          "module": "tests.v5_health.test_health_thresholds",
+          "status": "SKIPPED",
+          "reason": "Import error: No module named 'pytest'",
+          "score": 0
+        }
+      ],
+      "total_passed": 0,
+      "total_failed": 0,
+      "total_errors": 0,
+      "total_skipped": 0,
+      "total_tests": 0,
+      "score": 0,
+      "status": "PASSED"
+    }
+  },
+  "summary": {
+    "total_passed": 0,
+    "total_failed": 0,
+    "total_errors": 0,
+    "total_skipped": 0,
+    "total_tests": 0
+  }
+}

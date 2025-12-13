@@ -1,0 +1,75 @@
+#!/usr/bin/env zsh
+set -u
+
+# Init
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+AGENT="${GG_AGENT_ID:-${USER:-unknown}}"
+REPO_ROOT=~/02luka
+SNAPSHOT_EXIT="null"
+SAVE_EXIT="null"
+SNAPSHOT_ID="none"
+
+cd "$REPO_ROOT" || exit 1
+
+# --- Step 1: Local Agent Review ---
+echo "🔍 [1/3] Running Local Agent Review..."
+# Run review. We use --quiet to reduce noise, but capture exit code.
+# We assume staged changes by default as per standard dev workflow.
+# If user didn't set LOCAL_REVIEW_ACK, this might fail.
+if [[ -z "${LOCAL_REVIEW_ACK:-}" ]]; then
+    echo "⚠️  LOCAL_REVIEW_ACK not set. Defaulting to --offline mode for safety."
+    # Use array for zsh command execution
+    REVIEW_CMD=(python3 tools/local_agent_review.py staged --quiet --offline)
+else
+    REVIEW_CMD=(python3 tools/local_agent_review.py staged --quiet)
+fi
+
+"${REVIEW_CMD[@]}"
+REVIEW_EXIT=$?
+
+if [[ $REVIEW_EXIT -gt 1 ]]; then
+    echo "❌ Review encountered system/security error ($REVIEW_EXIT). Stopping chain."
+    # We still log partial telemetry
+else
+    # --- Step 2: GitDrop Snapshot ---
+    echo "📸 [2/3] Creating GitDrop Snapshot..."
+    SNAPSHOT_LOG=$(python3 tools/gitdrop.py backup --reason "Auto-snapshot after review" 2>&1)
+    SNAPSHOT_EXIT=$?
+    
+    # Extract Snapshot ID if created
+    SNAPSHOT_ID=$(echo "$SNAPSHOT_LOG" | grep -o "Created snapshot [0-9_]*" | awk '{print $3}' || echo "none")
+    if [[ "$SNAPSHOT_ID" == "none" ]]; then
+         # Try to capture "No changes" message or similar
+         SNAPSHOT_MSG=$(echo "$SNAPSHOT_LOG" | head -n 1)
+    else
+         SNAPSHOT_MSG="Created $SNAPSHOT_ID"
+    fi
+    echo "   → $SNAPSHOT_MSG"
+
+    # --- Step 3: Save Session ---
+    echo "💾 [3/3] Saving Session..."
+    tools/save.sh "dev_review_chain"
+    SAVE_EXIT=$?
+fi
+
+# --- Telemetry ---
+TELEMETRY_FILE="g/telemetry/workflow_dev_review_save.jsonl"
+mkdir -p g/telemetry
+
+# Construct JSON manually
+JSON_LOG="{\"ts\": \"$TIMESTAMP\", \"agent\": \"$AGENT\", \"review_exit\": $REVIEW_EXIT, \"snapshot_exit\": \"$SNAPSHOT_EXIT\", \"save_exit\": \"$SAVE_EXIT\"}"
+echo "$JSON_LOG" >> "$TELEMETRY_FILE"
+
+# --- Summary ---
+echo ""
+echo "=== Workflow Complete ==="
+echo "✅ Review:   Exit $REVIEW_EXIT"
+echo "✅ Snapshot: Exit $SNAPSHOT_EXIT ($SNAPSHOT_ID)"
+echo "✅ Save:     Exit $SAVE_EXIT"
+echo "📝 Telemetry logged to $TELEMETRY_FILE"
+
+if [[ "$SAVE_EXIT" == "0" ]]; then
+    exit 0
+else
+    exit 1
+fi
