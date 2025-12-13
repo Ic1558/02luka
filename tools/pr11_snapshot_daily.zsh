@@ -25,11 +25,17 @@ SNAPSHOT_DIR="g/reports/pr11_healthcheck"
 mkdir -p "$SNAPSHOT_DIR"
 
 SNAPSHOT_FILE="${SNAPSHOT_DIR}/$(date +%F)T$(date +%H%M%S).json"
+SNAPSHOT_ERR="${SNAPSHOT_FILE%.json}.err"
 
-if ! zsh tools/monitor_v5_production.zsh json > "$SNAPSHOT_FILE" 2>&1; then
+# Redirect stderr to separate file to avoid corrupting JSON
+if ! zsh tools/monitor_v5_production.zsh json > "$SNAPSHOT_FILE" 2>"$SNAPSHOT_ERR"; then
   echo "❌ Failed to generate snapshot" >&2
+  [[ -s "$SNAPSHOT_ERR" ]] && cat "$SNAPSHOT_ERR" >&2
   exit 1
 fi
+
+# Clean up error file if empty
+[[ ! -s "$SNAPSHOT_ERR" ]] && rm -f "$SNAPSHOT_ERR"
 
 echo "✅ Snapshot created: $SNAPSHOT_FILE"
 
