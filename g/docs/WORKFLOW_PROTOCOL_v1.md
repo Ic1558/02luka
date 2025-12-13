@@ -13,6 +13,25 @@ This protocol defines the mandatory workflow for all development tasks, ensuring
 
 **Core Principle:** Never run changes directly. Always plan, dry-run, verify, and only execute after validation.
 
+---
+
+## 🚨 Before You Start - READ THIS FIRST
+
+**Before suggesting, proposing, or executing ANY change, complete:**
+
+**Pre-Action Checklist:** `g/docs/WORKFLOW_PRE_ACTION_CHECKLIST.md`
+
+**Quick Check:**
+- [ ] Have I created a plan?
+- [ ] Have I defined the spec/goal?
+- [ ] Have I done a dry-run?
+- [ ] Have I verified the dry-run results?
+- [ ] Do I have evidence/logs to support my claim?
+
+**If ANY checkbox is unchecked → STOP and complete it first.**
+
+**Remember:** Verification is proof. Without proof, there is no claim.
+
 **Why This Matters:**
 - **Safety:** Prevents destructive mistakes
 - **Accuracy:** Avoids overclaiming without verification

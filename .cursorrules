@@ -154,13 +154,18 @@ Before claiming success:
 
 ## Development Workflow Protocol
 
-**⚠️ FUNDAMENTAL WORKING METHOD - NOT OPTIONAL**
+**⚠️⚠️⚠️ FUNDAMENTAL WORKING METHOD - NOT OPTIONAL ⚠️⚠️⚠️**
+
+**THIS IS HOW YOU WORK. EVERY TIME. NO EXCEPTIONS.**
 
 This is the BASIC, DEFAULT way to work. All code changes and system modifications MUST follow this workflow.
 
 **Why:** Safety, accuracy, reliability. Prevents overclaiming without verification.
 
-**Full Protocol:** `g/docs/WORKFLOW_PROTOCOL_v1.md`
+**Before ANY action, complete:** `g/docs/WORKFLOW_PRE_ACTION_CHECKLIST.md`
+
+**Full Protocol:** `g/docs/WORKFLOW_PROTOCOL_v1.md`  
+**Enforcement Strategy:** `g/docs/WORKFLOW_ENFORCEMENT.md`
 
 **Quick Reference:**
 
