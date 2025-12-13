@@ -11,16 +11,19 @@
   - Task broken down into clear steps
   - Dependencies identified
   - Risks assessed
+  - **✅ Plan matches requirements exactly (no scope creep)**
 
 - [ ] **Spec Defined**
   - Requirements clear
   - Acceptance criteria set
   - Expected behavior documented
+  - **✅ Spec defines what was asked (not what I think is better)**
 
 - [ ] **Goal Stated**
   - Objective is measurable
   - Success criteria defined
   - "Done" condition clear
+  - **✅ Goal measures what was expected (aligned with requirement)**
 
 - [ ] **Dry-Run Completed**
   - Tested without making real changes
@@ -36,11 +39,13 @@
   - Logs/outputs captured
   - Results documented
   - Proof of verification
+  - **✅ I have verified results (I don't trust my assumptions)**
 
 - [ ] **Ready to Execute** (if dry-run passed)
   - All checks passed
   - Safe to proceed
   - Rollback plan (if needed)
+  - **✅ Verification passed (I believe the proof, not my assumptions)**
 
 ---
 
@@ -93,6 +98,21 @@
 7. Then execute (if all pass)
 
 **Remember:** Verification is proof. Without proof, there is no claim.
+
+---
+
+## ⚠️ Critical Reminders
+
+**1. Don't Believe Yourself:**
+> "I have overclaimed many times. I do NOT trust my own assumptions. Only verification proves truth."
+
+**2. Stay Focused on Requirements:**
+> "When planning, I focus on what I WILL do. Everything must align with requirements and expectations. No deviation."
+
+**3. Check Alignment:**
+- Does my plan match the requirement exactly?
+- Am I adding things not asked for? (If yes, remove them)
+- Does my goal measure what was expected?
 
 ---
 

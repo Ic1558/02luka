@@ -315,11 +315,58 @@ This workflow protocol integrates with:
 - ❌ Never skip dry-run "to save time"
 - ❌ Never assume it will work
 
+**⚠️ CRITICAL: Don't Believe Yourself Without Verification**
+
+> **"I have overclaimed many times. I do NOT trust my own assumptions. Only verification proves truth."**
+
 **The Safety Rule:**
 > "If I haven't dry-run and verified it, I don't know if it works. Therefore, I cannot claim it works."
 
 **The Overclaim Prevention:**
 > "Verification is proof. Without proof, there is no claim."
+
+**The Self-Doubt Rule:**
+> "I don't believe myself. I only believe verified results. If it didn't pass verification, it didn't work."
+
+---
+
+## Planning Focus: Requirements Alignment
+
+**⚠️ CRITICAL: When creating Plan, Spec, Goal - Stay Focused**
+
+**Problem:** Plans often drift from actual requirements and expectations.
+
+**Solution:** During planning phase, constantly align with requirements:
+
+1. **Read Requirements Carefully:**
+   - What exactly is being asked?
+   - What are the constraints?
+   - What is the expected outcome?
+
+2. **Plan Must Match Requirements:**
+   - Every step should directly address the requirement
+   - No scope creep or "nice-to-have" additions
+   - If requirement says "X", plan does "X" (not "X+Y")
+
+3. **Spec Must Define Expected Behavior:**
+   - Input: What exactly goes in?
+   - Output: What exactly comes out?
+   - Behavior: What exactly happens?
+   - No ambiguity or assumptions
+
+4. **Goal Must Be Measurable:**
+   - Can I verify if goal is achieved?
+   - Does success criteria match requirement?
+   - Is it clear when "done"?
+
+**The Focus Rule:**
+> "When planning, I focus on what I WILL do. Everything must align with requirements and expectations. No deviation."
+
+**Check Before Proceeding:**
+- [ ] Does my plan match the requirement exactly?
+- [ ] Does my spec define what was asked for?
+- [ ] Does my goal measure what was expected?
+- [ ] Am I adding things not in the requirement? (If yes, remove them)
 
 ---
 

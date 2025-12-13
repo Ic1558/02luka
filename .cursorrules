@@ -211,6 +211,12 @@ This is the BASIC, DEFAULT way to work. All code changes and system modification
 - Git operations: Use `-n` flag (`git rm --cached -n`) to preview
 - File operations: Test with sample data or backup copies
 
+**End-of-Task Requirement:**
+- ✅ Check telemetry auto-tracking (`g/telemetry/*.jsonl`)
+- ✅ Create completion report (`g/docs/TASK_COMPLETION_REPORT_TEMPLATE.md`)
+- ✅ Document all tasks, commits, and evidence
+- ✅ Verify tracking for auditability
+
 ## Workspace Split (Repo/Workspace Separation)
 
 **CRITICAL:** Workspace runtime data is stored outside repo to prevent git operations from destroying data.
