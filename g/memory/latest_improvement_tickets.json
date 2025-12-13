@@ -1,0 +1,11 @@
+{
+  "generated_at": "2025-12-05T02:25:35.545952+00:00",
+  "entries": [
+    {
+      "title": "Opal R&D Node Integration",
+      "path": "g/memory/improvement_tickets/2025-11-13_opal_rnd_node.md",
+      "summary": "- Add R&D node after CLS/QA in Opal workflows to auto-generate lessons/rules and push updates to memory.",
+      "updated_at": "2025-12-05T02:25:20.298994+00:00"
+    }
+  ]
+}
