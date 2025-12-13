@@ -1,5 +1,0 @@
-title: "CLS–Cursor Integration Test"
-priority: "P3"
-tags: ["cursor","cls"]
-body: |
-  End-to-end verification of bridge from Cursor to CLC.

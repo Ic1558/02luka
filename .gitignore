@@ -197,3 +197,5 @@ lukadata/
 lukadata/**
 **/lukadata/
 **/lukadata/**
+g/apps/dashboard/data/followup.json
+shared_memory/
