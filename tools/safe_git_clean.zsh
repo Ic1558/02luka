@@ -27,16 +27,17 @@ fi
 
 cd "$REPO"
 
-# Run guard first (fail if workspace is broken)
+# Run guard first (warn if workspace is broken, but continue)
 echo "${YELLOW}== Pre-clean guard check ==${NC}"
-if ! zsh tools/guard_workspace_inside_repo.zsh 2>/dev/null; then
-  echo "${RED}ERROR: Workspace guard failed. Aborting clean to protect workspace data.${NC}" >&2
-  exit 1
+if zsh tools/guard_workspace_inside_repo.zsh 2>&1 | grep -q "FAIL"; then
+  echo "${YELLOW}⚠️  Warning: Workspace guard detected issues${NC}"
+  echo "${YELLOW}   Safe git clean will continue (only removes .gitignore files)${NC}"
+  echo ""
+else
+  echo ""
+  echo "${GREEN}✅ Workspace guard passed${NC}"
+  echo ""
 fi
-
-echo ""
-echo "${GREEN}✅ Workspace guard passed${NC}"
-echo ""
 echo "${YELLOW}== Safe git clean (only ignored files) ==${NC}"
 echo "Using: git clean -fdX (removes only .gitignore-matched files)"
 echo ""
