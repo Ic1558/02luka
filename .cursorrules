@@ -1,6 +1,11 @@
 # 02LUKA System - Cursor AI Rules
-# Updated: 2025-11-05
+# Updated: 2025-12-14
 # SOT Path: /Users/icmini/02luka
+#
+# ⚠️ FUNDAMENTAL WORKING METHOD:
+# - Always dry-run and verify before claiming success
+# - Never overclaim without evidence
+# - See "Development Workflow Protocol" section below
 
 ## System Architecture
 
@@ -149,7 +154,11 @@ Before claiming success:
 
 ## Development Workflow Protocol
 
-**MANDATORY:** All code changes and system modifications MUST follow this workflow.
+**⚠️ FUNDAMENTAL WORKING METHOD - NOT OPTIONAL**
+
+This is the BASIC, DEFAULT way to work. All code changes and system modifications MUST follow this workflow.
+
+**Why:** Safety, accuracy, reliability. Prevents overclaiming without verification.
 
 **Full Protocol:** `g/docs/WORKFLOW_PROTOCOL_v1.md`
 
@@ -177,11 +186,20 @@ Before claiming success:
 9. **Repeat** - Minimum 3 optimization cycles before declaring failure
 10. **Report** - If still failing after 3+ cycles, document all attempts
 
-**Key Rules:**
+**Key Rules (FUNDAMENTAL):**
 - ❌ **NEVER** run changes directly without dry-run
+- ❌ **NEVER** claim success without verification
+- ❌ **NEVER** skip dry-run "to save time"
 - ✅ **ALWAYS** dry-run first, verify, then execute
+- ✅ **ALWAYS** have evidence/logs before claiming success
 - ✅ **MINIMUM** 3 optimization cycles before reporting failure
 - ✅ **DOCUMENT** all attempts and findings
+
+**The Safety Rule:**
+> "If I haven't dry-run and verified it, I don't know if it works. Therefore, I cannot claim it works."
+
+**The Overclaim Prevention:**
+> "Verification is proof. Without proof, there is no claim."
 
 **Examples:**
 - Script changes: Test with `set -n` or in test directory first
