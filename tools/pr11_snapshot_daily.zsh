@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 # PR-11 Daily Snapshot - Atomic Workflow
 # Generates snapshot, commits, and pushes with guard checks
-# Usage: zsh tools/pr11_snapshot_daily.zsh
+# Usage: zsh tools/pr11_snapshot_daily.zsh [--force]
 
 set -euo pipefail
 
@@ -11,6 +11,12 @@ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 REPO="${HOME}/02luka"
 cd "$REPO"
 
+# Parse arguments (--force can be anywhere)
+FORCE=0
+for a in "$@"; do
+  [[ "$a" == "--force" ]] && FORCE=1
+done
+
 # Step 1: Guard check (must pass)
 echo "== Step 1: Guard Check =="
 if ! zsh tools/guard_workspace_inside_repo.zsh >/dev/null 2>&1; then
@@ -18,6 +24,31 @@ if ! zsh tools/guard_workspace_inside_repo.zsh >/dev/null 2>&1; then
   exit 1
 fi
 echo "✅ Guard check passed"
+
+# Step 1.5: Check for existing snapshot today (unless --force)
+TODAY="$(/bin/date +%F)"
+
+# Check for commits with pr11(dayN): pattern from today
+# Use full log + awk filter (more reliable than --grep with complex regex)
+# Format: HASH DATE MESSAGE (awk: $1=hash, $2=date, $3=message)
+EXISTING_TODAY="$(
+  /usr/bin/git log --all --pretty='%H %cs %s' |
+  /usr/bin/awk -v today="$TODAY" '$2==today && $3 ~ /^pr11\(day[0-9]+\):/ {print $1; exit}'
+)"
+
+if [[ -n "$EXISTING_TODAY" ]] && [[ "$FORCE" -eq 0 ]]; then
+  echo "❌ Snapshot already exists for today (${TODAY})" >&2
+  echo "   Commit: $EXISTING_TODAY" >&2
+  echo "   Use: zsh tools/pr11_snapshot_daily.zsh --force (for reruns/incidents)" >&2
+  exit 1
+fi
+
+# Set force suffix for commit message (if rerun)
+if [[ "$FORCE" -eq 1 ]] && [[ -n "$EXISTING_TODAY" ]]; then
+  FORCE_SUFFIX=" [rerun]"
+else
+  FORCE_SUFFIX=""
+fi
 
 # Step 2: Generate snapshot
 echo "== Step 2: Generate Snapshot =="
@@ -78,7 +109,7 @@ else
   DAY_NUM=$((EXISTING_DAYS + 1))
 fi
 
-git commit -m "pr11(day${DAY_NUM}): monitoring snapshot evidence" || {
+git commit -m "pr11(day${DAY_NUM}): monitoring snapshot evidence${FORCE_SUFFIX}" || {
   echo "⚠️  No new snapshot to commit (may already be committed)"
   exit 0  # Not an error if already committed
 }
