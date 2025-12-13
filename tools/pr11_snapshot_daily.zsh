@@ -56,11 +56,20 @@ echo "== Step 4: Commit Evidence =="
 git add "$SNAPSHOT_FILE"
 
 # Get day number (count commits with pr11(day pattern)
-DAY_NUM=$(git log --oneline --all --grep="pr11(day" | head -1 | sed -n 's/.*pr11(day\([0-9]*\)).*/\1/p')
-if [[ -z "$DAY_NUM" ]] || [[ "$DAY_NUM" == "" ]]; then
+# According to PR-11 standard: Day 0 = baseline, Day 1+ = daily monitoring
+# Check if day0 exists (baseline snapshot)
+HAS_DAY0=$(git log --oneline --all --grep="pr11(day0" | wc -l | tr -d ' ')
+EXISTING_DAYS=$(git log --oneline --all --grep="pr11(day" | sed -n 's/.*pr11(day\([0-9]*\)).*/\1/p' | sort -n | tail -1)
+
+if [[ "$HAS_DAY0" -eq 0 ]]; then
+  # No day0 commit exists = this should be day0 (baseline)
+  DAY_NUM=0
+elif [[ -z "$EXISTING_DAYS" ]] || [[ "$EXISTING_DAYS" == "" ]]; then
+  # Has day0 but no other days = this is day1 (first monitoring day)
   DAY_NUM=1
 else
-  DAY_NUM=$((DAY_NUM + 1))
+  # Increment from highest existing day number
+  DAY_NUM=$((EXISTING_DAYS + 1))
 fi
 
 git commit -m "pr11(day${DAY_NUM}): monitoring snapshot evidence" || {
