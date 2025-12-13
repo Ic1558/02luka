@@ -199,3 +199,5 @@ lukadata/**
 **/lukadata/**
 g/apps/dashboard/data/followup.json
 shared_memory/
+g/reports/gh_failures/.seen_runs
+g/reports/gh_failures/.seen_runs
