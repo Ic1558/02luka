@@ -10,6 +10,8 @@ mkdir_safe() { /bin/mkdir "$@"; }
 ln_safe() { /bin/ln "$@"; }
 grep_safe() { /usr/bin/grep "$@"; }
 cat_safe() { /bin/cat "$@"; }
+dirname_safe() { /usr/bin/dirname "$@"; }
+head_safe() { /usr/bin/head "$@"; }
 
 # Phase C: Operations Confidence Tests
 # Execute all tests from phase_c_ops_confidence.md
@@ -97,20 +99,42 @@ echo ""
 # Test 3: Guard Script Verification
 echo "=== Test 3: Guard Script Verification ==="
 echo "   Creating violations (replace symlinks with real directories)..."
-# Backup symlinks
-declare -A backups
+# Backup symlinks (use array instead of associative array for simplicity)
+backup_paths=()
+backup_targets=()
 for path in g/data g/telemetry; do
+  echo "     Checking: $path"
   if [[ -L "$path" ]]; then
-    backups["$path"]=$(readlink_safe "$path")
+    echo "     Is symlink, reading target..."
+    backup_target=$(readlink_safe "$path")
+    echo "     Target: $backup_target"
+    backup_paths+=("$path")
+    backup_targets+=("$backup_target")
+    echo "     Backed up: $path -> $backup_target"
     # Remove symlink and create real directory (violation)
+    echo "     Removing symlink..."
     rm_safe -f "$path"
+    echo "     Creating real directory..."
     mkdir_safe -p "$path"
     echo "test" > "$path/test.txt"
+    echo "     Created violation: $path"
+  else
+    echo "     ⚠️  Skipping $path (not a symlink)"
   fi
 done
+echo "   Violations created, backup arrays: ${#backup_paths[@]} paths"
 
-# Run guard (should fail)
-if zsh tools/guard_workspace_inside_repo.zsh 2>&1 | grep_safe -q "FAIL\|real directory"; then
+echo "   Running guard script..."
+# Run guard (should fail) - use temp file to avoid command substitution hanging
+guard_tmp="/tmp/phase_c_test3_guard.log"
+set +e  # Allow guard to fail
+/bin/zsh tools/guard_workspace_inside_repo.zsh > "$guard_tmp" 2>&1
+guard_rc=$?
+set -e
+guard_output=$(cat_safe "$guard_tmp" 2>/dev/null || echo "")
+echo "   Guard completed (exit code: $guard_rc)"
+
+if [[ $guard_rc -ne 0 ]] && echo "$guard_output" | grep_safe -qE "FAIL|real directory"; then
   echo "✅ PASS: Guard script detected violations"
   test3_passed=1
 else
@@ -118,11 +142,21 @@ else
 fi
 
 # Cleanup: restore symlinks
-for path in "${(@k)backups}"; do
-  rm_safe -rf "$path"
-  ln_safe -sfn "${backups[$path]}" "$path"
-done
-unset backups
+if [[ ${#backup_paths[@]} -gt 0 ]]; then
+  local i=1
+  while [[ $i -le ${#backup_paths[@]} ]]; do
+    path="${backup_paths[$i]}"
+    target="${backup_targets[$i]}"
+    if [[ -n "$path" && -n "$target" ]]; then
+    rm_safe -rf "$path"
+    # Ensure parent directory exists before creating symlink
+    mkdir_safe -p "$(dirname_safe "$path")"
+    ln_safe -sfn "$target" "$path"
+    fi
+    i=$((i + 1))
+  done
+fi
+unset backup_paths backup_targets
 echo ""
 
 # Test 4: Verify Symlinks After Bootstrap
@@ -131,7 +165,7 @@ echo "   Removing symlinks (simulating fresh setup)..."
 rm_safe -f g/data g/telemetry g/followup mls/ledger bridge/processed 2>/dev/null || true
 
 echo "   Running bootstrap..."
-if zsh tools/bootstrap_workspace.zsh > /tmp/phase_c_test4.log 2>&1; then
+if /bin/zsh tools/bootstrap_workspace.zsh > /tmp/phase_c_test4.log 2>&1; then
   echo "   Verifying symlinks..."
   all_symlinks=1
   for path in g/data g/telemetry g/followup mls/ledger bridge/processed; do
@@ -155,7 +189,7 @@ if zsh tools/bootstrap_workspace.zsh > /tmp/phase_c_test4.log 2>&1; then
   fi
   
   # Verify guard passes
-  if zsh tools/guard_workspace_inside_repo.zsh 2>&1 | grep_safe -q "All workspace guards passed"; then
+  if /bin/zsh tools/guard_workspace_inside_repo.zsh 2>&1 | grep_safe -q "All workspace guards passed"; then
     echo "   ✅ Guard script passes"
   else
     echo "   ⚠️  Guard script may have issues"

@@ -4,70 +4,156 @@ set -euo pipefail
 # Ensure a sane PATH even in constrained shells (Cursor/launchd/etc.)
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-# --- helpers (PATH-safe core utils)
-rm_safe() { /bin/rm "$@"; }
-mkdir_safe() { /bin/mkdir "$@"; }
-ln_safe() { /bin/ln "$@"; }
-grep_safe() { /usr/bin/grep "$@"; }
-cat_safe() { /bin/cat "$@"; }
+REPO="${HOME}/02luka"
+WS="${HOME}/02luka_ws"
+LOCAL="${HOME}/02luka_local"
 
-# Helper: readlink with fallback
-readlink_safe() {
-  local p="$1"
-  if command -v readlink >/dev/null 2>&1; then
-    readlink "$p"
+# --- sanity
+if [[ ! -d "$REPO/.git" ]]; then
+  echo "ERROR: $REPO is not a git repo (missing .git)" >&2
+  exit 1
+fi
+
+/bin/mkdir -p "$WS" "$LOCAL"
+
+# --- workspace dirs (never in git)
+/bin/mkdir -p \
+  "$WS/g/data" \
+  "$WS/g/telemetry" \
+  "$WS/g/followup" \
+  "$WS/mls/ledger" \
+  "$WS/bridge/processed"
+
+# --- local dirs (never in git)
+/bin/mkdir -p \
+  "$LOCAL/.claude" \
+  "$LOCAL/.cursor" \
+  "$LOCAL/.vscode" \
+  "$LOCAL/Library/LaunchAgents"
+
+# Helper: migrate existing directory to workspace
+migrate_to_workspace() {
+  local source="$1"
+  local target="$2"
+  
+  # If source doesn't exist or is already symlink, skip
+  if [[ ! -e "$source" ]] || [[ -L "$source" ]]; then
+    return 0
+  fi
+  
+  # If target already has content, merge (rsync)
+  if [[ -d "$target" ]] && [[ "$(ls -A "$target" 2>/dev/null)" ]]; then
+    echo "WARN: Target $target already has content. Merging from $source..."
+    rsync -av "$source/" "$target/" || {
+      echo "ERROR: Failed to merge $source -> $target" >&2
+      exit 1
+    }
   else
-    # Fallback: python3 (pass the path as argv)
-    /usr/bin/python3 - "$p" <<'PY'
-import os,sys
-p=sys.argv[1]
-try:
-    print(os.readlink(p))
-except OSError:
-    sys.exit(1)
-PY
+    # Target is empty or doesn't exist, move everything
+    echo "MIGRATE: Moving $source -> $target"
+    /bin/mkdir -p "$(/usr/bin/dirname "$target")"
+    /bin/mv "$source" "$target" || {
+      echo "ERROR: Failed to move $source -> $target" >&2
+      exit 1
+    }
   fi
 }
 
-echo "=== Phase C Execute Tests ==="
+# Helper: create symlink safely
+link_to() {
+  local target="$1"
+  local linkpath="$2"
 
-# Test 1: Basic symlink creation and readlink
-echo "Test 1: Basic symlink and readlink"
-rm_safe -f g/data
-mkdir_safe -p g/data
-ln_safe -sfn /tmp g/data
-echo "Link target of g/data:"
-readlink_safe g/data
+  # If link exists and is correct symlink -> ok
+  if [[ -L "$linkpath" ]]; then
+    local cur
+    cur="$(readlink "$linkpath")"
+    if [[ "$cur" == "$target" ]]; then
+      echo "OK  symlink: $linkpath -> $target"
+      return 0
+    fi
+    echo "WARN symlink differs: $linkpath -> $cur (expected $target). Replacing."
+    /bin/rm -f "$linkpath"
+  fi
 
-cat_safe /tmp/phase_c_test1.log 2>/dev/null || echo "(no log)"
+  # If path exists as real dir/file -> migrate first, then create symlink
+  if [[ -e "$linkpath" ]] && [[ ! -L "$linkpath" ]]; then
+    echo "MIGRATE: Found real directory at $linkpath, migrating to workspace..."
+    migrate_to_workspace "$linkpath" "$target"
+    /bin/rm -rf "$linkpath"
+  fi
 
-# Test 2: Backup and restore symlink
-echo "Test 2: Backup and restore symlink"
-backup_target=$(readlink_safe g/data)
-rm_safe -rf g/data
-mkdir_safe -p g/data
-ln_safe -sfn "$backup_target" g/data
+  /bin/ln -s "$target" "$linkpath"
+  echo "NEW symlink: $linkpath -> $target"
+}
 
-# Test 3: Multiple symlink operations
-echo "Test 3: Multiple symlink operations"
-declare -A backups
-for path in g/data g/telemetry g/followup mls/ledger bridge/processed; do
-  rm_safe -f "$path"
-  mkdir_safe -p "$path"
-  ln_safe -sfn "/backup/$path" "$path"
-  backups[$path]="/backup/$path"
+echo "== Linking workspace paths into repo =="
+link_to "$WS/g/data"          "$REPO/g/data"
+link_to "$WS/g/telemetry"     "$REPO/g/telemetry"
+link_to "$WS/g/followup"      "$REPO/g/followup"
+link_to "$WS/mls/ledger"      "$REPO/mls/ledger"
+link_to "$WS/bridge/processed" "$REPO/bridge/processed"
+
+echo "== Optional: link local tool/config dirs into repo =="
+# Uncomment if you want these to live outside repo:
+# link_to "$LOCAL/.claude" "$REPO/.claude"
+# link_to "$LOCAL/.cursor" "$REPO/.cursor"
+# link_to "$LOCAL/.vscode" "$REPO/.vscode"
+# link_to "$LOCAL/.env.local" "$REPO/.env.local"
+
+echo "== Guard: verify tracked paths are symlinks (if tracked) =="
+cd "$REPO"
+bad_tracked=0
+for p in \
+  "g/data" \
+  "g/telemetry" \
+  "g/followup" \
+  "mls/ledger" \
+  "bridge/processed"
+do
+  if git ls-files --error-unmatch "$p" >/dev/null 2>&1; then
+    # Path is tracked - verify it's a symlink
+    if [[ -L "$REPO/$p" ]]; then
+      echo "OK  tracked symlink: $p (allowed)"
+    else
+      echo "ERROR: git is tracking '$p' but it's a real dir/file (must be symlink)." >&2
+      echo "FIX: Remove from git, then re-run bootstrap:" >&2
+      echo "     git rm -r --cached $p  (then commit)" >&2
+      echo "     zsh tools/bootstrap_workspace.zsh" >&2
+      bad_tracked=1
+    fi
+  else
+    # Not tracked - that's fine
+    echo "OK  not tracked: $p"
+  fi
 done
+if [[ "$bad_tracked" -ne 0 ]]; then
+  exit 1
+fi
 
-# Test 4: Guard checks for symlinks
-echo "Test 4: Guard checks for symlinks"
-rm_safe -f g/data g/telemetry g/followup mls/ledger bridge/processed 2>/dev/null || true
+echo "== Guard: verify linked paths are symlinks =="
+must_be_symlink=0
+for p in \
+  "$REPO/g/data" \
+  "$REPO/g/telemetry" \
+  "$REPO/g/followup" \
+  "$REPO/mls/ledger" \
+  "$REPO/bridge/processed"
+do
+  if [[ ! -L "$p" ]]; then
+    echo "ERROR: expected symlink but got real path: $p" >&2
+    must_be_symlink=1
+  fi
+done
+if [[ "$must_be_symlink" -ne 0 ]]; then
+  exit 1
+fi
 
-if tools/guard_workspace_inside_repo.zsh | grep_safe -q "FAIL\|real directory"; then
-  echo "Guard check failed"
-else
-  echo "All workspace guards passed"
-fi | grep_safe -q "All workspace guards passed"
-
-cat_safe /tmp/phase_c_test4.log || echo "(no log)"
-
-echo "=== Phase C Execute Tests Complete ==="
+echo ""
+echo "✅ Workspace split bootstrap complete."
+echo "Repo : $REPO"
+echo "WS   : $WS"
+echo "LOCAL: $LOCAL"
+echo ""
+echo "Safety note:"
+echo "- You may git reset/clean inside repo; workspace data stays safe outside."

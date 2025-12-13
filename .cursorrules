@@ -147,6 +147,47 @@ Before claiming success:
 3. Check system health: `~/02luka/tools/system_health_check.zsh`
 4. Test Redis: `~/02luka/tools/redis_status.zsh`
 
+## Development Workflow Protocol
+
+**MANDATORY:** All code changes and system modifications MUST follow this workflow.
+
+**Full Protocol:** `g/docs/WORKFLOW_PROTOCOL_v1.md`
+
+**Quick Reference:**
+
+**Phase 1: Planning & Specification**
+1. **Make Plan** - Break down task into clear steps
+2. **Make Spec** - Define requirements and acceptance criteria
+3. **Define Goal** - State clear, measurable objective
+
+**Phase 2: Dry-Run & Verification**
+4. **Dry-Run** - Execute in non-destructive mode (`-n`, `--dry-run`, simulation)
+5. **Verify** - Check output matches expected results
+
+**Phase 3: Decision Branch**
+
+**If Dry-Run Passes:**
+6. **Run** - Execute actual changes
+7. **Post-Verification** - Confirm changes applied correctly
+
+**If Dry-Run Fails:**
+6. **Debug** - Analyze failure points
+7. **Optimize** - Fix issues and improve
+8. **Re-Verify** - Test again
+9. **Repeat** - Minimum 3 optimization cycles before declaring failure
+10. **Report** - If still failing after 3+ cycles, document all attempts
+
+**Key Rules:**
+- ❌ **NEVER** run changes directly without dry-run
+- ✅ **ALWAYS** dry-run first, verify, then execute
+- ✅ **MINIMUM** 3 optimization cycles before reporting failure
+- ✅ **DOCUMENT** all attempts and findings
+
+**Examples:**
+- Script changes: Test with `set -n` or in test directory first
+- Git operations: Use `-n` flag (`git rm --cached -n`) to preview
+- File operations: Test with sample data or backup copies
+
 ## Workspace Split (Repo/Workspace Separation)
 
 **CRITICAL:** Workspace runtime data is stored outside repo to prevent git operations from destroying data.
