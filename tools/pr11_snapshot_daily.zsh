@@ -55,9 +55,9 @@ fi
 echo "== Step 4: Commit Evidence =="
 git add "$SNAPSHOT_FILE"
 
-# Get day number (count existing snapshots or use date)
-DAY_NUM=$(git log --oneline --grep="pr11(day" | head -1 | sed -n 's/.*pr11(day\([0-9]*\)).*/\1/p' || echo "1")
-if [[ -z "$DAY_NUM" ]]; then
+# Get day number (count commits with pr11(day pattern)
+DAY_NUM=$(git log --oneline --all --grep="pr11(day" | head -1 | sed -n 's/.*pr11(day\([0-9]*\)).*/\1/p')
+if [[ -z "$DAY_NUM" ]] || [[ "$DAY_NUM" == "" ]]; then
   DAY_NUM=1
 else
   DAY_NUM=$((DAY_NUM + 1))
@@ -65,6 +65,7 @@ fi
 
 git commit -m "pr11(day${DAY_NUM}): monitoring snapshot evidence" || {
   echo "⚠️  No new snapshot to commit (may already be committed)"
+  exit 0  # Not an error if already committed
 }
 
 # Step 6: Pull and push (with guard check)
