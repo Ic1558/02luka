@@ -147,6 +147,36 @@ Before claiming success:
 3. Check system health: `~/02luka/tools/system_health_check.zsh`
 4. Test Redis: `~/02luka/tools/redis_status.zsh`
 
+## Workspace Split (Repo/Workspace Separation)
+
+**CRITICAL:** Workspace runtime data is stored outside repo to prevent git operations from destroying data.
+
+**Structure:**
+- Repo: `~/02luka` (code-only, safe for git reset/clean)
+- Workspace: `~/02luka_ws/` (runtime data: g/data, g/telemetry, mls/ledger, etc.)
+- Local: `~/02luka_local/` (machine-specific configs)
+
+**Workspace paths are symlinks:**
+- `g/data/` → `~/02luka_ws/g/data`
+- `g/telemetry/` → `~/02luka_ws/g/telemetry`
+- `g/followup/` → `~/02luka_ws/g/followup`
+- `mls/ledger/` → `~/02luka_ws/mls/ledger`
+- `bridge/processed/` → `~/02luka_ws/bridge/processed`
+
+**Git Clean Safety:**
+- ❌ **NEVER use:** `git clean -fd` (destroys untracked files in repo)
+- ✅ **ALWAYS use:** `zsh ~/02luka/tools/safe_git_clean.zsh -n` (dry-run first)
+- ✅ **Then:** `zsh ~/02luka/tools/safe_git_clean.zsh -f` (removes only ignored files)
+
+**Guard System:**
+- Pre-commit hook automatically runs `guard_workspace_inside_repo.zsh`
+- Fails if workspace paths exist as real directories (must be symlinks)
+- Prevents accidental workspace data in repo
+
+**Bootstrap:**
+- Run `~/02luka/tools/bootstrap_workspace.zsh` to setup symlinks
+- Migrates existing data automatically to workspace
+
 ## Common Pitfalls
 
 ❌ **Don't:**
@@ -154,9 +184,13 @@ Before claiming success:
 - Assume Docker for Redis (it's Homebrew!)
 - Skip ThrottleInterval in LaunchAgents
 - Use KeepAlive: false for subscribers
+- Use `git clean -fd` (use safe_git_clean.zsh instead)
+- Create workspace directories as real dirs in repo (must be symlinks)
 
 ✅ **Do:**
 - Use new SOT paths (`/Users/icmini/02luka`)
 - Test before claiming success
 - Capture MLS lessons
 - Document in session reports
+- Use `safe_git_clean.zsh` for cleaning (protects workspace data)
+- Verify workspace paths are symlinks before committing
