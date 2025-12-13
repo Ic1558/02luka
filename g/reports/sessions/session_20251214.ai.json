@@ -1,0 +1,26 @@
+{
+  "date": "2025-12-14",
+  "ts_utc": "2025-12-13T21:28:49Z",
+  "ts_local": "2025-12-14T04:28:49+0700",
+  "agent": "CLS",
+  "summary": {
+    "total_entries": 119,
+    "top_activities": [
+  "File modified: guard_workspace_inside_repo.zsh",
+  "File modified: guard_workspace_inside_repo.zsh",
+  "File modified: phase_a_execute.zsh",
+  "File modified: phase_a_migrate_paths.py",
+  "File modified: phase_a_verify.py"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 119,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2025-12-14.jsonl",
+    "full_session": "g/reports/sessions/session_20251214_042848.md"
+  }
+}
