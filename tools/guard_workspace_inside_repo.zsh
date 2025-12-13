@@ -36,7 +36,13 @@ for path in "${workspace_paths[@]}"; do
   # If path exists but is NOT a symlink -> FAIL
   if [[ ! -L "$full_path" ]]; then
     echo "❌ FAIL: $path exists as real directory (must be symlink to workspace)" >&2
-    echo "   Found: $(file "$full_path")" >&2
+    if [[ -d "$full_path" ]]; then
+      echo "   Found: real directory" >&2
+    elif [[ -f "$full_path" ]]; then
+      echo "   Found: real file" >&2
+    else
+      echo "   Found: other type (not symlink)" >&2
+    fi
     echo "   Fix: Run bootstrap_workspace.zsh or manually migrate to ~/02luka_ws/" >&2
     failed=1
   else
@@ -46,14 +52,28 @@ for path in "${workspace_paths[@]}"; do
 done
 
 echo ""
-echo "== Guard: Checking workspace paths are NOT tracked in git =="
+echo "== Guard: Checking workspace paths (if tracked, must be symlinks) =="
 for path in "${workspace_paths[@]}"; do
   if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
-    echo "❌ FAIL: git is tracking '$path' (should be ignored/symlink only)" >&2
-    echo "   Fix: git rm -r --cached $path" >&2
-    failed=1
+    # Path is tracked - verify it's a symlink (not real dir/file)
+    full_path="$REPO/$path"
+    if [[ -L "$full_path" ]]; then
+      echo "✓ OK: $path is tracked as symlink (allowed)"
+    else
+      echo "❌ FAIL: git is tracking '$path' but it's a real dir/file (must be symlink)" >&2
+      echo "   Fix: Remove from git, then create symlink: git rm --cached $path && zsh tools/bootstrap_workspace.zsh" >&2
+      failed=1
+    fi
   else
-    echo "✓ OK: $path not tracked in git"
+    # Not tracked - that's fine, but if it exists, must be symlink
+    full_path="$REPO/$path"
+    if [[ -e "$full_path" ]] && [[ ! -L "$full_path" ]]; then
+      echo "❌ FAIL: $path exists as real dir/file but not tracked (should be symlink)" >&2
+      echo "   Fix: Run bootstrap_workspace.zsh or create symlink manually" >&2
+      failed=1
+    else
+      echo "✓ OK: $path not tracked (or is symlink)"
+    fi
   fi
 done
 

@@ -1,0 +1,46 @@
+name: Workspace Guard Check
+
+on:
+  pull_request:
+    paths:
+      - 'g/data/**'
+      - 'g/telemetry/**'
+      - 'g/followup/**'
+      - 'mls/ledger/**'
+      - 'bridge/processed/**'
+      - 'tools/guard_workspace_inside_repo.zsh'
+      - 'tools/bootstrap_workspace.zsh'
+  push:
+    branches: [main]
+    paths:
+      - 'g/data/**'
+      - 'g/telemetry/**'
+      - 'g/followup/**'
+      - 'mls/ledger/**'
+      - 'bridge/processed/**'
+      - 'tools/guard_workspace_inside_repo.zsh'
+      - 'tools/bootstrap_workspace.zsh'
+
+jobs:
+  workspace-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+      
+      - name: Run Workspace Guard
+        run: |
+          chmod +x tools/guard_workspace_inside_repo.zsh
+          zsh tools/guard_workspace_inside_repo.zsh || {
+            echo "::error::Workspace guard failed! Workspace paths must be symlinks, not real directories."
+            echo "::error::Run 'zsh tools/bootstrap_workspace.zsh' to fix."
+            exit 1
+          }
+      
+      - name: Guard Passed
+        run: echo "✅ Workspace guard check passed"
