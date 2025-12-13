@@ -324,3 +324,32 @@ This workflow protocol integrates with:
 ---
 
 **Remember:** Quality over speed. A well-verified dry-run prevents costly mistakes. **This is your fundamental working method.**
+
+---
+
+## 📊 End-of-Task: Telemetry & Report
+
+**After completing any task, ALWAYS:**
+
+1. **Check Telemetry:**
+   ```bash
+   # Save sessions
+   tail -3 g/telemetry/save_sessions.jsonl
+   
+   # Other telemetry
+   ls -lt g/telemetry/*.jsonl | head -5
+   ```
+
+2. **Create Completion Report:**
+   - Use template: `g/docs/TASK_COMPLETION_REPORT_TEMPLATE.md`
+   - Document all tasks, commits, telemetry
+   - Include verification evidence
+   - Save to: `g/reports/system/task_completion_report_YYYYMMDD.md`
+
+3. **Verify Tracking:**
+   - All commits logged
+   - Telemetry entries present
+   - Session files created
+   - Report complete
+
+**Why:** Enables tracking back all work, auditability, and rollback capability.
