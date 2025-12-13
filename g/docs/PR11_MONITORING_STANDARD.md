@@ -41,7 +41,7 @@ git commit -m "pr11(dayN): monitoring snapshot evidence"
 git pull --rebase && git push
 ```
 
-### Automated Workflow (Atomic Command)
+### Automated Workflow (Atomic Command) ⭐ RECOMMENDED
 
 **Script:** `tools/pr11_snapshot_daily.zsh`
 
@@ -51,12 +51,22 @@ cd ~/02luka
 zsh tools/pr11_snapshot_daily.zsh
 ```
 
-**What it does:**
-1. Runs guard check (must pass)
-2. Generates snapshot
-3. Adds to git
-4. Commits with standardized message
-5. Pulls and pushes (with guard check)
+**What it does (atomic, all-in-one):**
+1. ✅ Runs guard check (must pass, exits if fails)
+2. ✅ Generates snapshot with timestamp
+3. ✅ Validates JSON format
+4. ✅ Checks process health (gateway, mary)
+5. ✅ Adds snapshot to git
+6. ✅ Commits with standardized message (auto-increments day number)
+7. ✅ Pulls with rebase
+8. ✅ Runs guard check again (before push)
+9. ✅ Pushes to remote
+
+**Benefits:**
+- Single command = complete workflow
+- Guard checks prevent bad commits
+- Auto-increments day number
+- Handles edge cases (already committed, etc.)
 
 ---
 
