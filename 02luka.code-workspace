@@ -23,41 +23,205 @@
   ],
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.defaultProfile.osx": "zsh",
     "terminal.integrated.cwd": "${workspaceFolder}",
+    "terminal.integrated.env.osx": {
+      "SOT": "/Users/icmini/02luka"
+    },
     "files.exclude": {
-      "**/.DS_Store": true
+      "**/.DS_Store": true,
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/node_modules": true,
+      "**/.git/objects": true,
+      "**/.git/subtree-cache": true,
+      "**/dist": false,
+      "**/build": false
     },
     "files.watcherExclude": {
       "**/node_modules/**": true,
       "**/logs/**": true,
       "**/.tmp/**": true,
+      "**/__pycache__/**": true,
+      "**/g/telemetry/**": true,
+      "**/mls/ledger/**": true,
+      "**/memory/**/*.jsonl": true,
       "/Volumes/lukadata/**/.git": true,
       "/Volumes/lukadata/**/.git/**": true
     },
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
     "git.enabled": true,
     "git.path": "git",
     "git.autorefresh": true,
     "git.detectSubmodules": true,
     "git.defaultCloneDirectory": "${workspaceFolder}",
-    "github.gitProtocol": "ssh",
-    "files.autoSave": "afterDelay",
     "git.autoRepositoryDetection": "openEditors",
+    "git.confirmSync": false,
+    "git.autofetch": true,
     "git.ignoredRepositories": [
       "/Volumes/lukadata",
       "/Volumes/lukadata/**",
       "/Volumes/lukadata/**/.git",
       "/Volumes/lukadata/**/.git/**"
     ],
+    "github.gitProtocol": "ssh",
     "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/__pycache__": true,
+      "**/g/telemetry/**": true,
+      "**/mls/ledger/**": true,
+      "**/memory/**/*.jsonl": true,
       "/Volumes/lukadata/**/.git/**": true,
       "/Volumes/lukadata/**/__pycache__/**": true,
       "/Volumes/lukadata/**/node_modules/**": true
-    }
+    },
+    "search.followSymlinks": false,
+    "search.smartCase": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": false,
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": true,
+    "editor.wordWrap": "on",
+    "editor.lineNumbers": "on",
+    "editor.minimap.enabled": true,
+    "editor.suggestSelection": "first",
+    "editor.quickSuggestions": {
+      "other": true,
+      "comments": false,
+      "strings": false
+    },
+    "editor.acceptSuggestionOnCommitCharacter": true,
+    "editor.snippetSuggestions": "top",
+    "python.defaultInterpreterPath": "/usr/bin/python3",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.formatting.provider": "black",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "[python]": {
+      "editor.tabSize": 4,
+      "editor.insertSpaces": true,
+      "editor.formatOnSave": true
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
+      "editor.formatOnSave": true
+    },
+    "[jsonc]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+      "editor.wordWrap": "on",
+      "editor.quickSuggestions": false
+    },
+    "[shellscript]": {
+      "editor.tabSize": 2,
+      "files.eol": "\n"
+    },
+    "cursor.chat.enabled": true,
+    "cursor.general.enableAIFeatures": true,
+    "telemetry.telemetryLevel": "off",
+    "redhat.telemetry.enabled": false,
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true
   },
   "extensions": {
     "recommendations": [
       "github.vscode-pull-request-github",
-      "github.copilot"
+      "github.copilot",
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "foxundermoon.shell-format",
+      "timonwong.shellcheck",
+      "yzhang.markdown-all-in-one",
+      "redhat.vscode-yaml",
+      "editorconfig.editorconfig"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: Current File",
+        "type": "python",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder}"
+      },
+      {
+        "name": "Gateway V3 Router",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/agents/mary_router/gateway_v3_router.py",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "SOT": "/Users/icmini/02luka"
+        }
+      },
+      {
+        "name": "Monitor V5",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/tools/monitor_v5_production.zsh",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Run Tests",
+        "type": "shell",
+        "command": "pytest tests/",
+        "group": {
+          "kind": "test",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      },
+      {
+        "label": "Monitor V5 Production",
+        "type": "shell",
+        "command": "zsh ${workspaceFolder}/tools/monitor_v5_production.zsh json",
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      },
+      {
+        "label": "Session Save",
+        "type": "shell",
+        "command": "bash ${workspaceFolder}/tools/session_save.zsh",
+        "group": "none",
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        }
+      }
     ]
   }
 }
