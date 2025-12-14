@@ -94,12 +94,28 @@ link_to "$WS/g/followup"      "$REPO/g/followup"
 link_to "$WS/mls/ledger"      "$REPO/mls/ledger"
 link_to "$WS/bridge/processed" "$REPO/bridge/processed"
 
+echo "== Linking .env.local (secrets) from workspace =="
+# .env.local must live in workspace to survive git clean/bootstrap operations
+# See: g/reports/system/env_local_workspace_migration.md
+/bin/mkdir -p "$WS/env"
+if [[ -f "$WS/env/.env.local" ]]; then
+  link_to "$WS/env/.env.local" "$REPO/.env.local"
+  echo "✓ Linked .env.local from workspace"
+elif [[ -f "$REPO/.env.local" ]] && [[ ! -L "$REPO/.env.local" ]]; then
+  # Migrate existing .env.local to workspace
+  echo "⚠️  Migrating existing .env.local to workspace..."
+  /bin/mv "$REPO/.env.local" "$WS/env/.env.local"
+  link_to "$WS/env/.env.local" "$REPO/.env.local"
+  echo "✓ Migrated and linked .env.local"
+else
+  echo "ℹ️  .env.local not found (will be created in workspace when needed)"
+fi
+
 echo "== Optional: link local tool/config dirs into repo =="
 # Uncomment if you want these to live outside repo:
 # link_to "$LOCAL/.claude" "$REPO/.claude"
 # link_to "$LOCAL/.cursor" "$REPO/.cursor"
 # link_to "$LOCAL/.vscode" "$REPO/.vscode"
-# link_to "$LOCAL/.env.local" "$REPO/.env.local"
 
 echo "== Guard: verify tracked paths are symlinks (if tracked) =="
 cd "$REPO"

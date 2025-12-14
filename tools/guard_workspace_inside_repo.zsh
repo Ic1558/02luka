@@ -22,6 +22,11 @@ workspace_paths=(
   "bridge/processed"
 )
 
+# Secrets/env files that MUST be symlinks (never real files in repo)
+env_files=(
+  ".env.local"
+)
+
 failed=0
 
 echo "== Guard: Checking workspace paths are symlinks =="
@@ -52,6 +57,26 @@ for path in "${workspace_paths[@]}"; do
 done
 
 echo ""
+echo "== Guard: Checking .env.local (must be symlink if exists) =="
+for env_file in "${env_files[@]}"; do
+  full_path="$REPO/$env_file"
+  
+  if [[ ! -e "$full_path" ]]; then
+    continue  # File doesn't exist, that's ok
+  fi
+  
+  if [[ -f "$full_path" ]] && [[ ! -L "$full_path" ]]; then
+    echo "❌ FAIL: $env_file exists as real file (must be symlink to workspace)" >&2
+    echo "   Fix: Run bootstrap_workspace.zsh or:" >&2
+    echo "        mkdir -p ~/02luka_ws/env" >&2
+    echo "        mv $env_file ~/02luka_ws/env/$env_file" >&2
+    echo "        ln -sfn ~/02luka_ws/env/$env_file $env_file" >&2
+    failed=1
+  elif [[ -L "$full_path" ]]; then
+    echo "✓ OK: $env_file is symlink (as required)"
+  fi
+done
+
 echo "== Guard: Checking workspace paths (if tracked, must be symlinks) =="
 for path in "${workspace_paths[@]}"; do
   if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then
