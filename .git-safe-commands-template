@@ -1,0 +1,26 @@
+#!/usr/bin/env zsh
+# Template: Safe Git Commands in Scripts
+# Copy this template when writing scripts that use git commands
+
+set -euo pipefail
+
+# Safe git diff: Always uses -- separator
+git_diff_safe() {
+    local revision="$1"
+    local file="$2"
+    git diff "$revision" -- "$file"
+}
+
+# Safe git show: Uses : separator (no -- needed)
+git_show_safe() {
+    local revision="$1"
+    local file="$2"
+    git show "$revision:$file"
+}
+
+# Usage Examples:
+# git_diff_safe "$BRANCH" "$FILE"
+# git show "$BRANCH:$FILE"
+
+# ❌ WRONG: git diff "$BRANCH$FILE"
+# ✅ CORRECT: git diff "$BRANCH" -- "$FILE"
