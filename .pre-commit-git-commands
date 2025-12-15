@@ -1,0 +1,22 @@
+#!/bin/bash
+# Pre-commit hook: Check for problematic git commands
+# Install: ln -s ../../.pre-commit-git-commands.sh .git/hooks/pre-commit
+
+# Check staged shell scripts for problematic git commands
+git diff --cached --name-only --diff-filter=ACM | grep -E '\.(zsh|sh)$' | while read file; do
+    if [[ -f "$file" ]]; then
+        # Check for problematic patterns
+        if grep -qE 'git (diff|log|checkout).*\$.*\$' "$file"; then
+            echo "❌ ERROR: Found problematic git command in $file"
+            echo "   Pattern: git command with variable concatenation (missing --)"
+            grep -nE 'git (diff|log|checkout).*\$.*\$' "$file" | sed 's/^/   /'
+            echo ""
+            echo "   Fix: Use '--' separator:"
+            echo "   ❌ git diff \"\$BRANCH\$FILE\""
+            echo "   ✅ git diff \"\$BRANCH\" -- \"\$FILE\""
+            exit 1
+        fi
+    fi
+done
+
+exit 0
