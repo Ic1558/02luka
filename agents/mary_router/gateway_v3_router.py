@@ -60,6 +60,29 @@ class GatewayV3Router:
         for path in [self.inbox, self.processed, self.error, self.telemetry_file.parent]:
             path.mkdir(parents=True, exist_ok=True)
         
+        # #region agent log
+        import json as json_module
+        try:
+            with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"A","location":"gateway_v3_router.py:60","message":"Init telemetry_file path check","data":{"telemetry_file":str(self.telemetry_file),"telemetry_file_resolved":str(self.telemetry_file.resolve()),"parent_exists":self.telemetry_file.parent.exists(),"parent_is_dir":self.telemetry_file.parent.is_dir(),"can_write":self.telemetry_file.parent.exists() and self.telemetry_file.parent.is_dir()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+        except: pass
+        # #endregion
+        
+        # Test write capability
+        # #region agent log
+        try:
+            test_write_ok = False
+            try:
+                with self.telemetry_file.open("a", encoding="utf-8") as test_f:
+                    test_f.write("")
+                test_write_ok = True
+            except Exception as test_e:
+                test_write_ok = False
+            with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"E","location":"gateway_v3_router.py:75","message":"Init write test","data":{"test_write_ok":test_write_ok,"telemetry_file":str(self.telemetry_file)},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+        except: pass
+        # #endregion
+        
         # Worker settings
         self.sleep_interval = self.config["worker"]["sleep_interval_seconds"]
         self.supported_targets = set(self.config["routing"]["supported_targets"])
@@ -162,11 +185,36 @@ class GatewayV3Router:
     
     def log_telemetry(self, event: Dict[str, Any]) -> None:
         """Log telemetry event as JSONL."""
+        # #region agent log
+        import json as json_module
+        try:
+            with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"B","location":"gateway_v3_router.py:163","message":"log_telemetry called","data":{"telemetry_file":str(self.telemetry_file),"event_action":event.get("action","unknown")},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+        except: pass
+        # #endregion
         event["ts"] = datetime.now(timezone.utc).isoformat()
         try:
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"C","location":"gateway_v3_router.py:170","message":"Before telemetry write","data":{"telemetry_file":str(self.telemetry_file),"file_exists":self.telemetry_file.exists(),"parent_exists":self.telemetry_file.parent.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
             with self.telemetry_file.open("a", encoding="utf-8") as f:
                 f.write(json.dumps(event) + "\n")
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"C","location":"gateway_v3_router.py:175","message":"After telemetry write","data":{"telemetry_file":str(self.telemetry_file),"file_exists":self.telemetry_file.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
         except Exception as e:
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"C","location":"gateway_v3_router.py:180","message":"Telemetry write exception","data":{"telemetry_file":str(self.telemetry_file),"error":str(e),"error_type":type(e).__name__},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
             log.error(f"Failed to write telemetry: {e}")
     
     def process_wo(self, wo_path: Path) -> bool:
@@ -178,6 +226,13 @@ class GatewayV3Router:
         Returns:
             True if processed successfully, False on error
         """
+        # #region agent log
+        import json as json_module
+        try:
+            with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"B","location":"gateway_v3_router.py:172","message":"process_wo called","data":{"wo_path":str(wo_path),"wo_exists":wo_path.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+        except: pass
+        # #endregion
         wo_id = wo_path.stem
         
         # Try v5 stack first (if available and enabled)
@@ -407,6 +462,13 @@ class GatewayV3Router:
                     log.info(f"Processing {wo_file.name}...")
                     self.process_wo(wo_file)
                 else:
+                    # #region agent log
+                    import json as json_module
+                    try:
+                        with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                            debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"B","location":"gateway_v3_router.py:410","message":"No WOs in inbox","data":{"inbox":str(self.inbox),"inbox_exists":self.inbox.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+                    except: pass
+                    # #endregion
                     # No files, sleep longer
                     time.sleep(self.sleep_interval * 2)
                     continue
