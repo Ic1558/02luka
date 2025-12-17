@@ -6,5 +6,6 @@
   "mls:today": "~/02luka/mls/ledger/${TODAY}.jsonl",
   "code:hooks": "~/02luka/tools/claude_hooks",
   "code:templates": "~/02luka/.claude/templates",
-  "cursor:commands": "~/02luka/.cursor/commands"
+  "cursor:commands": "~/02luka/.cursor/commands",
+  "persona:gemini": "/Users/icmini/02luka/personas/GEMINI_PERSONA_v3.md"
 }
