@@ -1,0 +1,20 @@
+version: "3.0"
+phase: 0
+routing:
+  default_target: "CLC"
+  supported_targets:
+    - "CLC"
+  routing_hint_mapping:
+    dev_oss: "CLC"
+    dev_oss_lane: "CLC"
+telemetry:
+  log_file: "g/telemetry/gateway_v3_router.jsonl"
+  log_level: "INFO"
+directories:
+  inbox: "bridge/inbox_local/MAIN"
+  processed: "bridge/processed_local/MAIN"
+  error: "bridge/error_local/MAIN"
+worker:
+  sleep_interval_seconds: 1.0
+  process_one_by_one: true
+use_v5_stack: false
