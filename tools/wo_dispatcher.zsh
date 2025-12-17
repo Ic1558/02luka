@@ -27,9 +27,9 @@ if [[ "$ENGINE" == "gemini" ]]; then
 fi
 
 case "$ENGINE" in
-  "CLC")    INBOX="$BASE/bridge/inbox/CLC" ;;
-  "LPE")    INBOX="$BASE/bridge/inbox/LPE" ;;
-  "GEMINI") INBOX="$BASE/bridge/inbox/GEMINI" ;;
+  "CLC")    INBOX="$BASE/bridge/inbox/clc" ;;
+  "LPE")    INBOX="$BASE/bridge/inbox/lpe" ;;
+  "GEMINI") INBOX="$BASE/bridge/inbox/gemini" ;;
   *)
     echo "[wo_dispatcher] Unknown engine: $ENGINE" >&2
     exit 1

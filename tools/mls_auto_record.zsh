@@ -58,7 +58,7 @@ LEDGER_DIR="$BASE/mls/ledger"
 mkdir -p "$LEDGER_DIR"
 
 # Get current context
-CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/CLC/WO-*.{yaml,json,zsh} 2>/dev/null | head -1 | xargs basename 2>/dev/null | sed 's/\.[^.]*$//' || echo "")
+CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/clc/WO-*.{yaml,json,zsh} 2>/dev/null | head -1 | xargs basename 2>/dev/null | sed 's/\.[^.]*$//' || echo "")
 CURRENT_SESSION=$(find ~/02luka/g/reports/sessions -name "*.md" -type f 2>/dev/null | sort -r | head -1 | xargs basename 2>/dev/null || echo "")
 [[ -z "$WO_ID" ]] && WO_ID="$CURRENT_WO"
 

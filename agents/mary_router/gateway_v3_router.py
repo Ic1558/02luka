@@ -2,7 +2,7 @@
 """
 Mary Router Gateway v3 - Central Inbox Router
 
-Phase 1 (v5 Integration): Routes WOs from bridge/inbox/MAIN/ using WO Processor v5
+Phase 1 (v5 Integration): Routes WOs from bridge/inbox/main/ using WO Processor v5
 - Uses Router v5 for lane-based routing
 - STRICT lane → CLC inbox
 - FAST/WARN lane → Local execution
@@ -91,18 +91,46 @@ class GatewayV3Router:
         
         log.info(f"Gateway v3 Router initialized (Phase {self.config['phase']})")
         log.info(f"Inbox: {self.inbox}")
+        log.info(f"Telemetry file: {self.telemetry_file}")
         log.info(f"Supported targets: {self.supported_targets}")
+        log.info(f"Config loaded from: {self.config_path} ({'YAML file' if self.config_path.exists() else 'defaults'})")
     
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from YAML file."""
+        # #region agent log
+        import json as json_module
+        try:
+            with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"D","location":"gateway_v3_router.py:96","message":"Loading config","data":{"config_path":str(self.config_path),"config_exists":self.config_path.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+        except: pass
+        # #endregion
         if not self.config_path.exists():
             log.warning(f"Config not found: {self.config_path}, using defaults")
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"D","location":"gateway_v3_router.py:100","message":"Config not found, using defaults","data":{},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
             return self._default_config()
         
         try:
             with self.config_path.open("r", encoding="utf-8") as f:
-                return yaml.safe_load(f) or {}
+                loaded = yaml.safe_load(f) or {}
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"D","location":"gateway_v3_router.py:107","message":"Config loaded","data":{"telemetry_log_file":loaded.get("telemetry",{}).get("log_file","NOT_FOUND"),"use_v5_stack":loaded.get("use_v5_stack","NOT_FOUND")},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
+            return loaded
         except Exception as e:
+            # #region agent log
+            try:
+                with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
+                    debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"init","hypothesisId":"D","location":"gateway_v3_router.py:113","message":"Config load exception","data":{"error":str(e)},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
+            except: pass
+            # #endregion
             log.error(f"Failed to load config: {e}, using defaults")
             return self._default_config()
     
@@ -117,18 +145,19 @@ class GatewayV3Router:
                 "routing_hint_mapping": {"dev_oss": "CLC"}
             },
             "telemetry": {
-                "log_file": "g/telemetry/gateway_v3_router.log",
+                "log_file": "g/telemetry/gateway_v3_router.jsonl",  # Updated to match config standard
                 "log_level": "INFO"
             },
             "directories": {
-                "inbox": "bridge/inbox/MAIN",
+                "inbox": "bridge/inbox/main",  # Default, but YAML config should override
                 "processed": "bridge/processed/MAIN",
                 "error": "bridge/error/MAIN"
             },
             "worker": {
                 "sleep_interval_seconds": 1.0,
                 "process_one_by_one": True
-            }
+            },
+            "use_v5_stack": True  # Default to v5 enabled
         }
     
     def load_wo(self, wo_path: Path) -> Optional[Dict[str, Any]]:
@@ -365,7 +394,29 @@ class GatewayV3Router:
         
         # Move to target inbox
         target_inbox = ROOT / "bridge/inbox" / target
-        target_inbox.mkdir(parents=True, exist_ok=True)
+        # Handle symlink case: check if it exists and is accessible
+        # Don't use resolve() to avoid symlink loops - just check if we can access it
+        try:
+            if target_inbox.is_symlink():
+                # Symlink exists, check if target is accessible
+                target_resolved = target_inbox.readlink()
+                # If symlink is broken or points to itself, create directory instead
+                if not target_inbox.exists() or target_resolved == target_inbox.name:
+                    # Remove broken symlink and create directory
+                    target_inbox.unlink(missing_ok=True)
+                    target_inbox.mkdir(parents=True, exist_ok=True)
+            elif not target_inbox.exists():
+                # Doesn't exist, create it
+                target_inbox.mkdir(parents=True, exist_ok=True)
+            elif not target_inbox.is_dir():
+                # Exists but not a directory - this shouldn't happen, but handle it
+                log.warning(f"Target inbox {target_inbox} exists but is not a directory")
+        except Exception as e:
+            log.error(f"Error preparing target inbox {target_inbox}: {e}")
+            # Fallback: try to create parent and target
+            target_inbox.parent.mkdir(parents=True, exist_ok=True)
+            if not target_inbox.exists():
+                target_inbox.mkdir(exist_ok=True)
         target_path = target_inbox / wo_path.name
         
         try:
@@ -446,7 +497,7 @@ class GatewayV3Router:
     
     def run(self):
         """Main loop: watch inbox and process WOs one-by-one."""
-        log.info("Gateway v3 Router started. Watching bridge/inbox/MAIN/...")
+        log.info("Gateway v3 Router started. Watching bridge/inbox/main/...")
         
         while True:
             try:

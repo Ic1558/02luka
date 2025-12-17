@@ -8,7 +8,7 @@
 set -euo pipefail
 
 ROOT="${LUKA_SOT:-${HOME}/02luka}"
-CLC_INBOX="${ROOT}/bridge/inbox/CLC"
+CLC_INBOX="${ROOT}/bridge/inbox/clc"
 ARCHIVE_DIR="${ROOT}/bridge/archive/CLC/legacy_before_v5"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 

@@ -100,7 +100,7 @@ class ProcessingResult:
 
 def read_wo_from_main(wo_path: str) -> Dict[str, Any]:
     """
-    Read WO from bridge/inbox/MAIN/.
+    Read WO from bridge/inbox/main/.
     
     Args:
         wo_path: Path to WO file
@@ -213,7 +213,7 @@ def create_clc_wo(
     strict_operations: List[Dict[str, Any]]
 ) -> str:
     """
-    Create WO for CLC and send to bridge/inbox/CLC/.
+    Create WO for CLC and send to bridge/inbox/clc/.
     
     Args:
         wo: Original WO
@@ -449,7 +449,7 @@ def process_wo_with_lane_routing(wo_path: str) -> ProcessingResult:
     Main function: Process WO with lane-based routing.
     
     Flow:
-    1. Read WO from bridge/inbox/MAIN/
+    1. Read WO from bridge/inbox/main/
     2. Route operations by lane (Router v5)
     3. Route STRICT → CLC
     4. Execute FAST/WARN locally

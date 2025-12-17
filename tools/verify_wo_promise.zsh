@@ -8,7 +8,7 @@ set -euo pipefail
 BASE="${LUKA_SOT:-/Users/icmini/02luka}"
 MLS_LEDGER="${BASE}/g/knowledge/mls_lessons.jsonl"
 MLS_LEDGER_DIR="${BASE}/g/knowledge/mls/ledger"
-WO_INBOX="${BASE}/bridge/inbox/ENTRY"
+WO_INBOX="${BASE}/bridge/inbox/entry"
 CHECK_MLS=false
 CHECK_FILES=false
 

@@ -98,7 +98,7 @@ update_index() {
 
 # Get current context
 get_context() {
-  CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/CLC/WO-*.{zsh,json} 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
+  CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/clc/WO-*.{zsh,json} 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
   CURRENT_SESSION=$(ls -t ~/02luka/memory/clc/session_*.md 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
 }
 

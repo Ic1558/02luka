@@ -3,9 +3,9 @@ set -euo pipefail
 setopt null_glob
 
 R="$HOME/02luka"
-IN="$R/bridge/inbox/RND"
-ENTRY="$R/bridge/inbox/ENTRY"
-REVIEW="$R/bridge/inbox/CLS"
+IN="$R/bridge/inbox/rnd"
+ENTRY="$R/bridge/inbox/entry"
+REVIEW="$R/bridge/inbox/cls"
 DONE="$R/bridge/processed/RND"
 POL="$R/config/rnd_policy.yaml"
 LOG="$R/logs/rnd_gate.log"

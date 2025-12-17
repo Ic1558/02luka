@@ -42,7 +42,7 @@ TIMESTAMP=$(date +%s)
 LESSON_ID="MLS-${TIMESTAMP}"
 
 # Capture current context
-CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/CLC/WO-*.zsh 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
+CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/clc/WO-*.zsh 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
 CURRENT_SESSION=$(ls -t ~/02luka/g/reports/sessions/*.md 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
 
 # Create lesson entry
@@ -100,8 +100,8 @@ echo "$NEW_INDEX" | jq -r '
 '
 
 # Trigger R&D autopilot notification
-if [[ -d "$HOME/02luka/bridge/inbox/RD" ]]; then
-  RD_NOTIFICATION="$HOME/02luka/bridge/inbox/RD/MLS-notification-${TIMESTAMP}.json"
+if [[ -d "$HOME/02luka/bridge/inbox/rd" ]]; then
+  RD_NOTIFICATION="$HOME/02luka/bridge/inbox/rd/MLS-notification-${TIMESTAMP}.json"
   jq -n \
     --arg lesson_id "$LESSON_ID" \
     --arg type "$TYPE" \

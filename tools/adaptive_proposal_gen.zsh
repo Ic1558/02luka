@@ -7,7 +7,7 @@ set -euo pipefail
 REPO="$HOME/02luka"
 TODAY=$(date +%Y%m%d)
 INSIGHTS_FILE="$REPO/mls/adaptive/insights_${TODAY}.json"
-RND_INBOX="$REPO/bridge/inbox/RND"
+RND_INBOX="$REPO/bridge/inbox/rnd"
 YEARMONTH=$(date +%Y%m)
 METRICS_FILE="$REPO/g/reports/memory_metrics_${YEARMONTH}.json"
 

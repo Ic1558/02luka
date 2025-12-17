@@ -10,7 +10,7 @@ set -euo pipefail
 
 ROOT="${LUKA_SOT:-${HOME}/02luka}"
 LOG_FILE="${ROOT}/g/telemetry/gateway_v3_router.log"
-INBOX_DIR="${ROOT}/bridge/inbox/MAIN"
+INBOX_DIR="${ROOT}/bridge/inbox/main"
 LAUNCHAGENT_NAME="com.02luka.mary-gateway-v3"
 
 # ═══════════════════════════════════════════

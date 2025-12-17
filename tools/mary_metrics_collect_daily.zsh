@@ -35,7 +35,7 @@ if [[ -f "$MARY_LOG" ]]; then
 fi
 
 # Count pending (current)
-metrics[mary_pending]=$(find "$REPO/bridge/inbox/ENTRY" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | xargs || echo "0")
+metrics[mary_pending]=$(find "$REPO/bridge/inbox/entry" -maxdepth 1 -name "*.yaml" 2>/dev/null | wc -l | xargs || echo "0")
 
 # Collect CLS metrics (from JSONL)
 if [[ -f "$CLS_LOG" ]]; then

@@ -126,14 +126,14 @@ complexity: "{task.get('complexity', 'simple')}"
         task["content"] = polished
         
     def run(self):
-        inbox = LAC_BASE_DIR / "bridge/inbox/LAC"
+        inbox = LAC_BASE_DIR / "bridge/inbox/lac"
         processing = LAC_BASE_DIR / "bridge/processing/LAC"
         processed = LAC_BASE_DIR / "bridge/processed/LAC"
         
         for d in [inbox, processing, processed]:
             d.mkdir(parents=True, exist_ok=True)
             
-        logging.info("LAC Manager started. Watching bridge/inbox/LAC...")
+        logging.info("LAC Manager started. Watching bridge/inbox/lac...")
         
         # Single pass (LaunchAgent will handle loop interval)
         tasks = sorted(list(inbox.glob("*.yaml")))

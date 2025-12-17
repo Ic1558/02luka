@@ -12,11 +12,77 @@
 set -euo pipefail
 
 ROOT="${LUKA_SOT:-${HOME}/02luka}"
-LOG_FILE="${ROOT}/g/telemetry/gateway_v3_router.log"
-MAIN_INBOX="${ROOT}/bridge/inbox/MAIN"
-CLC_INBOX="${ROOT}/bridge/inbox/CLC"
-PROCESSED="${ROOT}/bridge/processed/MAIN"
-ERROR="${ROOT}/bridge/error/MAIN"
+# Check for .jsonl first (config default), fallback to .log for backward compatibility
+if [[ -f "${ROOT}/g/telemetry/gateway_v3_router.jsonl" ]]; then
+    LOG_FILE="${ROOT}/g/telemetry/gateway_v3_router.jsonl"
+elif [[ -f "${ROOT}/g/telemetry/gateway_v3_router.log" ]]; then
+    LOG_FILE="${ROOT}/g/telemetry/gateway_v3_router.log"
+else
+    LOG_FILE="${ROOT}/g/telemetry/gateway_v3_router.jsonl"  # Default to .jsonl (config standard)
+fi
+
+# Load paths from gateway config (source of truth)
+CONFIG_FILE="${ROOT}/g/config/mary_router_gateway_v3.yaml"
+if [[ -f "$CONFIG_FILE" ]]; then
+    # Extract paths from YAML config using Python
+    eval "$(python3 << PYEOF
+import yaml
+import sys
+import os
+
+config_path = "$CONFIG_FILE"
+root = "$ROOT"
+
+try:
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f) or {}
+    
+    directories = config.get('directories', {})
+    
+    # Get inbox path and normalize to lowercase
+    inbox_path = directories.get('inbox', 'bridge/inbox/main')
+    # Normalize: convert uppercase channel names to lowercase
+    # e.g., bridge/inbox_local/MAIN -> bridge/inbox_local/main
+    inbox_normalized = inbox_path
+    if '/MAIN' in inbox_normalized:
+        inbox_normalized = inbox_normalized.replace('/MAIN', '/main')
+    elif '/CLC' in inbox_normalized:
+        inbox_normalized = inbox_normalized.replace('/CLC', '/clc')
+    
+    processed_path = directories.get('processed', 'bridge/processed/MAIN')
+    processed_normalized = processed_path.replace('/MAIN', '/main')
+    
+    error_path = directories.get('error', 'bridge/error/MAIN')
+    error_normalized = error_path.replace('/MAIN', '/main')
+    
+    # Resolve relative paths
+    inbox_full = os.path.join(root, inbox_normalized)
+    processed_full = os.path.join(root, processed_normalized)
+    error_full = os.path.join(root, error_normalized)
+    
+    # For CLC inbox, derive from main inbox path
+    clc_inbox = inbox_normalized.replace('/main', '/clc')
+    clc_inbox_full = os.path.join(root, clc_inbox)
+    
+    print(f"MAIN_INBOX=\"{inbox_full}\"")
+    print(f"CLC_INBOX=\"{clc_inbox_full}\"")
+    print(f"PROCESSED=\"{processed_full}\"")
+    print(f"ERROR=\"{error_full}\"")
+except Exception as e:
+    # Fallback to defaults if config parsing fails
+    print(f"MAIN_INBOX=\"{root}/bridge/inbox/main\"")
+    print(f"CLC_INBOX=\"{root}/bridge/inbox/clc\"")
+    print(f"PROCESSED=\"{root}/bridge/processed/main\"")
+    print(f"ERROR=\"{root}/bridge/error/main\"")
+PYEOF
+    )"
+else
+    # Fallback to defaults if config file doesn't exist
+    MAIN_INBOX="${ROOT}/bridge/inbox/main"
+    CLC_INBOX="${ROOT}/bridge/inbox/clc"
+    PROCESSED="${ROOT}/bridge/processed/main"
+    ERROR="${ROOT}/bridge/error/main"
+fi
 
 # ═══════════════════════════════════════════
 # Monitoring Functions

@@ -44,7 +44,7 @@ test_dev_oss() {
     log "Test 1: dev_oss (Lightweight)"
     
     # Create test WO
-    cat > bridge/inbox/ENTRY/WO-TEST-LAC-DEV-OSS-QA.yaml <<'YAML'
+    cat > bridge/inbox/entry/WO-TEST-LAC-DEV-OSS-QA.yaml <<'YAML'
 id: WO-TEST-LAC-DEV-OSS-QA
 intent: apply_sip_patch
 summary: LAC QA Test - Simple dev_oss task
@@ -70,7 +70,7 @@ YAML
     sleep 3  # Give more time for routing
     
     # Check routing (may already be processed by running LAC Manager)
-    if [[ -f bridge/inbox/LAC/WO-TEST-LAC-DEV-OSS-QA.yaml ]] || [[ -f bridge/processed/LAC/WO-TEST-LAC-DEV-OSS-QA.yaml ]]; then
+    if [[ -f bridge/inbox/lac/WO-TEST-LAC-DEV-OSS-QA.yaml ]] || [[ -f bridge/processed/LAC/WO-TEST-LAC-DEV-OSS-QA.yaml ]]; then
         pass "WO routed to LAC"
     else
         fail "WO not routed to LAC inbox"
@@ -78,7 +78,7 @@ YAML
     fi
     
     # Run LAC Manager if WO still in inbox
-    if [[ -f bridge/inbox/LAC/WO-TEST-LAC-DEV-OSS-QA.yaml ]]; then
+    if [[ -f bridge/inbox/lac/WO-TEST-LAC-DEV-OSS-QA.yaml ]]; then
         python3 agents/lac_manager/lac_manager.py > /dev/null 2>&1 || true
         sleep 2
     fi
@@ -106,7 +106,7 @@ test_qa_report() {
     log "Test 2: QA Report (State + Report)"
     
     # Create test WO
-    cat > bridge/inbox/ENTRY/WO-TEST-LAC-QA-REPORT-QA.yaml <<'YAML'
+    cat > bridge/inbox/entry/WO-TEST-LAC-QA-REPORT-QA.yaml <<'YAML'
 id: WO-TEST-LAC-QA-REPORT-QA
 intent: apply_sip_patch
 summary: LAC QA Test - QA lane (read state + write report)
@@ -128,7 +128,7 @@ YAML
     sleep 3  # Give more time for routing
     
     # Check routing (may already be processed by running LAC Manager)
-    if [[ -f bridge/inbox/LAC/WO-TEST-LAC-QA-REPORT-QA.yaml ]] || [[ -f bridge/processed/LAC/WO-TEST-LAC-QA-REPORT-QA.yaml ]]; then
+    if [[ -f bridge/inbox/lac/WO-TEST-LAC-QA-REPORT-QA.yaml ]] || [[ -f bridge/processed/LAC/WO-TEST-LAC-QA-REPORT-QA.yaml ]]; then
         pass "WO routed to LAC"
     else
         fail "WO not routed to LAC inbox"
@@ -136,7 +136,7 @@ YAML
     fi
     
     # Run LAC Manager if WO still in inbox
-    if [[ -f bridge/inbox/LAC/WO-TEST-LAC-QA-REPORT-QA.yaml ]]; then
+    if [[ -f bridge/inbox/lac/WO-TEST-LAC-QA-REPORT-QA.yaml ]]; then
         python3 agents/lac_manager/lac_manager.py > /dev/null 2>&1 || true
         sleep 2
     fi
@@ -162,7 +162,7 @@ test_routing() {
     log "Test 3: Routing Verification"
     
     # Create test WO with strict_target
-    cat > bridge/inbox/ENTRY/WO-TEST-ROUTING-QA.yaml <<'YAML'
+    cat > bridge/inbox/entry/WO-TEST-ROUTING-QA.yaml <<'YAML'
 id: WO-TEST-ROUTING-QA
 strict_target: LAC
 target_candidates: [LAC]
@@ -173,9 +173,9 @@ YAML
     sleep 2
     
     # Check routing
-    if [[ -f bridge/inbox/LAC/WO-TEST-ROUTING-QA.yaml ]]; then
+    if [[ -f bridge/inbox/lac/WO-TEST-ROUTING-QA.yaml ]]; then
         pass "strict_target: LAC routes correctly"
-    elif [[ -f bridge/inbox/ENTRY/WO-TEST-ROUTING-QA.yaml ]]; then
+    elif [[ -f bridge/inbox/entry/WO-TEST-ROUTING-QA.yaml ]]; then
         fail "WO still in ENTRY (routing failed)"
     elif [[ -f bridge/processed/ENTRY/WO-TEST-ROUTING-QA.yaml ]]; then
         skip "WO processed by Mary (may have routed to LAC then processed)"
@@ -187,7 +187,7 @@ YAML
             if [[ "$found" == *"/outbox/"* ]]; then
                 # Wait a bit more and check LAC inbox again
                 sleep 3
-                if [[ -f bridge/inbox/LAC/WO-TEST-ROUTING-QA.yaml ]]; then
+                if [[ -f bridge/inbox/lac/WO-TEST-ROUTING-QA.yaml ]]; then
                     pass "strict_target: LAC routes correctly (after delay)"
                 else
                     skip "WO in outbox (routing in progress or routed elsewhere)"
@@ -206,7 +206,7 @@ test_manager_loop() {
     log "Test 4: LAC Manager Processing Loop"
     
     # Create test WO
-    cat > bridge/inbox/LAC/WO-TEST-LOOP-QA.yaml <<'YAML'
+    cat > bridge/inbox/lac/WO-TEST-LOOP-QA.yaml <<'YAML'
 id: WO-TEST-LOOP-QA
 intent: test
 summary: Test LAC Manager loop
@@ -220,7 +220,7 @@ YAML
     # Check processing
     if [[ -f bridge/processed/LAC/WO-TEST-LOOP-QA.yaml ]]; then
         pass "LAC Manager processes WOs in loop"
-    elif [[ -f bridge/inbox/LAC/WO-TEST-LOOP-QA.yaml ]]; then
+    elif [[ -f bridge/inbox/lac/WO-TEST-LOOP-QA.yaml ]]; then
         fail "WO still in inbox (not processed)"
         return 1
     else

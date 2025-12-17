@@ -17,7 +17,7 @@ if [[ -x "$HOME/tools/bridge_cls_clc.zsh" ]]; then
     --wait || true
 else
   # Fallback: drop a simple WO stub into inbox if bridge is not available
-  INBOX="${HOME}/02luka/bridge/inbox/CLC"
+  INBOX="${HOME}/02luka/bridge/inbox/clc"
   mkdir -p "$INBOX"
   F="${INBOX}/WO-$(date +%Y%m%d-%H%M%S)-ESC.txt"
   printf '%s\n' "$BODY" > "$F"

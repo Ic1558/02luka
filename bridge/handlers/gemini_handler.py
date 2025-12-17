@@ -2,7 +2,7 @@
 """
 Gemini Work Order handler (Phase 3)
 
-Transforms WO YAML entries from bridge/inbox/GEMINI into normalized payloads
+Transforms WO YAML entries from bridge/inbox/gemini into normalized payloads
 for the Gemini connector and writes results back to the GEMINI outbox.
 """
 
@@ -33,7 +33,7 @@ def handle(task: Dict[str, Any]) -> Dict[str, Any]:
 
 class GeminiHandler:
     """
-    Processes Gemini work orders from bridge/inbox/GEMINI.
+    Processes Gemini work orders from bridge/inbox/gemini.
 
     Workflow:
     1. Read WO YAML from the GEMINI inbox

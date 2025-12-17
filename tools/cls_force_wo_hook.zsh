@@ -5,7 +5,7 @@ set -euo pipefail
 # CLS Force WO Hook: atomic drop to CLC inbox when task is stuck
 # -------------------------------------------------------------------
 : "${LUKA_HOME:=$HOME/02luka}"
-: "${INBOX:=$LUKA_HOME/bridge/inbox/CLC}"
+: "${INBOX:=$LUKA_HOME/bridge/inbox/clc}"
 : "${HISTORY:=$LUKA_HOME/logs/wo_drop_history}"
 : "${SRC_JSON:=$LUKA_HOME/hub/delegation_watchdog.json}"   # default input
 : "${WO_KIND:=CLS_FORCE_WO}"

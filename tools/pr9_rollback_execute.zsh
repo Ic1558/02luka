@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE="${LUKA_SOT:-$HOME/02luka}"
-INBOX="$BASE/bridge/inbox/MAIN"
+INBOX="$BASE/bridge/inbox/main"
 TEST_FILE="$BASE/g/reports/feature-dev/governance_v5_unified_law/pr_battle_tests/PR9_ROLLBACK_TEST.md"
 
 echo "🔄 PR-9 Rollback Execution"

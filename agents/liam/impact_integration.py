@@ -85,7 +85,7 @@ def _create_sot_update_wo(feature_name: str, files: List[str]) -> None:
             "note": "SOT update required due to system-level changes"
         }
     )
-    # TODO: Create actual WO file in bridge/inbox/HYBRID/
+    # TODO: Create actual WO file in bridge/inbox/hybrid/
 
 
 def _create_ai_context_update_wo(feature_name: str, components: List[str]) -> None:
@@ -99,7 +99,7 @@ def _create_ai_context_update_wo(feature_name: str, components: List[str]) -> No
             "note": "AI context refresh required due to behavior/subsystem changes"
         }
     )
-    # TODO: Create actual WO file in bridge/inbox/HYBRID/
+    # TODO: Create actual WO file in bridge/inbox/hybrid/
 
 
 def _notify_workers(feature_name: str, report: ImpactReport) -> None:

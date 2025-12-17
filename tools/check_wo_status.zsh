@@ -54,11 +54,11 @@ check_wos() {
   echo ""
   
   # Check CLC inbox
-  echo -e "${BOLD}📥 CLC Inbox${NC} ${GRAY}(bridge/inbox/CLC/)${NC}"
+  echo -e "${BOLD}📥 CLC Inbox${NC} ${GRAY}(bridge/inbox/clc/)${NC}"
   local clc_count=0
-  if [[ -d "$HOME/02luka/bridge/inbox/CLC" ]]; then
+  if [[ -d "$HOME/02luka/bridge/inbox/clc" ]]; then
     setopt null_glob
-    for wo in "$HOME/02luka/bridge/inbox/CLC"/*.yaml "$HOME/02luka/bridge/inbox/CLC"/*.json; do
+    for wo in "$HOME/02luka/bridge/inbox/clc"/*.yaml "$HOME/02luka/bridge/inbox/clc"/*.json; do
       if [[ -f "$wo" ]]; then
         local wo_id=$(basename "$wo")
         local wo_age=$(( ($(date +%s) - $(stat -f %m "$wo")) / 86400 ))
@@ -135,10 +135,10 @@ check_wos() {
   echo ""
   
   # Check ENTRY inbox
-  echo -e "${BOLD}📬 ENTRY Inbox${NC} ${GRAY}(bridge/inbox/ENTRY/)${NC}"
+  echo -e "${BOLD}📬 ENTRY Inbox${NC} ${GRAY}(bridge/inbox/entry/)${NC}"
   local entry_count=0
-  if [[ -d "$HOME/02luka/bridge/inbox/ENTRY" ]]; then
-    for wo in "$HOME/02luka/bridge/inbox/ENTRY"/*.yaml "$HOME/02luka/bridge/inbox/ENTRY"/*.json; do
+  if [[ -d "$HOME/02luka/bridge/inbox/entry" ]]; then
+    for wo in "$HOME/02luka/bridge/inbox/entry"/*.yaml "$HOME/02luka/bridge/inbox/entry"/*.json; do
       if [[ -f "$wo" ]]; then
         local wo_id=$(basename "$wo")
         local wo_age=$(( ($(date +%s) - $(stat -f %m "$wo")) / 86400 ))

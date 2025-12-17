@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE="${LUKA_SOT:-$HOME/02luka}"
-INBOX="$BASE/bridge/inbox/MAIN"
+INBOX="$BASE/bridge/inbox/main"
 
 echo "📝 PR-10 CLS Auto-Approve Test"
 echo ""

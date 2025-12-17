@@ -47,8 +47,8 @@ mem_files=$(count_files "$MEM_DIR")
 mem_size=$(sz "$MEM_DIR")
 
 # Queues
-llm_pending=$([ -d "$ROOT/bridge/inbox/LLM" ] && find "$ROOT/bridge/inbox/LLM" -type f -name 'WO-*.json' 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
-rd_pending=$([ -d "$ROOT/bridge/inbox/RD" ] && find "$ROOT/bridge/inbox/RD" -type f -name '*.json' 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
+llm_pending=$([ -d "$ROOT/bridge/inbox/llm" ] && find "$ROOT/bridge/inbox/llm" -type f -name 'WO-*.json' 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
+rd_pending=$([ -d "$ROOT/bridge/inbox/rd" ] && find "$ROOT/bridge/inbox/rd" -type f -name '*.json' 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
 rd_proposals=$([ -d "$WO_DIR" ] && find "$WO_DIR" -maxdepth 1 -type f -name 'WO-*.json' 2>/dev/null | wc -l | awk '{print $1}' || echo 0)
 
 # Telemetry

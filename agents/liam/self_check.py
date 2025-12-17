@@ -41,7 +41,7 @@ def run_self_check():
     }
     
     # 5. Write to Bridge Inbox
-    inbox_path = "/Users/icmini/02luka/bridge/inbox/LIAM"
+    inbox_path = "/Users/icmini/02luka/bridge/inbox/liam"
     os.makedirs(inbox_path, exist_ok=True)
     file_path = os.path.join(inbox_path, "WO-LIAM-SMOKETEST.json")
     

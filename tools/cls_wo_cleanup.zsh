@@ -26,7 +26,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 WO_STATUS_FILE="$HOME/02luka/memory/cls/wo_status.jsonl"
-WO_INBOX="$HOME/02luka/bridge/inbox/CLC"
+WO_INBOX="$HOME/02luka/bridge/inbox/clc"
 ARCHIVE_DIR="$HOME/02luka/bridge/archive"
 LOG_FILE="$HOME/02luka/g/telemetry/cls_wo_cleanup.jsonl"
 REDIS_HOST="${REDIS_HOST:-127.0.0.1}"

@@ -8,7 +8,7 @@
 set -euo pipefail
 
 ROOT="${LUKA_SOT:-${HOME}/02luka}"
-MAIN_INBOX="${ROOT}/bridge/inbox/MAIN"
+MAIN_INBOX="${ROOT}/bridge/inbox/main"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
 # ═══════════════════════════════════════════

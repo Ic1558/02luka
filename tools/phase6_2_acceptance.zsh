@@ -31,7 +31,7 @@ echo '{"trends": {}, "anomalies": [], "recommendations": []}' > "$REPO/mls/adapt
 # Run proposal generator
 "$REPO/tools/adaptive_proposal_gen.zsh" >/dev/null 2>&1
 # Check no proposal created
-if [[ -z "$(find "$REPO/bridge/inbox/RND" -name "RND-ADAPTIVE-${TODAY}-*.yaml" 2>/dev/null)" ]]; then
+if [[ -z "$(find "$REPO/bridge/inbox/rnd" -name "RND-ADAPTIVE-${TODAY}-*.yaml" 2>/dev/null)" ]]; then
   ok "Guard works: No proposal when no actionable insights"
 else
   ng "Guard failed: Proposal created when no actionable insights"
