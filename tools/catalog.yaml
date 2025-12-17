@@ -15,10 +15,11 @@ commands:
   save-now:
     description: "Lightweight session save from MLS ledger"
     entry: "./tools/save.sh"
-    env: "AGENT_ID=<agent_name>"
+    usage: "cd ~/02luka && AGENT_ID=<agent_name> SAVE_SOURCE=terminal ./tools/save.sh"
+    env: "AGENT_ID=<agent_name> SAVE_SOURCE=terminal"
     function: "dev_save"
     source: "git_safety_aliases.zsh"
-    notes: "Uses save.sh as gateway, NOT session_save.zsh directly"
+    notes: "Command should be interpreted as: cd ~/02luka && AGENT_ID=<agent_name> SAVE_SOURCE=terminal ./tools/save.sh. Uses save.sh as gateway, NOT session_save.zsh directly"
     
   seal-now:
     description: "Full chain: Review → GitDrop → Save"

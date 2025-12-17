@@ -63,8 +63,18 @@ except (ImportError, IndexError) as e:
 
 def load_spec(path: Path) -> dict:
     """Loads a JSON specification file."""
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    text = path.read_text(encoding="utf-8")
+    try:
+        return json.loads(text)
+    except Exception:
+        try:
+            import yaml  # type: ignore
+        except Exception as e:  # pragma: no cover
+            raise RuntimeError(f"Failed to parse spec as JSON, and PyYAML is unavailable: {e}") from e
+        data = yaml.safe_load(text) or {}
+        if not isinstance(data, dict):
+            raise ValueError("WO spec must be a JSON/YAML object")
+        return data
 
 def watch_inbox(inbox_name: str):
     """Monitors a Bridge inbox and processes new Work Order files."""
