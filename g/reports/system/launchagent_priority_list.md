@@ -15,7 +15,6 @@ These LaunchAgents are essential for core system operation. Dashboard should sho
 - `com.02luka.clc-executor` - Executes CLC work orders (recently fixed)
 - `com.02luka.rag.api` - RAG API server (recently fixed, port 8765)
 - `com.02luka.memory.hub` - Memory hub (if using shared memory system)
-- `com.02luka.mcp.fs` - MCP filesystem bridge
 
 ---
 
@@ -43,6 +42,8 @@ These LaunchAgents provide useful features but system can operate without them. 
 
 ### MCP (Optional)
 - `com.02luka.gg.mcp-bridge` - MCP bridge routes tasks from external sources to GG
+- `com.02luka.mcp.fs` - MCP filesystem bridge
+  - **Note**: Optional because stdio-server requires attached client. Can exit/respawn frequently without client, causing stderr spam. Keep Optional until proven required by active client usage.
 
 ### Monitoring & Health
 - `com.02luka.health_monitor` - System health monitoring
@@ -157,7 +158,7 @@ These LaunchAgents provide useful features but system can operate without them. 
 ### Status Check Command:
 ```bash
 # Check P0 agents
-for agent in com.02luka.json_wo_processor com.02luka.wo_executor com.02luka.followup_tracker com.02luka.wo_pipeline_guardrail com.02luka.lpe.worker com.02luka.mary-dispatch com.02luka.mary-bridge com.02luka.clc-executor com.02luka.mls.cursor.watcher com.02luka.mls.ledger.monitor com.02luka.gg.mcp-bridge com.02luka.mcp.fs com.02luka.memory.hub com.02luka.rag.api; do
+for agent in com.02luka.mary-gateway-v3 com.02luka.clc-executor com.02luka.rag.api com.02luka.memory.hub; do
   pid=$(launchctl list "$agent" 2>/dev/null | grep -E "^\s*\"PID\"" | awk '{print $3}' | tr -d ';')
   if [ -z "$pid" ] || [ "$pid" = "0" ]; then
     echo "❌ $agent: NOT RUNNING"
