@@ -17,15 +17,34 @@ import os
 import logging
 from pathlib import Path
 
-# Configure logging to a file, bypassing stdout/stderr for debug
-LOG_FILE = Path("clc_local_debug.log")
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE)
-    ]
-)
+# Configure logging.
+# NOTE: LaunchAgents may start with cwd="/" which makes relative log paths fail.
+def _default_log_file() -> Path:
+    base_dir = os.getenv("LAC_BASE_DIR")
+    if base_dir:
+        return Path(base_dir) / "logs" / "clc_local_debug.log"
+    return Path.home() / "Library" / "Logs" / "02luka" / "clc_local_debug.log"
+
+
+def _init_logging() -> None:
+    log_file_env = os.getenv("CLC_LOG_FILE") or os.getenv("CLC_EXECUTOR_LOG_FILE")
+    log_path = Path(log_file_env).expanduser() if log_file_env else _default_log_file()
+    handlers: list[logging.Handler] = []
+
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path))
+    except Exception:
+        handlers.append(logging.StreamHandler(sys.stderr))
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=handlers,
+    )
+
+
+_init_logging()
 logger = logging.getLogger(__name__)
 
 # Add project root to path for imports
