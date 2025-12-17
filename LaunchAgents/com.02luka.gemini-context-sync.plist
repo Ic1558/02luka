@@ -7,7 +7,7 @@
     
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/zsh</string>
+        <string>/bin/zsh</string>
         <string>/Users/icmini/02luka/tools/gemini_context_sync.zsh</string>
     </array>
     
@@ -19,7 +19,7 @@
         <key>LUKA_SOT</key>
         <string>/Users/icmini/02luka</string>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <string>/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
     
     <key>StandardOutPath</key>

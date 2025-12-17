@@ -62,6 +62,20 @@ commands:
     entry: "./tools/gemini_bootstrap.zsh"
     usage: "zsh tools/gemini_bootstrap.zsh <profile> [--print] [--doctor] [--] [gemini args...]"
     notes: "Reads profiles from ~/.config/gemini/policies.yaml and only passes gemini flags that exist in 'gemini --help'."
+
+  gemini-full:
+    description: "Gemini CLI full feature mode (OAuth + sandbox, human/full)"
+    entry: "./tools/gemini_full_feature.zsh"
+    usage: "zsh tools/gemini_full_feature.zsh [gemini args...]"
+    env: "GEMINI_API_KEY unset (forces OAuth)"
+    notes: "Unsets GEMINI_API_KEY to force OAuth flow. Uses --sandbox --approval-mode=default. Don't use --model auto (not valid in v0.21.1). Best default: don't send --model at all."
+
+  gmx-system:
+    description: "GMX system/plain mode (OAuth, no sandbox)"
+    entry: "./tools/gmx_system.zsh"
+    usage: "zsh tools/gmx_system.zsh [gemini args...]"
+    env: "GEMINI_API_KEY unset (forces OAuth)"
+    notes: "Unsets GEMINI_API_KEY to force OAuth flow. Uses --sandbox=false --approval-mode=default. For API key route (billable), create separate alias like gmx-api."
     
   feature-dev-validate:
     description: "Mandatory validation gate for feature development"

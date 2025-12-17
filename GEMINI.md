@@ -41,6 +41,27 @@ The following context modules are automatically updated by the system:
 
 **Reload context**: Use `/memory refresh` after system updates.
 
+## Running Gemini CLI (Full Feature Mode)
+
+To run Gemini CLI with full features (OAuth + sandbox):
+
+```bash
+cd ~/02luka && env -u GEMINI_API_KEY /opt/homebrew/bin/gemini --sandbox --approval-mode=default
+```
+
+**Or use helper**:
+```bash
+zsh tools/gemini_full_feature.zsh
+```
+
+**Important**:
+- **OAuth vs API Key**: If `GEMINI_API_KEY` is in your environment, CLI may use API key instead of OAuth
+- **Solution**: Use `env -u GEMINI_API_KEY` to unset it (forces OAuth flow)
+- **Model Flag**: **Don't use `--model auto`** (not valid in v0.21.1). **Best default: don't send `--model` at all** unless intentionally pinning a model.
+- **Approval Mode**: Use `--approval-mode=default` (not `auto_edit`) for proper approval flow
+- **Full Feature**: Enabled by `--sandbox` + `--approval-mode`, not just extensions
+- **Extensions**: Many tools are built-in; empty extension list doesn't mean no web/tools
+
 ---
 
 **Last Updated**: 2025-12-18  
