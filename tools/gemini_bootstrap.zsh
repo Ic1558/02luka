@@ -149,6 +149,15 @@ tools = to_bool(cfg.get("tools", True), default=True)
 agent = cfg.get("agent")
 project_root = cfg.get("project_root")
 banner = cfg.get("banner")
+unset_env = cfg.get("unset_env") or cfg.get("unsetEnv") or cfg.get("unset") or []
+
+if isinstance(unset_env, str):
+    # Allow comma-separated string for convenience.
+    unset_env = [p.strip() for p in unset_env.split(",") if p.strip()]
+elif isinstance(unset_env, list):
+    unset_env = [str(v).strip() for v in unset_env if str(v).strip()]
+else:
+    unset_env = []
 
 def q(v):
     return shlex.quote("" if v is None else str(v))
@@ -161,6 +170,7 @@ print(f"TOOLS={'1' if tools else '0'}")
 print(f"AGENT={q(agent)}")
 print(f"PROJECT_ROOT={q(project_root)}")
 print(f"BANNER={q(banner)}")
+print(f"UNSET_ENV={q(' '.join(unset_env))}")
 PY
 )"
 
@@ -173,6 +183,15 @@ COLOR="$CYAN"
 [[ "$PROFILE" == system_* ]] && COLOR="$RED"
 
 WARNINGS=()
+
+if [[ -n "${UNSET_ENV:-}" ]]; then
+  for var in ${(z)UNSET_ENV}; do
+    if [[ -n "$var" ]]; then
+      unset "$var" 2>/dev/null || true
+    fi
+  done
+  WARNINGS+=("unset env vars for this profile: ${UNSET_ENV}")
+fi
 
 GEMINI_BIN="$(command -v gemini 2>/dev/null || true)"
 if [[ -z "$GEMINI_BIN" ]]; then
@@ -194,9 +213,13 @@ if [[ -n "$GEMINI_BIN" ]]; then
   }
 
   if has_flag "--model"; then
-    GEMINI_ARGS+=(--model "$MODEL")
+    if [[ "${MODEL}" != "auto" && -n "${MODEL}" ]]; then
+      GEMINI_ARGS+=(--model "$MODEL")
+    fi
   else
-    WARNINGS+=("gemini does not advertise --model (not passing model=$MODEL)")
+    if [[ "${MODEL}" != "auto" && -n "${MODEL}" ]]; then
+      WARNINGS+=("gemini does not advertise --model (not passing model=$MODEL)")
+    fi
   fi
 
   if [[ "$SANDBOX" == "off" ]]; then
