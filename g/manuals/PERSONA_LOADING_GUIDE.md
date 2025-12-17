@@ -4,6 +4,10 @@
 **อัปเดต:** 2025-12-17
 **สำหรับ:** Persona v3 + v5 Loader
 
+**Scope:** Persona Loading / IDE Integration
+**Applies to:** Persona v3, v5 Loader, All 10 Agents
+**Related:** AI_OP_001_v5, GOVERNANCE_UNIFIED_v5, Two Worlds Model
+
 ---
 
 ## 📋 สารบัญ
