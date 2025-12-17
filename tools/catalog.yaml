@@ -56,6 +56,12 @@ commands:
     entry: "./tools/run_tool.zsh"
     usage: "zsh tools/run_tool.zsh <tool-id> [args...]"
     notes: "Always use this wrapper. Auto-discovery fallback prevents blocking."
+
+  gemini-bootstrap:
+    description: "Gemini CLI profile bootstrap (banner + safe flags)"
+    entry: "./tools/gemini_bootstrap.zsh"
+    usage: "zsh tools/gemini_bootstrap.zsh <profile> [--print] [--doctor] [--] [gemini args...]"
+    notes: "Reads profiles from ~/.config/gemini/policies.yaml and only passes gemini flags that exist in 'gemini --help'."
     
   feature-dev-validate:
     description: "Mandatory validation gate for feature development"
