@@ -52,14 +52,13 @@ _get_telemetry_hash() {
 
 # Check if stamp is expired
 _stamp_expired() {
-  local stamp_ts="$1"
-  local now_ts=$(date -u +%s)
-  local stamp_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$stamp_ts" +%s 2>/dev/null || echo 0)
+  local stamp_epoch="$1"
+  local now_epoch=$(date +%s)
   local expiry_seconds=$((EXPIRY_HOURS * 3600))
-  local age=$((now_ts - stamp_epoch))
+  local age=$((now_epoch - stamp_epoch))
   
-  if (( age > expiry_seconds )); then
-    return 0  # expired
+  if (( age > expiry_seconds )) || (( age < 0 )); then
+    return 0  # expired or invalid
   else
     return 1  # still valid
   fi
@@ -119,11 +118,13 @@ pre_action_stamp_create() {
   local session_path=$(_get_latest_session)
   local telem_hash=$(_get_telemetry_hash)
   local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local epoch=$(date +%s)
   
   # Create stamp JSON
   cat > "$STAMP_FILE" <<EOF
 {
   "ts": "$ts",
+  "epoch": $epoch,
   "agent": "$AGENT_ID",
   "liam_md_sha256": "$liam_sha",
   "latest_session_path": "$session_path",
@@ -160,12 +161,15 @@ pre_action_stamp_verify() {
   fi
   
   # Parse stamp
-  local stamp_ts=$(cat "$STAMP_FILE" | grep '"ts"' | cut -d'"' -f4)
+  local stamp_epoch=$(cat "$STAMP_FILE" | grep '"epoch"' | grep -oE '[0-9]+' | head -1)
   local stamp_sha=$(cat "$STAMP_FILE" | grep '"liam_md_sha256"' | cut -d'"' -f4)
   local current_sha=$(_get_sha256 "$LIAM_MD")
   
+  # Default epoch to 0 if missing (will trigger expired)
+  [[ -z "$stamp_epoch" ]] && stamp_epoch=0
+  
   # Check expiry
-  if _stamp_expired "$stamp_ts"; then
+  if _stamp_expired "$stamp_epoch"; then
     echo ""
     echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo "${RED}❌ BLOCKED: Read stamp expired${NC}"
