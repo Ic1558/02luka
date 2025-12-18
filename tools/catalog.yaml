@@ -48,6 +48,19 @@ commands:
     flags: ["--staged", "--unstaged", "--diff", "--quick", "--json"]
     gate: "Gate 2.5 (after DRYRUN, before VERIFY)"
     output: "✅/⚠️ verdict with risks + diff hotspots"
+
+  pr-check:
+    description: "PR Decision Advisory - Analyze PRs and recommend merge strategy (advisory-only, no auto-merge)"
+    entry: "./tools/pr_decision_advisory.zsh"
+    usage: "pr-check [PR_NUMBER...] # Analyzes open PRs via 3 Gates + 4 Outcomes framework"
+    examples:
+      - "pr-check              # Analyze all open PRs"
+      - "pr-check 407          # Analyze PR #407"
+      - "pr-check 407 408      # Analyze multiple PRs"
+    framework: "./g/docs/PR_MANAGEMENT_DECISION_FRAMEWORK_v1.md"
+    category: "git-ops"
+    output: "Zone classification, dependency check, mergeability status, and actionable recommendation"
+    notes: "Advisory-only tool - does not auto-merge. Integrated with seal-now as PR preflight check."
     cache: "g/.cache/code_review_cache.json"
     notes: "Use run_tool.zsh wrapper. Fallback auto-discovery if not in catalog."
     
