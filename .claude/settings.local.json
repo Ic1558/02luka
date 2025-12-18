@@ -22,7 +22,12 @@
       "Bash(whence:*)",
       "Bash(zsh ~/02luka/tools/gemini_bootstrap.zsh human --print)",
       "Bash(source ~/.zshrc)",
-      "Bash(hash -r)"
+      "Bash(hash -r)",
+      "Bash(find:*)",
+      "Bash(if [[ -f ~/02luka/context/gemini/gmx_agent_prompt.md ]])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
