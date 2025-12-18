@@ -3,21 +3,29 @@
 # Pre-push hook: Block direct push to origin/main (enforce PR-only workflow)
 # Install: zsh tools/install_pre_push_hook.zsh
 # Override: ALLOW_PUSH_MAIN=1 git push origin main
+#
+# Git pre-push hook receives:
+#   $1 = remote_name (e.g., "origin")
+#   $2 = remote_url (e.g., "git@github.com:user/repo.git")
+#   stdin = refspecs: "local_ref local_sha remote_ref remote_sha" per line
+#
+# Test without pushing: git push --dry-run origin HEAD:main
 
 set -euo pipefail
 
-# Read stdin from git push
+# Get remote name from $1 (NOT from stdin)
+remote_name="${1:-}"
+remote_url="${2:-}"
+
+# Read refspecs from stdin
 while read local_ref local_sha remote_ref remote_sha; do
   # Skip if empty
   [[ -z "$remote_ref" ]] && continue
   
-  # Check if pushing to origin/main
+  # Check if pushing to main branch
   if [[ "$remote_ref" == "refs/heads/main" ]]; then
-    # Extract remote name (usually "origin")
-    remote_name=$(echo "$remote_ref" | cut -d'/' -f1 || echo "")
-    
-    # Check if this is origin/main
-    if [[ "$remote_name" == "origin" ]] || [[ "$remote_ref" == "refs/heads/main" ]]; then
+    # Check if this is a push to origin (the protected remote)
+    if [[ "$remote_name" == "origin" ]]; then
       # Allow override for Boss
       if [[ "${ALLOW_PUSH_MAIN:-}" == "1" ]]; then
         echo "⚠️  ALLOW_PUSH_MAIN=1 detected - allowing push to origin/main (Boss override)"
@@ -37,6 +45,8 @@ while read local_ref local_sha remote_ref remote_sha; do
       echo "  3. Create PR: gh pr create"
       echo ""
       echo "Override (Boss only): ALLOW_PUSH_MAIN=1 git push origin main"
+      echo ""
+      echo "Test (dry-run): git push --dry-run origin HEAD:main"
       echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
       exit 1
     fi

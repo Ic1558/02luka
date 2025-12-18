@@ -26,6 +26,27 @@ check_main_push_warning() {
   fi
 }
 
+# --- Step 0: Pre-Action Telemetry Read (GG Review requirement) ---
+echo "📖 [0/3] Reading latest telemetry and session..."
+echo ""
+
+# Read latest telemetry files
+if [[ -d "$REPO_ROOT/g/telemetry" ]]; then
+  echo "📊 Recent telemetry:"
+  for f in "$REPO_ROOT"/g/telemetry/*.jsonl(N.om[1,3]); do
+    [[ -f "$f" ]] && echo "   $(basename "$f"): $(tail -n 1 "$f" 2>/dev/null | head -c 100)..."
+  done
+  echo ""
+fi
+
+# Read latest session summary
+LATEST_SESSION=$(ls -t "$REPO_ROOT"/g/reports/sessions/*.ai.json 2>/dev/null | head -1)
+if [[ -n "$LATEST_SESSION" ]]; then
+  echo "📋 Latest session: $(basename "$LATEST_SESSION")"
+  echo "   $(cat "$LATEST_SESSION" 2>/dev/null | head -c 200)..."
+  echo ""
+fi
+
 # --- Step 1: Local Agent Review ---
 echo "🔍 [1/3] Running Local Agent Review..."
 # Run review. We use --quiet to reduce noise, but capture exit code.
