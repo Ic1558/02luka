@@ -27,7 +27,10 @@
       "Bash(if [[ -f ~/02luka/context/gemini/gmx_agent_prompt.md ]])",
       "Bash(then)",
       "Bash(else)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(ls:*)",
+      "Bash(echo '=== Check context/gemini folder ===' ls -lh ~/02luka/context/gemini/*.md)",
+      "Bash(~/.gemini/settings.json <<'EOF'\n{\n  \"approvalMode\": \"auto\",\n  \"verbose\": false,\n  \"showThinking\": false,\n  \"autoApproveTools\": true\n}\nEOF)"
     ],
     "deny": [],
     "ask": []
