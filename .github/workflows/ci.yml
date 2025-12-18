@@ -80,9 +80,9 @@ jobs:
           # Only check files that are added or modified (not deleted)
           # Use --diff-filter=AM to exclude deleted files
           # Find any markdown files under g/reports that are NOT in the approved subdirs
-          OTHER=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/.*\.md$' | grep -Ev '^g/reports/(phase5_governance|phase6_paula|system)/' || true)
+          OTHER=$(git diff --name-only --diff-filter=AM origin/main...HEAD | grep -E '^g/reports/.*\\.md$' | grep -Ev '^g/reports/(phase5_governance|phase6_paula|system|feature-dev|pr11_healthcheck|sessions)/' || true)
           if [ -n "$OTHER" ]; then
-            echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system}/ only"
+            echo "❌ Reports must be in g/reports/{phase5_governance,phase6_paula,system,feature-dev,pr11_healthcheck,sessions}/ only"
             echo ""
             echo "Files in wrong location:"
             echo "$OTHER" | sed 's/^/  - /'
@@ -91,6 +91,7 @@ jobs:
             echo "  - Phase 5 reports → g/reports/phase5_governance/"
             echo "  - Phase 6 reports → g/reports/phase6_paula/"
             echo "  - System reports → g/reports/system/"
+            echo "  - Feature dev → g/reports/feature-dev/"
             
             # Add job summary for better visibility
             {
@@ -105,6 +106,7 @@ jobs:
               echo "- Phase 5 reports → \`g/reports/phase5_governance/\`"
               echo "- Phase 6 reports → \`g/reports/phase6_paula/\`"
               echo "- System reports → \`g/reports/system/\`"
+              echo "- Feature dev → \`g/reports/feature-dev/\`"
             } >> "$GITHUB_STEP_SUMMARY"
             
             exit 1
