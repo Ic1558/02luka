@@ -88,3 +88,25 @@ cd ~/02luka && AGENT_ID=liam SAVE_SOURCE=terminal ./tools/save.sh
 - `g/docs/WORKFLOW_PRE_ACTION_CHECKLIST.md`
 - `g/docs/PR_MANAGEMENT_DECISION_FRAMEWORK_v1.md`
 - `g/docs/PR_AUTOPILOT_RULES.md`
+
+---
+
+## 🚨 Anti-Pattern: "Fix to Pass" (2025-12-19)
+
+**What I did wrong:**
+- Added broad exclusions to sandbox to make CI pass
+- Result: Safety checker becomes useless → eventual chaos
+
+**What I should have done (GG Review):**
+1. **Layer A:** Ignore artifacts (*.bak, *.bak2) — not tools
+2. **Layer B:** Make rm-rf tools safe with guards — not exempt them
+3. **Layer C:** Only whitelist specific files with documented reason
+
+**Prevention checklist before "fixing" failures:**
+- [ ] Am I adding exclusions/exemptions? → STOP
+- [ ] Is this "fixing to pass" or "fixing properly"?
+- [ ] Does this weaken a safety system?
+- [ ] Did I READ the relevant docs first?
+- [ ] Did I understand WHY it's failing?
+
+**Remember:** Quick fix = future chaos. Proper fix = stable system.
