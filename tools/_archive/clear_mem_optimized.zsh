@@ -1,4 +1,10 @@
 #!/usr/bin/env zsh
+# ============================================================================
+# LEGACY - This script is deprecated and archived
+# Replaced by: tools/mole_headless_clean.zsh
+# Archive Date: 2025-12-19
+# Original Purpose: Optimized RAM Cleanup
+# ============================================================================
 # Optimized RAM Cleanup - Auto-generated restoration
 # Usage: ram-c (via alias)
 

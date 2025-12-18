@@ -99,8 +99,16 @@ function is_excluded_path() {
   fi
   local lower="${rel_path:l}"
   case "$lower" in
+    # Standard doc/log files
     *.md|*.log|*.jsonl|*.ndjson) return 0 ;;
+    # Backup/artifact files (not real code, reduce noise)
+    *.bak|*.bak2|*.backup|*~) return 0 ;;
   esac
+  # macOS artifacts
+  local base="${rel_path##*/}"
+  if [[ "$base" == ".DS_Store" ]]; then
+    return 0
+  fi
   return 1
 }
 
@@ -200,6 +208,8 @@ EXCLUDE_DIR_BASE=(
   node_modules
   dist
   build
+  # Archive for legacy files (marked as replaced/deprecated)
+  _archive
 )
 
 add_dir_variants INCLUDE_DIRS "${INCLUDE_DIR_BASE[@]}"
