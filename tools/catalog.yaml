@@ -77,6 +77,18 @@ commands:
     env: "GEMINI_API_KEY unset (forces OAuth)"
     notes: "Unsets GEMINI_API_KEY to force OAuth flow. Uses --sandbox=false --approval-mode=default. For API key route (billable), create separate alias like gmx-api."
     
+  git-restore-missing:
+    description: "Safely restore files from origin/main that are missing locally"
+    entry: "./tools/git_restore_missing_from_origin.zsh"
+    usage: "zsh tools/git_restore_missing_from_origin.zsh [file1] [file2] ..."
+    notes: "Checks for common missing files or restores specified files. Safe, non-destructive. Use when IDE shows 'deleted' files that exist in origin/main."
+    
+  git-safe-status:
+    description: "Show git status with warnings for missing files from origin/main"
+    entry: "./tools/git_safe_status.zsh"
+    usage: "zsh tools/git_safe_status.zsh"
+    notes: "Helps identify when IDE shows 'deleted' files that actually exist in origin/main. Shows branch status and missing file warnings."
+    
   feature-dev-validate:
     description: "Mandatory validation gate for feature development"
     entry: "./tools/feature_dev_validate.zsh"
