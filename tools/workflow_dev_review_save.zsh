@@ -11,6 +11,15 @@ SNAPSHOT_ID="none"
 
 cd "$REPO_ROOT" || exit 1
 
+# --- HARD GATE: Pre-Action Read Stamp (GG Review requirement) ---
+# Block if agent hasn't read LIAM.md, session, and telemetry
+source "$REPO_ROOT/tools/pre_action_gate.zsh"
+if ! pre_action_stamp_verify; then
+  echo ""
+  echo "💡 Run 'read-now' or 'zsh tools/pre_action_gate.zsh create' first"
+  exit 1
+fi
+
 # Soft gate: Warn if attempting direct push to main (PR workflow preferred)
 check_main_push_warning() {
   local current_branch=$(git branch --show-current 2>/dev/null || echo "")
