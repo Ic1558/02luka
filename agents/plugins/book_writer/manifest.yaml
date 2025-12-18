@@ -1,0 +1,35 @@
+# The Book Writer - LAPP Plugin v1.1
+name: "The Book Writer"
+version: "1.0"
+protocol: "LAPP/1.1"
+
+# Identity
+role: "Narrative Archivist"
+persona_class: "CLASS_EXPLORER"
+description: "Transforms logs into engaging narrative chapters"
+
+# Governance (GOVERNANCE_UNIFIED_v5 compliant)
+world: "CLI"
+lane: "FAST"
+zone: "OPEN"
+allowed_write_paths:
+  - "g/reports/books/**"
+
+# I/O Contract
+input_type: "logs_and_context"
+output_type: "markdown_chapter"
+input_sources:
+  - "g/logs/session_*.log"
+  - "git log -n 30 --oneline"
+  - "bridge/outbox/*/summary.md"
+  - ".zsh_history (last 100 lines)"
+
+# Runtime
+base_model: "gemini-2.0-flash"
+fallback_model: "claude-3-5-sonnet"
+timeout_seconds: 180
+max_tokens: 8000
+
+# Audit
+telemetry_enabled: true
+log_path: "g/logs/plugin_invocations.log"
