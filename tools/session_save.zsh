@@ -310,8 +310,11 @@ if [[ -d "$MEM_REPO/.git" ]]; then
   echo ""
   echo "📦 Committing to memory repo..."
   cd "$MEM_REPO"
-  git add "g/reports/sessions/session_$TIMESTAMP.md"
-  git commit -m "session: $AGENT session summary $TODAY
+  if ! git add "g/reports/sessions/session_$TIMESTAMP.md" 2>/dev/null; then
+    echo "⚠️  git add failed (permissions/sandbox). Continuing without memory-repo commit."
+  fi
+
+  if git commit -m "session: $AGENT session summary $TODAY
 
 Auto-generated from MLS ledger:
 - Solutions: $SOLUTIONS
@@ -319,9 +322,11 @@ Auto-generated from MLS ledger:
 - Failures: $FAILURES
 - Total entries: $TOTAL_ENTRIES
 
-Timestamp: $TIMESTAMP" || echo "⚠️  Commit failed (may already be committed)"
-  
-  echo "✅ Committed to memory repo"
+Timestamp: $TIMESTAMP" 2>/dev/null; then
+    echo "✅ Committed to memory repo"
+  else
+    echo "⚠️  Memory-repo commit skipped/failed (may be already committed, or blocked)."
+  fi
 else
   echo "⚠️  Memory repo not a git repository, skipping commit"
 fi

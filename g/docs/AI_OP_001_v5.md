@@ -14,6 +14,7 @@
   - How human approval and CLC review are wired into the flow.
 - It is designed to be **consistent with**:
   - `g/docs/GOVERNANCE_UNIFIED_v5.md` (unified law / architecture spec).
+  - `g/manuals/PERSONA_LOADING_GUIDE.md` (persona loading / IDE integration for all 10 agents).
   - `bridge/core/router_v5.py` (lane + zone resolution).
   - `bridge/core/sandbox_guard_v5.py` (SIP / path safety).
   - `bridge/core/wo_processor_v5.py` (execution engine).
