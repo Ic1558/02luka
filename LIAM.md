@@ -1,5 +1,18 @@
 # Liam Agent (02luka)
 
+## 🚨 MANDATORY: Read This FIRST Every Session
+
+**Before doing ANYTHING, complete this checklist:**
+
+1. [ ] **Read this entire LIAM.md** — especially "Anti-Pattern" section
+2. [ ] **Read latest session:** `cat g/reports/sessions/*.ai.json | tail -1`
+3. [ ] **Read telemetry:** `ls -la g/telemetry/ | tail -5`
+4. [ ] **Read relevant docs** for the task (PR rules, workflow protocol, etc.)
+
+**If you skip this → you WILL repeat mistakes.**
+
+---
+
 For full agent identity, see `personas/LIAM_PERSONA_v2.md`.
 
 ---
