@@ -1,32 +1,40 @@
 #!/usr/bin/env zsh
 # tools/pre_action_gate.zsh
-# Pre-Action Gate: Enforce read before work
-# GG Review requirement: "save without read is forbidden by default workflows"
+# Pre-Action Gate: Enforce read before work (GG Review v2)
 #
 # Usage:
 #   source tools/pre_action_gate.zsh
-#   pre_action_stamp_create   # After reading LIAM.md, session, telemetry
-#   pre_action_stamp_verify   # Before any workflow (returns 0=valid, 1=invalid)
+#   pre_action_stamp_create   # After reading required files
+#   pre_action_stamp_verify   # Before any workflow
+#
+# Emergency override: SAVE_EMERGENCY=1 (logs to telemetry)
+# Interactive override: If AGENT_ID is empty/interactive → warn-only
 #
 # Integrated into: seal-now, pr-check, save-now
 
 set -u
 
-# Config
+# === Config ===
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
-AGENT_ID="${AGENT_ID:-${GG_AGENT_ID:-liam}}"
+AGENT_ID="${AGENT_ID:-${GG_AGENT_ID:-}}"  # Empty = interactive/Boss
 STAMP_DIR="$REPO_ROOT/g/state"
-STAMP_FILE="$STAMP_DIR/agent_readstamp_${AGENT_ID}.json"
+STAMP_FILE="$STAMP_DIR/agent_readstamp_${AGENT_ID:-interactive}.json"
+EXPIRY_HOURS="${STAMP_EXPIRY_HOURS:-4}"   # GG: 4 hours default
+
+# Critical files to check (GG: check 3 files, not just LIAM.md)
 LIAM_MD="$REPO_ROOT/LIAM.md"
-EXPIRY_HOURS="${STAMP_EXPIRY_HOURS:-2}"
+PR_RULES="$REPO_ROOT/g/docs/PR_AUTOPILOT_RULES.md"
+WORKFLOW_PROTOCOL="$REPO_ROOT/g/docs/WORKFLOW_PROTOCOL_v1.md"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
-# Get SHA256 of a file
+# === Helper Functions ===
+
 _get_sha256() {
   local file="$1"
   if [[ -f "$file" ]]; then
@@ -36,12 +44,10 @@ _get_sha256() {
   fi
 }
 
-# Get latest session file
 _get_latest_session() {
   ls -t "$REPO_ROOT"/g/reports/sessions/*.ai.json 2>/dev/null | head -1 || echo ""
 }
 
-# Get telemetry tail hash (last 50 lines of all jsonl)
 _get_telemetry_hash() {
   local hash=""
   for f in "$REPO_ROOT"/g/telemetry/*.jsonl(N.om[1,3]); do
@@ -50,7 +56,6 @@ _get_telemetry_hash() {
   echo "$hash" | shasum -a 256 2>/dev/null | cut -d' ' -f1
 }
 
-# Check if stamp is expired
 _stamp_expired() {
   local stamp_epoch="$1"
   local now_epoch=$(date +%s)
@@ -58,13 +63,28 @@ _stamp_expired() {
   local age=$((now_epoch - stamp_epoch))
   
   if (( age > expiry_seconds )) || (( age < 0 )); then
-    return 0  # expired or invalid
+    return 0  # expired
   else
-    return 1  # still valid
+    return 1  # valid
   fi
 }
 
-# Display the content being "read"
+_is_interactive() {
+  # GG: If AGENT_ID is empty or "unknown" → interactive/Boss
+  [[ -z "$AGENT_ID" || "$AGENT_ID" == "unknown" || "$AGENT_ID" == "$USER" ]]
+}
+
+_log_emergency() {
+  local reason="$1"
+  local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local log_file="$REPO_ROOT/g/telemetry/gate_emergency.jsonl"
+  mkdir -p "$(dirname "$log_file")"
+  echo "{\"ts\":\"$ts\",\"agent\":\"${AGENT_ID:-interactive}\",\"action\":\"emergency_bypass\",\"reason\":\"$reason\"}" >> "$log_file"
+  echo "${YELLOW}⚠️  Emergency bypass logged to telemetry${NC}"
+}
+
+# === Display Required Reading ===
+
 _display_required_reading() {
   echo ""
   echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -72,61 +92,90 @@ _display_required_reading() {
   echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
   
-  # 1. LIAM.md (first 30 lines - contains MANDATORY section)
-  echo "${GREEN}[1/3] LIAM.md (Memory/Lessons):${NC}"
+  # 1. LIAM.md (first 30 lines)
+  echo "${GREEN}[1/5] LIAM.md (Memory/Lessons):${NC}"
   if [[ -f "$LIAM_MD" ]]; then
     head -n 30 "$LIAM_MD" | sed 's/^/  /'
     echo "  ..."
   else
-    echo "  ${RED}File not found: $LIAM_MD${NC}"
+    echo "  ${RED}Not found${NC}"
   fi
   echo ""
   
-  # 2. Latest session summary
-  echo "${GREEN}[2/3] Latest Session:${NC}"
+  # 2. PR_AUTOPILOT_RULES.md (first 20 lines)
+  echo "${GREEN}[2/5] PR_AUTOPILOT_RULES.md (key rules):${NC}"
+  if [[ -f "$PR_RULES" ]]; then
+    head -n 20 "$PR_RULES" | sed 's/^/  /'
+    echo "  ..."
+  else
+    echo "  ${RED}Not found${NC}"
+  fi
+  echo ""
+  
+  # 3. WORKFLOW_PROTOCOL_v1.md (first 15 lines)
+  echo "${GREEN}[3/5] WORKFLOW_PROTOCOL_v1.md (workflow):${NC}"
+  if [[ -f "$WORKFLOW_PROTOCOL" ]]; then
+    head -n 15 "$WORKFLOW_PROTOCOL" | sed 's/^/  /'
+    echo "  ..."
+  else
+    echo "  ${RED}Not found${NC}"
+  fi
+  echo ""
+  
+  # 4. Latest session
+  echo "${GREEN}[4/5] Latest Session:${NC}"
   local session=$(_get_latest_session)
   if [[ -n "$session" && -f "$session" ]]; then
     echo "  File: $(basename "$session")"
-    cat "$session" 2>/dev/null | head -c 500 | sed 's/^/  /'
+    head -c 300 "$session" 2>/dev/null | sed 's/^/  /'
     echo ""
   else
     echo "  ${RED}No session found${NC}"
   fi
   echo ""
   
-  # 3. Telemetry tail
-  echo "${GREEN}[3/3] Telemetry (last entries):${NC}"
+  # 5. Telemetry tail
+  echo "${GREEN}[5/5] Telemetry (last entries):${NC}"
   for f in "$REPO_ROOT"/g/telemetry/*.jsonl(N.om[1,3]); do
     if [[ -f "$f" ]]; then
       echo "  $(basename "$f"):"
-      tail -n 2 "$f" 2>/dev/null | sed 's/^/    /'
+      tail -n 1 "$f" 2>/dev/null | sed 's/^/    /'
     fi
   done
   echo ""
   echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# Create read stamp (after reading)
+# === Create Stamp ===
+
 pre_action_stamp_create() {
   mkdir -p "$STAMP_DIR"
   
   # Display required reading
   _display_required_reading
   
-  # Get hashes
+  # Get hashes for all 3 critical files (GG: check 3 files)
   local liam_sha=$(_get_sha256 "$LIAM_MD")
+  local pr_rules_sha=$(_get_sha256 "$PR_RULES")
+  local workflow_sha=$(_get_sha256 "$WORKFLOW_PROTOCOL")
   local session_path=$(_get_latest_session)
   local telem_hash=$(_get_telemetry_hash)
   local ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local ts_local=$(date +"%Y-%m-%dT%H:%M:%S%z")
   local epoch=$(date +%s)
   
-  # Create stamp JSON
+  # Create stamp JSON with all 3 file SHAs
   cat > "$STAMP_FILE" <<EOF
 {
-  "ts": "$ts",
+  "ts_utc": "$ts",
+  "ts_local": "$ts_local",
   "epoch": $epoch,
-  "agent": "$AGENT_ID",
-  "liam_md_sha256": "$liam_sha",
+  "agent": "${AGENT_ID:-interactive}",
+  "files_read": {
+    "liam_md_sha256": "$liam_sha",
+    "pr_autopilot_sha256": "$pr_rules_sha",
+    "workflow_protocol_sha256": "$workflow_sha"
+  },
   "latest_session_path": "$session_path",
   "telemetry_tail_hash": "$telem_hash",
   "expiry_hours": $EXPIRY_HOURS
@@ -135,76 +184,139 @@ EOF
   
   echo ""
   echo "${GREEN}✅ Read stamp created${NC}"
-  echo "   Agent: $AGENT_ID"
+  echo "   Agent: ${AGENT_ID:-interactive}"
   echo "   Expiry: $EXPIRY_HOURS hours"
+  echo "   Files: LIAM.md, PR_AUTOPILOT_RULES.md, WORKFLOW_PROTOCOL_v1.md"
   echo "   Stamp: $STAMP_FILE"
   echo ""
   echo "You may now run: seal-now, pr-check, save-now"
   return 0
 }
 
-# Verify read stamp exists and is valid
+# === Verify Stamp ===
+
 pre_action_stamp_verify() {
+  # GG: Emergency override (must log)
+  if [[ "${SAVE_EMERGENCY:-}" == "1" ]]; then
+    _log_emergency "SAVE_EMERGENCY=1 override used"
+    echo "${YELLOW}⚠️  Emergency override active - proceeding without read stamp${NC}"
+    return 0
+  fi
+  
+  # GG: Actor-aware gating (interactive = warn-only)
+  local is_interactive=false
+  if _is_interactive; then
+    is_interactive=true
+  fi
+  
   # Check stamp exists
   if [[ ! -f "$STAMP_FILE" ]]; then
     echo ""
     echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo "${RED}❌ BLOCKED: No read stamp found${NC}"
+    if $is_interactive; then
+      echo "${YELLOW}⚠️  WARNING: No read stamp found (interactive mode)${NC}"
+    else
+      echo "${RED}❌ BLOCKED: No read stamp found${NC}"
+    fi
     echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "You must read LIAM.md, session, and telemetry first."
+    echo "Run: ${GREEN}read-now${NC} (or: zsh tools/pre_action_gate.zsh create)"
     echo ""
-    echo "Run: ${GREEN}read-now${NC}"
-    echo "     (or: source tools/pre_action_gate.zsh && pre_action_stamp_create)"
-    echo ""
+    
+    if $is_interactive; then
+      echo "${CYAN}Continuing anyway (interactive/Boss mode)...${NC}"
+      return 0
+    fi
     return 1
   fi
   
   # Parse stamp
-  local stamp_epoch=$(cat "$STAMP_FILE" | grep '"epoch"' | grep -oE '[0-9]+' | head -1)
-  local stamp_sha=$(cat "$STAMP_FILE" | grep '"liam_md_sha256"' | cut -d'"' -f4)
-  local current_sha=$(_get_sha256 "$LIAM_MD")
+  local stamp_epoch=$(grep '"epoch"' "$STAMP_FILE" | grep -oE '[0-9]+' | head -1)
+  local stamp_liam_sha=$(grep '"liam_md_sha256"' "$STAMP_FILE" | cut -d'"' -f4)
+  local stamp_pr_sha=$(grep '"pr_autopilot_sha256"' "$STAMP_FILE" | cut -d'"' -f4 2>/dev/null || echo "")
+  local stamp_wf_sha=$(grep '"workflow_protocol_sha256"' "$STAMP_FILE" | cut -d'"' -f4 2>/dev/null || echo "")
   
-  # Default epoch to 0 if missing (will trigger expired)
+  # Default epoch to 0 if missing
   [[ -z "$stamp_epoch" ]] && stamp_epoch=0
+  
+  # Get current SHAs
+  local current_liam_sha=$(_get_sha256 "$LIAM_MD")
+  local current_pr_sha=$(_get_sha256 "$PR_RULES")
+  local current_wf_sha=$(_get_sha256 "$WORKFLOW_PROTOCOL")
+  
+  # GG: Invalidate immediately if critical files changed
+  local files_changed=false
+  local changed_files=""
+  
+  if [[ -n "$stamp_liam_sha" && "$stamp_liam_sha" != "$current_liam_sha" ]]; then
+    files_changed=true
+    changed_files+="LIAM.md "
+  fi
+  if [[ -n "$stamp_pr_sha" && "$stamp_pr_sha" != "$current_pr_sha" ]]; then
+    files_changed=true
+    changed_files+="PR_AUTOPILOT_RULES.md "
+  fi
+  if [[ -n "$stamp_wf_sha" && "$stamp_wf_sha" != "$current_wf_sha" ]]; then
+    files_changed=true
+    changed_files+="WORKFLOW_PROTOCOL.md "
+  fi
+  
+  if $files_changed; then
+    echo ""
+    echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    if $is_interactive; then
+      echo "${YELLOW}⚠️  WARNING: Critical files changed: $changed_files${NC}"
+    else
+      echo "${RED}❌ BLOCKED: Critical files changed: $changed_files${NC}"
+    fi
+    echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "You must re-read to get latest rules."
+    echo "Run: ${GREEN}read-now${NC}"
+    echo ""
+    
+    if $is_interactive; then
+      echo "${CYAN}Continuing anyway (interactive/Boss mode)...${NC}"
+      return 0
+    fi
+    return 1
+  fi
   
   # Check expiry
   if _stamp_expired "$stamp_epoch"; then
     echo ""
     echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo "${RED}❌ BLOCKED: Read stamp expired${NC}"
+    if $is_interactive; then
+      echo "${YELLOW}⚠️  WARNING: Read stamp expired (>$EXPIRY_HOURS hours)${NC}"
+    else
+      echo "${RED}❌ BLOCKED: Read stamp expired (>$EXPIRY_HOURS hours)${NC}"
+    fi
     echo "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
-    echo "Your read stamp is older than $EXPIRY_HOURS hours."
     echo "Re-read to refresh: ${GREEN}read-now${NC}"
     echo ""
+    
+    if $is_interactive; then
+      echo "${CYAN}Continuing anyway (interactive/Boss mode)...${NC}"
+      return 0
+    fi
     return 1
   fi
   
-  # Check LIAM.md hasn't changed
-  if [[ "$stamp_sha" != "$current_sha" ]]; then
-    echo ""
-    echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo "${YELLOW}⚠️  WARNING: LIAM.md changed since last read${NC}"
-    echo "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    echo "New lessons may have been added. Consider re-reading."
-    echo "Continuing anyway (stamp not expired)..."
-    echo ""
-  fi
-  
-  echo "${GREEN}✅ Read stamp verified (age: valid, agent: $AGENT_ID)${NC}"
+  echo "${GREEN}✅ Read stamp verified (agent: ${AGENT_ID:-interactive}, age: valid)${NC}"
   return 0
 }
 
-# Alias for easy use
+# === Aliases ===
+
 read_now() {
   pre_action_stamp_create
 }
 
-# If sourced with argument "create" or "verify"
+# === CLI ===
+
 case "${1:-}" in
   create) pre_action_stamp_create ;;
   verify) pre_action_stamp_verify ;;
-  *) ;; # Just source the functions
+  *) ;; # Just source
 esac
