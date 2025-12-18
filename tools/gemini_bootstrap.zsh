@@ -34,10 +34,12 @@ shift
 
 DO_PRINT=0
 DO_DOCTOR=0
+DO_QUIET=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --print) DO_PRINT=1; shift ;;
     --doctor) DO_DOCTOR=1; shift ;;
+    --quiet|-q) DO_QUIET=1; shift ;;
     --) shift; break ;;
     *) break ;;
   esac
@@ -318,7 +320,9 @@ if (( DO_PRINT )); then
   exit 0
 fi
 
-print_banner
+if (( ! DO_QUIET )); then
+  print_banner
+fi
 
 if [[ -z "$GEMINI_BIN" ]]; then
   echo "${RED}❌ Cannot start Gemini CLI: gemini not found in PATH${NC}" >&2

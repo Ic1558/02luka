@@ -20,7 +20,9 @@
       "Bash(git commit:*)",
       "Bash(command -v:*)",
       "Bash(whence:*)",
-      "Bash(zsh ~/02luka/tools/gemini_bootstrap.zsh human --print)"
+      "Bash(zsh ~/02luka/tools/gemini_bootstrap.zsh human --print)",
+      "Bash(source ~/.zshrc)",
+      "Bash(hash -r)"
     ],
     "deny": [],
     "ask": []
