@@ -305,10 +305,11 @@ echo "   Total entries: $TOTAL_ENTRIES"
 echo "   File size: $(du -h "$SESSION_FILE" | cut -f1)"
 ((TELEMETRY_FILES_WRITTEN++)) || true
 
-# Auto-commit to memory repo
+# Auto-commit to memory repo (always commit session file, even in SAVE_ONLY mode)
+# This is separate from main repo commit - session files should always be tracked
 if [[ -d "$MEM_REPO/.git" ]]; then
   echo ""
-  echo "📦 Committing to memory repo..."
+  echo "📦 Committing session file to memory repo..."
   cd "$MEM_REPO"
   if ! git add "g/reports/sessions/session_$TIMESTAMP.md" 2>/dev/null; then
     echo "⚠️  git add failed (permissions/sandbox). Continuing without memory-repo commit."
@@ -323,7 +324,7 @@ Auto-generated from MLS ledger:
 - Total entries: $TOTAL_ENTRIES
 
 Timestamp: $TIMESTAMP" 2>/dev/null; then
-    echo "✅ Committed to memory repo"
+    echo "✅ Committed session file to memory repo"
   else
     echo "⚠️  Memory-repo commit skipped/failed (may be already committed, or blocked)."
   fi
@@ -471,17 +472,27 @@ fi
 # ============================================
 # STEP 5: Commit All Changes to Main Repo
 # ============================================
-echo ""
-echo "📦 Committing to main 02luka repo..."
+# Skip main repo commit if SKIP_COMMIT or SAVE_ONLY is set
+# This allows save-now to be "save-only" without committing workspace changes
+# seal-now will handle commits as part of the full chain
 
-if [[ -d ~/02luka/.git ]]; then
-  cd ~/02luka
-  
-  # Add all changed files
-  git add -A 2>/dev/null || true
-  
-  # Create comprehensive commit message
-  COMMIT_MSG="session save: $AGENT $TODAY
+if [[ "${SKIP_COMMIT:-${SAVE_ONLY:-false}}" == "true" ]]; then
+  echo ""
+  echo "⏭️  Skipping main repo commit (SAVE_ONLY mode)"
+  echo "   Session artifacts saved, but workspace changes not committed"
+  echo "   Use 'seal-now' for full chain (Review → GitDrop → Save)"
+else
+  echo ""
+  echo "📦 Committing to main 02luka repo..."
+
+  if [[ -d ~/02luka/.git ]]; then
+    cd ~/02luka
+    
+    # Add all changed files
+    git add -A 2>/dev/null || true
+    
+    # Create comprehensive commit message
+    COMMIT_MSG="session save: $AGENT $TODAY
 
 Session Summary:
 - Total MLS entries: $TOTAL_ENTRIES
@@ -497,15 +508,16 @@ Files updated:
 - Documentation: 02luka.md (AUTO_RUNTIME section)
 
 Timestamp: $(date +%FT%TZ)"
-  
-  # Commit (will only commit if there are changes)
-  if git commit -m "$COMMIT_MSG" 2>/dev/null; then
-    echo "✅ Committed to main repo"
+    
+    # Commit (will only commit if there are changes)
+    if git commit -m "$COMMIT_MSG" 2>/dev/null; then
+      echo "✅ Committed to main repo"
+    else
+      echo "ℹ️  No changes to commit in main repo"
+    fi
   else
-    echo "ℹ️  No changes to commit in main repo"
+    echo "⚠️  Main repo not a git repository"
   fi
-else
-  echo "⚠️  Main repo not a git repository"
 fi
 
 # Short output format (as per spec)

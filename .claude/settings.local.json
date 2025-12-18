@@ -33,7 +33,8 @@
       "Bash(~/.gemini/settings.json <<'EOF'\n{\n  \"approvalMode\": \"auto\",\n  \"verbose\": false,\n  \"showThinking\": false,\n  \"autoApproveTools\": true\n}\nEOF)",
       "Bash(zsh:*)",
       "Bash(/Users/icmini/02luka/tools/pr_decision_advisory.zsh:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

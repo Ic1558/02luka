@@ -24,6 +24,10 @@ export SAVE_SOURCE="${SAVE_SOURCE:-${AGENT_ENV}}"
 export SAVE_TIMESTAMP="${SAVE_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 export SAVE_SCHEMA_VERSION="${SAVE_SCHEMA_VERSION:-1}"
 
+# save-now should be "save-only" (no main repo commit)
+# seal-now will handle commits as part of full chain
+export SAVE_ONLY="true"
+
 # Log intent (optional, for debugging)
 # echo "🔹 Agent: ${AGENT_ID} | Env: ${AGENT_ENV} | Source: ${SAVE_SOURCE}"
 

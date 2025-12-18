@@ -48,6 +48,9 @@ else
 
     # --- Step 3: Save Session ---
     echo "💾 [3/3] Saving Session..."
+    # seal-now should commit (full chain), so unset SAVE_ONLY if set
+    unset SAVE_ONLY
+    unset SKIP_COMMIT
     tools/save.sh "dev_review_chain"
     SAVE_EXIT=$?
 fi
