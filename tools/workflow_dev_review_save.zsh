@@ -11,6 +11,21 @@ SNAPSHOT_ID="none"
 
 cd "$REPO_ROOT" || exit 1
 
+# Soft gate: Warn if attempting direct push to main (PR workflow preferred)
+check_main_push_warning() {
+  local current_branch=$(git branch --show-current 2>/dev/null || echo "")
+  if [[ "$current_branch" == "main" ]]; then
+    echo "⚠️  WARNING: You are on 'main' branch"
+    echo "   Recommended: Use PR workflow instead of direct push"
+    echo "   Policy: g/docs/PR_AUTOPILOT_RULES.md (main accepts changes via PR only)"
+    echo ""
+    echo "   If you proceed, ensure you have:"
+    echo "   - ALLOW_PUSH_MAIN=1 (Boss override)"
+    echo "   - Or use: git checkout -b feat/... && push branch && create PR"
+    echo ""
+  fi
+}
+
 # --- Step 1: Local Agent Review ---
 echo "🔍 [1/3] Running Local Agent Review..."
 # Run review. We use --quiet to reduce noise, but capture exit code.
@@ -48,6 +63,8 @@ else
 
     # --- Step 3: Save Session ---
     echo "💾 [3/3] Saving Session..."
+    # Soft gate: Warn about PR workflow (but don't block)
+    check_main_push_warning
     tools/save.sh "dev_review_chain"
     SAVE_EXIT=$?
 fi

@@ -96,6 +96,7 @@ Any of these triggers:
 - Conflicts in core/bridge/governance
 - Any destructive action on main history (force push to main, rewriting remote)
 - Unclear policy choice / first-time pattern
+- **Direct push to origin/main (forbidden - main accepts changes via PR only)**
 
 Escalation format (short):
 - PR #: title
