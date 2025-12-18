@@ -80,6 +80,8 @@ Only if ALL true:
 - no blockers (Gate B clear)
 - change scope small/focused
 
+**Default merge strategy:** For DOCS/OPEN PRs, CLS MUST use squash merge (1 PR = 1 commit). Use merge commit only when Boss explicitly requests preserving commit history.
+
 ### AUTO: Resolve Conflicts (policy-only)
 Only if conflict files are strictly AUTO_GENERATED (or trivial docs formatting) and policy is clear.
 
@@ -94,6 +96,7 @@ Any of these triggers:
 - Conflicts in core/bridge/governance
 - Any destructive action on main history (force push to main, rewriting remote)
 - Unclear policy choice / first-time pattern
+- **Direct push to main (forbidden unless Boss explicitly orders)**
 
 Escalation format (short):
 - PR #: title
@@ -105,8 +108,13 @@ Escalation format (short):
 ---
 
 ## 8) Post-merge Verification (must do)
+**Minimum verify (3 steps):**
+1. `git pull origin main` (sync local)
+2. `pr-check <merged_pr>` (optional, verify decision was correct)
+3. Run relevant verify scripts if available
+
+**Full verify:**
 - Confirm files exist where expected
-- Run the relevant verify scripts (if available)
 - Regenerate auto-generated artifacts if the system expects it
 - Summarize: what changed, what verified, remaining risks
 
