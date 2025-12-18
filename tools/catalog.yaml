@@ -89,6 +89,18 @@ commands:
     usage: "zsh tools/git_safe_status.zsh"
     notes: "Helps identify when IDE shows 'deleted' files that actually exist in origin/main. Shows branch status and missing file warnings."
     
+  catalog-add-tool:
+    description: "Add new tool/script to catalog.yaml"
+    entry: "./tools/catalog_add_tool.zsh"
+    usage: "zsh tools/catalog_add_tool.zsh <tool-name> [--entry <path>] [--description <desc>] [--usage <usage>] [--notes <notes>]"
+    notes: "Interactive tool to add new entries to catalog. Auto-detects entry point if script exists in tools/."
+    
+  catalog-auto-scan:
+    description: "Scan tools/ directory and suggest missing catalog entries"
+    entry: "./tools/catalog_auto_scan.zsh"
+    usage: "zsh tools/catalog_auto_scan.zsh [--dry-run] [--add-missing]"
+    notes: "Finds scripts not in catalog. Use --dry-run to preview, --add-missing to auto-add."
+    
   feature-dev-validate:
     description: "Mandatory validation gate for feature development"
     entry: "./tools/feature_dev_validate.zsh"
