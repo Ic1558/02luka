@@ -73,6 +73,8 @@ If unclear → ask Boss (brief, evidence-based)
 ## 6) Allowed Automation Outcomes
 CLS may do without Boss approval:
 
+**Default merge strategy:** `--squash` (1 PR = 1 commit). Use `--merge` only when Boss explicitly requests preserving commit history.
+
 ### AUTO: Merge Now
 Only if ALL true:
 - Zone = DOCS or OPEN
