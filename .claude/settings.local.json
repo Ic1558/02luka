@@ -17,7 +17,10 @@
       "Bash(git commit -m \"$(cat <<''EOF''\nchore: restore git safety configuration files\n\nRestore git safety files that were accidentally deleted:\n- .git-command-best-practices.md - Git command safety guidelines\n- .git-safe-commands-template - Safe command template\n- .pre-commit-git-commands - Pre-commit git safety hook\n- tools/check_git_commands_in_scripts.zsh - Git command checker\n\nThese files are part of the git safety system to prevent\naccidental data loss from git clean operations.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(zsh ~/02luka/CREATE_CLEAN_PR.sh)",
       "Bash(git commit -m \"$(cat <<''EOF''\ndocs(manuals): add comprehensive Persona Loading Guide\n\nCreate detailed Thai manual for persona loading operations covering:\n- All 10 agents (CLS, GG, GM, Liam, Mary, CLC, GMX, Codex, Gemini, LAC)\n- v3 and v5 loader usage\n- Cursor vs Antigravity injection\n- Command examples for each agent\n- Troubleshooting and best practices\n- Testing and verification procedures\n\nKey commands documented:\n✅ ~/02luka/tools/load_persona_v3.zsh <agent> <target>\n✅ ~/02luka/tools/load_persona_v5.zsh cls sync\n✅ Examples for all agents and targets\n\nResolves missing documentation identified in persona v3 rollout plan.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(command -v:*)",
+      "Bash(whence:*)",
+      "Bash(zsh ~/02luka/tools/gemini_bootstrap.zsh human --print)"
     ],
     "deny": [],
     "ask": []

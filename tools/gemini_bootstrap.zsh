@@ -193,9 +193,10 @@ if [[ -n "${UNSET_ENV:-}" ]]; then
   WARNINGS+=("unset env vars for this profile: ${UNSET_ENV}")
 fi
 
-GEMINI_BIN="$(command -v gemini 2>/dev/null || true)"
-if [[ -z "$GEMINI_BIN" ]]; then
-  WARNINGS+=("gemini not found in PATH")
+GEMINI_BIN="$(whence -p gemini 2>/dev/null || command -v gemini 2>/dev/null || echo /opt/homebrew/bin/gemini)"
+if [[ ! -x "$GEMINI_BIN" ]]; then
+  WARNINGS+=("gemini not found in PATH or not executable")
+  GEMINI_BIN=""
 fi
 
 if [[ -n "${PROJECT_ROOT:-}" && -d "$PROJECT_ROOT" ]]; then
