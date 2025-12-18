@@ -13,13 +13,13 @@ maintainer: "Boss / Docs Agent"
 # =============================================================================
 commands:
   save-now:
-    description: "Lightweight session save from MLS ledger"
+    description: "Lightweight session save from MLS ledger (save-only, no main repo commit)"
     entry: "./tools/save.sh"
     usage: "cd ~/02luka && AGENT_ID=<agent_name> SAVE_SOURCE=terminal ./tools/save.sh"
     env: "AGENT_ID=<agent_name> SAVE_SOURCE=terminal"
     function: "dev_save"
     source: "git_safety_aliases.zsh"
-    notes: "Command should be interpreted as: cd ~/02luka && AGENT_ID=<agent_name> SAVE_SOURCE=terminal ./tools/save.sh. Uses save.sh as gateway, NOT session_save.zsh directly"
+    notes: "Command should be interpreted as: cd ~/02luka && AGENT_ID=<agent_name> SAVE_SOURCE=terminal ./tools/save.sh. Uses save.sh as gateway, NOT session_save.zsh directly. SAVE_ONLY mode: generates session artifacts but does NOT commit workspace changes to main repo. Use seal-now for full chain (Review → GitDrop → Save + Commit)."
     
   seal-now:
     description: "Full chain: Review → GitDrop → Save"
@@ -48,6 +48,8 @@ commands:
     flags: ["--staged", "--unstaged", "--diff", "--quick", "--json"]
     gate: "Gate 2.5 (after DRYRUN, before VERIFY)"
     output: "✅/⚠️ verdict with risks + diff hotspots"
+    cache: "g/.cache/code_review_cache.json"
+    notes: "Use run_tool.zsh wrapper. Fallback auto-discovery if not in catalog."
 
   pr-check:
     description: "PR Decision Advisory - Analyze PRs and recommend merge strategy (advisory-only, no auto-merge)"
@@ -61,8 +63,6 @@ commands:
     category: "git-ops"
     output: "Zone classification, dependency check, mergeability status, and actionable recommendation"
     notes: "Advisory-only tool - does not auto-merge. Integrated with seal-now as PR preflight check."
-    cache: "g/.cache/code_review_cache.json"
-    notes: "Use run_tool.zsh wrapper. Fallback auto-discovery if not in catalog."
     
   run-tool:
     description: "Single entry point for all tools (wrapper)"

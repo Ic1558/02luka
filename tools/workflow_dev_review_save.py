@@ -45,6 +45,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--strict", action="store_true", help="Treat warnings as failures in review")
     parser.add_argument("--skip-gitdrop", action="store_true", help="Skip gitdrop step")
     parser.add_argument("--skip-save", action="store_true", help="Skip save step")
+    parser.add_argument("--skip-pr-check", action="store_true", help="Skip PR preflight check (Boss override)")
     args = parser.parse_args(argv)
 
     run_id = os.getenv("RUN_ID") or generate_run_id()
@@ -71,9 +72,106 @@ def main(argv: Optional[list[str]] = None) -> int:
         "duration_ms_review": None,
         "duration_ms_gitdrop": None,
         "duration_ms_save": None,
+        "pr_num": None,
+        "pr_zone": None,
+        "pr_mergeable": None,
+        "pr_blocked": False,
         "errors": None,
         "notes": None,
     }
+
+    # --- PR Preflight Check (Gate) ---
+    pr_preflight_blocked = False
+    pr_preflight_reason: list[str] = []
+    pr_preflight_zone = "unknown"
+
+    if not args.skip_pr_check:
+        try:
+            # Get currently checked-out branch
+            current_branch = subprocess.run(
+                ["git", "branch", "--show-current"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=True
+            ).stdout.strip()
+
+            if current_branch:
+                # Find PR for this branch
+                pr_result = subprocess.run(
+                    ["gh", "pr", "view", current_branch, "--json", "number,files,mergeable"],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                    text=True
+                )
+
+                if pr_result.returncode == 0:
+                    pr_info = json.loads(pr_result.stdout)
+                    pr_num = pr_info.get("number")
+                    pr_files = [f["path"] for f in pr_info.get("files", [])]
+                    pr_mergeable = pr_info.get("mergeable")
+
+                    # Classify zone (same logic as pr_decision_advisory.zsh)
+                    for file_path in pr_files:
+                        if "g/docs/GOVERNANCE" in file_path or "g/docs/AI_OP_001" in file_path:
+                            pr_preflight_zone = "GOVERNANCE"
+                            break
+                        elif file_path.startswith("bridge/core") or file_path.startswith("core/"):
+                            pr_preflight_zone = "LOCKED_CORE"
+                            break
+
+                    if pr_preflight_zone == "unknown":
+                        for file_path in pr_files:
+                            if file_path.startswith(("g/docs", "g/reports", "g/manuals", "personas")):
+                                pr_preflight_zone = "DOCS"
+                                break
+                            elif file_path.startswith(("tools", "tests", "apps")):
+                                pr_preflight_zone = "OPEN"
+                                break
+
+                    # GATE: Block if high-risk zone OR conflicts
+                    if pr_preflight_zone in ("GOVERNANCE", "LOCKED_CORE"):
+                        pr_preflight_blocked = True
+                        pr_preflight_reason.append(f"High-risk zone: {pr_preflight_zone}")
+                        pr_preflight_reason.append("Requires Boss approval before seal-now")
+
+                    if pr_mergeable == "CONFLICTING":
+                        pr_preflight_blocked = True
+                        pr_preflight_reason.append("PR has merge conflicts")
+                        pr_preflight_reason.append("Resolve conflicts before seal-now")
+
+                    record["pr_num"] = pr_num
+                    record["pr_zone"] = pr_preflight_zone
+                    record["pr_mergeable"] = pr_mergeable
+                    record["pr_blocked"] = pr_preflight_blocked
+
+        except Exception as e:
+            # No PR found or error → continue without blocking
+            record["notes"] = f"PR preflight skipped: {e}"
+
+    # GATE: If blocked, exit early
+    if pr_preflight_blocked:
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🚫 PR PREFLIGHT CHECK BLOCKED")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        for reason in pr_preflight_reason:
+            print(f"  ⚠️  {reason}")
+        print("")
+        print("📋 Run pr-check for full analysis:")
+        if record.get("pr_num"):
+            print(f"   pr-check {record['pr_num']}")
+        print("")
+        print("After resolving, re-run:")
+        print("   seal-now")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        record["review_exit_code"] = None
+        record["gitdrop_status"] = "blocked_by_pr"
+        record["save_status"] = "blocked_by_pr"
+        record["duration_ms_total"] = int((time.monotonic() - chain_start) * 1000)
+        record["errors"] = "; ".join(pr_preflight_reason)
+        _append_record(record)
+        return 0  # Exit early, don't run review/gitdrop/save
 
     # --- Review step ---
     report_dir = REPO_ROOT / "g" / "reports" / "reviews"
