@@ -57,7 +57,13 @@ fi
 
 echo ""
 echo "📁 Creating required directories..."
-mkdir -p g/memory g/reports g/telemetry
+# In CI, remove symlinks that point to local workspaces (they don't exist in runner)
+for dir in g/memory g/reports g/telemetry g/data; do
+  if [[ -L "$dir" ]]; then
+    rm -f "$dir"
+  fi
+done
+mkdir -p g/memory g/reports g/telemetry g/data
 
 echo ""
 echo "🔥 Running smoke tests..."
