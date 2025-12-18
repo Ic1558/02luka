@@ -24,6 +24,18 @@ export SAVE_SOURCE="${SAVE_SOURCE:-${AGENT_ENV}}"
 export SAVE_TIMESTAMP="${SAVE_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 export SAVE_SCHEMA_VERSION="${SAVE_SCHEMA_VERSION:-1}"
 
+# --- HARD GATE: Pre-Action Read Stamp (GG Review requirement) ---
+# Block if agent hasn't read LIAM.md, session, and telemetry
+GATE_SCRIPT="$SCRIPT_DIR/pre_action_gate.zsh"
+if [[ -f "$GATE_SCRIPT" ]]; then
+  source "$GATE_SCRIPT"
+  if ! pre_action_stamp_verify; then
+    echo ""
+    echo "💡 Run 'read-now' or 'zsh tools/pre_action_gate.zsh create' first"
+    exit 1
+  fi
+fi
+
 # Log intent (optional, for debugging)
 # echo "🔹 Agent: ${AGENT_ID} | Env: ${AGENT_ENV} | Source: ${SAVE_SOURCE}"
 
