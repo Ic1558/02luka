@@ -27,7 +27,7 @@
   `g/docs/AI_OP_001_v5.md`
 
 - 📚 **Persona / Capability Model:**  
-  `g/docs/PERSONA_MODEL_v5.md` (เมื่อสร้างเสร็จ)
+  `g/docs/PERSONA_MODEL_v5.md` ✅
 
 - 🚦 **Mary Router Implementation:**  
   `tools/mary_dispatch.py`
