@@ -120,3 +120,25 @@ Option C: Block with Evidence (rule, file/line, missing input)
 | `feature-plan` | Read WORKFLOW_PROTOCOL → Phase 0 Discovery → Create SPEC + PLAN |
 | New feature | Pre-Action Checklist must be complete before implementation |
 | Any change | Plan → Dry-run → Verify → Execute (never skip) |
+
+---
+
+## 🛡️ Runtime Guard (Active Memory)
+
+**Before executing risky commands, USE THE GUARD:**
+
+```bash
+# Check a command
+echo "git push origin main" | zsh tools/guard_runtime.zsh --cmd -
+
+# Check a batch file
+zsh tools/guard_runtime.zsh --batch batch_task.zsh
+
+# Emergency override (if blocked)
+SAVE_EMERGENCY=1 zsh tools/guard_runtime.zsh --cmd "..."
+```
+
+**Patterns that will trigger:**
+- `.vscode/extensions` → WARN (ATG uses `~/.antigravity/extensions/`)
+- `git push origin main` → BLOCK (use PR)
+- Broad exclusions → WARN (fix-to-pass anti-pattern)

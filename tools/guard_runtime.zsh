@@ -1,12 +1,17 @@
 #!/usr/bin/env zsh
-set -euo pipefail
+# tools/guard_runtime.zsh
+# Active Memory Runtime Guard - Pattern matching engine
+# V2: Robust Python JSON handling + Multi-hit override check + Fail-safe lanes
+set -u
 
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 PATTERNS_FILE="${PATTERNS_FILE:-$REPO_ROOT/g/rules/runtime_patterns.yaml}"
 TELEMETRY_FILE="${TELEMETRY_FILE:-$REPO_ROOT/g/telemetry/runtime_guard.jsonl}"
+EMERGENCY_LOG="${EMERGENCY_LOG:-$REPO_ROOT/g/telemetry/gate_emergency.jsonl}"
 ACTOR="${ACTOR:-${AGENT_ID:-${GG_AGENT_ID:-unknown}}}"
+GUARD_LANE="${GUARD_LANE:-daemon}" # daemon (fail-closed) or interactive (fail-open warn)
 
-mkdir -p "$REPO_ROOT/g/telemetry"
+mkdir -p "$(dirname "$TELEMETRY_FILE")"
 
 usage() {
   echo "Usage:"
@@ -53,104 +58,155 @@ elif [[ -z "$_cmd" ]]; then
   exit 2
 fi
 
-# Export for Python subprocess
 export _CMD="$_cmd"
 export PATTERNS_FILE
+export TELEMETRY_FILE
+export EMERGENCY_LOG
+export ACTOR
+export GUARD_LANE
 
-# Run Python pattern matcher - outputs: LEVEL on line 1, then hit details
-_result="$(python3 - <<'PY'
-import os, re, sys
+# Single Python block for logic + JSON integrity
+python3 - <<'PY'
+import os, re, sys, json, time
+from datetime import datetime, timezone
 
-pat_file = os.environ.get("PATTERNS_FILE", "")
+def log_telemetry(data, file_path):
+    try:
+        if not file_path: return
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(data) + "\n")
+    except Exception as e:
+        sys.stderr.write(f"Telemetry error: {e}\n")
+
+def fail(msg, code=1):
+    print(f"\033[0;31m⛔ SYSTEM ERROR: {msg}\033[0m")
+    sys.exit(code)
+
 cmd = os.environ.get("_CMD", "")
+pat_file = os.environ.get("PATTERNS_FILE", "")
+actor = os.environ.get("ACTOR", "unknown")
+lane = os.environ.get("GUARD_LANE", "daemon")
+ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-if not pat_file or not os.path.exists(pat_file):
-    print("ALLOW")
-    print("0")
-    sys.exit(0)
-
+# 1. Load Patterns
+patterns = []
 try:
+    if not pat_file or not os.path.exists(pat_file):
+        raise FileNotFoundError(f"Missing patterns file: {pat_file}")
+    
     import yaml
-except:
-    print("ALLOW")
-    print("0")
-    sys.exit(0)
+    data = yaml.safe_load(open(pat_file, "r", encoding="utf-8")) or {}
+    patterns = data.get("patterns", [])
+except ImportError:
+    msg = "PyYAML missing"
+    if lane == "interactive":
+        print(f"\033[1;33m⚠️  Guard Skipped ({msg}) - Interactive Mode Allow\033[0m")
+        sys.exit(0)
+    else:
+        fail(f"Guard Failed ({msg}) - Daemon Mode Block")
+except Exception as e:
+    msg = str(e)
+    if lane == "interactive":
+        print(f"\033[1;33m⚠️  Guard Skipped ({msg}) - Interactive Mode Allow\033[0m")
+        sys.exit(0)
+    else:
+        fail(f"Guard Failed ({msg}) - Daemon Mode Block")
 
-data = yaml.safe_load(open(pat_file, "r", encoding="utf-8")) or {}
-patterns = data.get("patterns", [])
-
+# 2. Match Logic
 level_rank = {"ALLOW": 0, "WARN": 1, "BLOCK": 2}
-best = "ALLOW"
+max_level = "ALLOW"
 hits = []
+active_overrides = set()
 
 for p in patterns:
     pid = p.get("id", "unknown")
     trig = p.get("trigger", "")
     action = (p.get("action", "ALLOW") or "ALLOW").upper()
-    msg = (p.get("message", "") or "").replace("\n", " ").strip()
+    msg = (p.get("message", "") or "").strip()
     fix = (p.get("fix", "") or "").strip()
     override_env = (p.get("override_env", "") or "").strip()
+
+    if not trig: continue
     
-    if not trig:
-        continue
     try:
         if re.search(trig, cmd, flags=re.IGNORECASE | re.MULTILINE):
-            hits.append((pid, action, msg, fix, override_env))
-            if level_rank.get(action, 0) > level_rank.get(best, 0):
-                best = action
+            hits.append({
+                "id": pid, 
+                "action": action, 
+                "msg": msg, 
+                "fix": fix,
+                "override": override_env
+            })
+            if level_rank.get(action, 0) > level_rank.get(max_level, 0):
+                max_level = action
+            if action == "BLOCK" and override_env:
+                active_overrides.add(override_env)
     except re.error:
-        continue
+        continue # Bad regex in pattern shouldn't crash guard
 
-# Output format: line 1 = level, line 2 = hit_count, rest = hit details
-print(best)
-print(len(hits))
-for pid, action, msg, fix, override_env in hits:
-    print(f"{action}|{pid}|{msg}|{fix}|{override_env}")
+# 3. Decision & Override Check
+final_decision = max_level
+effective_override = None
+
+if max_level == "BLOCK" and active_overrides:
+    # Check if any valid override is present in current env
+    for ov in active_overrides:
+        if "=" in ov:
+            k, v = ov.split("=", 1)
+            env_val = os.environ.get(k)
+            # print(f"DEBUG: Checking override {k}={v} (current env: {env_val})")
+            if env_val == v:
+                final_decision = "ALLOW" # downgrade to allow
+                effective_override = ov
+                break
+
+# 4. Telemetry (Integrity critical)
+telem_rec = {
+    "ts": ts,
+    "actor": actor,
+    "level": max_level, # Original level
+    "final": final_decision,
+    "hits": len(hits),
+    "cmd_preview": cmd[:500],
+    "override_used": effective_override
+}
+log_telemetry(telem_rec, os.environ.get("TELEMETRY_FILE"))
+
+if effective_override:
+    emerg_rec = {
+        "ts": ts,
+        "actor": actor,
+        "action": "emergency_bypass",
+        "reason": f"Override {effective_override} used for pattern(s)",
+        "cmd_preview": cmd[:500]
+    }
+    log_telemetry(emerg_rec, os.environ.get("EMERGENCY_LOG"))
+
+# 5. User Output & Exit Code
+if not hits:
+    print("\033[0;32m✅ ALLOW\033[0m")
+    sys.exit(0)
+
+# Print Report
+print(f"Guard Decision: {final_decision}")
+print("----")
+for h in hits:
+    color = "\033[0;31m" if h['action'] == "BLOCK" else "\033[1;33m"
+    rst = "\033[0m"
+    print(f"{color}[{h['action']}] {h['id']}{rst}")
+    if h['msg']: print(f"  {h['msg'].replace(chr(10), ' ')}")
+    if h['fix']: print(f"  Fix: {h['fix']}")
+    if h['override']: print(f"  Override: {h['override']}")
+    print("")
+
+if effective_override:
+    print(f"\033[1;33m⚠️  Emergency Override Applied ({effective_override}) - Proceeding with caution.\033[0m")
+    sys.exit(0)
+
+if max_level == "BLOCK":
+    print("\033[0;31m⛔ BLOCKED\033[0m")
+    sys.exit(1)
+
+# WARN or ALLOW
+sys.exit(0)
 PY
-)"
-
-# Parse result
-level="$(echo "$_result" | sed -n '1p')"
-hits_count="$(echo "$_result" | sed -n '2p')"
-
-ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-# log telemetry
-cmd_escaped="$(printf '%s' "$_cmd" | head -c 200 | tr '\n' ' ')"
-echo "{\"ts\":\"$ts\",\"actor\":\"$ACTOR\",\"level\":\"$level\",\"hits\":$hits_count,\"cmd_preview\":\"$cmd_escaped\"}" >> "$TELEMETRY_FILE"
-
-if [[ "$level" == "ALLOW" ]]; then
-  echo "ALLOW"
-  exit 0
-fi
-
-# pretty print hits
-echo "$level"
-echo "----"
-echo "$_result" | tail -n +3 | while IFS='|' read -r action pid msg fix override_env; do
-  echo "[$action] $pid"
-  [[ -n "$msg" ]] && echo "  $msg"
-  [[ -n "$fix" ]] && echo "  Fix: $fix"
-  [[ -n "$override_env" ]] && echo "  Override: $override_env"
-  echo ""
-done
-
-if [[ "$level" == "WARN" ]]; then
-  exit 0
-fi
-
-# BLOCK with optional emergency override
-# Get override_env from first hit
-override_key="$(echo "$_result" | sed -n '3p' | cut -d'|' -f5)"
-
-if [[ -n "$override_key" && "$override_key" != "" ]]; then
-  key="${override_key%%=*}"
-  val="${override_key#*=}"
-  if [[ "${(P)key:-}" == "$val" ]]; then
-    echo "⚠️ Emergency override detected ($override_key) → allowing but logging."
-    echo "{\"ts\":\"$ts\",\"actor\":\"$ACTOR\",\"override\":\"$override_key\",\"cmd_preview\":\"$cmd_escaped\"}" >> "$REPO_ROOT/g/telemetry/gate_emergency.jsonl"
-    exit 0
-  fi
-fi
-
-exit 1

@@ -42,7 +42,13 @@
       "Bash(/Applications/then.app/Contents/MacOS/then)",
       "Bash(spctl --assess --verbose:*)",
       "Bash(ps:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(ln:*)",
+      "Bash(hdiutil create:*)",
+      "Bash(hdiutil imageinfo:*)",
+      "Bash(hdiutil attach:*)",
+      "Bash(hdiutil verify:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
