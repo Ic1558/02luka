@@ -30,7 +30,11 @@
       "Bash(fi)",
       "Bash(ls:*)",
       "Bash(echo '=== Check context/gemini folder ===' ls -lh ~/02luka/context/gemini/*.md)",
-      "Bash(~/.gemini/settings.json <<'EOF'\n{\n  \"approvalMode\": \"auto\",\n  \"verbose\": false,\n  \"showThinking\": false,\n  \"autoApproveTools\": true\n}\nEOF)"
+      "Bash(~/.gemini/settings.json <<'EOF'\n{\n  \"approvalMode\": \"auto\",\n  \"verbose\": false,\n  \"showThinking\": false,\n  \"autoApproveTools\": true\n}\nEOF)",
+      "Bash(mdfind:*)",
+      "Bash(open:*)",
+      "Bash(log show:*)",
+      "Bash(xattr:*)"
     ],
     "deny": [],
     "ask": []

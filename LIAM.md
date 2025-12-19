@@ -72,6 +72,26 @@ Option C: Block with Evidence (rule, file/line, missing input)
 
 ---
 
+## 🧠 Lessons Learned
+
+### Antigravity Extension Installation (2025-12-20)
+
+**Problem:** Copied extension folder but it didn't appear in Antigravity
+
+**Root Cause:** 
+- Antigravity uses `~/.antigravity/extensions/` (not `~/.vscode/extensions/`)
+- Copying folder alone is NOT enough
+- Must also add entry to `~/.antigravity/extensions/extensions.json`
+
+**Solution:**
+1. Copy extension folder to `~/.antigravity/extensions/`
+2. Add entry to `extensions.json` with: identifier, version, location, metadata
+3. Quit & restart Antigravity (reload is not enough)
+
+**Note:** `code` CLI command installs to `~/.vscode/` — wrong location for Antigravity
+
+---
+
 ## 🚨 Anti-Pattern: "Fix to Pass" (2025-12-19)
 
 **What I did wrong:**
