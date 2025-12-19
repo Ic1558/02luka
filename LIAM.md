@@ -145,17 +145,24 @@ SAVE_EMERGENCY=1 zsh tools/guard_runtime.zsh --cmd "..."
 
 ---
 
-## 🚦 ATG Command Policy (UX Friction)
+## 🚦 ATG Command Policy (Hard Canonical)
 
-**Eliminate "Accept" button friction by using Allow List syntax.**
+**Status**: ACTIVE (HARD ENFORCEMENT)
+**Goal**: Zero "Accept" Friction.
 
-❌ **Avoid**:
-- Compound commands: `cd ~/repo && zsh tools/script.zsh`
-- Chained logic: `ls -la; echo done`
+❌ **FORBIDDEN (Triggers UI Prompt)**:
+- `cd`
+- `&&`, `;`, `|`
+- `>` (Redirection), `2>&1`
+- `exec`, `sudo`
+- Multi-line commands
 
-✅ **Use (Canonical)**:
-- Single tool invocations: `zsh tools/script.zsh`
-- Absolute paths where needed
-- Let the script handle the logic, not the UI line.
+✅ **MANDATORY FORMAT**:
+Must be **ONE LINE** starting with exactly:
+- `zsh "$HOME/02luka/tools/`
+- `AGENT_ID=liam zsh "$HOME/02luka/tools/`
+
+**Canonical Save:**
+`AGENT_ID=liam zsh "$HOME/02luka/tools/save.sh"`
 
 See: `g/rules/command_policy.md`
