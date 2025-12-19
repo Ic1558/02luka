@@ -513,3 +513,5 @@ RELATIVE_SESSION_FILE="g/reports/sessions/$(basename "$SESSION_FILE")"
 echo ""
 echo "✅ save-now: done → $RELATIVE_SESSION_FILE"
 echo ""
+
+exit 0

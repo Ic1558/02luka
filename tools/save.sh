@@ -61,13 +61,10 @@ fi
 
 # Execute backend
 if [[ -f "$BACKEND_SCRIPT" ]]; then
-    exec "$BACKEND_SCRIPT" "$@"
+    zsh "$BACKEND_SCRIPT" "$@"
+    exit_code=$?
+    exit $exit_code
 else
     echo "❌ Error: Save backend not found at $BACKEND_SCRIPT"
     exit 1
-fi
-
-## ACTIVE_MEMORY: solution_collector hook
-if [[ -x "$SCRIPT_DIR/solution_collector.zsh" ]]; then
-  (REPO="$REPO_ROOT" zsh "$SCRIPT_DIR/solution_collector.zsh" >/dev/null 2>&1) || true
 fi
