@@ -1,0 +1,26 @@
+{
+  "date": "2025-12-20",
+  "ts_utc": "2025-12-19T19:17:25Z",
+  "ts_local": "2025-12-20T02:17:25+0700",
+  "agent": "liam",
+  "summary": {
+    "total_entries": 5,
+    "top_activities": [
+  "File modified: liam_smoke_test_new_rules.zsh",
+  "File modified: liam_smoke_test_new_rules.zsh",
+  "File modified: liam_smoke_test_new_rules.zsh",
+  "File modified: liam_smoke_test_new_rules.zsh",
+  "File modified: atg_runner_daemon.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 5,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2025-12-20.jsonl",
+    "full_session": "g/reports/sessions/session_20251220_021724.md"
+  }
+}
