@@ -48,7 +48,9 @@
       "Bash(hdiutil imageinfo:*)",
       "Bash(hdiutil attach:*)",
       "Bash(hdiutil verify:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(zsh:*)",
+      "Bash(/bin/zsh:*)"
     ],
     "deny": [],
     "ask": []

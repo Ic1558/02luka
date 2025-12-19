@@ -1,6 +1,8 @@
 #!/usr/bin/env zsh
 # tools/save.sh
-# Universal Gateway for 02luka Save System
+# Save current state + Harvest Active Memory
+REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
+zsh "$REPO_ROOT/tools/solution_collector.zsh" 2>/dev/null & # Background harvest Save System
 # Forwards requests to backend (session_save.zsh) with telemetry context.
 
 set -e
