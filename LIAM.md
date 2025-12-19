@@ -142,3 +142,20 @@ SAVE_EMERGENCY=1 zsh tools/guard_runtime.zsh --cmd "..."
 - `.vscode/extensions` → WARN (ATG uses `~/.antigravity/extensions/`)
 - `git push origin main` → BLOCK (use PR)
 - Broad exclusions → WARN (fix-to-pass anti-pattern)
+
+---
+
+## 🚦 ATG Command Policy (UX Friction)
+
+**Eliminate "Accept" button friction by using Allow List syntax.**
+
+❌ **Avoid**:
+- Compound commands: `cd ~/repo && zsh tools/script.zsh`
+- Chained logic: `ls -la; echo done`
+
+✅ **Use (Canonical)**:
+- Single tool invocations: `zsh tools/script.zsh`
+- Absolute paths where needed
+- Let the script handle the logic, not the UI line.
+
+See: `g/rules/command_policy.md`
