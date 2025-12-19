@@ -1,15 +1,14 @@
 #!/usr/bin/env zsh
 # tools/guard_runtime.zsh
 # Active Memory Runtime Guard - Pattern matching engine
-# V2: Robust Python JSON handling + Multi-hit override check + Fail-safe lanes
-set -u
+# V4: Hardening (Fail-fast, Audit Telemetry, Better Lane Detect)
+set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 PATTERNS_FILE="${PATTERNS_FILE:-$REPO_ROOT/g/rules/runtime_patterns.yaml}"
 TELEMETRY_FILE="${TELEMETRY_FILE:-$REPO_ROOT/g/telemetry/runtime_guard.jsonl}"
 EMERGENCY_LOG="${EMERGENCY_LOG:-$REPO_ROOT/g/telemetry/gate_emergency.jsonl}"
 ACTOR="${ACTOR:-${AGENT_ID:-${GG_AGENT_ID:-unknown}}}"
-GUARD_LANE="${GUARD_LANE:-daemon}" # daemon (fail-closed) or interactive (fail-open warn)
 
 mkdir -p "$(dirname "$TELEMETRY_FILE")"
 
@@ -58,6 +57,19 @@ elif [[ -z "$_cmd" ]]; then
   exit 2
 fi
 
+# Auto-detect lane (default) AFTER command is known.
+# Prefer explicit GUARD_LANE if set.
+# Treat piped/STDIN command mode (`--cmd -`) as interactive by default.
+if [[ -z "${GUARD_LANE:-}" ]]; then
+  if [[ "${_cmd:-}" == "-" ]]; then
+    GUARD_LANE="interactive"
+  elif [[ -t 0 || -t 1 || -t 2 ]]; then
+    GUARD_LANE="interactive"
+  else
+    GUARD_LANE="daemon"
+  fi
+fi
+
 export _CMD="$_cmd"
 export PATTERNS_FILE
 export TELEMETRY_FILE
@@ -65,9 +77,9 @@ export EMERGENCY_LOG
 export ACTOR
 export GUARD_LANE
 
-# Single Python block for logic + JSON integrity
+# Single Python block for logic
 python3 - <<'PY'
-import os, re, sys, json, time
+import os, re, sys, json, hashlib
 from datetime import datetime, timezone
 
 def log_telemetry(data, file_path):
@@ -112,11 +124,16 @@ except Exception as e:
     else:
         fail(f"Guard Failed ({msg}) - Daemon Mode Block")
 
-# 2. Match Logic
-level_rank = {"ALLOW": 0, "WARN": 1, "BLOCK": 2}
-max_level = "ALLOW"
+# 2. Match Logic & Security Check
 hits = []
-active_overrides = set()
+invalid_patterns = []
+highest_effective = "ALLOW"
+raw_highest = "ALLOW"
+level_rank = {"ALLOW": 0, "WARN": 1, "BLOCK": 2}
+
+blocked_hits_effective = [] # Blocks that stayed blocked
+bypassed_block_ids = []     # Blocks that were overridden
+overrides_used = []
 
 for p in patterns:
     pid = p.get("id", "unknown")
@@ -130,83 +147,106 @@ for p in patterns:
     
     try:
         if re.search(trig, cmd, flags=re.IGNORECASE | re.MULTILINE):
-            hits.append({
+            # Calculate raw highest (before overrides)
+            if level_rank.get(action, 0) > level_rank.get(raw_highest, 0):
+                raw_highest = action
+
+            hit_info = {
                 "id": pid, 
                 "action": action, 
                 "msg": msg, 
                 "fix": fix,
-                "override": override_env
-            })
-            if level_rank.get(action, 0) > level_rank.get(max_level, 0):
-                max_level = action
-            if action == "BLOCK" and override_env:
-                active_overrides.add(override_env)
-    except re.error:
-        continue # Bad regex in pattern shouldn't crash guard
+                "override": override_env,
+                "bypassed": False
+            }
+            
+            if action == "BLOCK":
+                is_overridden = False
+                if override_env and "=" in override_env:
+                    k, v = override_env.split("=", 1)
+                    if os.environ.get(k) == v:
+                        is_overridden = True
+                        if override_env not in overrides_used:
+                            overrides_used.append(override_env)
+                
+                if is_overridden:
+                    hit_info["bypassed"] = True
+                    bypassed_block_ids.append(pid)
+                else:
+                    blocked_hits_effective.append(pid)
+                    # Update effective highest
+                    if level_rank.get(action, 0) > level_rank.get(highest_effective, 0):
+                        highest_effective = action
+            else:
+                 # WARN or ALLOW
+                 if level_rank.get(action, 0) > level_rank.get(highest_effective, 0):
+                        highest_effective = action
+            
+            hits.append(hit_info)
 
-# 3. Decision & Override Check
-final_decision = max_level
-effective_override = None
+    except re.error as e:
+        invalid_patterns.append({"id": pid, "error": str(e), "trigger": trig[:200]})
+        continue
 
-if max_level == "BLOCK" and active_overrides:
-    # Check if any valid override is present in current env
-    for ov in active_overrides:
-        if "=" in ov:
-            k, v = ov.split("=", 1)
-            env_val = os.environ.get(k)
-            # print(f"DEBUG: Checking override {k}={v} (current env: {env_val})")
-            if env_val == v:
-                final_decision = "ALLOW" # downgrade to allow
-                effective_override = ov
-                break
+cmd_sha256 = hashlib.sha256(cmd.encode("utf-8", errors="replace")).hexdigest() if cmd else ""
 
-# 4. Telemetry (Integrity critical)
+final_decision = highest_effective
+if blocked_hits_effective:
+    final_decision = "BLOCK"
+
+# 3. Telemetry
 telem_rec = {
     "ts": ts,
     "actor": actor,
-    "level": max_level, # Original level
+    "level": highest_effective,   # Effective level
+    "raw_highest": raw_highest,   # Raw severity before override
     "final": final_decision,
     "hits": len(hits),
+    "invalid_patterns": invalid_patterns,
     "cmd_preview": cmd[:500],
-    "override_used": effective_override
+    "cmd_sha256": cmd_sha256,
+    "overrides": overrides_used,
+    "bypassed_block_ids": bypassed_block_ids
 }
 log_telemetry(telem_rec, os.environ.get("TELEMETRY_FILE"))
 
-if effective_override:
+if overrides_used:
     emerg_rec = {
         "ts": ts,
         "actor": actor,
         "action": "emergency_bypass",
-        "reason": f"Override {effective_override} used for pattern(s)",
-        "cmd_preview": cmd[:500]
+        "reason": f"Overrides used: {overrides_used}",
+        "cmd_preview": cmd[:500],
+        "bypassed_ids": bypassed_block_ids
     }
     log_telemetry(emerg_rec, os.environ.get("EMERGENCY_LOG"))
 
-# 5. User Output & Exit Code
+# 4. Reporting
 if not hits:
     print("\033[0;32m✅ ALLOW\033[0m")
     sys.exit(0)
 
-# Print Report
 print(f"Guard Decision: {final_decision}")
 print("----")
 for h in hits:
-    color = "\033[0;31m" if h['action'] == "BLOCK" else "\033[1;33m"
+    color = "\033[0;31m" # Default Red/Block
+    if h['bypassed']: color = "\033[0;32m" # Green if bypassed
+    elif h['action'] == "WARN": color = "\033[1;33m" # Yellow
     rst = "\033[0m"
-    print(f"{color}[{h['action']}] {h['id']}{rst}")
+    
+    status_tag = h['action']
+    if h['bypassed']: status_tag += " (BYPASSED)"
+    
+    print(f"{color}[{status_tag}] {h['id']}{rst}")
     if h['msg']: print(f"  {h['msg'].replace(chr(10), ' ')}")
     if h['fix']: print(f"  Fix: {h['fix']}")
     if h['override']: print(f"  Override: {h['override']}")
     print("")
 
-if effective_override:
-    print(f"\033[1;33m⚠️  Emergency Override Applied ({effective_override}) - Proceeding with caution.\033[0m")
-    sys.exit(0)
-
-if max_level == "BLOCK":
+if final_decision == "BLOCK":
     print("\033[0;31m⛔ BLOCKED\033[0m")
     sys.exit(1)
 
-# WARN or ALLOW
+# Allow or Warn
 sys.exit(0)
 PY
