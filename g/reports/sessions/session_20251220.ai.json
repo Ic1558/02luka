@@ -1,8 +1,8 @@
 {
   "date": "2025-12-20",
-  "ts_utc": "2025-12-19T22:04:48Z",
-  "ts_local": "2025-12-20T05:04:48+0700",
-  "agent": "gmx",
+  "ts_utc": "2025-12-19T22:12:39Z",
+  "ts_local": "2025-12-20T05:12:39+0700",
+  "agent": "liam",
   "summary": {
     "total_entries": 42,
     "top_activities": [
@@ -21,6 +21,6 @@
   },
   "links": {
     "mls_ledger": "mls/ledger/2025-12-20.jsonl",
-    "full_session": "g/reports/sessions/session_20251220_050447.md"
+    "full_session": "g/reports/sessions/session_20251220_051238.md"
   }
 }
