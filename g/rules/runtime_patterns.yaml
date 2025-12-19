@@ -1,0 +1,29 @@
+patterns:
+  - id: atg_extensions_trap
+    trigger: "(~/.vscode/extensions|Application Support/Code|~/.vscode-server/extensions)"
+    action: WARN
+    message: |
+      ATG extension trap:
+      - Antigravity uses: ~/.antigravity/extensions/
+      - Copying ~/.vscode/extensions alone is not enough
+      - Must also update Antigravity extensions.json (registry) if required by ATG
+    fix: "Copy into ~/.antigravity/extensions/ AND update ATG extensions.json, then restart ATG"
+
+  - id: git_push_main_trap
+    trigger: "(git\\s+push\\s+origin\\s+main|ALLOW_PUSH_MAIN=)"
+    action: BLOCK
+    message: |
+      PR management is law:
+      - Never push origin/main directly
+      - Use: branch → push → PR → squash merge
+    override_env: "SAVE_EMERGENCY=1"
+    fix: "Create branch + PR. Use SAVE_EMERGENCY=1 only for true emergency and log evidence."
+
+  - id: fix_to_pass_trap
+    trigger: "(EXCLUDE.*\\*\\*|broad\\s+exclusion|exclude\\s+tools/\\*\\*|skip\\s+sandbox)"
+    action: WARN
+    message: |
+      Fix-to-pass anti-pattern detected:
+      - Avoid broad exclusions to make CI pass
+      - Prefer root-cause fixes + narrow allowlist with rationale
+    fix: "Explain root cause, add narrow allowlist or safe-guard rm -rf with path checks"

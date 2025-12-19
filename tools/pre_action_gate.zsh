@@ -320,3 +320,19 @@ case "${1:-}" in
   verify) pre_action_stamp_verify ;;
   *) ;; # Just source
 esac
+
+
+## ACTIVE_MEMORY: show_top_lessons
+show_top_lessons() {
+  local ledger="$REPO_ROOT/g/knowledge/solution_ledger.jsonl"
+  [[ -f "$ledger" ]] || return 0
+  echo ""
+  echo "🧠 Active Memory (latest lessons):"
+  tail -n 3 "$ledger" | sed 's/^/  - /'
+}
+
+
+# ACTIVE_MEMORY_CALL
+if [[ "${1:-}" == "create" ]] || [[ "${1:-}" == "read-now" ]] || [[ "${READ_NOW:-}" == "1" ]]; then
+  show_top_lessons || true
+fi

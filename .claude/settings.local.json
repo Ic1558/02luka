@@ -34,7 +34,15 @@
       "Bash(mdfind:*)",
       "Bash(open:*)",
       "Bash(log show:*)",
-      "Bash(xattr:*)"
+      "Bash(xattr:*)",
+      "Bash(/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister:*)",
+      "Bash(codesign:*)",
+      "Bash(otool:*)",
+      "Bash(spctl -a -t open --raw:*)",
+      "Bash(/Applications/then.app/Contents/MacOS/then)",
+      "Bash(spctl --assess --verbose:*)",
+      "Bash(ps:*)",
+      "Bash(tar:*)"
     ],
     "deny": [],
     "ask": []

@@ -107,6 +107,16 @@ Option C: Block with Evidence (rule, file/line, missing input)
 ## References
 
 - `personas/LIAM_PERSONA_v2.md`
-- `g/docs/WORKFLOW_PROTOCOL_v1.md`
+- `g/docs/WORKFLOW_PROTOCOL_v1.md` — **MUST READ for any feature/plan**
 - `g/docs/PR_AUTOPILOT_RULES.md`
 - `g/docs/PR_MANAGEMENT_DECISION_FRAMEWORK_v1.md`
+
+---
+
+## 🔄 Workflow Triggers
+
+| Trigger | Action |
+|---------|--------|
+| `feature-plan` | Read WORKFLOW_PROTOCOL → Phase 0 Discovery → Create SPEC + PLAN |
+| New feature | Pre-Action Checklist must be complete before implementation |
+| Any change | Plan → Dry-run → Verify → Execute (never skip) |

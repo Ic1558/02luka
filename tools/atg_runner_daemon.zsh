@@ -116,3 +116,16 @@ _main_loop(){
 }
 
 _main_loop
+
+
+## ACTIVE_MEMORY: runtime_guard
+guard_batch_or_block() {
+  local batch_file="$1"
+  if [[ -x "$REPO_ROOT/tools/guard_runtime.zsh" ]]; then
+    if ! ACTOR="atg_daemon" zsh "$REPO_ROOT/tools/guard_runtime.zsh" --batch "$batch_file" >/dev/null; then
+      echo "❌ BLOCKED by runtime guard: $batch_file"
+      return 1
+    fi
+  fi
+  return 0
+}
