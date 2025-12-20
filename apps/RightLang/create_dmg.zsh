@@ -5,7 +5,7 @@
 set -euo pipefail
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔨 Building and Packaging then.app v0.2.0"
+echo "🔨 Building and Packaging then.app v0.2.1"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -51,7 +51,7 @@ ln -s /Applications Applications
 
 # Create INSTALL.txt
 cat > "$DMG_BUILD/INSTALL.txt" << 'EOF'
-then 0.2.0 - Thai/English Text Conversion Service
+then 0.2.1 - Thai/English Text Conversion Service
 ================================================
 
 Installation Instructions:
@@ -87,7 +87,7 @@ System Requirements:
 About:
 ------
 
-then.app v0.2.0
+then.app v0.2.1
 Bundle ID: com.02luka.then
 Signed with hardened runtime for macOS Sequoia compatibility
 
@@ -102,8 +102,8 @@ This DMG can be copied to other Macs. The app works on:
 EOF
 
 # Create DMG
-DMG_OUTPUT="$OUTPUT_DIR/then-0.2.0.dmg"
-hdiutil create -volname "then 0.2.0" \
+DMG_OUTPUT="$OUTPUT_DIR/then-0.2.1.dmg"
+hdiutil create -volname "then 0.2.1" \
   -srcfolder "$DMG_BUILD" \
   -ov -format UDZO \
   "$DMG_OUTPUT"
@@ -123,27 +123,27 @@ echo "  📊 DMG size: $DMG_SIZE"
 hdiutil attach "$DMG_OUTPUT" -quiet
 sleep 1
 
-if [[ -d "/Volumes/then 0.2.0/then.app" ]]; then
+if [[ -d "/Volumes/then 0.2.1/then.app" ]]; then
   echo "  ✅ DMG contains then.app"
 
-  if codesign -v "/Volumes/then 0.2.0/then.app" 2>&1; then
+  if codesign -v "/Volumes/then 0.2.1/then.app" 2>&1; then
     echo "  ✅ Signature valid"
   else
     echo "  ⚠️  Signature verification failed"
   fi
 
-  if [[ -L "/Volumes/then 0.2.0/Applications" ]]; then
+  if [[ -L "/Volumes/then 0.2.1/Applications" ]]; then
     echo "  ✅ Applications symlink present"
   fi
 
-  if [[ -f "/Volumes/then 0.2.0/INSTALL.txt" ]]; then
+  if [[ -f "/Volumes/then 0.2.1/INSTALL.txt" ]]; then
     echo "  ✅ INSTALL.txt included"
   fi
 else
   echo "  ❌ DMG verification failed"
 fi
 
-hdiutil detach "/Volumes/then 0.2.0" -quiet 2>/dev/null || true
+hdiutil detach "/Volumes/then 0.2.1" -quiet 2>/dev/null || true
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
