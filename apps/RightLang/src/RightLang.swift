@@ -326,11 +326,31 @@ private final class KeyCaptureService {
 
     private var currentToken: String = ""
     private var lastToken: String = ""
+    private var eventCount = 0  // For debug logging
     var onToggleSelection: (() -> Void)?
 
     func startIfEnabled() {
-        guard UserDefaults.standard.bool(forKey: PrefKey.enableKeyCapture) else { return }
-        if tap != nil { return }
+        let isEnabled = UserDefaults.standard.bool(forKey: PrefKey.enableKeyCapture)
+        NSLog("🔍 KeyCapture startIfEnabled: enabled=\(isEnabled)")
+
+        guard isEnabled else {
+            NSLog("⚠️ KeyCapture disabled in preferences")
+            return
+        }
+
+        if tap != nil {
+            NSLog("✅ KeyCapture already running")
+            return
+        }
+
+        // Check Accessibility permission
+        let hasAccess = AXIsProcessTrusted()
+        NSLog("🔍 Accessibility permission: \(hasAccess)")
+
+        if !hasAccess {
+            NSLog("❌ No Accessibility permission - KeyCapture cannot start")
+            return
+        }
 
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
         guard let eventTap = CGEvent.tapCreate(
@@ -344,6 +364,7 @@ private final class KeyCaptureService {
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         ) else {
+            NSLog("❌ FAILED to create CGEventTap - Accessibility issue?")
             return
         }
 
@@ -353,6 +374,7 @@ private final class KeyCaptureService {
             CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
         }
         CGEvent.tapEnable(tap: eventTap, enable: true)
+        NSLog("✅ KeyCapture started successfully!")
     }
 
     func stop() {
@@ -394,11 +416,18 @@ private final class KeyCaptureService {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
 
+        // Log key events for debugging
+        eventCount += 1
+        if eventCount <= 3 {
+            NSLog("🎹 Key event #\(eventCount): keyCode=\(keyCode) flags=\(flags.rawValue)")
+        }
+
         // Hotkey: Cmd+Shift+L
         if (UserDefaults.standard.object(forKey: PrefKey.enableHotkeyFix) as? Bool ?? true),
            keyCode == Int(kVK_ANSI_L),
            flags.contains(.maskCommand),
            flags.contains(.maskShift) {
+            NSLog("🔥 Cmd+Shift+L detected - triggering fixLastWord")
             triggerFixLastWord()
             return nil
         }
@@ -412,6 +441,7 @@ private final class KeyCaptureService {
             let savedMods = HotkeyMods(rawValue: savedModsRaw)
             let eventMods = HotkeyMods.fromCGFlags(flags)
             if keyCode == savedKeyCode, eventMods.contains(savedMods) {
+                NSLog("🔥 Cmd+Shift+Space detected - toggling selection")
                 onToggleSelection?()
                 return nil
             }

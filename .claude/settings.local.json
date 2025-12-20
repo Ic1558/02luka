@@ -50,7 +50,8 @@
       "Bash(hdiutil verify:*)",
       "Bash(echo:*)",
       "Bash(zsh:*)",
-      "Bash(/bin/zsh:*)"
+      "Bash(/bin/zsh:*)",
+      "Bash(killall then)"
     ],
     "deny": [],
     "ask": []
