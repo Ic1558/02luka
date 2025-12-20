@@ -755,7 +755,6 @@ private final class SettingsWindowController: NSWindowController {
     }
 }
 
-@main
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWC: SettingsWindowController?
@@ -768,22 +767,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let didShowWelcomeKey = "then.didShowWelcome"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSLog("🚀 then.app starting - applicationDidFinishLaunching called")
+        print("🚀 then.app starting")
+
         NSApp.setActivationPolicy(.accessory)
 
         NSApp.servicesProvider = servicesProvider
         NSUpdateDynamicServices()
 
         // Create menu bar icon
+        NSLog("📍 Creating status bar item...")
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.isVisible = true  // Explicitly set visible
+        NSLog("📍 Status item created: \(statusItem != nil)")
+
         if let button = statusItem.button {
+            NSLog("📍 Got button, setting title...")
             button.toolTip = "then"
-            if #available(macOS 11.0, *), let img = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "then") {
-                button.image = img
-                button.title = ""
-            } else {
-                button.image = nil
-                button.title = "then"
-            }
+            button.title = "T"  // Simple letter T
+            button.image = nil
+            NSLog("📍 Button configured: title=\(button.title)")
+        } else {
+            NSLog("❌ ERROR: statusItem.button is nil!")
         }
 
         let menu = NSMenu()
@@ -813,6 +818,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit then", action: #selector(quit), keyEquivalent: "q"))
         statusItem.menu = menu
+        NSLog("✅ Menu assigned to status item")
 
         maybeShowWelcome()
 
@@ -972,5 +978,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             KeyboardFixer.shared.sendPaste()
         }
+    }
+}
+
+// Strong reference to prevent delegate deallocation
+private var appDelegateInstance: AppDelegate!
+
+@main
+struct ThenApp {
+    static func main() {
+        let app = NSApplication.shared
+        appDelegateInstance = AppDelegate()  // Store strong reference!
+        app.delegate = appDelegateInstance
+        app.run()
     }
 }

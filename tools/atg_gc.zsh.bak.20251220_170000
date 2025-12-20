@@ -5,11 +5,10 @@ REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 ATG_INBOX="$REPO_ROOT/bridge/inbox/ATG"
 
 # Retention policy (tune if needed)
-DAYS_PENDING="${ATG_GC_DAYS_PENDING:-3}"
-DAYS_REJECTED="${ATG_GC_DAYS_REJECTED:-7}"
+DAYS_PENDING="${ATG_GC_DAYS_PENDING:-7}"
+DAYS_REJECTED="${ATG_GC_DAYS_REJECTED:-14}"
 DAYS_TMP="${ATG_GC_DAYS_TMP:-2}"
 DAYS_LOG="${ATG_GC_DAYS_LOG:-14}"
-ATG_GC_DAYS_ARCHIVE="${ATG_GC_DAYS_ARCHIVE:-30}"
 
 mkdir -p "$ATG_INBOX/rejected" "$ATG_INBOX/pending" "$ATG_INBOX/processed" "$ATG_INBOX/archive"
 
@@ -18,33 +17,12 @@ _safe_prune() {
   local dir="$1"; shift
   local days="$1"; shift
   [[ -d "$dir" ]] || return 0
-  if (( days <= 0 )); then
-    # Delete immediately (no age threshold)
-    find "$dir" -type f -print -delete 2>/dev/null || true
-  else
-    # Delete files older than N days
-    find "$dir" -type f -mtime "+$days" -print -delete 2>/dev/null || true
-  fi
+  # Delete files older than N days
+  find "$dir" -type f -mtime "+$days" -print -delete 2>/dev/null || true
 }
 
 echo "[atg_gc] repo=$REPO_ROOT"
-echo "[atg_gc] pending>${DAYS_PENDING}d rejected>${DAYS_REJECTED}d archive>${ATG_GC_DAYS_ARCHIVE:-30}d tmp>${DAYS_TMP}d logs>${DAYS_LOG}d"
-
-
-# --- GC: orphan temp workfiles (can land in rejected/pending/etc) ---
-# These are internal work artifacts and should never accumulate.
-# We clean them across the whole ATG inbox tree, but ONLY within the inbox root.
-if [[ -n "${ATG_INBOX:-}" ]] && [[ -d "$ATG_INBOX" ]]; then
-_tmp_days="${TMP_DAYS:-2}"
-if (( _tmp_days <= 0 )); then
-  find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -print -delete 2>/dev/null || true
-else
-  find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -mtime +"$_tmp_days" -print -delete 2>/dev/null || true
-fi
-  rmdir "$ATG_INBOX/tmp_orphans" 2>/dev/null || true
-fi
-# --- /GC: orphan temp workfiles ---
-
+echo "[atg_gc] pending>${DAYS_PENDING}d rejected>${DAYS_REJECTED}d archive>${ATG_GC_DAYS_ARCHIVE:-90}d tmp>${DAYS_TMP}d logs>${DAYS_LOG}d"
 
 # 1) Temp work files left behind by daemon runs (common leak source)
 #    Example: .work_test_safe.zsh.17468
@@ -63,7 +41,7 @@ _safe_prune "$ATG_INBOX" "$DAYS_LOG" \
 #    Move (not delete) to archive, then prune archive after 90 days.
 if [[ -d "$ATG_INBOX/processed" ]]; then
   find "$ATG_INBOX/processed" -type f -mtime "+$DAYS_PENDING" -print -exec mv -n {} "$ATG_INBOX/archive/" \; 2>/dev/null || true
-  _safe_prune "$ATG_INBOX/archive" "$ATG_GC_DAYS_ARCHIVE"
+  _safe_prune "$ATG_INBOX/archive" "${ATG_GC_DAYS_ARCHIVE:-90}"
 fi
 
 echo "[atg_gc] done"
