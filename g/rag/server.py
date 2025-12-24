@@ -27,14 +27,19 @@ def repo_root() -> Path:
 
 
 def open_db(db_path: Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(str(db_path))
+    # Threaded HTTP server: open a fresh connection per request with
+    # check_same_thread=False so sqlite doesn't crash when handler threads
+    # use their own connections.
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def count_docs(conn: sqlite3.Connection) -> int:
-    row = conn.execute("SELECT count(*) AS n FROM docs").fetchone()
-    return int(row["n"]) if row else 0
+def count_docs(db_path: Path) -> int:
+    # Open per-call to ensure the connection is bound to the current thread.
+    with open_db(db_path) as conn:
+        row = conn.execute("SELECT count(*) AS n FROM docs").fetchone()
+        return int(row["n"]) if row else 0
 
 
 def search_docs(conn: sqlite3.Connection, query: str, limit: int) -> list[dict[str, Any]]:
@@ -99,8 +104,7 @@ class Handler(BaseHTTPRequestHandler):
         db_path: Path = self.server.db_path  # type: ignore[attr-defined]
 
         if path == "/health":
-            with open_db(db_path) as conn:
-                docs = count_docs(conn)
+            docs = count_docs(db_path)
             self._send_json(
                 200,
                 {
