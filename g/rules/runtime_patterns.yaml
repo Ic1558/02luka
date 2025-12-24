@@ -27,3 +27,16 @@ patterns:
       - Avoid broad exclusions to make CI pass
       - Prefer root-cause fixes + narrow allowlist with rationale
     fix: "Explain root cause, add narrow allowlist or safe-guard rm -rf with path checks"
+
+  - id: strategic_change_warning
+    trigger: "(commit.*-m.*(policy|strategy|architecture))"
+    action: WARN
+    message: |
+      ⚠️ Strategic-change reminder (WARN-only)
+      Use DECISION_BOX for policy/strategy/architecture/authority-model changes.
+      Skip for small bugfix/typo/routine ops.
+
+      Template: g/decision/DECISION_BOX.md
+      Fast path: zsh tools/warroom.zsh "<topic>"
+    fix: "Run: zsh tools/warroom.zsh \"<topic>\""
+
