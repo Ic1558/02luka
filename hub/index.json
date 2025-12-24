@@ -1,15 +1,33 @@
 {
   "_meta": {
     "created_by": "GG_Agent_02luka",
-    "created_at": "2025-12-24T19:19:38.965Z",
+    "created_at": "2025-12-24T19:37:42.946Z",
     "source": "hub_autoindex.cjs",
     "total": 22,
     "mem_root": "/home/runner/work/02luka/02luka/code-repo/_memory"
   },
   "items": [
     {
+      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
+      "mtime": "2025-12-24T19:37:38.044Z",
+      "bytes": 10267,
+      "kind": "md",
+      "title": "MCP Configuration Crisis Resolution",
+      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
+      "meta": {
+        "title": "MCP Configuration Crisis Resolution",
+        "date": "2025-11-07",
+        "type": "solution",
+        "category": "infrastructure",
+        "severity": "critical",
+        "status": "resolved",
+        "tags": "[mcp, cursor, configuration, troubleshooting]"
+      },
+      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
+    },
+    {
       "rel": "g/reports/PHASE_20_HUB_AUTOINDEX_COMPLETE.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 9575,
       "kind": "md",
       "title": "Phase 20: Hub Dashboard Auto-Index & Memory Sync",
@@ -27,7 +45,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_033807.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -44,7 +62,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251108_102049.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -61,7 +79,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215231.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -78,7 +96,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215448.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -95,7 +113,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251109_215450.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -112,7 +130,7 @@
     },
     {
       "rel": "g/reports/sessions/session_20251111_054601.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 3005,
       "kind": "md",
       "title": "CLC Session Summary",
@@ -129,7 +147,7 @@
     },
     {
       "rel": "test/manual_setup/git_manual_test.md",
-      "mtime": "2025-12-24T19:19:36.385Z",
+      "mtime": "2025-12-24T19:37:38.044Z",
       "bytes": 261,
       "kind": "md",
       "title": "Manual Git Setup Test",
@@ -138,8 +156,38 @@
       "sha256": "58663d3dc8202fddd4d8443e6fb2efa72dd25d5cd5f2fea1683b6093087a6d38"
     },
     {
+      "rel": ".cursor/mcp.json",
+      "mtime": "2025-12-24T19:37:38.043Z",
+      "bytes": 23,
+      "kind": "json",
+      "title": "",
+      "summary": "{\"mcpServers\":{}}",
+      "meta": {},
+      "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
+    },
+    {
+      "rel": "GG/context/INTEGRATION_CHECK.md",
+      "mtime": "2025-12-24T19:37:38.043Z",
+      "bytes": 229,
+      "kind": "md",
+      "title": "Integration Test Ping",
+      "summary": "# Integration Test Ping\n# Generated: 2025-11-11T17:14:46Z\n# Purpose: Verify end-to-end memory sync workflow\n\nThis file is created by the integration test to verify:\n- mem_sync_from_core.zsh (pull)\n- mem_push_to_memory.zsh (push)\n",
+      "meta": {},
+      "sha256": "327e69370dac60d1a0bdcceec3165beaf0aa6e8736edaa4b37d8bc14bd34f84c"
+    },
+    {
+      "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
+      "mtime": "2025-12-24T19:37:38.043Z",
+      "bytes": 146,
+      "kind": "md",
+      "title": "Integration Ping",
+      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:36:19Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
+      "meta": {},
+      "sha256": "670d9ecd0b435aeba65283cb5e3cf48a4506fb61eff711bba94d97adbc32979d"
+    },
+    {
       "rel": "GG/context/INTEGRATION_PING_20251111_173937.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 146,
       "kind": "md",
       "title": "Integration Ping",
@@ -149,7 +197,7 @@
     },
     {
       "rel": "GG/context/LATEST.json",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -166,7 +214,7 @@
     },
     {
       "rel": "GG/context/LATEST.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -182,7 +230,7 @@
     },
     {
       "rel": "GG/context/LATEST.meta.json",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -192,7 +240,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.json",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 15223,
       "kind": "json",
       "title": "",
@@ -207,7 +255,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_202138Z.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 9360,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -223,7 +271,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.json",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 14873,
       "kind": "json",
       "title": "",
@@ -240,7 +288,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 8969,
       "kind": "md",
       "title": "Context Summary - 02LUKA System",
@@ -256,7 +304,7 @@
     },
     {
       "rel": "GG/context/context_summary_20251107_203206Z.meta.json",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 453,
       "kind": "json",
       "title": "",
@@ -266,61 +314,13 @@
     },
     {
       "rel": "README.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
+      "mtime": "2025-12-24T19:37:38.043Z",
       "bytes": 461,
       "kind": "md",
       "title": "02LUKA Memory Repository",
       "summary": "# 02LUKA Memory Repository\n\nThis repository stores automated memory entries created by the AI/OP-001 v3 protocol.\n\n## Structure\n\n- `{agent}/{scope}/` - Memory entries organized by agent and scope\n- Each file contains markdown-formatted memory content\n- Git history provides complete audit trail\n\n## Generated By\n\n- AI/OP-001 v3 Memory Upsert Protocol  \n- N8N Workflow: GM • Memory Upsert (v3-git-auth",
       "meta": {},
       "sha256": "11249329f1852c363cde2a6918663ce554eb2e923e4900ec69a476b37c92bc21"
-    },
-    {
-      "rel": "g/reports/MCP_CONFIG_FIX_20251107.md",
-      "mtime": "2025-12-24T19:19:36.384Z",
-      "bytes": 10267,
-      "kind": "md",
-      "title": "MCP Configuration Crisis Resolution",
-      "summary": "# MCP Configuration Crisis Resolution\n\n## Executive Summary\n\n**Problem**: Cursor displayed critical MCP configuration errors:\n- \"mcpServers must be an object\" format error\n- \"Exceeding total tools limit\" (149 tools vs 80 limit)\n- MCP_DOCKER duplication across multiple config files\n\n**Solution**: Fixed configuration format, reduced server count, eliminated duplicates\n\n**Result**: System fully opera",
-      "meta": {
-        "title": "MCP Configuration Crisis Resolution",
-        "date": "2025-11-07",
-        "type": "solution",
-        "category": "infrastructure",
-        "severity": "critical",
-        "status": "resolved",
-        "tags": "[mcp, cursor, configuration, troubleshooting]"
-      },
-      "sha256": "1aa5b0c8e0cfd55da9067c717d0624a23bc541176d9d0f6a7f88230fb29afcd6"
-    },
-    {
-      "rel": ".cursor/mcp.json",
-      "mtime": "2025-12-24T19:19:36.383Z",
-      "bytes": 23,
-      "kind": "json",
-      "title": "",
-      "summary": "{\"mcpServers\":{}}",
-      "meta": {},
-      "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
-    },
-    {
-      "rel": "GG/context/INTEGRATION_CHECK.md",
-      "mtime": "2025-12-24T19:19:36.383Z",
-      "bytes": 229,
-      "kind": "md",
-      "title": "Integration Test Ping",
-      "summary": "# Integration Test Ping\n# Generated: 2025-11-11T17:14:46Z\n# Purpose: Verify end-to-end memory sync workflow\n\nThis file is created by the integration test to verify:\n- mem_sync_from_core.zsh (pull)\n- mem_push_to_memory.zsh (push)\n",
-      "meta": {},
-      "sha256": "327e69370dac60d1a0bdcceec3165beaf0aa6e8736edaa4b37d8bc14bd34f84c"
-    },
-    {
-      "rel": "GG/context/INTEGRATION_PING_20251111_173619.md",
-      "mtime": "2025-12-24T19:19:36.383Z",
-      "bytes": 146,
-      "kind": "md",
-      "title": "Integration Ping",
-      "summary": "# Integration Ping\n\n- when: 2025-11-11T17:36:19Z\n- by: WO-251113-CLAUDE-SUBTREE-FLOW\n- note: verifying subtree split/push + CI auto-index linkage\n",
-      "meta": {},
-      "sha256": "670d9ecd0b435aeba65283cb5e3cf48a4506fb61eff711bba94d97adbc32979d"
     }
   ]
 }
