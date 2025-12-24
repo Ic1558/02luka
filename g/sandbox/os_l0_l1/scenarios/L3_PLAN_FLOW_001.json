@@ -1,0 +1,68 @@
+{
+  "session_id": "SESSION-L3-DEMO-001",
+  "task_id": "TASK-L3-PLAN-P0",
+  "plan": {
+    "plan_id": "P-L3-DEMO-001",
+    "title": "L3 Demo Plan",
+    "owner_agent": "Liam",
+    "status": "ACTIVE",
+    "actor": "Liam"
+  },
+  "items": [
+    {
+      "item_id": "I-001",
+      "plan_id": "P-L3-DEMO-001",
+      "kind": "TASK",
+      "title": "Create schema + CLI skeleton",
+      "state": "TODO",
+      "priority": 1,
+      "assigned_to": "Codex",
+      "due_ts": null,
+      "actor": "Codex"
+    },
+    {
+      "item_id": "I-002",
+      "plan_id": "P-L3-DEMO-001",
+      "kind": "TASK",
+      "title": "Run scenario + verify_chain",
+      "state": "TODO",
+      "priority": 2,
+      "assigned_to": "Liam",
+      "due_ts": null,
+      "actor": "Liam"
+    }
+  ],
+  "updates": [
+    {
+      "item_id": "I-002",
+      "expected_version": 1,
+      "patch": {
+        "priority": 3,
+        "title": "Run scenario + verify_chain (prep)"
+      },
+      "actor": "Liam"
+    }
+  ],
+  "transitions": [
+    {
+      "item_id": "I-001",
+      "to_state": "IN_PROGRESS",
+      "expected_version": 1,
+      "actor": "Codex"
+    },
+    {
+      "item_id": "I-001",
+      "to_state": "DONE",
+      "expected_version": 2,
+      "actor": "Codex"
+    }
+  ],
+  "conflicts": [
+    {
+      "item_id": "I-002",
+      "expected_version": 1,
+      "patch": { "state": "IN_PROGRESS" },
+      "actor": "Liam"
+    }
+  ]
+}
