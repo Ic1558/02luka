@@ -257,6 +257,24 @@ End
 
 ----------------------------------------------------------------
 
+4.1 Evidence (2025-12-24 sandbox run)
+-------------------------------------
+- Commands run:
+  - zsh g/sandbox/os_l0_l1/tools/init_db.zsh
+  - (cd g/sandbox/os_l0_l1 && python3 tools/os_l3_plan.py --db data/os_sandbox.db apply-scenario scenarios/L3_PLAN_FLOW_001.json)
+  - zsh g/sandbox/os_l0_l1/tools/verify_chain.zsh
+  - (cd g/sandbox/os_l0_l1 && python3 tools/os_l3_plan.py --db data/os_sandbox.db list-plans)
+  - (cd g/sandbox/os_l0_l1 && python3 tools/os_l3_plan.py --db data/os_sandbox.db list-items --plan-id P-L3-DEMO-001)
+  - zsh g/sandbox/os_l0_l1/tools/healthcheck.zsh --extended
+- Key outputs:
+  - apply-scenario: plan_created=true, items_added=2, item_updates=1, state_changes=2, conflicts=1, events_written=7
+  - verify_chain: chain_status=OK, events=7, mismatches=[]
+  - list-plans: P-L3-DEMO-001 ACTIVE, version=1
+  - list-items: I-001 DONE version=3; I-002 TODO version=2
+  - healthcheck --extended: re-ran init + scenario + verify-chain + list commands, all OK (reproducible)
+
+----------------------------------------------------------------
+
 5) Start Work (Operator Steps)
 ------------------------------
 
