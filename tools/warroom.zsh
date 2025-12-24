@@ -13,7 +13,7 @@ LAC_MIRROR="$DECISION_DIR/LAC_REASONING_MIRROR.md"
 mkdir -p "$DRAFTS_DIR"
 
 # Argument Parsing
-provider="gemini" # Default to Gemini (we know it exists)
+provider="antigravity" # Default to Antigravity (Identity Alignment)
 fill_mode="false"
 lac_mode="false"
 args=()
