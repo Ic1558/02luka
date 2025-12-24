@@ -58,6 +58,22 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     with open(SCHEMA_PATH, "r", encoding="utf-8") as fh:
         conn.executescript(fh.read())
 
+    # Migration-safe column add for plan_items execution fields
+    def _has_column(table: str, column: str) -> bool:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        return any(r["name"] == column for r in rows)
+
+    def _add_column(table: str, column: str, definition: str) -> None:
+        if not _has_column(table, column):
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    _add_column("plan_items", "exec_status", "TEXT NOT NULL DEFAULT 'NONE'")
+    _add_column("plan_items", "exec_ready_ts", "TEXT")
+    _add_column("plan_items", "exec_request_ts", "TEXT")
+    _add_column("plan_items", "exec_result_ts", "TEXT")
+    _add_column("plan_items", "exec_result_json", "TEXT")
+    _add_column("plan_items", "exec_error", "TEXT")
+
 
 def record_event(
     conn: sqlite3.Connection,
@@ -324,6 +340,216 @@ def update_item_state(
     }
 
 
+def mark_item_ready(
+    conn: sqlite3.Connection,
+    *,
+    item_id: str,
+    expected_version: int,
+    actor: str,
+    session_id: str,
+    task_id: str,
+) -> Dict[str, Any]:
+    row = conn.execute(
+        "SELECT item_id, plan_id, exec_status, version FROM plan_items WHERE item_id = ?",
+        (item_id,),
+    ).fetchone()
+    if not row:
+        raise ValueError(f"Item not found: {item_id}")
+    if row["version"] != expected_version:
+        record_event(
+            conn,
+            event_type="PLAN_CONFLICT_DETECTED",
+            payload={
+                "plan_id": row["plan_id"],
+                "item_id": item_id,
+                "expected_version": expected_version,
+                "current_version": row["version"],
+                "attempted_status": "READY_FOR_EXEC",
+            },
+            actor=actor,
+            session_id=session_id,
+            task_id=task_id,
+        )
+        return {
+            "item_id": item_id,
+            "status": "conflict",
+            "expected_version": expected_version,
+            "current_version": row["version"],
+        }
+    new_version = row["version"] + 1
+    now_ts = iso_now()
+    conn.execute(
+        """
+        UPDATE plan_items
+        SET exec_status = 'READY_FOR_EXEC', exec_ready_ts = ?, version = ?, updated_ts = ?
+        WHERE item_id = ?
+        """,
+        (now_ts, new_version, now_ts, item_id),
+    )
+    record_event(
+        conn,
+        event_type="PLAN_ITEM_MARKED_READY",
+        payload={
+            "plan_id": row["plan_id"],
+            "item_id": item_id,
+            "exec_status": "READY_FOR_EXEC",
+            "expected_version": expected_version,
+            "new_version": new_version,
+        },
+        actor=actor,
+        session_id=session_id,
+        task_id=task_id,
+    )
+    return {"item_id": item_id, "status": "updated", "exec_status": "READY_FOR_EXEC", "version": new_version}
+
+
+def record_exec_request(
+    conn: sqlite3.Connection,
+    *,
+    item_id: str,
+    expected_version: int,
+    actor: str,
+    session_id: str,
+    task_id: str,
+    payload: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    row = conn.execute(
+        "SELECT item_id, plan_id, exec_status, version FROM plan_items WHERE item_id = ?",
+        (item_id,),
+    ).fetchone()
+    if not row:
+        raise ValueError(f"Item not found: {item_id}")
+    if row["version"] != expected_version:
+        record_event(
+            conn,
+            event_type="PLAN_CONFLICT_DETECTED",
+            payload={
+                "plan_id": row["plan_id"],
+                "item_id": item_id,
+                "expected_version": expected_version,
+                "current_version": row["version"],
+                "attempted_status": "EXEC_REQUESTED",
+            },
+            actor=actor,
+            session_id=session_id,
+            task_id=task_id,
+        )
+        return {
+            "item_id": item_id,
+            "status": "conflict",
+            "expected_version": expected_version,
+            "current_version": row["version"],
+        }
+    new_version = row["version"] + 1
+    now_ts = iso_now()
+    conn.execute(
+        """
+        UPDATE plan_items
+        SET exec_status = 'EXEC_REQUESTED',
+            exec_request_ts = ?,
+            exec_result_json = ?,
+            exec_error = NULL,
+            version = ?,
+            updated_ts = ?
+        WHERE item_id = ?
+        """,
+        (now_ts, json.dumps(payload or {}, sort_keys=True), new_version, now_ts, item_id),
+    )
+    record_event(
+        conn,
+        event_type="PLAN_ITEM_EXEC_REQUESTED",
+        payload={
+            "plan_id": row["plan_id"],
+            "item_id": item_id,
+            "exec_status": "EXEC_REQUESTED",
+            "request": payload or {},
+            "expected_version": expected_version,
+            "new_version": new_version,
+        },
+        actor=actor,
+        session_id=session_id,
+        task_id=task_id,
+    )
+    return {"item_id": item_id, "status": "updated", "exec_status": "EXEC_REQUESTED", "version": new_version}
+
+
+def record_exec_result(
+    conn: sqlite3.Connection,
+    *,
+    item_id: str,
+    expected_version: int,
+    actor: str,
+    session_id: str,
+    task_id: str,
+    result: Optional[Dict[str, Any]] = None,
+    error: Optional[str] = None,
+) -> Dict[str, Any]:
+    row = conn.execute(
+        "SELECT item_id, plan_id, exec_status, version FROM plan_items WHERE item_id = ?",
+        (item_id,),
+    ).fetchone()
+    if not row:
+        raise ValueError(f"Item not found: {item_id}")
+    if row["version"] != expected_version:
+        record_event(
+            conn,
+            event_type="PLAN_CONFLICT_DETECTED",
+            payload={
+                "plan_id": row["plan_id"],
+                "item_id": item_id,
+                "expected_version": expected_version,
+                "current_version": row["version"],
+                "attempted_status": "EXEC_RESULT_RECORDED",
+            },
+            actor=actor,
+            session_id=session_id,
+            task_id=task_id,
+        )
+        return {
+            "item_id": item_id,
+            "status": "conflict",
+            "expected_version": expected_version,
+            "current_version": row["version"],
+        }
+    new_version = row["version"] + 1
+    now_ts = iso_now()
+    conn.execute(
+        """
+        UPDATE plan_items
+        SET exec_status = 'EXEC_RESULT_RECORDED',
+            exec_result_ts = ?,
+            exec_result_json = ?,
+            exec_error = ?,
+            version = ?,
+            updated_ts = ?
+        WHERE item_id = ?
+        """,
+        (now_ts, json.dumps(result or {}, sort_keys=True), error, new_version, now_ts, item_id),
+    )
+    record_event(
+        conn,
+        event_type="PLAN_ITEM_EXEC_RESULT_RECORDED",
+        payload={
+            "plan_id": row["plan_id"],
+            "item_id": item_id,
+            "exec_status": "EXEC_RESULT_RECORDED",
+            "result": result or {},
+            "error": error,
+            "expected_version": expected_version,
+            "new_version": new_version,
+        },
+        actor=actor,
+        session_id=session_id,
+        task_id=task_id,
+    )
+    return {
+        "item_id": item_id,
+        "status": "updated",
+        "exec_status": "EXEC_RESULT_RECORDED",
+        "version": new_version,
+    }
+
+
 def list_plans(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
     rows = conn.execute(
         "SELECT plan_id, title, owner_agent, status, version, created_ts, updated_ts FROM plans ORDER BY created_ts ASC"
@@ -334,7 +560,9 @@ def list_plans(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
 def list_items(conn: sqlite3.Connection, plan_id: str) -> List[Dict[str, Any]]:
     rows = conn.execute(
         """
-        SELECT item_id, plan_id, kind, title, state, priority, assigned_to, due_ts, version, created_ts, updated_ts
+        SELECT item_id, plan_id, kind, title, state, priority, assigned_to, due_ts,
+               exec_ready_ts, exec_status, exec_request_ts, exec_result_ts, exec_result_json, exec_error,
+               version, created_ts, updated_ts
         FROM plan_items
         WHERE plan_id = ?
         ORDER BY created_ts ASC
@@ -386,6 +614,9 @@ def apply_scenario(conn: sqlite3.Connection, scenario: Dict[str, Any]) -> Dict[s
         "items_added": 0,
         "state_changes": 0,
         "item_updates": 0,
+        "exec_ready": 0,
+        "exec_requests": 0,
+        "exec_results": 0,
         "conflicts": 0,
         "events_written": 0,
     }
@@ -447,6 +678,51 @@ def apply_scenario(conn: sqlite3.Connection, scenario: Dict[str, Any]) -> Dict[s
             else:
                 results["state_changes"] += 1
 
+        for ready in scenario.get("exec_ready", []):
+            res = mark_item_ready(
+                conn,
+                item_id=ready["item_id"],
+                expected_version=int(ready["expected_version"]),
+                actor=ready.get("actor", ""),
+                session_id=session_id,
+                task_id=task_id,
+            )
+            if res.get("status") == "conflict":
+                results["conflicts"] += 1
+            elif res.get("status") == "updated":
+                results["exec_ready"] += 1
+
+        for req in scenario.get("exec_requests", []):
+            res = record_exec_request(
+                conn,
+                item_id=req["item_id"],
+                expected_version=int(req["expected_version"]),
+                actor=req.get("actor", ""),
+                session_id=session_id,
+                task_id=task_id,
+                payload=req.get("payload"),
+            )
+            if res.get("status") == "conflict":
+                results["conflicts"] += 1
+            elif res.get("status") == "updated":
+                results["exec_requests"] += 1
+
+        for exec_res in scenario.get("exec_results", []):
+            res = record_exec_result(
+                conn,
+                item_id=exec_res["item_id"],
+                expected_version=int(exec_res["expected_version"]),
+                actor=exec_res.get("actor", ""),
+                session_id=session_id,
+                task_id=task_id,
+                result=exec_res.get("result"),
+                error=exec_res.get("error"),
+            )
+            if res.get("status") == "conflict":
+                results["conflicts"] += 1
+            elif res.get("status") == "updated":
+                results["exec_results"] += 1
+
     after_events = conn.execute("SELECT COUNT(1) AS c FROM events").fetchone()["c"]
     results["events_written"] = after_events - before_events
     results["session_id"] = session_id
@@ -501,6 +777,30 @@ def main(argv: List[str]) -> int:
     p_apply = sub.add_parser("apply-scenario", help="Apply scenario JSON")
     p_apply.add_argument("scenario_path", help="Relative path under scenarios/")
 
+    p_ready = sub.add_parser("mark-ready", help="Mark item READY_FOR_EXEC")
+    p_ready.add_argument("--item-id", required=True)
+    p_ready.add_argument("--expected-version", required=True, type=int)
+    p_ready.add_argument("--actor", default="")
+    p_ready.add_argument("--session-id", default="L3_PLAN_P0_SESSION")
+    p_ready.add_argument("--task-id", default="L3_PLAN_P0_TASK")
+
+    p_req = sub.add_parser("record-request", help="Record execution request")
+    p_req.add_argument("--item-id", required=True)
+    p_req.add_argument("--expected-version", required=True, type=int)
+    p_req.add_argument("--actor", default="")
+    p_req.add_argument("--payload", default="{}", help="JSON payload for request")
+    p_req.add_argument("--session-id", default="L3_PLAN_P0_SESSION")
+    p_req.add_argument("--task-id", default="L3_PLAN_P0_TASK")
+
+    p_res = sub.add_parser("record-result", help="Record execution result")
+    p_res.add_argument("--item-id", required=True)
+    p_res.add_argument("--expected-version", required=True, type=int)
+    p_res.add_argument("--actor", default="")
+    p_res.add_argument("--result", default="{}", help="JSON result payload")
+    p_res.add_argument("--error", default=None, help="Error message if any")
+    p_res.add_argument("--session-id", default="L3_PLAN_P0_SESSION")
+    p_res.add_argument("--task-id", default="L3_PLAN_P0_TASK")
+
     sub.add_parser("verify-chain", help="Verify hash-chain integrity")
 
     args = parser.parse_args(argv)
@@ -532,6 +832,55 @@ def main(argv: List[str]) -> int:
         result = apply_scenario(conn, scenario)
         json_print(result)
         return 0
+    if args.command == "mark-ready":
+        ensure_schema(conn)
+        result = mark_item_ready(
+            conn,
+            item_id=args.item_id,
+            expected_version=args.expected_version,
+            actor=args.actor,
+            session_id=args.session_id,
+            task_id=args.task_id,
+        )
+        json_print(result)
+        return 0 if result.get("status") != "conflict" else 1
+    if args.command == "record-request":
+        ensure_schema(conn)
+        try:
+            payload_obj = json.loads(args.payload) if args.payload else {}
+        except Exception as e:
+            sys.stderr.write(f"Invalid payload JSON: {e}\n")
+            return 1
+        result = record_exec_request(
+            conn,
+            item_id=args.item_id,
+            expected_version=args.expected_version,
+            actor=args.actor,
+            session_id=args.session_id,
+            task_id=args.task_id,
+            payload=payload_obj,
+        )
+        json_print(result)
+        return 0 if result.get("status") != "conflict" else 1
+    if args.command == "record-result":
+        ensure_schema(conn)
+        try:
+            result_obj = json.loads(args.result) if args.result else {}
+        except Exception as e:
+            sys.stderr.write(f"Invalid result JSON: {e}\n")
+            return 1
+        result = record_exec_result(
+            conn,
+            item_id=args.item_id,
+            expected_version=args.expected_version,
+            actor=args.actor,
+            session_id=args.session_id,
+            task_id=args.task_id,
+            result=result_obj,
+            error=args.error,
+        )
+        json_print(result)
+        return 0 if result.get("status") != "conflict" else 1
     if args.command == "verify-chain":
         ensure_schema(conn)
         result = verify_chain(conn)

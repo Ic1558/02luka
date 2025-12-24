@@ -1917,3 +1917,32 @@ _Normalized by normalize_and_report.py_
 <!-- Last Session: 20251115_163435 -->
 
 <!-- Last Session: 20251115_163443 -->
+
+<!-- SYSTEM_TRUTH_SYNC_P1_START -->
+
+## System Truth Snapshot (P1 - Writable)
+
+- Generated at (UTC): `2025-12-24T09:40:26.141874+00:00`
+
+### Sandbox OS L0/L1
+- Status: **GREEN**
+- Message: Manual sandbox check (codex sandbox): basic read/write ok; scenario runner not present here.
+- Latest report: `g/sandbox/os_l0_l1/logs/liam_reports/health_20251216_191607.json`
+- Report timestamp: `2025-12-16T19:16:07.663961+00:00`
+
+### Gateway v3 Router
+- Telemetry file: `g/telemetry/gateway_v3_router.jsonl`
+- Total events: 9
+- Latest event ts: `2025-12-17T17:25:40.647934+00:00`
+- Latest: `None` - None
+
+### Key Work Orders (Snapshot)
+- **WO-20251113-SYSTEM-TRUTH-SYNC** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-20251113-SYSTEM-TRUTH-SYNC.yaml`  
+- **WO-20251206-GATEWAY-V3-CORE** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-20251206-GATEWAY-V3-CORE.yaml`  
+- **WO-20251206-SANDBOX-FIX-V1** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-20251206-SANDBOX-FIX-V1.yaml`  
+- **WO-20251206-LOCAL-AGENT-REVIEW-PHASE1** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-20251206-LOCAL-AGENT-REVIEW-PHASE1.yaml`  
+- **WO-TEST-GATEWAY-V3** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-TEST-GATEWAY-V3.yaml`  
+- **WO-20251206-LAR-GITDROP-SAVECHAIN-V1** (status: `unknown`, priority: `-`, owner: `-`)  `bridge/outbox/CLC/WO-20251206-LAR-GITDROP-SAVECHAIN-V1.yaml`  
+
+> Managed by system_truth_sync_p1.py --apply (sandbox, append-only log inferred).
+<!-- SYSTEM_TRUTH_SYNC_P1_END -->
