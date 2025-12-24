@@ -2,12 +2,13 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
-ATG_INBOX="$REPO_ROOT/bridge/inbox/ATG"
+ATG_INBOX="${ATG_INBOX:-$REPO_ROOT/bridge/inbox/ATG}"
 
 # Retention policy (tune if needed)
 DAYS_PENDING="${ATG_GC_DAYS_PENDING:-3}"
 DAYS_REJECTED="${ATG_GC_DAYS_REJECTED:-7}"
-DAYS_TMP="${ATG_GC_DAYS_TMP:-2}"
+# TMP_DAYS remains as a legacy alias for ATG_GC_DAYS_TMP
+DAYS_TMP="${ATG_GC_DAYS_TMP:-${TMP_DAYS:-2}}"
 DAYS_LOG="${ATG_GC_DAYS_LOG:-14}"
 ATG_GC_DAYS_ARCHIVE="${ATG_GC_DAYS_ARCHIVE:-30}"
 
@@ -27,7 +28,7 @@ _safe_prune() {
   fi
 }
 
-echo "[atg_gc] repo=$REPO_ROOT"
+echo "[atg_gc] repo=$REPO_ROOT inbox=$ATG_INBOX"
 echo "[atg_gc] pending>${DAYS_PENDING}d rejected>${DAYS_REJECTED}d archive>${ATG_GC_DAYS_ARCHIVE:-30}d tmp>${DAYS_TMP}d logs>${DAYS_LOG}d"
 
 
@@ -35,12 +36,11 @@ echo "[atg_gc] pending>${DAYS_PENDING}d rejected>${DAYS_REJECTED}d archive>${ATG
 # These are internal work artifacts and should never accumulate.
 # We clean them across the whole ATG inbox tree, but ONLY within the inbox root.
 if [[ -n "${ATG_INBOX:-}" ]] && [[ -d "$ATG_INBOX" ]]; then
-_tmp_days="${TMP_DAYS:-2}"
-if (( _tmp_days <= 0 )); then
-  find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -print -delete 2>/dev/null || true
-else
-  find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -mtime +"$_tmp_days" -print -delete 2>/dev/null || true
-fi
+  if (( DAYS_TMP <= 0 )); then
+    find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -print -delete 2>/dev/null || true
+  else
+    find "$ATG_INBOX" -type f -name '.work_*.zsh.*' -mtime "+$DAYS_TMP" -print -delete 2>/dev/null || true
+  fi
   rmdir "$ATG_INBOX/tmp_orphans" 2>/dev/null || true
 fi
 # --- /GC: orphan temp workfiles ---
