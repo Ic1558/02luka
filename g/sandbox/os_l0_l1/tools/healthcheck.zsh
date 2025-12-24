@@ -35,7 +35,9 @@ if $EXTENDED; then
   echo "[healthcheck] running extended L3 scenario"
   zsh "$HC_ROOT/tools/init_db.zsh"
   (cd "$HC_ROOT" && python3 tools/os_l3_plan.py --db "$DB_PATH" apply-scenario "$SCENARIO_PATH")
+  (cd "$HC_ROOT" && python3 tools/os_l3_plan.py --db "$DB_PATH" apply-scenario "scenarios/L3_CONTRACT_FLOW_001.json")
   python3 "$HC_ROOT/tools/os_l3_plan.py" --db "$DB_PATH" verify-chain
   (cd "$HC_ROOT" && python3 tools/os_l3_plan.py --db "$DB_PATH" list-plans)
   (cd "$HC_ROOT" && python3 tools/os_l3_plan.py --db "$DB_PATH" list-items --plan-id P-L3-DEMO-001)
+  (cd "$HC_ROOT" && python3 tools/os_l3_plan.py --db "$DB_PATH" list-items --plan-id P-L3-CONTRACT-001)
 fi
