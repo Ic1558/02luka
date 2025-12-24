@@ -9,11 +9,14 @@
 
 **⚠️ CRITICAL: This is the BASIC, FUNDAMENTAL way to work. Not optional. Not a suggestion.**
 
-This protocol defines the mandatory workflow for all development tasks, ensuring quality, safety, and systematic problem-solving.
+⚠️ **STRATEGIC RULE:** Any strategic / policy / architectural change MUST start with a DECISION_BOX artifact. No DECISION_BOX → No execution.
 
-**Core Principle:** Never run changes directly. Always plan, dry-run, verify, and only execute after validation.
+**Examples requiring DECISION_BOX:**
+- Changing guard / policy / GC rules
+- Introducing new agent / mode (e.g. warroom, lac behavior)
+- Refactoring core workflow or authority model
 
----
+**Core Principles:**
 
 ## 🚨 Before You Start - READ THIS FIRST
 
