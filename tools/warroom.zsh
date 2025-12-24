@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # tools/warroom.zsh - Consultant Mode Generator
-# Purpose: Start the "Think-Before-Act" pipeline by creating a Decision Box draft
+# Purpose: Start the "Think-Before-Act" pipeline by creating a Decision Box draft + Prompt
 
 REPO_ROOT="${REPO_ROOT:-"$HOME/02luka"}"
 DECISION_DIR="$REPO_ROOT/g/decision"
@@ -13,14 +13,14 @@ LAC_MIRROR="$DECISION_DIR/LAC_REASONING_MIRROR.md"
 mkdir -p "$DRAFTS_DIR"
 
 # Argument Parsing
-provider="auto"
+provider="gemini" # Default to Gemini (we know it exists)
 fill_mode="false"
 args=()
 
 while (( $# > 0 )); do
   case "$1" in
     --provider) 
-      provider="${2:-auto}"; shift 2;;
+      provider="${2:-gemini}"; shift 2;;
     --fill)
       fill_mode="true"; shift;;
     --check)
@@ -30,12 +30,12 @@ while (( $# > 0 )); do
           if [[ -f "$f" ]]; then echo "OK: $f"; else echo "MISSING: $f"; ok=false; fi
       done
       if $ok; then exit 0; else exit 1; fi
-      ;;
+      ;; 
     *)
-      args+=("$1"); shift;;
+      args+=("$1"); shift;; 
   esac
 done
-set -- "${args[@]:-""}"
+set -- "${args[@]:-}"
 
 # Normal mode: Topic Setup
 topic="${1:-'Unnamed Strategic Topic'}"
@@ -43,28 +43,21 @@ topic="${1:-'Unnamed Strategic Topic'}"
 slug=$(echo "$topic" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//;s/-$//')
 ts=$(date +"%Y%m%d_%H%M%S")
 
-out="$DRAFTS_DIR/${ts}_${slug}_DECISION_BOX.md"
+out_draft="$DRAFTS_DIR/${ts}_${slug}_DECISION_BOX.md"
+out_prompt="$DRAFTS_DIR/${ts}_${slug}_PROMPT.md"
 
-# Create Base File
+# Create Base Draft
 if [[ -f "$TEMPLATE" ]]; then
-    # Create from template with header injection
-    cat > "$out" <<EOF
+    cat > "$out_draft" <<EOF
 # Strategic Decision: $topic
 **Status:** DRAFT
 **Timestamp:** $(date)
 
 ---
 EOF
-    # If not filling, just copy template. If filling, we will append later.
-    if [[ "$fill_mode" == "false" ]]; then
-        cat "$TEMPLATE" >> "$out"
-        echo "" >> "$out"
-        echo "---" >> "$out"
-        echo "TODO: Run LAC Mirror checks: $LAC_MIRROR" >> "$out"
-    fi
 else
     # Fallback stub
-    cat > "$out" <<EOF
+    cat > "$out_draft" <<EOF
 # Warroom Draft (Stub)
 **Topic:** $topic
 **Timestamp:** $ts
@@ -78,12 +71,11 @@ fi
 
 _run_provider() {
   local _provider="$1"
-  local _prompt="$2"
+  local _prompt_file="$2"
 
   if [[ "$_provider" == "codex" ]]; then
     command -v codex >/dev/null 2>&1 || return 2
-    # Codex CLI usually accepts prompt as arg
-    codex "$_prompt"
+    codex "$(cat "$_prompt_file")"
     return $?
   fi
 
@@ -94,27 +86,12 @@ _run_provider() {
        GEMINI_BIN=$(command -v gemini) || return 2
     fi
     
-    # Use -p or direct arg. Unset KEY to force OAuth if needed, or rely on env.
-    # Assuming gemini_full_feature environment is active or usable.
-    env -u GEMINI_API_KEY "$GEMINI_BIN" "$_prompt"
+    # Use -p or direct arg. Unset KEY to force OAuth if needed.
+    env -u GEMINI_API_KEY "$GEMINI_BIN" "$(cat "$_prompt_file")"
     return $?
   fi
 
   return 2
-}
-
-_pick_provider_and_run() {
-  local _provider="$1"
-  local _prompt="$2"
-
-  if [[ "$_provider" == "auto" ]]; then
-    # Try Codex first, then Gemini
-    _run_provider "codex" "$_prompt" && return 0
-    _run_provider "gemini" "$_prompt" && return 0
-    return 2
-  fi
-
-  _run_provider "$_provider" "$_prompt"
 }
 
 _build_fill_prompt() {
@@ -162,22 +139,17 @@ EOF
 
 if [[ "$fill_mode" == "true" ]]; then
   echo ""
-  echo "🧠 Filling Decision Box (1–6) via provider=$provider ..."
+  echo "🧠 Generating Prompt..."
+  _build_fill_prompt "$topic" "$REPO_ROOT" "$TEMPLATE" "$LAC_MIRROR" > "$out_prompt"
+  echo "✅ Prompt file created: $out_prompt"
+
+  echo ""
+  echo "🧠 Attempting Auto-Fill via provider=$provider ..."
   echo "   (This may take 10-30 seconds)"
   
-  prompt="$(_build_fill_prompt "$topic" "$REPO_ROOT" "$TEMPLATE" "$LAC_MIRROR")"
-  
-  fill_out="$(_pick_provider_and_run "$provider" "$prompt")" || {
-    echo "⚠️ Provider unavailable or failed. Draft created but not filled."
-    cat "$TEMPLATE" >> "$out" # Fallback to empty template
-    echo ""
-    echo "✅ Decision Box created (Manual mode):"
-    echo "$out"
-    exit 0
-  }
-
-  # Append filled content
-  cat >> "$out" <<EOF
+  if fill_out="$(_run_provider "$provider" "$out_prompt")"; then
+      # Success: Append filled content
+      cat >> "$out_draft" <<EOF
 
 $fill_out
 
@@ -193,22 +165,54 @@ $fill_out
 ---
 TODO: Run LAC Mirror checks: $LAC_MIRROR
 EOF
+      echo "✅ Decision Box created & Auto-Filled:"
+      echo "$out_draft"
+      echo ""
+      echo "Next Steps:"
+      echo "  1. Review sections 1-6 (AI generated)"
+      echo "  2. Fill sections 7-8 (Your Decision)"
+      echo "  3. Use LAC Mirror for pressure test"
 
-  echo "✅ Decision Box created & Auto-Filled:"
-  echo "$out"
-  echo ""
-  echo "Next Steps:"
-  echo "  1. Review sections 1-6 (AI generated)"
-  echo "  2. Fill sections 7-8 (Your Decision)"
-  echo "  3. Use LAC Mirror for pressure test"
+  else
+      # Failure (Graceful Fallback)
+      echo "⚠️  Provider execution failed or unavailable. Switching to Manual Handoff."
+      
+      # Append empty template for manual fill
+      if [[ -f "$TEMPLATE" ]]; then
+          cat "$TEMPLATE" >> "$out_draft"
+          echo "" >> "$out_draft"
+          echo "---" >> "$out_draft"
+          echo "TODO: Run LAC Mirror checks: $LAC_MIRROR" >> "$out_draft"
+      fi
+
+      echo ""
+      echo "✅ Decision Box Draft created (Empty):"
+      echo "$out_draft"
+      echo ""
+      echo "✅ Prompt created (Ready for Handoff):"
+      echo "$out_prompt"
+      echo ""
+      echo "MANUAL HANDOFF INSTRUCTIONS:"
+      echo "  1. Open Prompt: code \"$out_prompt\""
+      echo "  2. Copy content -> Paste into your AI (Gemini/Codex/Antigravity)"
+      echo "  3. Paste result into: code \"$out_draft\""
+  fi
+
 else
-  # Manual mode output
+  # Manual mode output (No fill requested)
+  if [[ -f "$TEMPLATE" ]]; then
+      cat "$TEMPLATE" >> "$out_draft"
+      echo "" >> "$out_draft"
+      echo "---" >> "$out_draft"
+      echo "TODO: Run LAC Mirror checks: $LAC_MIRROR" >> "$out_draft"
+  fi
+  
   echo ""
-  echo "✅ Decision Box created:"
-  echo "$out"
+  echo "✅ Decision Box created (Manual):"
+  echo "$out_draft"
   echo ""
   echo "Next Steps:"
-  echo "  1. Open the file: code \"$out\""
+  echo "  1. Open the file: code \"$out_draft\""
   echo "  2. Fill sections 1-3 (Objective, Context, Options)"
   echo "  3. Use LAC Mirror: cat $LAC_MIRROR"
 fi
