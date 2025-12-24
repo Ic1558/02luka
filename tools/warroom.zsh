@@ -15,6 +15,7 @@ mkdir -p "$DRAFTS_DIR"
 # Argument Parsing
 provider="gemini" # Default to Gemini (we know it exists)
 fill_mode="false"
+lac_mode="false"
 args=()
 
 while (( $# > 0 )); do
@@ -23,6 +24,8 @@ while (( $# > 0 )); do
       provider="${2:-gemini}"; shift 2;;
     --fill)
       fill_mode="true"; shift;;
+    --lac)
+      lac_mode="true"; shift;;
     --check)
       # Check Mode
       ok=true
@@ -45,6 +48,7 @@ ts=$(date +"%Y%m%d_%H%M%S")
 
 out_draft="$DRAFTS_DIR/${ts}_${slug}_DECISION_BOX.md"
 out_prompt="$DRAFTS_DIR/${ts}_${slug}_PROMPT.md"
+out_lac_prompt="$DRAFTS_DIR/${ts}_${slug}_LAC_PROMPT.md"
 
 # Create Base Draft
 if [[ -f "$TEMPLATE" ]]; then
@@ -137,6 +141,39 @@ Now produce the filled sections 1–6.
 EOF
 }
 
+_build_lac_prompt() {
+  local _topic="$1"
+  local _draft_content="$2"
+
+  cat <<EOF
+You are the Logical Architecture Council (LAC) Mirror for 02luka.
+Your Goal: Apply a "Reviewer Pass" (Option B: Ask + Risk + Evidence) to the draft below.
+Do not rewrite the draft. Append your analysis.
+
+TOPIC: $_topic
+
+DRAFT CONTENT TO REVIEW:
+$_draft_content
+
+REQUIREMENTS:
+1. Ask 3 Hard Questions (Pressure Test) that challenge the assumptions.
+2. Identify Top 3 Risks (Pre-mortem) if this decision goes wrong.
+3. List 3 Key Evidence items (logs, metrics, tests) required to validate success.
+4. Create a Quick Comparison/Risk Table.
+
+OUTPUT FORMAT:
+## LAC Mirror Pass
+### 1. Pressure Test
+...
+### 2. Risks (Pre-mortem)
+...
+### 3. Required Evidence
+...
+### 4. Quick Table
+...
+EOF
+}
+
 if [[ "$fill_mode" == "true" ]]; then
   echo ""
   echo "🧠 Generating Prompt..."
@@ -153,6 +190,42 @@ if [[ "$fill_mode" == "true" ]]; then
 
 $fill_out
 
+EOF
+      echo "✅ Decision Box created & Auto-Filled."
+      
+      # -------- LAC Mirror Pass (Auto) --------
+      if [[ "$lac_mode" == "true" ]]; then
+        echo ""
+        echo "🛡️  Generating LAC Mirror Prompt (Option B)..."
+        # We use the content we just generated + topic
+        _build_lac_prompt "$topic" "$fill_out" > "$out_lac_prompt"
+        
+        echo "🛡️  Running LAC Mirror Pass via $provider ..."
+        if lac_out="$(_run_provider "$provider" "$out_lac_prompt")"; then
+           cat >> "$out_draft" <<EOF
+
+---
+$lac_out
+EOF
+           echo "✅ LAC Mirror Pass appended."
+        else
+           echo "⚠️  LAC Provider failed. Appending manual checklist."
+           cat >> "$out_draft" <<EOF
+
+---
+## LAC Mirror Pass (Manual Fallback)
+- [ ] Pressure Test Q1:
+- [ ] Pressure Test Q2:
+- [ ] Pressure Test Q3:
+- [ ] Risks:
+- [ ] Evidence:
+EOF
+        fi
+      fi
+
+      # Finish up file structure
+      cat >> "$out_draft" <<EOF
+
 ---
 ## 7. Decision (Human)
 - Chosen Option: 
@@ -161,17 +234,16 @@ $fill_out
 ## 8. Confidence & Next Check
 - Confidence: 
 - Revisit Trigger: 
-
----
-TODO: Run LAC Mirror checks: $LAC_MIRROR
 EOF
-      echo "✅ Decision Box created & Auto-Filled:"
-      echo "$out_draft"
+
+      echo "File: $out_draft"
       echo ""
       echo "Next Steps:"
       echo "  1. Review sections 1-6 (AI generated)"
-      echo "  2. Fill sections 7-8 (Your Decision)"
-      echo "  3. Use LAC Mirror for pressure test"
+      if [[ "$lac_mode" == "true" ]]; then
+          echo "  2. Review LAC Mirror Pass (Risks & Questions)"
+      fi
+      echo "  3. Fill sections 7-8 (Your Decision)"
 
   else
       # Failure (Graceful Fallback)
