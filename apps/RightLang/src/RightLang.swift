@@ -80,6 +80,7 @@ private func keyCodeLabel(_ keyCode: UInt16) -> String {
     case Int(kVK_ANSI_Y): return "Y"
     case Int(kVK_ANSI_Z): return "Z"
     case Int(kVK_Space): return "Space"
+    case 49: return "Space"  // Alternative space key code
     default: return "KeyCode(\(keyCode))"
     }
 }
@@ -325,11 +326,31 @@ private final class KeyCaptureService {
 
     private var currentToken: String = ""
     private var lastToken: String = ""
+    private var eventCount = 0  // For debug logging
     var onToggleSelection: (() -> Void)?
 
     func startIfEnabled() {
-        guard UserDefaults.standard.bool(forKey: PrefKey.enableKeyCapture) else { return }
-        if tap != nil { return }
+        let isEnabled = UserDefaults.standard.bool(forKey: PrefKey.enableKeyCapture)
+        NSLog("🔍 KeyCapture startIfEnabled: enabled=\(isEnabled)")
+
+        guard isEnabled else {
+            NSLog("⚠️ KeyCapture disabled in preferences")
+            return
+        }
+
+        if tap != nil {
+            NSLog("✅ KeyCapture already running")
+            return
+        }
+
+        // Check Accessibility permission
+        let hasAccess = AXIsProcessTrusted()
+        NSLog("🔍 Accessibility permission: \(hasAccess)")
+
+        if !hasAccess {
+            NSLog("❌ No Accessibility permission - KeyCapture cannot start")
+            return
+        }
 
         let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
         guard let eventTap = CGEvent.tapCreate(
@@ -343,6 +364,7 @@ private final class KeyCaptureService {
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         ) else {
+            NSLog("❌ FAILED to create CGEventTap - Accessibility issue?")
             return
         }
 
@@ -352,6 +374,7 @@ private final class KeyCaptureService {
             CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes)
         }
         CGEvent.tapEnable(tap: eventTap, enable: true)
+        NSLog("✅ KeyCapture started successfully!")
     }
 
     func stop() {
@@ -393,22 +416,32 @@ private final class KeyCaptureService {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         let flags = event.flags
 
+        // Log key events for debugging
+        eventCount += 1
+        if eventCount <= 3 {
+            NSLog("🎹 Key event #\(eventCount): keyCode=\(keyCode) flags=\(flags.rawValue)")
+        }
+
         // Hotkey: Cmd+Shift+L
         if (UserDefaults.standard.object(forKey: PrefKey.enableHotkeyFix) as? Bool ?? true),
            keyCode == Int(kVK_ANSI_L),
            flags.contains(.maskCommand),
            flags.contains(.maskShift) {
+            NSLog("🔥 Cmd+Shift+L detected - triggering fixLastWord")
             triggerFixLastWord()
             return nil
         }
 
         // Hotkey (configurable): toggle selected text layout (copy->convert->paste).
-        if UserDefaults.standard.bool(forKey: PrefKey.enableSelectionToggleHotkey) {
-            let savedKeyCode = UserDefaults.standard.object(forKey: PrefKey.selectionToggleHotkeyKeyCode) as? Int ?? Int(kVK_ANSI_T)
+        // Default: Cmd+Shift+Space, enabled by default
+        let hotkeyEnabled = UserDefaults.standard.object(forKey: PrefKey.enableSelectionToggleHotkey) as? Bool ?? true
+        if hotkeyEnabled {
+            let savedKeyCode = UserDefaults.standard.object(forKey: PrefKey.selectionToggleHotkeyKeyCode) as? Int ?? 49  // 49 = Space
             let savedModsRaw = UserDefaults.standard.object(forKey: PrefKey.selectionToggleHotkeyMods) as? Int ?? (HotkeyMods.command.union(.shift).rawValue)
             let savedMods = HotkeyMods(rawValue: savedModsRaw)
             let eventMods = HotkeyMods.fromCGFlags(flags)
             if keyCode == savedKeyCode, eventMods.contains(savedMods) {
+                NSLog("🔥 Cmd+Shift+Space detected - toggling selection")
                 onToggleSelection?()
                 return nil
             }
@@ -629,14 +662,17 @@ private final class SettingsWindowController: NSWindowController {
         enableKeyCaptureCheckbox.state = defaults.bool(forKey: PrefKey.enableKeyCapture) ? .on : .off
         enableHotkeyCheckbox.state = (defaults.object(forKey: PrefKey.enableHotkeyFix) as? Bool ?? true) ? .on : .off
         enableAutoFixCheckbox.state = defaults.bool(forKey: PrefKey.enableAutoFix) ? .on : .off
-        enableSelectionHotkeyCheckbox.state = defaults.bool(forKey: PrefKey.enableSelectionToggleHotkey) ? .on : .off
+        // Default to enabled for selection toggle hotkey
+        let selectionHotkeyEnabled = defaults.object(forKey: PrefKey.enableSelectionToggleHotkey) as? Bool ?? true
+        enableSelectionHotkeyCheckbox.state = selectionHotkeyEnabled ? .on : .off
         let rawMode = defaults.string(forKey: PrefKey.conversionMode) ?? ConversionMode.auto.rawValue
         let mode = ConversionMode(rawValue: rawMode) ?? .auto
         modePopUp.selectItem(at: ConversionMode.allCases.firstIndex(of: mode) ?? 0)
         let minDelta = defaults.object(forKey: PrefKey.minDelta) as? Int ?? 4
         deltaField.stringValue = "\(minDelta)"
 
-        let kc = UInt16(defaults.object(forKey: PrefKey.selectionToggleHotkeyKeyCode) as? Int ?? Int(kVK_ANSI_T))
+        // Default to Space (49) instead of T
+        let kc = UInt16(defaults.object(forKey: PrefKey.selectionToggleHotkeyKeyCode) as? Int ?? 49)
         let modsRaw = defaults.object(forKey: PrefKey.selectionToggleHotkeyMods) as? Int ?? HotkeyMods.command.union(.shift).rawValue
         selectionHotkeyLabel.stringValue = "Current: \(hotkeyDisplay(mods: HotkeyMods(rawValue: modsRaw), keyCode: kc))"
     }
@@ -749,7 +785,6 @@ private final class SettingsWindowController: NSWindowController {
     }
 }
 
-@main
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWC: SettingsWindowController?
@@ -762,26 +797,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let didShowWelcomeKey = "then.didShowWelcome"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSLog("🚀 then.app starting - applicationDidFinishLaunching called")
+        print("🚀 then.app starting")
+
         NSApp.setActivationPolicy(.accessory)
 
         NSApp.servicesProvider = servicesProvider
         NSUpdateDynamicServices()
 
+        // Create menu bar icon
+        NSLog("📍 Creating status bar item...")
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem.isVisible = true  // Explicitly set visible
+        NSLog("📍 Status item created: \(statusItem != nil)")
+
         if let button = statusItem.button {
+            NSLog("📍 Got button, setting title...")
             button.toolTip = "then"
-            if #available(macOS 11.0, *), let img = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "then") {
-                button.image = img
-                button.title = ""
-            } else {
-                button.image = nil
-                button.title = "then"
-            }
+            button.title = "T"  // Simple letter T
+            button.image = nil
+            NSLog("📍 Button configured: title=\(button.title)")
+        } else {
+            NSLog("❌ ERROR: statusItem.button is nil!")
         }
 
         let menu = NSMenu()
+
+        // Status indicator for Accessibility permission
+        let hasAccess = AXIsProcessTrusted()
+        let statusMenuItem = NSMenuItem(title: hasAccess ? "✅ Ready (Accessibility granted)" : "⚠️ Grant Accessibility permission for hotkeys", action: nil, keyEquivalent: "")
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
+        menu.addItem(NSMenuItem.separator())
+
         menu.addItem(NSMenuItem(title: "Convert Clipboard Now", action: #selector(convertClipboardNow), keyEquivalent: "c"))
-        menu.addItem(NSMenuItem(title: "Toggle Selected Text Layout", action: #selector(toggleSelectedTextLayout), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Toggle Selected Text Layout (⌘⇧Space)", action: #selector(toggleSelectedTextLayout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Fix Last Word (⌘⇧L)", action: #selector(fixLastWord), keyEquivalent: ""))
         menu.addItem(NSMenuItem.separator())
 
@@ -798,6 +848,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit then", action: #selector(quit), keyEquivalent: "q"))
         statusItem.menu = menu
+        NSLog("✅ Menu assigned to status item")
 
         maybeShowWelcome()
 
@@ -907,14 +958,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
 
         let alert = NSAlert()
-        alert.messageText = "then is running"
-        alert.informativeText = "This is a menu bar app. Look for the keyboard icon in the top menu bar.\n\nFor selection convert: select text → right click → Services → then.\nFor hotkeys/auto-fix: grant Accessibility permission in System Settings."
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Open Settings…")
+        alert.messageText = "✅ then is running!"
+        alert.informativeText = """
+        Look for the ⌨️ keyboard icon in your menu bar (top right).
+
+        Quick Start:
+        • Press ⌘⇧Space to toggle keyboard layout while typing
+        • Or select text → Right-click → Services → then
+
+        ⚠️ Important: For hotkeys to work, you need to:
+        1. Grant Accessibility permission in System Settings
+        2. Click the menu bar icon → "Open Accessibility Settings"
+
+        You can customize hotkeys in Settings.
+        """
+        alert.addButton(withTitle: "Got it!")
+        alert.addButton(withTitle: "Open Settings Now")
 
         let response = alert.runModal()
         if response == .alertSecondButtonReturn {
             openSettings()
+            // Also open accessibility settings
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.openAccessibilitySettings()
+            }
         }
     }
 
@@ -941,5 +1008,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             KeyboardFixer.shared.sendPaste()
         }
+    }
+}
+
+// Strong reference to prevent delegate deallocation
+private var appDelegateInstance: AppDelegate!
+
+@main
+struct ThenApp {
+    static func main() {
+        let app = NSApplication.shared
+        appDelegateInstance = AppDelegate()  // Store strong reference!
+        app.delegate = appDelegateInstance
+        app.run()
     }
 }

@@ -61,6 +61,13 @@ _process_one(){
     return 0
   fi
 
+  # 3. Active Memory Runtime Guard (V5)
+  if ! zsh "$REPO/tools/guard_runtime.zsh" --batch "$work"; then
+    _log_json "ERROR" "Blocked by Runtime Guard: $base" ",\"file\":\"$base\""
+    mv "$work" "$INBOX/rejected/"
+    return 0
+  fi
+
   _log_json "INFO" "Executing batch: $base" ",\"file\":\"$base\""
   {
     echo "=== ATG RUNNER ==="
@@ -95,24 +102,52 @@ JSON
 }
 
 _main_loop(){
+  local once_mode="${1:-}"
+  export GUARD_LANE="daemon"
+  echo "DEBUG: Starting loop in $PWD (Once: $once_mode)"
   _log_json "INFO" "ATG runner started" ""
+  
+  # Ensure lock handling doesn't exit script on failure
   while true; do
     if ( set -o noclobber; echo "$$" > "$LOCK_FILE" ) 2>/dev/null; then
       trap 'rm -f "$LOCK_FILE"' EXIT INT TERM
       break
     else
+      echo "DEBUG: Waiting for lock..."
       sleep 1
     fi
   done
 
   while true; do
     local f=""
-    for f in "$INBOX"/batch_*.zsh(N); do
+    local found=false
+    echo "DEBUG: Scanning $INBOX..."
+    for f in "$INBOX"/batch_*.zsh(N) "$INBOX"/test_*.zsh(N); do
+      echo "DEBUG: Processing $f"
       _process_one "$f"
-      break
+      found=true
+      if [[ "$once_mode" == "--once" ]]; then break; fi
     done
+    
+    if [[ "$once_mode" == "--once" ]]; then 
+        echo "DEBUG: Once mode finished."
+        break 
+    fi
     sleep "$POLL_SECONDS"
   done
 }
 
-_main_loop
+_main_loop "${1:-}"
+
+
+## ACTIVE_MEMORY: runtime_guard
+guard_batch_or_block() {
+  local batch_file="$1"
+  if [[ -x "$REPO_ROOT/tools/guard_runtime.zsh" ]]; then
+    if ! ACTOR="atg_daemon" zsh "$REPO_ROOT/tools/guard_runtime.zsh" --batch "$batch_file" >/dev/null; then
+      echo "❌ BLOCKED by runtime guard: $batch_file"
+      return 1
+    fi
+  fi
+  return 0
+}

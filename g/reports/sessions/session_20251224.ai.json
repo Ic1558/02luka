@@ -1,0 +1,26 @@
+{
+  "date": "2025-12-24",
+  "ts_utc": "2025-12-24T05:21:54Z",
+  "ts_local": "2025-12-24T12:21:54+0700",
+  "agent": "liam",
+  "summary": {
+    "total_entries": 5,
+    "top_activities": [
+  "File modified: WARROOM_CLI_SPEC.md",
+  "File modified: warroom.zsh",
+  "File modified: WARROOM_CLI_SPEC.md",
+  "File modified: warroom.zsh",
+  "File modified: warroom.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 5,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2025-12-24.jsonl",
+    "full_session": "g/reports/sessions/session_20251224_122153.md"
+  }
+}

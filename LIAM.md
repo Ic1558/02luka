@@ -72,6 +72,26 @@ Option C: Block with Evidence (rule, file/line, missing input)
 
 ---
 
+## 🧠 Lessons Learned
+
+### Antigravity Extension Installation (2025-12-20)
+
+**Problem:** Copied extension folder but it didn't appear in Antigravity
+
+**Root Cause:** 
+- Antigravity uses `~/.antigravity/extensions/` (not `~/.vscode/extensions/`)
+- Copying folder alone is NOT enough
+- Must also add entry to `~/.antigravity/extensions/extensions.json`
+
+**Solution:**
+1. Copy extension folder to `~/.antigravity/extensions/`
+2. Add entry to `extensions.json` with: identifier, version, location, metadata
+3. Quit & restart Antigravity (reload is not enough)
+
+**Note:** `code` CLI command installs to `~/.vscode/` — wrong location for Antigravity
+
+---
+
 ## 🚨 Anti-Pattern: "Fix to Pass" (2025-12-19)
 
 **What I did wrong:**
@@ -87,6 +107,62 @@ Option C: Block with Evidence (rule, file/line, missing input)
 ## References
 
 - `personas/LIAM_PERSONA_v2.md`
-- `g/docs/WORKFLOW_PROTOCOL_v1.md`
+- `g/docs/WORKFLOW_PROTOCOL_v1.md` — **MUST READ for any feature/plan**
 - `g/docs/PR_AUTOPILOT_RULES.md`
 - `g/docs/PR_MANAGEMENT_DECISION_FRAMEWORK_v1.md`
+
+---
+
+## 🔄 Workflow Triggers
+
+| Trigger | Action |
+|---------|--------|
+| `feature-plan` | Read WORKFLOW_PROTOCOL → Phase 0 Discovery → Create SPEC + PLAN |
+| New feature | Pre-Action Checklist must be complete before implementation |
+| Any change | Plan → Dry-run → Verify → Execute (never skip) |
+
+---
+
+## 🛡️ Runtime Guard (Active Memory)
+
+**Before executing risky commands, USE THE GUARD:**
+
+```bash
+# Check a command
+echo "git push origin main" | zsh tools/guard_runtime.zsh --cmd -
+
+# Check a batch file
+zsh tools/guard_runtime.zsh --batch batch_task.zsh
+
+# Emergency override (if blocked)
+SAVE_EMERGENCY=1 zsh tools/guard_runtime.zsh --cmd "..."
+```
+
+**Patterns that will trigger:**
+- `.vscode/extensions` → WARN (ATG uses `~/.antigravity/extensions/`)
+- `git push origin main` → BLOCK (use PR)
+- Broad exclusions → WARN (fix-to-pass anti-pattern)
+
+---
+
+## 🚦 ATG Command Policy (Hard Canonical)
+
+**Status**: ACTIVE (HARD ENFORCEMENT)
+**Goal**: Zero "Accept" Friction.
+
+❌ **FORBIDDEN (Triggers UI Prompt)**:
+- `cd`
+- `&&`, `;`, `|`
+- `>` (Redirection), `2>&1`
+- `exec`, `sudo`
+- Multi-line commands
+
+✅ **MANDATORY FORMAT**:
+Must be **ONE LINE** starting with exactly:
+- `zsh "$HOME/02luka/tools/`
+- `AGENT_ID=liam zsh "$HOME/02luka/tools/`
+
+**Canonical Save:**
+`AGENT_ID=liam zsh "$HOME/02luka/tools/save.sh"`
+
+See: `g/rules/command_policy.md`
