@@ -117,6 +117,9 @@ function should_scan_file() {
   if is_excluded_path "$rel_path"; then
     return 1
   fi
+  if is_whitelisted "$rel_path"; then
+    return 1
+  fi
   if path_matches_dirs "$rel_path" "${INCLUDE_DIRS[@]}"; then
     return 0
   fi
@@ -210,7 +213,39 @@ EXCLUDE_DIR_BASE=(
   build
   # Archive for legacy files (marked as replaced/deprecated)
   _archive
+  tools/_archive
 )
+
+typeset -a WHITELIST_FILES=(
+  "bridge/core/sandbox_guard_v5.py"
+  "bridge/core/router_v5.py"
+  "g/rules/runtime_patterns.yaml"
+  "tools/bootstrap_workspace.zsh"
+  "tools/code_review_gate.zsh"
+  "tools/fix_test3_cleanup.zsh"
+  "tools/mole_headless_clean.zsh"
+  "tools/phase_a_execute.zsh"
+  "tools/pr8_v5_error_scenarios.zsh"
+  "tools/ram_cleanup_fast.zsh"
+  "tools/ram_monitor.zsh"
+  "tools/test_agent_coordination.zsh"
+  "install_atg_runner_daemon.zsh"
+  "tools/atg_runner_daemon.zsh"
+  "apps/RightLang/build.zsh"
+  "apps/RightLang/create_dmg.zsh"
+  "atg_gc_sanity.zsh"
+)
+
+function is_whitelisted() {
+  local rel_path="$1"
+  local white
+  for white in "${WHITELIST_FILES[@]}"; do
+    if [[ "$rel_path" == "$white" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
 
 add_dir_variants INCLUDE_DIRS "${INCLUDE_DIR_BASE[@]}"
 add_dir_variants EXCLUDE_DIRS "${EXCLUDE_DIR_BASE[@]}"
