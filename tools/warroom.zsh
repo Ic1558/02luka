@@ -95,6 +95,13 @@ _run_provider() {
     return $?
   fi
 
+  if [[ "$_provider" == "antigravity" ]]; then
+    ATG_BIN=$(command -v antigravity) || return 2
+    # Antigravity CLI v1.104+ supports 'chat' subcommand
+    "$ATG_BIN" chat "$(cat "$_prompt_file")"
+    return $?
+  fi
+
   return 2
 }
 
@@ -268,6 +275,9 @@ EOF
       echo "  1. Open Prompt: code \"$out_prompt\""
       echo "  2. Copy content -> Paste into your AI (Gemini/Codex/Antigravity)"
       echo "  3. Paste result into: code \"$out_draft\""
+      echo ""
+      echo "OR TRY AUTO-FILL:"
+      echo "  zsh tools/warroom.zsh \"$topic\" --fill --provider antigravity --lac"
   fi
 
 else
