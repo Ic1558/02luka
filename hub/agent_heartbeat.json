@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-12-27T04:03:23.632Z",
+  "agents": {
+    "mary": {
+      "id": "mary",
+      "name": "Mary",
+      "status": "unknown",
+      "last_heartbeat": null,
+      "seconds_since_heartbeat": null,
+      "channel": "agents:heartbeat:mary",
+      "metadata": {}
+    },
+    "lisa": {
+      "id": "lisa",
+      "name": "Lisa",
+      "status": "unknown",
+      "last_heartbeat": null,
+      "seconds_since_heartbeat": null,
+      "channel": "agents:heartbeat:lisa",
+      "metadata": {}
+    },
+    "paula": {
+      "id": "paula",
+      "name": "Paula",
+      "status": "unknown",
+      "last_heartbeat": null,
+      "seconds_since_heartbeat": null,
+      "channel": "agents:heartbeat:paula",
+      "metadata": {}
+    },
+    "hybrid": {
+      "id": "hybrid",
+      "name": "Hybrid",
+      "status": "unknown",
+      "last_heartbeat": null,
+      "seconds_since_heartbeat": null,
+      "channel": "agents:heartbeat:hybrid",
+      "metadata": {}
+    }
+  },
+  "alerts": [],
+  "summary": {
+    "total_agents": 4,
+    "online_agents": 0,
+    "offline_agents": 0,
+    "unknown_agents": 4
+  }
+}
