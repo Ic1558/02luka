@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-12-27T20:36:38Z",
+  "local_time": "2025-12-28 03:36:38",
+  "gateway_processes": 1,
+  "mary_processes": 1,
+  "monitor": {
+  "timestamp": "2025-12-27T20:36:38Z",
+  "v5_activity_24h": "v5:2,legacy:7",
+  "lane_distribution": {"strict":0,"local":0,"rejected":0},
+  "inbox_backlog": {"main":0,"clc":0},
+  "error_stats": {"processed":2,"errors":0,"error_rate":0},
+  "status": "operational"
+},
+  "errors_in_log": 0,
+  "status": "healthy"
+}
