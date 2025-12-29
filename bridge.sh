@@ -11,4 +11,4 @@ fi
 
 # 2. Run the bridge
 echo "🚀 Starting Gemini Bridge..."
-infra/gemini_env/bin/python3 gemini_bridge.py
+infra/gemini_env/bin/python3 -u gemini_bridge.py
