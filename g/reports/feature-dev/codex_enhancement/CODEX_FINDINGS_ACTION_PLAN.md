@@ -62,47 +62,71 @@ git add \
 
 ---
 
-## Issue #2: Unescaped JSON Fields (Medium Priority)
+## Issue #2: Unescaped JSON Fields ⚠️ CONFIRMED
 
-**File:** `tools/session_save.zsh:51`
+**File:** `tools/session_save.zsh:65-85` (actual location, Codex was close)
+**Status:** ⚠️ **CONFIRMED - EXISTS IN CURRENT CODE** (2025-12-30)
+**Analysis:** See `ISSUE_2_ANALYSIS.md`
 
 **Problem:**
 ```bash
-# Builds JSON with string interpolation
-cat > metadata.json <<EOF
-{
-  "project": "$PROJECT_ID",
-  "topic": "$SAVE_TOPIC",
-  "agent": "$AGENT"
-}
-EOF
+# Lines 65-85: Builds JSON with printf + string interpolation (UNSAFE)
+local json_fmt='{"ts": "%s", "agent": "%s", ..., "project_id": "%s", "topic": "%s", ...}'
+printf "$json_fmt\n" \
+    "$TELEMETRY_START_TS" \
+    "$agent" \
+    "$TELEMETRY_PROJECT_ID" \    # ❌ User input (can contain quotes)
+    "$TELEMETRY_TOPIC" \          # ❌ User input from save.sh args
+    "$branch" \                   # ❌ Can contain special chars
+    ...
+    >> g/telemetry/save_sessions.jsonl
+```
+
+**Attack Vector Confirmed:**
+```bash
+# File: tools/save.sh lines 58-60
+if [[ $# -gt 0 ]]; then
+    export TELEMETRY_TOPIC="$*"  # User can pass arbitrary text
+fi
+
+# Example that breaks:
+~/02luka/tools/save.sh 'My "awesome" topic'
+# Results in invalid JSON: {"topic": "My "awesome" topic"}
 ```
 
 **Risk:**
-- If PROJECT_ID contains quotes/newlines → invalid JSON
+- Invalid JSON in telemetry logs
 - JSON parsing errors downstream
-- Silent failures
-
-**Codex Suggestion:**
-Use `jq -n` or proper escaping.
+- Silent failures (code uses || true)
+- Telemetry data loss
+- Analytics/metrics broken
 
 **Recommended Fix:**
 ```bash
-# Safe: Use jq to build JSON
+# Replace lines 65-85 with jq -n construction
 jq -n \
-  --arg project "$PROJECT_ID" \
-  --arg topic "$SAVE_TOPIC" \
-  --arg agent "$AGENT" \
-  '{
-    project: $project,
-    topic: $topic,
-    agent: $agent
-  }' > metadata.json
+  --arg ts "$TELEMETRY_START_TS" \
+  --arg agent "$agent" \
+  --arg source "$source" \
+  --arg env "$env_field" \
+  --argjson schema "$schema_version" \
+  --arg project "$TELEMETRY_PROJECT_ID" \
+  --arg topic "$TELEMETRY_TOPIC" \
+  --argjson files "$TELEMETRY_FILES_WRITTEN" \
+  --arg repo "$repo_name" \
+  --arg branch "$branch" \
+  --argjson exit "$exit_code" \
+  --argjson duration "$duration_ms" \
+  '{...all fields...}' >> telemetry.jsonl
 ```
 
-**Priority:** 🟡 Medium
-**Impact:** Reliability
-**Effort:** 15 min
+**Code Comment Confirms Issue:**
+Line 59: `# Note: project_id and topic might contain user input, should be carefully handled if complex.`
+
+**Priority:** 🟡 Medium (security, but lower risk than Issue #1)
+**Impact:** Security + Reliability
+**Effort:** 15-20 min
+**Task Spec:** `tmp/codex_task_003_issue2.md` (ready for Codex)
 
 ---
 
