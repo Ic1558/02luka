@@ -69,7 +69,11 @@
       "Bash(git checkout:*)",
       "Bash(g/reports/feature-dev/codex_enhancement/CODEX_FINDINGS_ACTION_PLAN.md )",
       "Bash(g/reports/feature-dev/codex_enhancement/ISSUE_1_COMPLETE.md )",
-      "Bash(g/reports/codex_routing_log.jsonl)"
+      "Bash(g/reports/codex_routing_log.jsonl)",
+      "Bash(pip3 install fastapi uvicorn pydantic)",
+      "Bash(\"reliability_improvement\" )",
+      "Bash(\"codex-task add jq check\" )",
+      "Bash(9)"
     ],
     "deny": [],
     "ask": []
