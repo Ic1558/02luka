@@ -79,7 +79,7 @@ vault-up: vault-install ## Start Vault (native background process)
 		echo "✅ Vault is already running (PID $$(cat infra/vault/PID))"; \
 	else \
 		echo "🚀 Starting Vault (dev mode)..."; \
-		nohup vault server -dev > infra/vault/vault.log 2>&1 & echo $$! > infra/vault/PID; \
+		nohup vault server -dev -dev-root-token-id=root > infra/vault/vault.log 2>&1 & echo $$! > infra/vault/PID; \
 		echo "✅ Vault started (PID $$(cat infra/vault/PID))"; \
 		echo "   Log: infra/vault/vault.log"; \
 		echo "   UI:  http://127.0.0.1:8200"; \
