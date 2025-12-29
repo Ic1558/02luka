@@ -52,7 +52,13 @@
       "Bash(zsh:*)",
       "Bash(/bin/zsh:*)",
       "Bash(killall then)",
-      "Bash(grep -r cls_ ~/02luka/g/tools/*.zsh)"
+      "Bash(grep -r cls_ ~/02luka/g/tools/*.zsh)",
+      "Bash(printf \"🧹 CLS Decommissioning Complete\\\\n\\\\n\")",
+      "Bash(printf \"✅ LaunchAgent: Stopped & removed\\\\n\")",
+      "Bash(printf \"✅ Documentation: Archived\\\\n\")",
+      "Bash(printf \"✅ Governance: Updated with note\\\\n\\\\n\")",
+      "Bash(printf \"📦 Archive Contents:\\\\n\")",
+      "Bash(printf \"\\\\n🎯 System is cleaner. CLS = auto-approve concept only.\\\\n\")"
     ],
     "deny": [],
     "ask": []
