@@ -47,8 +47,16 @@ class AuthManager:
         )
         return key.hex()
 
-    def register(self, username: str, password: str) -> bool:
-        """Registers a new user. Returns True if successful."""
+    def register(self, username: str, password: str, role: str = "user") -> bool:
+        """
+        Registers a new user. 
+        Args:
+            username: Unique username.
+            password: Password to hash.
+            role: 'user' (default) or 'admin'.
+        Returns:
+            True if successful.
+        """
         data = self._load_db()
         users = data.get("users", {})
 
@@ -63,12 +71,34 @@ class AuthManager:
         users[username] = {
             "salt": salt.hex(),
             "password_hash": password_hash,
+            "role": role,
             "created_at": datetime.datetime.now().isoformat()
         }
 
         data["users"] = users
         self._save_db(data)
-        print(f"✅ User '{username}' registered successfully.")
+        print(f"✅ User '{username}' registered with role '{role}'.")
+        return True
+
+    def get_role(self, username: str) -> Optional[str]:
+        """Returns the role of the user, or None if not found."""
+        data = self._load_db()
+        user = data.get("users", {}).get(username)
+        return user.get("role", "user") if user else None
+
+    def promote_user(self, username: str, new_role: str) -> bool:
+        """Promotes (or demotes) a user to a new role."""
+        data = self._load_db()
+        users = data.get("users", {})
+        
+        if username not in users:
+            print(f"❌ User '{username}' not found.")
+            return False
+            
+        users[username]["role"] = new_role
+        data["users"] = users
+        self._save_db(data)
+        print(f"✅ User '{username}' promoted to '{new_role}'.")
         return True
 
     def login(self, username: str, password: str) -> bool:

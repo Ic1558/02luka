@@ -61,7 +61,15 @@
       "Bash(printf \"\\\\n🎯 System is cleaner. CLS = auto-approve concept only.\\\\n\")",
       "WebSearch",
       "Bash(codex --help:*)",
-      "Bash(codex-task \"Fix security issue in tools/session_save.zsh: Replace ''git add -A'' at line 480 with explicit file list for session files \\(memory/g/reports/sessions/session_*.md, g/system_map/system_map.v1.json, 02luka.md\\). Add comment explaining the change. Test that the fix works correctly without breaking session save functionality.\")"
+      "Bash(codex-task \"Fix security issue in tools/session_save.zsh: Replace ''git add -A'' at line 480 with explicit file list for session files \\(memory/g/reports/sessions/session_*.md, g/system_map/system_map.v1.json, 02luka.md\\). Add comment explaining the change. Test that the fix works correctly without breaking session save functionality.\")",
+      "Bash(~/02luka/g/reports/codex_routing_log.jsonl <<'EOF'\n{\"timestamp\":\"2025-12-30T03:10:00Z\",\"task_id\":\"issue-001-git-add-fix\",\"task_type\":\"security_fix\",\"zone\":\"non-locked\",\"engine\":\"clc\",\"command\":\"fix git add -A in tools/session_save.zsh\",\"duration_sec\":600,\"success\":true,\"quality_score\":10,\"prompts_triggered\":0,\"clc_quota_saved\":false,\"notes\":\"Issue #1 High severity - Fixed by CLC \\(Codex TTY limitation\\). Replaced git add -A with explicit file list. Commit: d298b70e\"}\nEOF)",
+      "Bash(python3 verify_auth.py)",
+      "Bash(pip3 install fastapi uvicorn pydantic --quiet)",
+      "Bash(python3 -c \"import fastapi, uvicorn, pydantic; print\\(''✅ All dependencies installed''\\); print\\(f''FastAPI: {fastapi.__version__}''\\); print\\(f''Uvicorn: {uvicorn.__version__}''\\); print\\(f''Pydantic: {pydantic.__version__}''\\)\")",
+      "Bash(git checkout:*)",
+      "Bash(g/reports/feature-dev/codex_enhancement/CODEX_FINDINGS_ACTION_PLAN.md )",
+      "Bash(g/reports/feature-dev/codex_enhancement/ISSUE_1_COMPLETE.md )",
+      "Bash(g/reports/codex_routing_log.jsonl)"
     ],
     "deny": [],
     "ask": []
