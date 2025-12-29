@@ -63,3 +63,40 @@ status: ## Show system status
 	@echo "Workflows:"
 	@ls -1 .github/workflows/*.yml 2>/dev/null | wc -l | awk '{print "  Total: " $$1 " files"}'
 	@echo ""
+
+vault-install: ## Check/Install vault binary
+	@if ! command -v vault >/dev/null; then \
+		echo "❌ Vault binary not found."; \
+		echo "   Run: brew install vault"; \
+		exit 1; \
+	else \
+		echo "✅ Vault binary found: $$(vault --version)"; \
+	fi
+
+vault-up: vault-install ## Start Vault (native background process)
+	@mkdir -p infra/vault
+	@if [ -f infra/vault/PID ] && ps -p $$(cat infra/vault/PID) > /dev/null; then \
+		echo "✅ Vault is already running (PID $$(cat infra/vault/PID))"; \
+	else \
+		echo "🚀 Starting Vault (dev mode)..."; \
+		nohup vault server -dev > infra/vault/vault.log 2>&1 & echo $$! > infra/vault/PID; \
+		echo "✅ Vault started (PID $$(cat infra/vault/PID))"; \
+		echo "   Log: infra/vault/vault.log"; \
+		echo "   UI:  http://127.0.0.1:8200"; \
+	fi
+
+vault-down: ## Stop Vault (native background process)
+	@if [ -f infra/vault/PID ]; then \
+		echo "🛑 Stopping Vault (PID $$(cat infra/vault/PID))..."; \
+		kill $$(cat infra/vault/PID) || true; \
+		rm infra/vault/PID; \
+		echo "✅ Vault stopped"; \
+	else \
+		echo "⚠️  Vault does not seem to be running (no PID file)"; \
+	fi
+
+vault-bootstrap: ## Bootstrap Vault with initial secrets
+	@zsh infra/vault/scripts/vault_bootstrap_dev.zsh
+
+vault-smoke: ## Run Vault smoke test
+	@zsh infra/vault/scripts/vault_smoke_test.zsh
