@@ -51,7 +51,8 @@
       "Bash(echo:*)",
       "Bash(zsh:*)",
       "Bash(/bin/zsh:*)",
-      "Bash(killall then)"
+      "Bash(killall then)",
+      "Bash(grep -r cls_ ~/02luka/g/tools/*.zsh)"
     ],
     "deny": [],
     "ask": []
