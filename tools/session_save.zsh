@@ -55,34 +55,48 @@ log_telemetry() {
     local repo_name=$(basename "$repo_root")
     local branch=$(git -C "$repo_root" branch --show-current 2>/dev/null || echo "detached")
     
-    # Safe JSON construction (manual escaping for shell)
-    # Note: project_id and topic might contain user input, should be carefully handled if complex.
-    # For now assuming simple strings or null.
-    
+    # Safe JSON construction via jq (auto-escapes quotes, newlines, special chars)
+    # Prevents invalid JSON when user input contains special characters
+    # See: CODEX_FINDINGS_ACTION_PLAN.md Issue #2
+
     # Enhanced schema with env and schema_version (Phase 1A: Multi-Agent Coordination)
     local env_field="${AGENT_ENV:-terminal}"
     local schema_version="${SAVE_SCHEMA_VERSION:-1}"
-    local json_fmt='{"ts": "%s", "agent": "%s", "source": "%s", "env": "%s", "schema_version": %d, "project_id": "%s", "topic": "%s", "files_written": %d, "save_mode": "full", "repo": "%s", "branch": "%s", "exit_code": %d, "duration_ms": %d, "truncated": false}'
-    
+
     # Ensure telemetry directory exists (and ignore errors if readonly etc)
     mkdir -p "${repo_root}/g/telemetry" 2>/dev/null || true
-    
-    # Write to log file
+
+    # Write to log file using jq for safe JSON construction
     if [[ -d "${repo_root}/g/telemetry" ]]; then
-        printf "$json_fmt\n" \
-            "$TELEMETRY_START_TS" \
-            "$agent" \
-            "$source" \
-            "$env_field" \
-            "$schema_version" \
-            "$TELEMETRY_PROJECT_ID" \
-            "$TELEMETRY_TOPIC" \
-            "$TELEMETRY_FILES_WRITTEN" \
-            "$repo_name" \
-            "$branch" \
-            "$exit_code" \
-            "$duration_ms" \
-            >> "${repo_root}/g/telemetry/save_sessions.jsonl" || true
+        jq -nc \
+            --arg ts "$TELEMETRY_START_TS" \
+            --arg agent "$agent" \
+            --arg source "$source" \
+            --arg env "$env_field" \
+            --argjson schema "$schema_version" \
+            --arg project "$TELEMETRY_PROJECT_ID" \
+            --arg topic "$TELEMETRY_TOPIC" \
+            --argjson files "$TELEMETRY_FILES_WRITTEN" \
+            --arg repo "$repo_name" \
+            --arg branch "$branch" \
+            --argjson exit "$exit_code" \
+            --argjson duration "$duration_ms" \
+            '{
+                ts: $ts,
+                agent: $agent,
+                source: $source,
+                env: $env,
+                schema_version: $schema,
+                project_id: $project,
+                topic: $topic,
+                files_written: $files,
+                save_mode: "full",
+                repo: $repo,
+                branch: $branch,
+                exit_code: $exit,
+                duration_ms: $duration,
+                truncated: false
+            }' >> "${repo_root}/g/telemetry/save_sessions.jsonl" || true
     fi
 }
 
