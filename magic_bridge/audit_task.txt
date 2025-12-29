@@ -1,0 +1,2 @@
+Analyze app_logic.py (in magic_bridge folder).
+Check if there are any configuration warnings I should be aware of in the imported modules.

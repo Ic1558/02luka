@@ -1,0 +1,23 @@
+# Codex Routing Log (JSONL format)
+# Purpose: Track Codex usage, measure CLC quota savings, validate quality
+# Format: One JSON object per line (easy to parse, append-only)
+# Usage: Append each task routed to Codex
+#
+# Schema:
+# {
+#   "timestamp": "ISO 8601 datetime",
+#   "task_id": "unique task identifier",
+#   "task_type": "code_review | refactor | test_gen | debug | analysis | other",
+#   "zone": "locked | non-locked",
+#   "engine": "codex | clc | gemini",
+#   "command": "exact command used",
+#   "duration_sec": number,
+#   "success": boolean,
+#   "quality_score": 1-10,
+#   "prompts_triggered": number,
+#   "clc_quota_saved": boolean,
+#   "notes": "optional notes"
+# }
+#
+# Example entries:
+{"timestamp":"2025-12-30T02:50:00Z","task_id":"test-001","task_type":"code_review","zone":"non-locked","engine":"codex","command":"codex-system 'review tools/session_save.zsh'","duration_sec":203,"success":true,"quality_score":9,"prompts_triggered":0,"clc_quota_saved":true,"notes":"First production test - excellent findings"}
