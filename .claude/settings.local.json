@@ -58,7 +58,8 @@
       "Bash(printf \"✅ Documentation: Archived\\\\n\")",
       "Bash(printf \"✅ Governance: Updated with note\\\\n\\\\n\")",
       "Bash(printf \"📦 Archive Contents:\\\\n\")",
-      "Bash(printf \"\\\\n🎯 System is cleaner. CLS = auto-approve concept only.\\\\n\")"
+      "Bash(printf \"\\\\n🎯 System is cleaner. CLS = auto-approve concept only.\\\\n\")",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
