@@ -62,6 +62,9 @@ jobs:
       - name: Setup Node.js with cache
         uses: ./.github/actions/node-setup
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Create output directories
         run: |
           mkdir -p hub
