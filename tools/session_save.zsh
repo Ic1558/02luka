@@ -5,6 +5,13 @@
 
 set -e
 
+# Preflight: ensure jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed"
+  echo "Install: brew install jq"
+  exit 1
+fi
+
 # --- Telemetry Initialization ---
 TELEMETRY_START_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Use date +%s%N if available (Linux), else date +%s (macOS fallback)
