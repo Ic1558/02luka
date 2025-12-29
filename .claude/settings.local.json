@@ -73,7 +73,12 @@
       "Bash(pip3 install fastapi uvicorn pydantic)",
       "Bash(\"reliability_improvement\" )",
       "Bash(\"codex-task add jq check\" )",
-      "Bash(9)"
+      "Bash(9)",
+      "Bash(~/02luka/tools/save.sh:*)",
+      "Bash(pip install httpx --quiet)",
+      "Bash(should be carefully handled if complex. For now assuming simple strings\"\n→ This was known technical debt, now fixed\n\nSeverity: Medium \\(security vulnerability, but low exploitation risk\\)\nFixed by: CLC \\(same pattern as Issue #1\\)\nQuality: 10/10\nTime: ~15 minutes\nReference: g/reports/feature-dev/codex_enhancement/ISSUE_2_ANALYSIS.md\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(g/reports/feature-dev/codex_enhancement/ISSUE_2_COMPLETE.md )",
+      "Bash(source venv/bin/activate)"
     ],
     "deny": [],
     "ask": []
