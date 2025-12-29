@@ -477,8 +477,15 @@ echo "📦 Committing to main 02luka repo..."
 if [[ -d ~/02luka/.git ]]; then
   cd ~/02luka
   
-  # Add all changed files
-  git add -A 2>/dev/null || true
+  # Add only session-related files (explicit list for safety)
+  # Prevents accidentally committing unrelated or sensitive files
+  # See: CODEX_FINDINGS_ACTION_PLAN.md Issue #1
+  git add \
+    g/reports/sessions/session_*.md \
+    g/reports/sessions/session_*.ai.json \
+    g/system_map/system_map.v1.json \
+    02luka.md \
+    2>/dev/null || true
   
   # Create comprehensive commit message
   COMMIT_MSG="session save: $AGENT $TODAY
