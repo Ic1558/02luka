@@ -399,3 +399,23 @@ These are deliberate **follow-ups**, not gaps that break current stability.
   - Together, they form the **audit trail** for governance v5.
 
 
+
+---
+
+## 📝 Historical Note: CLS Decommissioning (Dec 2025)
+
+**Important:** The term "CLS" referenced throughout this document now refers to the **Auto-Approve Semantic/Concept** only, not an active agent.
+
+**What Changed:**
+- **CLS Agent**: Decommissioned 2025-12-30
+- **Reason**: Functionality absorbed by Mary Core, Router v5, and direct CLC (Claude Code) operations
+- **Current System**: 
+  - Auto-approve logic → `router_v5.py` + `sandbox_guard_v5.py`
+  - Orchestration → Mary CORE (Operations)
+  - Governance → AI:OP-001_v5 enforcement
+  - Privileged Review → CLC (Claude Code)
+  
+**Legacy References:**
+- When you see "CLS auto-approve" → It means WOs that meet auto-approve conditions (OPEN zone + whitelist)
+- Archived documentation → `~/02luka/docs/archive/cls_legacy/`
+
