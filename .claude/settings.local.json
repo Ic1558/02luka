@@ -60,7 +60,8 @@
       "Bash(printf \"📦 Archive Contents:\\\\n\")",
       "Bash(printf \"\\\\n🎯 System is cleaner. CLS = auto-approve concept only.\\\\n\")",
       "WebSearch",
-      "Bash(codex --help:*)"
+      "Bash(codex --help:*)",
+      "Bash(codex-task \"Fix security issue in tools/session_save.zsh: Replace ''git add -A'' at line 480 with explicit file list for session files \\(memory/g/reports/sessions/session_*.md, g/system_map/system_map.v1.json, 02luka.md\\). Add comment explaining the change. Test that the fix works correctly without breaking session save functionality.\")"
     ],
     "deny": [],
     "ask": []
