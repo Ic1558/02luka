@@ -5,7 +5,22 @@ set -euo pipefail
 
 MLS_DB="$HOME/02luka/g/knowledge/mls_lessons.jsonl"
 MLS_INDEX="$HOME/02luka/g/knowledge/mls_index.json"
-mkdir -p "$(dirname "$MLS_DB")"
+MLS_DIR="$(dirname "$MLS_DB")"
+
+die() {
+  echo "❌ $*" >&2
+  exit 1
+}
+
+warn() {
+  echo "⚠️  $*" >&2
+}
+
+command -v jq >/dev/null 2>&1 || die "jq is required but not found in PATH"
+mkdir -p "$MLS_DIR" || die "Failed to create MLS directory: $MLS_DIR"
+if [[ -e "$MLS_DB" && ! -w "$MLS_DB" ]]; then
+  die "MLS database not writable: $MLS_DB"
+fi
 
 # Usage: mls_capture.zsh <type> <title> <description> [context]
 # Types: solution, failure, improvement, pattern, antipattern
@@ -37,6 +52,11 @@ USAGE
   exit 1
 fi
 
+case "$TYPE" in
+  solution|failure|improvement|pattern|antipattern) ;;
+  *) die "Invalid type: $TYPE (expected solution|failure|improvement|pattern|antipattern)" ;;
+esac
+
 # Generate lesson ID
 TIMESTAMP=$(date +%s)
 LESSON_ID="MLS-${TIMESTAMP}"
@@ -46,7 +66,7 @@ CURRENT_WO=$(ls -t ~/02luka/bridge/inbox/clc/WO-*.zsh 2>/dev/null | head -1 | xa
 CURRENT_SESSION=$(ls -t ~/02luka/g/reports/sessions/*.md 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo "none")
 
 # Create lesson entry
-LESSON=$(jq -n \
+if ! LESSON=$(jq -n \
   --arg id "$LESSON_ID" \
   --arg type "$TYPE" \
   --arg title "$TITLE" \
@@ -67,25 +87,37 @@ LESSON=$(jq -n \
     tags: [],
     verified: false,
     usefulness_score: 0
-  }')
+  }'); then
+  die "Failed to build lesson entry (jq error)"
+fi
 
 # Append to database
-echo "$LESSON" >> "$MLS_DB"
+if ! printf '%s\n' "$LESSON" >> "$MLS_DB"; then
+  die "Failed to append to MLS database: $MLS_DB"
+fi
 
 # Update index
 if [[ -f "$MLS_INDEX" ]]; then
-  INDEX=$(cat "$MLS_INDEX")
+  if ! INDEX=$(jq -e '.' "$MLS_INDEX" 2>/dev/null); then
+    warn "MLS index invalid; backing up and recreating"
+    mv "$MLS_INDEX" "$MLS_INDEX.bak.$TIMESTAMP" 2>/dev/null || true
+    INDEX='{"total":0,"by_type":{},"last_updated":""}'
+  fi
 else
   INDEX='{"total":0,"by_type":{},"last_updated":""}'
 fi
 
 # Increment counts
-NEW_INDEX=$(echo "$INDEX" | jq \
+if ! NEW_INDEX=$(echo "$INDEX" | jq \
   --arg type "$TYPE" \
   --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-  '.total += 1 | .by_type[$type] = (.by_type[$type] // 0) + 1 | .last_updated = $ts')
+  '.total += 1 | .by_type[$type] = (.by_type[$type] // 0) + 1 | .last_updated = $ts'); then
+  die "Failed to update MLS index (jq error)"
+fi
 
-echo "$NEW_INDEX" > "$MLS_INDEX"
+if ! printf '%s\n' "$NEW_INDEX" > "$MLS_INDEX"; then
+  die "Failed to write MLS index: $MLS_INDEX"
+fi
 
 # Output
 echo "✅ Lesson captured: $LESSON_ID"
@@ -93,29 +125,33 @@ echo "   Type: $TYPE"
 echo "   Title: $TITLE"
 echo ""
 echo "📊 MLS Stats:"
-echo "$NEW_INDEX" | jq -r '
+if ! echo "$NEW_INDEX" | jq -r '
   "   Total lessons: \(.total)",
   "   By type:",
   (.by_type | to_entries[] | "     - \(.key): \(.value)")
-'
+'; then
+  warn "Failed to render MLS stats from index JSON"
+fi
 
 # Trigger R&D autopilot notification
 if [[ -d "$HOME/02luka/bridge/inbox/rd" ]]; then
   RD_NOTIFICATION="$HOME/02luka/bridge/inbox/rd/MLS-notification-${TIMESTAMP}.json"
-  jq -n \
-    --arg lesson_id "$LESSON_ID" \
-    --arg type "$TYPE" \
-    --arg title "$TITLE" \
-    '{
-      task: "review_mls_lesson",
-      lesson_id: $lesson_id,
-      lesson_type: $type,
-      title: $title,
-      priority: "P3",
-      auto_approve: true
-    }' > "$RD_NOTIFICATION"
-
-  echo "🔔 Notified R&D autopilot"
+  if jq -n \
+      --arg lesson_id "$LESSON_ID" \
+      --arg type "$TYPE" \
+      --arg title "$TITLE" \
+      '{
+        task: "review_mls_lesson",
+        lesson_id: $lesson_id,
+        lesson_type: $type,
+        title: $title,
+        priority: "P3",
+        auto_approve: true
+      }' > "$RD_NOTIFICATION"; then
+    echo "🔔 Notified R&D autopilot"
+  else
+    warn "Failed to write R&D notification: $RD_NOTIFICATION"
+  fi
 fi
 
 echo ""

@@ -1,53 +1,44 @@
 import os
 import time
 import sys
-import google.generativeai as genai
+import vertexai
+from vertexai.generative_models import GenerativeModel
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import google.auth
 
 # --- Configuration ---
-API_KEY = os.getenv("GEMINI_API_KEY")
+# Attempts to auto-detect project/location from gcloud
+PROJECT_ID = "luka-cloud-471113" # Detected from your session
+LOCATION = "us-central1"
 MODEL_NAME = "gemini-1.5-flash"
 WATCH_DIR = "./magic_bridge"
 
 class GeminiHandler(FileSystemEventHandler):
-    def on_modified(self, event):
-        # 1. Ignore directories
-        if event.is_directory:
-            return
+    def __init__(self, model):
+        self.model = model
 
+    def on_modified(self, event):
+        if event.is_directory: return
         filename = os.path.basename(event.src_path)
-        
-        # 2. Ignore noise (.DS_Store and .summary.txt files)
-        if filename == ".DS_Store" or filename.endswith(".summary.txt"):
-            return
+        if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
 
         print(f"📝 Detected change in: {filename}")
-
-        # 3. Debounce (wait for write to finish)
-        time.sleep(1)
-
-        # 4. Process file
+        time.sleep(1) # Debounce
         self.process_file(event.src_path)
 
     def process_file(self, file_path):
         try:
-            # Read file content
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            if not content.strip():
-                print("   ⚠️  File is empty, skipping.")
-                return
+            if not content.strip(): return
 
-            print("   🚀 Sending to Gemini...")
+            print(f"   🚀 Sending to Vertex AI ({MODEL_NAME})...")
             
-            # Call Gemini API
-            model = genai.GenerativeModel(MODEL_NAME)
-            prompt = f"Summarize text or review code for bugs:\n\n{content}"
-            response = model.generate_content(prompt)
+            prompt = f"Summarize text or review code for bugs. Be concise:\n\n{content}"
+            response = self.model.generate_content(prompt)
             
-            # Write response to output file
             output_path = f"{file_path}.summary.txt"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(response.text)
@@ -55,28 +46,30 @@ class GeminiHandler(FileSystemEventHandler):
             print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
 
         except Exception as e:
-            print(f"   ❌ Error processing file: {e}")
+            print(f"   ❌ Error: {e}")
+            if "404" in str(e) and "Publisher Model" in str(e):
+                print("      👉 Action Required: Enable 'Vertex AI API' in Google Cloud Console.")
 
 def main():
-    # 1. Check API Key
-    if not API_KEY:
-        print("❌ Error: GEMINI_API_KEY environment variable not set.")
+    print("🔮 Initializing Gemini Bridge (Vertex AI via ADC)...")
+    
+    # 1. Init Vertex AI
+    try:
+        vertexai.init(project=PROJECT_ID, location=LOCATION)
+        model = GenerativeModel(MODEL_NAME)
+        # Smoke test
+        print(f"   Connecting to project '{PROJECT_ID}'...")
+    except Exception as e:
+        print(f"❌ Failed to initialize Vertex AI: {e}")
+        print("   Run: gcloud auth application-default login")
         sys.exit(1)
 
-    # 2. Configure Gemini
-    genai.configure(api_key=API_KEY)
-
-    # 3. Ensure watch directory exists
+    # 2. Setup Watchdog
     if not os.path.exists(WATCH_DIR):
-        try:
-            os.makedirs(WATCH_DIR)
-            print(f"✅ Created directory: {WATCH_DIR}")
-        except OSError as e:
-            print(f"❌ Error creating directory {WATCH_DIR}: {e}")
-            sys.exit(1)
+        os.makedirs(WATCH_DIR)
+        print(f"   Created watch directory: {WATCH_DIR}")
 
-    # 4. Setup Watchdog
-    event_handler = GeminiHandler()
+    event_handler = GeminiHandler(model)
     observer = Observer()
     observer.schedule(event_handler, path=WATCH_DIR, recursive=False)
     observer.start()
