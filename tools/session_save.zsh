@@ -138,7 +138,11 @@ REPORTS_DIR="$LUKA_MEM_REPO_ROOT/g/reports/sessions"
 TODAY_PATTERN=$(date +%Y%m%d)
 
 # Find latest session file for today
-LATEST_SESSION=$(ls -t "$REPORTS_DIR"/session_${TODAY_PATTERN}*.md 2>/dev/null | head -1)
+session_candidates=("$REPORTS_DIR"/session_${TODAY_PATTERN}*.md(N))
+LATEST_SESSION=""
+if (( ${#session_candidates[@]} > 0 )); then
+  LATEST_SESSION=$(ls -t -- "${session_candidates[@]}" 2>/dev/null | head -1)
+fi
 
 if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
   # Extract timestamp from filename (format: session_YYYYMMDD_HHMMSS.md)
@@ -183,20 +187,17 @@ fi
 
 # If we get here, proceed with full save pipeline
 
-# Check if MLS ledger exists
-if [[ ! -f "$MLS_LEDGER" ]]; then
-  echo "⚠️  No MLS ledger found for today: $MLS_LEDGER"
-  echo "Creating minimal session record..."
-fi
-
 # Extract session data from MLS
-extract_mls_data() {
-  if [[ ! -f "$MLS_LEDGER" ]]; then
+parse_mls_data() {
+  local ledger_path="$1"
+  if [[ ! -f "$ledger_path" ]]; then
+    echo "⚠️  No MLS ledger found for today: $ledger_path"
+    echo "Creating minimal session record..."
     echo '{"total":0,"types":{},"entries":[]}'
-    return
+    return 0
   fi
-  
-  cat "$MLS_LEDGER" | jq -s '{
+
+  jq -s '{
     total: length,
     types: (group_by(.type) | map({(.[0].type): length}) | add // {}),
     entries: map({
@@ -207,7 +208,7 @@ extract_mls_data() {
       solution: .solution // "",
       tags: .tags // []
     })
-  }'
+  }' "$ledger_path"
 }
 
 # Get agent name from Phase 1A gateway (SAVE_AGENT) or fallback
@@ -215,7 +216,7 @@ AGENT="${SAVE_AGENT:-${SESSION_AGENT:-${GG_AGENT_ID:-CLS}}}"
 
 # Generate session content
 echo "📝 Generating session from MLS ledger..."
-MLS_DATA=$(extract_mls_data)
+MLS_DATA=$(parse_mls_data "$MLS_LEDGER")
 TOTAL_ENTRIES=$(echo "$MLS_DATA" | jq -r '.total')
 
 # Count by type
