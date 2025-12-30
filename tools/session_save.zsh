@@ -63,12 +63,21 @@ log_telemetry() {
     local env_field="${AGENT_ENV:-terminal}"
     local schema_version="${SAVE_SCHEMA_VERSION:-1}"
 
+    local telemetry_dir="${repo_root}/g/telemetry"
+    local telemetry_file="${telemetry_dir}/save_sessions.jsonl"
+
     # Ensure telemetry directory exists (and ignore errors if readonly etc)
-    mkdir -p "${repo_root}/g/telemetry" 2>/dev/null || true
+    mkdir -p "$telemetry_dir" 2>/dev/null || true
 
     # Write to log file using jq for safe JSON construction
-    if [[ -d "${repo_root}/g/telemetry" ]]; then
-        jq -nc \
+    if [[ -d "$telemetry_dir" ]]; then
+      if [[ -e "$telemetry_file" && ! -w "$telemetry_file" ]]; then
+        return 0
+      fi
+      if [[ ! -e "$telemetry_file" && ! -w "$telemetry_dir" ]]; then
+        return 0
+      fi
+      jq -nc \
             --arg ts "$TELEMETRY_START_TS" \
             --arg agent "$agent" \
             --arg source "$source" \
@@ -96,7 +105,7 @@ log_telemetry() {
                 exit_code: $exit,
                 duration_ms: $duration,
                 truncated: false
-            }' >> "${repo_root}/g/telemetry/save_sessions.jsonl" || true
+            }' >> "$telemetry_file" || true
     fi
 }
 
