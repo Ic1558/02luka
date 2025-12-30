@@ -84,7 +84,16 @@
       "Bash(g/reports/feature-dev/codex_enhancement/WEEK1_ROUTING_PLAN.md )",
       "Bash(g/reports/feature-dev/codex_enhancement/PHASE_COMPLETE_SUMMARY.md)",
       "Bash(lsof -i :8000)",
-      "Bash(tools/codex_metrics_summary.zsh:*)"
+      "Bash(tools/codex_metrics_summary.zsh:*)",
+      "Bash(launchctl list)",
+      "Bash(lsof -nP -iTCP:8000 -sTCP:LISTEN)",
+      "Bash(lsof -nP -iTCP:8088 -sTCP:LISTEN)",
+      "Bash(/Users/icmini/02luka/g/reports/codex_routing_log.jsonl <<'EOF'\n{\"timestamp\":\"2025-12-30T21:26:00Z\",\"task_id\":\"week1-task-3.1-findings-summary\",\"task_type\":\"documentation\",\"zone\":\"non-locked\",\"engine\":\"codex\",\"command\":\"codex-task add Phase Complete summary to findings\",\"duration_sec\":120,\"success\":true,\"quality_score\":9,\"prompts_triggered\":0,\"clc_quota_saved\":true,\"notes\":\"Week 1 Task 3.1 - Added Phase Complete Summary to CODEX_FINDINGS_ACTION_PLAN.md. 4/4 issues resolved, commits listed, key insights, next steps. Production-ready.\"}\n{\"timestamp\":\"2025-12-30T21:28:00Z\",\"task_id\":\"week1-task-2.1-session-save-refactor\",\"task_type\":\"refactor\",\"zone\":\"non-locked\",\"engine\":\"codex\",\"command\":\"codex-task extract parse_mls_data function\",\"duration_sec\":120,\"success\":true,\"quality_score\":9,\"prompts_triggered\":0,\"clc_quota_saved\":true,\"notes\":\"Week 1 Task 2.1 - Extracted parse_mls_data\\(\\) from session_save.zsh. Improved testability and organization. Clean refactor.\"}\n{\"timestamp\":\"2025-12-30T21:30:00Z\",\"task_id\":\"week1-task-3.3-codex-setup-guide\",\"task_type\":\"documentation\",\"zone\":\"non-locked\",\"engine\":\"codex\",\"command\":\"codex-task create Tier 2 setup guide\",\"duration_sec\":120,\"success\":true,\"quality_score\":9,\"prompts_triggered\":0,\"clc_quota_saved\":true,\"notes\":\"Week 1 Task 3.3 - Created tools/CODEX_SETUP.md. Comprehensive Tier 2 config with copy-paste toml, shell aliases, validation steps. 60+ lines, production-ready.\"}\n{\"timestamp\":\"2025-12-30T21:32:00Z\",\"task_id\":\"week1-task-3.5-routing-flowchart\",\"task_type\":\"documentation\",\"zone\":\"non-locked\",\"engine\":\"codex\",\"command\":\"codex-task create routing flowchart\",\"duration_sec\":120,\"success\":true,\"quality_score\":9,\"prompts_triggered\":0,\"clc_quota_saved\":true,\"notes\":\"Week 1 Task 3.5 - Created g/docs/CODEX_ROUTING_FLOWCHART.md. Text-based decision tree for CLC vs Codex routing. Clear, actionable, includes TTY limitation.\"}\nEOF)",
+      "Bash(unalias claude-cld)",
+      "Bash(alias claude-cld)",
+      "Bash(launchctl unload -w ~/Library/LaunchAgents/com.02luka.dashboard.server.plist)",
+      "Bash(launchctl load -w ~/Library/LaunchAgents/com.02luka.dashboard.server.plist 2)",
+      "Bash(1 sleep 2 lsof -nP -iTCP:8088 -sTCP:LISTEN)"
     ],
     "deny": [],
     "ask": []
