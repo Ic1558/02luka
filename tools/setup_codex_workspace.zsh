@@ -140,6 +140,11 @@ rollback_checkpoint() {
 
 codex-task() {
   local instruction="${1:-codex-task}"
+  if [[ ! -t 0 ]]; then
+    echo "⚠️  codex-task requires an interactive TTY." >&2
+    echo "   Fix: run in a normal terminal session (not CI/non-interactive)." >&2
+    return 1
+  fi
   create_checkpoint "$instruction"
 
   echo "🤖 Running Codex..."

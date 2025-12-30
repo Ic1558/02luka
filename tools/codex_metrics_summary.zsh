@@ -28,7 +28,11 @@ INVALID_COUNT=0
 LINE_NO=0
 while IFS= read -r line || [[ -n "$line" ]]; do
     LINE_NO=$((LINE_NO + 1))
-    if [[ -z "$line" ]]; then
+    line_trim="${line#"${line%%[![:space:]]*}"}"
+    if [[ -z "$line_trim" ]]; then
+        continue
+    fi
+    if [[ "$line_trim" == \#* ]]; then
         continue
     fi
     if echo "$line" | jq -e . >/dev/null 2>&1; then
