@@ -62,8 +62,10 @@ jobs:
       - name: Setup Node.js with cache
         uses: ./.github/actions/node-setup
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Debug Dependencies
+        run: |
+          ls -F node_modules/ || echo "node_modules missing"
+          ls -F node_modules/yaml/ || echo "yaml missing"
 
       - name: Create output directories
         run: |

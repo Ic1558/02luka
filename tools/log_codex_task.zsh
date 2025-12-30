@@ -8,7 +8,10 @@
 
 set -euo pipefail
 
-LOG_FILE="${HOME}/02luka/g/reports/codex_routing_log.jsonl"
+SCRIPT_DIR="$(cd "$(dirname "${(%):-%N}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+LOG_FILE="${REPO_ROOT}/g/reports/codex_routing_log.jsonl"
+mkdir -p "$(dirname "$LOG_FILE")"
 
 # Input
 TASK_TYPE="${1:-other}"

@@ -127,19 +127,30 @@ alias codex-auto='codex -a on-request -s workspace-write'
 alias codex-danger='codex --dangerously-bypass-approvals-and-sandbox'
 
 # Codex with git safety net
-codex-task() {
+create_checkpoint() {
+  local message="${1:-codex-task}"
   echo "📌 Creating safety checkpoint..."
-  git add -A && git commit -m "pre-codex: $1" || echo "⚠️ No changes to commit"
+  git add -A && git commit -m "pre-codex: $message" || echo "⚠️ No changes to commit"
+}
+
+rollback_checkpoint() {
+  echo "⏪ Rolling back to last checkpoint..."
+  git reset --hard HEAD
+}
+
+codex-task() {
+  local instruction="${1:-codex-task}"
+  create_checkpoint "$instruction"
 
   echo "🤖 Running Codex..."
-  codex-auto "$1"
+  codex-auto "$instruction"
 
   echo "📊 Review changes:"
   git diff HEAD
 
   echo ""
-  echo "✅ To keep: git add -A && git commit -m 'codex: $1'"
-  echo "❌ To undo: git reset --hard HEAD"
+  echo "✅ To keep: git add -A && git commit -m 'codex: $instruction'"
+  echo "❌ To undo: rollback_checkpoint"
 }
 EOF
 

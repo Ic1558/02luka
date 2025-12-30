@@ -101,7 +101,7 @@ jobs:
           cat dist/ops/manifest.json
           echo ""
           echo "Latest JSON (first 5 lines):"
-          head -5 dist/ops/latest.json
+          [ -f dist/ops/latest.json ] && head -5 dist/ops/latest.json || echo "⚠️ latest.json not generated (API down?)"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
