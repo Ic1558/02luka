@@ -263,3 +263,127 @@ Thinking (CLC) → Execution (Codex) → Validation (CLC/Boss)
 **Status:** ✅ COMPLETE
 
 **Next:** Week 1 Codex Routing (10+ tasks)
+
+---
+
+## 🎯 NEXT ACTION REMINDER
+
+### When Ready to Start Week 1:
+
+**Step 1: Pick First Task (Recommended: Task 1.1 or 3.2)**
+```bash
+# Open the plan
+cat ~/02luka/g/reports/feature-dev/codex_enhancement/WEEK1_ROUTING_PLAN.md
+
+# Task 1.1: Add jq check to mls_search.zsh (easiest, 5 minutes)
+# Task 3.2: Create Codex Quick Reference (useful, 15 minutes)
+```
+
+**Step 2: Run Codex Command**
+```bash
+cd ~/02luka
+
+# Example: Task 1.1
+codex-task "Add jq availability check to tools/mls_search.zsh: Add preflight check after shebang that verifies jq is installed. If not found, print clear error message 'Error: jq is required but not installed' and 'Install: brew install jq', then exit 1."
+```
+
+**Step 3: Validate Result**
+```bash
+# Review changes
+git diff tools/mls_search.zsh
+
+# Test the script
+zsh tools/mls_search.zsh --help
+```
+
+**Step 4: Log Metrics (IMPORTANT: Replace 9 with actual score)**
+```bash
+zsh ~/02luka/tools/log_codex_task.zsh \
+  "reliability_improvement" \
+  "codex-task add jq check to mls_search" \
+  9
+```
+
+**Step 5: Commit**
+```bash
+git add tools/mls_search.zsh
+git commit -m "fix(tools): add jq preflight check to mls_search
+
+RELIABILITY FIX - Week 1 Codex Routing
+
+Added jq availability check with clear error message.
+Same pattern as Issue #3 (session_save.zsh).
+
+Quality: 9/10
+Engine: Codex (interactive)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+"
+```
+
+**Step 6: Repeat for More Tasks**
+- Target: 10+ tasks in Week 1
+- Goal: 40%+ CLC quota savings
+- Track: All metrics in codex_routing_log.jsonl
+
+---
+
+### If Codex Fails (TTY Error):
+
+**Option A: Try Different Task**
+- Some tasks may work, some may not
+- Document which patterns fail
+
+**Option B: Route to CLC Instead**
+```bash
+# CLC can do the task immediately
+# Log with engine="clc" instead of "codex"
+zsh ~/02luka/tools/log_codex_task.zsh \
+  "reliability_improvement" \
+  "clc manual fix" \
+  10
+```
+
+**Option C: Prepare Task Spec for Later**
+- Create detailed spec in tmp/
+- Boss runs when convenient
+
+---
+
+### Week 1 End (After 10+ Tasks):
+
+**Create Week 1 Report:**
+```bash
+# Document results
+vim ~/02luka/g/reports/feature-dev/codex_enhancement/WEEK1_ROUTING_REPORT.md
+
+# Include:
+# - Tasks completed (count)
+# - Quality average
+# - CLC quota saved (estimated %)
+# - Issues encountered
+# - Lessons learned
+# - Recommendations for Week 2
+```
+
+**View Metrics:**
+```bash
+zsh ~/02luka/tools/codex_metrics_summary.zsh
+```
+
+---
+
+### Quick Reference Files:
+
+📋 **Task List:** `g/reports/feature-dev/codex_enhancement/WEEK1_ROUTING_PLAN.md`
+📊 **Metrics Log:** `g/reports/codex_routing_log.jsonl`
+📖 **Phase Summary:** `g/reports/feature-dev/codex_enhancement/PHASE_COMPLETE_SUMMARY.md`
+🔧 **Routing Rules:** See "Routing Rules v1.0" section above
+
+---
+
+**Status:** Ready to execute Week 1 whenever convenient
+**First Task:** Task 1.1 (jq check in mls_search.zsh) - 5 minutes, low risk
+**Goal:** Prove Codex can save 40%+ CLC quota with 8+ quality 🚀
