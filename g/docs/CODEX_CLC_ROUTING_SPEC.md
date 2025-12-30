@@ -87,6 +87,8 @@ When zone is non-locked AND quota < 60%, use task type:
 
 ## Routing Decision Flow
 
+**Flowchart:** `g/docs/CODEX_ROUTING_FLOWCHART.md`
+
 ```
 START
   ↓

@@ -11,6 +11,28 @@ set -e
 SCRIPT_DIR=$(dirname "$0")
 BACKEND_SCRIPT="$SCRIPT_DIR/session_save.zsh"
 
+atomic_write_file() {
+    local dest="$1"
+    local content="$2"
+    local dest_dir
+    dest_dir=$(dirname "$dest")
+    mkdir -p "$dest_dir" || return 1
+    local tmp_file
+    tmp_file=$(mktemp "${dest_dir}/.save_tmp.XXXXXX") || return 1
+    printf '%s\n' "$content" > "$tmp_file" || {
+        rm -f "$tmp_file"
+        return 1
+    }
+    if [[ ! -s "$tmp_file" ]]; then
+        rm -f "$tmp_file"
+        return 1
+    fi
+    if ! mv -f "$tmp_file" "$dest"; then
+        rm -f "$tmp_file"
+        return 1
+    fi
+}
+
 # Load agent context (Phase 1A: Multi-Agent Coordination)
 if [[ -f "$SCRIPT_DIR/agent_context.zsh" ]]; then
     source "$SCRIPT_DIR/agent_context.zsh"
@@ -25,6 +47,12 @@ export SAVE_AGENT="${SAVE_AGENT:-${AGENT_ID}}"
 export SAVE_SOURCE="${SAVE_SOURCE:-${AGENT_ENV}}"
 export SAVE_TIMESTAMP="${SAVE_TIMESTAMP:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 export SAVE_SCHEMA_VERSION="${SAVE_SCHEMA_VERSION:-1}"
+
+SAVE_META_FILE="${SAVE_META_FILE:-$REPO_ROOT/g/reports/sessions/save_last.txt}"
+SAVE_META_CONTENT="ts=${SAVE_TIMESTAMP} agent=${SAVE_AGENT} source=${SAVE_SOURCE}"
+if ! atomic_write_file "$SAVE_META_FILE" "$SAVE_META_CONTENT"; then
+    echo "⚠️  Failed to write save metadata (ignored): $SAVE_META_FILE"
+fi
 
 # --- HARD GATE: Pre-Action Read Stamp (GG Review requirement) ---
 # Block if agent hasn't read LIAM.md, session, and telemetry
