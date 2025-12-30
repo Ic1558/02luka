@@ -1,5 +1,7 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+setopt null_glob
+
 
 # Bridge Self-Check Tool
 # Scans bridge/inbox/outbox/processed folders for integrity and permissions
