@@ -71,6 +71,7 @@ jobs:
         run: |
           mkdir -p hub
           mkdir -p g/reports
+          rm -rf g/telemetry || true
           mkdir -p g/telemetry
           echo "✅ Output directories created"
 
