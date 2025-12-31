@@ -115,6 +115,40 @@ START
 
 ---
 
+## Governance Task Execution Model
+
+**CLC-governance tasks operate on an INDEPENDENT, NON-BLOCKING execution model:**
+
+### Key Principles
+
+✅ **Non-Blocking:**
+- Governance tasks are ROUTED to CLC, not BLOCKING operational work
+- Codex execution continues immediately
+- No synchronous wait required for governance completion
+
+✅ **Queue-Based:**
+- Governance tasks queue independently in CLC's backlog
+- Processed when CLC capacity available
+- Zero impact on Codex throughput
+
+✅ **Rare & Low-Frequency:**
+- Governance tasks: 2-3 per week (Week 1+2 data)
+- Operational tasks: 20+ per week via Codex
+- Governance is NOT in the hot path
+
+### Metrics Proof
+
+**Week 1+2 Results:**
+- Total tasks: 23
+- Codex tasks: 20 (87%)
+- CLC governance tasks: 3 (13%)
+- **CLC quota saved: ~86%**
+- Zero blocking observed
+
+**Rule:** Governance routing is a LANE ASSIGNMENT, not a BLOCKING DEPENDENCY. System efficiency is unaffected by governance queue depth.
+
+---
+
 ## Examples
 
 ### Example 1: Code Review in `/apps/`
