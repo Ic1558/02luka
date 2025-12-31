@@ -394,15 +394,16 @@ codex-task() {
 2. ✅ Add aliases to `~/.zshrc`
 3. ✅ Test with 3 sandbox tests above
 
-### Week 1 (After Testing)
-1. Route 5-10 tasks to Codex with new config
-2. Validate no blocking issues
-3. Measure speed improvement
+### Week 1 Results
+1. ✅ 12 Codex tasks completed (100% success)
+2. ✅ Average quality: 9.2/10
+3. ✅ CLC quota savings: ~80%
+4. ✅ TTY limitation identified; interactive runs or task specs work
 
-### Week 2+ (Production)
-1. Update GG Orchestrator to use `codex-auto`
-2. Enable full Codex routing for non-locked zones
-3. Monitor for any safety issues
+### Week 2 Targets (Production)
+1. Scale to 10-15 tasks with 95%+ success and 9.0+ quality
+2. Follow routing flowchart for all task assignments
+3. Update GG Orchestrator to use `codex-auto`
 
 ---
 
