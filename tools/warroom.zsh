@@ -13,7 +13,7 @@ LAC_MIRROR="$DECISION_DIR/LAC_REASONING_MIRROR.md"
 mkdir -p "$DRAFTS_DIR"
 
 # Argument Parsing
-provider="gemini" # Default to Gemini (we know it exists)
+provider="antigravity" # Default to Antigravity (Identity Alignment)
 fill_mode="false"
 lac_mode="false"
 args=()
@@ -92,6 +92,13 @@ _run_provider() {
     
     # Use -p or direct arg. Unset KEY to force OAuth if needed.
     env -u GEMINI_API_KEY "$GEMINI_BIN" "$(cat "$_prompt_file")"
+    return $?
+  fi
+
+  if [[ "$_provider" == "antigravity" ]]; then
+    ATG_BIN=$(command -v antigravity) || return 2
+    # Antigravity CLI v1.104+ supports 'chat' subcommand
+    "$ATG_BIN" chat "$(cat "$_prompt_file")"
     return $?
   fi
 
@@ -268,6 +275,9 @@ EOF
       echo "  1. Open Prompt: code \"$out_prompt\""
       echo "  2. Copy content -> Paste into your AI (Gemini/Codex/Antigravity)"
       echo "  3. Paste result into: code \"$out_draft\""
+      echo ""
+      echo "OR TRY AUTO-FILL:"
+      echo "  zsh tools/warroom.zsh \"$topic\" --fill --provider antigravity --lac"
   fi
 
 else

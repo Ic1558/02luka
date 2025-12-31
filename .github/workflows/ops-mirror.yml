@@ -43,13 +43,15 @@ jobs:
 
       - name: Setup GitHub CLI
         run: |
-          SUDO_BIN="${SUDO_CMD:-$(printf 'su''do')}"
-          # yamllint disable-line rule:line-length
-          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | "$SUDO_BIN" dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-          # yamllint disable-line rule:line-length
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | "$SUDO_BIN" tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-          "$SUDO_BIN" apt update
-          "$SUDO_BIN" apt install gh
+          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt update \
+          && sudo apt install gh -y
+
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
 
       - name: Fetch latest OPS data
         run: |
@@ -101,7 +103,7 @@ jobs:
           cat dist/ops/manifest.json
           echo ""
           echo "Latest JSON (first 5 lines):"
-          head -5 dist/ops/latest.json
+          [ -f dist/ops/latest.json ] && head -5 dist/ops/latest.json || echo "⚠️ latest.json not generated (API down?)"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

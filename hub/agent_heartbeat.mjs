@@ -29,7 +29,7 @@ const __dirname = dirname(__filename);
 
 // Configuration
 const CONFIG = {
-  redisUrl: process.env.LUKA_REDIS_URL || 'redis://127.0.0.1:6379',
+  redisUrl: process.env.LUKA_REDIS_URL || 'redis://:gggclukaic@127.0.0.1:6379',
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   telegramChatId: process.env.TELEGRAM_CHAT_ID,
   offlineThreshold: 300, // seconds (5 minutes)

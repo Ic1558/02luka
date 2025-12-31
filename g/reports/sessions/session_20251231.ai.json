@@ -1,0 +1,26 @@
+{
+  "date": "2025-12-31",
+  "ts_utc": "2025-12-30T21:34:09Z",
+  "ts_local": "2025-12-31T04:34:09+0700",
+  "agent": "unknown",
+  "summary": {
+    "total_entries": 17,
+    "top_activities": [
+  "File modified: bridge_selfcheck.zsh",
+  "File modified: bridge_selfcheck.zsh",
+  "File modified: bridge_selfcheck.zsh",
+  "File modified: mls_search.zsh",
+  "File modified: codex_metrics_summary.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 17,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2025-12-31.jsonl",
+    "full_session": "g/reports/sessions/session_20251231_043409.md"
+  }
+}

@@ -8,16 +8,29 @@ Phase 1 (v5 Integration): Routes WOs from bridge/inbox/main/ using WO Processor 
 - FAST/WARN lane → Local execution
 - BLOCKED lane → Error inbox
 - Falls back to legacy routing if v5 stack unavailable
+
+Phase 1 (extended, feature-flagged via config phase1.enabled):
+- Priority: sort WOs by YAML priority (desc), then mtime.
+- Retry: bounded retry with backoff, sidecar .retry counter, telemetry for retry_scheduled/retry_exhausted.
+- Idempotency: skip duplicate wo_id when already recorded in idempotency log.
+
+Oneshot example:
+  python agents/mary_router/gateway_v3_router.py --once --config g/config/mary_router_gateway_v3.yaml
+
+Telemetry sample (JSONL):
+  {"wo_id":"WO-123","action":"retry_scheduled","priority":5,"retry_count":1,"status":"error","ts":"...","source_inbox":"MAIN"}
 """
 
+import argparse
 import json
 import logging
 import os
 import sys
 import time
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 
 import yaml
 
@@ -88,6 +101,14 @@ class GatewayV3Router:
         self.supported_targets = set(self.config["routing"]["supported_targets"])
         self.routing_hint_mapping = self.config["routing"].get("routing_hint_mapping", {})
         self.default_target = self.config["routing"]["default_target"]
+        self.phase1_cfg = self.config.get("phase1", {})
+        self.phase1_enabled = bool(self.phase1_cfg.get("enabled", False))
+        self.priority_enabled = bool(self.phase1_cfg.get("priority_enabled", True))
+        self.max_retries = int(self.phase1_cfg.get("max_retries", 3))
+        self.retry_backoff = float(self.phase1_cfg.get("retry_backoff_seconds", 1.0))
+        self.idempotency_enabled = bool(self.phase1_cfg.get("idempotency_enabled", True))
+        self.idempotency_log = ROOT / self.phase1_cfg.get("idempotency_log", "g/telemetry/gateway_v3_idempotency.jsonl")
+        self._idempotency_seen = None  # type: Optional[set]
         
         log.info(f"Gateway v3 Router initialized (Phase {self.config['phase']})")
         log.info(f"Inbox: {self.inbox}")
@@ -157,7 +178,15 @@ class GatewayV3Router:
                 "sleep_interval_seconds": 1.0,
                 "process_one_by_one": True
             },
-            "use_v5_stack": True  # Default to v5 enabled
+            "use_v5_stack": True,  # Default to v5 enabled
+            "phase1": {
+                "enabled": False,
+                "priority_enabled": True,
+                "max_retries": 3,
+                "retry_backoff_seconds": 1.0,
+                "idempotency_enabled": True,
+                "idempotency_log": "g/telemetry/gateway_v3_idempotency.jsonl"
+            }
         }
     
     def load_wo(self, wo_path: Path) -> Optional[Dict[str, Any]]:
@@ -245,6 +274,87 @@ class GatewayV3Router:
             except: pass
             # #endregion
             log.error(f"Failed to write telemetry: {e}")
+
+    # ---- Phase1 helpers ----
+    def _retry_sidecar(self, wo_path: Path) -> Path:
+        return wo_path.with_suffix(wo_path.suffix + ".retry")
+
+    def get_retry_count(self, wo_path: Path) -> int:
+        try:
+            p = self._retry_sidecar(wo_path)
+            if p.exists():
+                return int(p.read_text().strip() or "0")
+        except Exception:
+            return 0
+        return 0
+
+    def bump_retry(self, wo_path: Path) -> int:
+        new_count = self.get_retry_count(wo_path) + 1
+        try:
+            self._retry_sidecar(wo_path).write_text(str(new_count), encoding="utf-8")
+        except Exception as e:
+            log.warning(f"Failed to write retry counter for {wo_path}: {e}")
+        return new_count
+
+    def _load_idempotency_set(self) -> set:
+        if self._idempotency_seen is not None:
+            return self._idempotency_seen
+        seen = set()
+        if self.idempotency_log.exists():
+            try:
+                for line in self.idempotency_log.read_text().splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        if "wo_id" in obj:
+                            seen.add(obj["wo_id"])
+                    except Exception:
+                        continue
+            except Exception as e:
+                log.warning(f"Failed to load idempotency log: {e}")
+        self._idempotency_seen = seen
+        return self._idempotency_seen
+
+    def is_duplicate(self, wo_id: str) -> bool:
+        if not self.phase1_enabled or not self.idempotency_enabled:
+            return False
+        return wo_id in self._load_idempotency_set()
+
+    def record_idempotent(self, wo_id: str, status: str) -> None:
+        if not self.phase1_enabled or not self.idempotency_enabled:
+            return
+        line = json.dumps({"wo_id": wo_id, "status": status, "ts": datetime.now(timezone.utc).isoformat()})
+        try:
+            self.idempotency_log.parent.mkdir(parents=True, exist_ok=True)
+            with self.idempotency_log.open("a", encoding="utf-8") as f:
+                f.write(line + "\n")
+            self._load_idempotency_set().add(wo_id)
+        except Exception as e:
+            log.warning(f"Failed to record idempotency for {wo_id}: {e}")
+
+    def get_priority(self, wo_path: Path) -> int:
+        if not self.phase1_enabled or not self.priority_enabled:
+            return 0
+        try:
+            data = yaml.safe_load(wo_path.read_text()) or {}
+            return int(data.get("priority", 0) or 0)
+        except Exception:
+            return 0
+
+    def list_inbox_files(self) -> List[Path]:
+        wo_files = list(self.inbox.glob("*.yaml"))
+        if not self.phase1_enabled or not self.priority_enabled:
+            return sorted(wo_files, key=lambda p: p.stat().st_mtime)
+        scored: List[Tuple[int, float, Path]] = []
+        for p in wo_files:
+            try:
+                scored.append((self.get_priority(p), p.stat().st_mtime, p))
+            except Exception:
+                scored.append((0, p.stat().st_mtime, p))
+        scored.sort(key=lambda t: (-t[0], t[1]))
+        return [p for _, __, p in scored]
     
     def process_wo(self, wo_path: Path) -> bool:
         """
@@ -263,6 +373,28 @@ class GatewayV3Router:
         except: pass
         # #endregion
         wo_id = wo_path.stem
+        try:
+            data_for_id = yaml.safe_load(wo_path.read_text()) or {}
+            wo_id = str(data_for_id.get("wo_id") or wo_id)
+        except Exception:
+            pass
+
+        if self.phase1_enabled and self.idempotency_enabled and self.is_duplicate(wo_id):
+            try:
+                processed_path = self.processed / wo_path.name
+                if wo_path.exists():
+                    processed_path.parent.mkdir(parents=True, exist_ok=True)
+                    wo_path.rename(processed_path)
+                self.log_telemetry({
+                    "wo_id": wo_id,
+                    "source_inbox": "MAIN",
+                    "action": "dedupe_skip",
+                    "status": "ok",
+                    "moved_to": str(processed_path)
+                })
+                return True
+            except Exception as e:
+                log.warning(f"Idempotency skip failed for {wo_id}: {e}")
         
         # Try v5 stack first (if available and enabled)
         if V5_STACK_AVAILABLE and self.config.get("use_v5_stack", True):
@@ -295,6 +427,7 @@ class GatewayV3Router:
                             wo_path.rename(processed_path)
                         telemetry_data["moved_to"] = str(processed_path)
                         self.log_telemetry(telemetry_data)
+                        self.record_idempotent(result.wo_id, telemetry_data["status"])
                         log.info(f"Processed {result.wo_id} via v5 stack (status: {result.status.value})")
                         return True
                     except Exception as e:
@@ -319,6 +452,7 @@ class GatewayV3Router:
                     
                     telemetry_data["status"] = "error"
                     self.log_telemetry(telemetry_data)
+                    self.record_idempotent(result.wo_id, telemetry_data["status"])
                     log.info(f"Rejected {result.wo_id} via v5 stack (BLOCKED lane)")
                     return True  # This is a successful v5 processing result
                 else:
@@ -330,6 +464,7 @@ class GatewayV3Router:
                         telemetry_data["moved_to"] = str(error_path)
                         telemetry_data["status"] = "error"
                         self.log_telemetry(telemetry_data)
+                        self.record_idempotent(result.wo_id, telemetry_data["status"])
                         log.warning(f"v5 processing failed for {result.wo_id}, moved to error/")
                         return True  # Still a v5 processing result (not legacy)
                     except Exception as e:
@@ -433,6 +568,7 @@ class GatewayV3Router:
                 "action": "route",
                 "status": "ok"
             })
+            self.record_idempotent(wo_id, "ok")
             
             log.info(f"Routed {wo_id} from MAIN to {target}")
             return True
@@ -495,38 +631,58 @@ class GatewayV3Router:
                 log.error(f"Failed to move {wo_id} to error/: {move_error}")
             return False
     
+    def process_next(self) -> Optional[bool]:
+        files = self.list_inbox_files()
+        if not files:
+            return None
+        wo_file = files[0]
+        log.info(f"Processing {wo_file.name}...")
+        success = self.process_wo(wo_file)
+        if success:
+            return True
+        if not self.phase1_enabled:
+            return False
+        # Retry handling
+        if not wo_file.exists():
+            return False
+        retries = self.bump_retry(wo_file)
+        if retries >= self.max_retries:
+            error_path = self.error / wo_file.name
+            try:
+                wo_file.rename(error_path)
+            except Exception:
+                pass
+            self.log_telemetry({
+                "wo_id": wo_file.stem,
+                "source_inbox": "MAIN",
+                "action": "retry_exhausted",
+                "status": "error",
+                "retry_count": retries
+            })
+            return False
+        # keep in inbox for retry
+        self.log_telemetry({
+            "wo_id": wo_file.stem,
+            "source_inbox": "MAIN",
+            "action": "retry_scheduled",
+            "status": "error",
+            "retry_count": retries
+        })
+        time.sleep(self.retry_backoff)
+        return False
+
     def run(self):
         """Main loop: watch inbox and process WOs one-by-one."""
         log.info("Gateway v3 Router started. Watching bridge/inbox/main/...")
         
         while True:
             try:
-                # Get all YAML files, sorted by modification time (oldest first)
-                wo_files = sorted(
-                    self.inbox.glob("*.yaml"),
-                    key=lambda p: p.stat().st_mtime
-                )
-                
-                if wo_files:
-                    # Process oldest file first
-                    wo_file = wo_files[0]
-                    log.info(f"Processing {wo_file.name}...")
-                    self.process_wo(wo_file)
-                else:
-                    # #region agent log
-                    import json as json_module
-                    try:
-                        with open("/Users/icmini/02luka/.cursor/debug.log", "a") as debug_f:
-                            debug_f.write(json_module.dumps({"sessionId":"debug-session","runId":"runtime","hypothesisId":"B","location":"gateway_v3_router.py:410","message":"No WOs in inbox","data":{"inbox":str(self.inbox),"inbox_exists":self.inbox.exists()},"timestamp":int(datetime.now(timezone.utc).timestamp()*1000)})+"\n")
-                    except: pass
-                    # #endregion
+                result = self.process_next()
+                if result is None:
                     # No files, sleep longer
                     time.sleep(self.sleep_interval * 2)
-                    continue
-                
-                # Sleep before next iteration
-                time.sleep(self.sleep_interval)
-                
+                else:
+                    time.sleep(self.sleep_interval)
             except KeyboardInterrupt:
                 log.info("Received interrupt, shutting down...")
                 break
@@ -536,5 +692,12 @@ class GatewayV3Router:
 
 
 if __name__ == "__main__":
-    router = GatewayV3Router()
-    router.run()
+    parser = argparse.ArgumentParser(description="Gateway v3 router")
+    parser.add_argument("--once", action="store_true", help="Process a single WO if present, then exit")
+    parser.add_argument("--config", help="Path to gateway config YAML", default=None)
+    args = parser.parse_args()
+    router = GatewayV3Router(Path(args.config) if args.config else None)
+    if args.once:
+        router.process_next()
+    else:
+        router.run()

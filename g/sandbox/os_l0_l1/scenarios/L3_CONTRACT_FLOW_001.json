@@ -1,0 +1,49 @@
+{
+  "session_id": "SESSION-L3-CONTRACT-001",
+  "task_id": "TASK-L3-CONTRACT-P0",
+  "plan": {
+    "plan_id": "P-L3-CONTRACT-001",
+    "title": "L3 Contract Flow Demo",
+    "owner_agent": "Liam",
+    "status": "ACTIVE",
+    "actor": "Liam"
+  },
+  "items": [
+    {
+      "item_id": "I-READY-1",
+      "plan_id": "P-L3-CONTRACT-001",
+      "kind": "TASK",
+      "title": "Prepare contract execution",
+      "state": "TODO",
+      "priority": 1,
+      "assigned_to": "Codex",
+      "actor": "Codex"
+    }
+  ],
+  "exec_ready": [
+    {
+      "item_id": "I-READY-1",
+      "expected_version": 1,
+      "actor": "Codex"
+    }
+  ],
+  "exec_requests": [
+    {
+      "item_id": "I-READY-1",
+      "expected_version": 2,
+      "actor": "Gateway",
+      "payload": { "request": "execute contract" }
+    }
+  ],
+  "exec_results": [
+    {
+      "item_id": "I-READY-1",
+      "expected_version": 3,
+      "actor": "Liam",
+      "result": {
+        "status": "SUCCESS",
+        "output": "Execution completed"
+      }
+    }
+  ]
+}

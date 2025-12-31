@@ -1,18 +1,43 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+die() {
+  echo "Error: $*" >&2
+  exit 1
+}
+
+warn() {
+  echo "⚠️  $*" >&2
+}
+
 REPO="${REPO:-$HOME/02luka}"
-cd "$REPO"
+if [[ ! -d "$REPO" ]]; then
+  die "Repo not found: $REPO"
+fi
+cd "$REPO" || die "Failed to change directory to $REPO"
 
 LEDGER="g/knowledge/solution_ledger.jsonl"
 TELE_GUARD="g/telemetry/runtime_guard.jsonl"
 DRY="${1:-}"
 
-mkdir -p g/knowledge
+if ! command -v python3 >/dev/null 2>&1; then
+  die "python3 not found in PATH"
+fi
+
+mkdir -p g/knowledge || die "Failed to create g/knowledge"
+if [[ -e "$LEDGER" && ! -w "$LEDGER" ]]; then
+  die "Ledger not writable: $LEDGER"
+fi
+if [[ ! -e "$LEDGER" && ! -w "g/knowledge" ]]; then
+  die "Ledger directory not writable: g/knowledge"
+fi
 
 if [[ ! -f "$TELE_GUARD" ]]; then
-  echo "No runtime guard telemetry yet: $TELE_GUARD"
+  warn "No runtime guard telemetry yet: $TELE_GUARD"
   exit 0
+fi
+if [[ ! -r "$TELE_GUARD" ]]; then
+  die "Runtime guard telemetry not readable: $TELE_GUARD"
 fi
 
 # take last 200 lines, extract WARN/BLOCK, append as lessons (simple v1)

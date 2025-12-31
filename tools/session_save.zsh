@@ -5,6 +5,13 @@
 
 set -e
 
+# Preflight: ensure jq is available
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed"
+  echo "Install: brew install jq"
+  exit 1
+fi
+
 # --- Telemetry Initialization ---
 TELEMETRY_START_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # Use date +%s%N if available (Linux), else date +%s (macOS fallback)
@@ -48,34 +55,57 @@ log_telemetry() {
     local repo_name=$(basename "$repo_root")
     local branch=$(git -C "$repo_root" branch --show-current 2>/dev/null || echo "detached")
     
-    # Safe JSON construction (manual escaping for shell)
-    # Note: project_id and topic might contain user input, should be carefully handled if complex.
-    # For now assuming simple strings or null.
-    
+    # Safe JSON construction via jq -nc (auto-escapes quotes/newlines)
+    # --argjson preserves numeric types; no manual escaping required
+    # See: CODEX_FINDINGS_ACTION_PLAN.md Issue #2
+
     # Enhanced schema with env and schema_version (Phase 1A: Multi-Agent Coordination)
     local env_field="${AGENT_ENV:-terminal}"
     local schema_version="${SAVE_SCHEMA_VERSION:-1}"
-    local json_fmt='{"ts": "%s", "agent": "%s", "source": "%s", "env": "%s", "schema_version": %d, "project_id": "%s", "topic": "%s", "files_written": %d, "save_mode": "full", "repo": "%s", "branch": "%s", "exit_code": %d, "duration_ms": %d, "truncated": false}'
-    
+
+    local telemetry_dir="${repo_root}/g/telemetry"
+    local telemetry_file="${telemetry_dir}/save_sessions.jsonl"
+
     # Ensure telemetry directory exists (and ignore errors if readonly etc)
-    mkdir -p "${repo_root}/g/telemetry" 2>/dev/null || true
-    
-    # Write to log file
-    if [[ -d "${repo_root}/g/telemetry" ]]; then
-        printf "$json_fmt\n" \
-            "$TELEMETRY_START_TS" \
-            "$agent" \
-            "$source" \
-            "$env_field" \
-            "$schema_version" \
-            "$TELEMETRY_PROJECT_ID" \
-            "$TELEMETRY_TOPIC" \
-            "$TELEMETRY_FILES_WRITTEN" \
-            "$repo_name" \
-            "$branch" \
-            "$exit_code" \
-            "$duration_ms" \
-            >> "${repo_root}/g/telemetry/save_sessions.jsonl" || true
+    mkdir -p "$telemetry_dir" 2>/dev/null || true
+
+    # Write to log file using jq -nc for consistent typing
+    if [[ -d "$telemetry_dir" ]]; then
+      if [[ -e "$telemetry_file" && ! -w "$telemetry_file" ]]; then
+        return 0
+      fi
+      if [[ ! -e "$telemetry_file" && ! -w "$telemetry_dir" ]]; then
+        return 0
+      fi
+      jq -nc \
+            --arg ts "$TELEMETRY_START_TS" \
+            --arg agent "$agent" \
+            --arg source "$source" \
+            --arg env "$env_field" \
+            --argjson schema "$schema_version" \
+            --arg project "$TELEMETRY_PROJECT_ID" \
+            --arg topic "$TELEMETRY_TOPIC" \
+            --argjson files "$TELEMETRY_FILES_WRITTEN" \
+            --arg repo "$repo_name" \
+            --arg branch "$branch" \
+            --argjson exit "$exit_code" \
+            --argjson duration "$duration_ms" \
+            '{
+                ts: $ts,
+                agent: $agent,
+                source: $source,
+                env: $env,
+                schema_version: $schema,
+                project_id: $project,
+                topic: $topic,
+                files_written: $files,
+                save_mode: "full",
+                repo: $repo,
+                branch: $branch,
+                exit_code: $exit,
+                duration_ms: $duration,
+                truncated: false
+            }' >> "$telemetry_file" || true
     fi
 }
 
@@ -117,7 +147,11 @@ REPORTS_DIR="$LUKA_MEM_REPO_ROOT/g/reports/sessions"
 TODAY_PATTERN=$(date +%Y%m%d)
 
 # Find latest session file for today
-LATEST_SESSION=$(ls -t "$REPORTS_DIR"/session_${TODAY_PATTERN}*.md 2>/dev/null | head -1)
+session_candidates=("$REPORTS_DIR"/session_${TODAY_PATTERN}*.md(N))
+LATEST_SESSION=""
+if (( ${#session_candidates[@]} > 0 )); then
+  LATEST_SESSION=$(ls -t -- "${session_candidates[@]}" 2>/dev/null | head -1)
+fi
 
 if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
   # Extract timestamp from filename (format: session_YYYYMMDD_HHMMSS.md)
@@ -162,20 +196,17 @@ fi
 
 # If we get here, proceed with full save pipeline
 
-# Check if MLS ledger exists
-if [[ ! -f "$MLS_LEDGER" ]]; then
-  echo "⚠️  No MLS ledger found for today: $MLS_LEDGER"
-  echo "Creating minimal session record..."
-fi
-
 # Extract session data from MLS
-extract_mls_data() {
-  if [[ ! -f "$MLS_LEDGER" ]]; then
+parse_mls_data() {
+  local ledger_path="$1"
+  if [[ ! -f "$ledger_path" ]]; then
+    echo "⚠️  No MLS ledger found for today: $ledger_path"
+    echo "Creating minimal session record..."
     echo '{"total":0,"types":{},"entries":[]}'
-    return
+    return 0
   fi
-  
-  cat "$MLS_LEDGER" | jq -s '{
+
+  jq -s '{
     total: length,
     types: (group_by(.type) | map({(.[0].type): length}) | add // {}),
     entries: map({
@@ -186,7 +217,7 @@ extract_mls_data() {
       solution: .solution // "",
       tags: .tags // []
     })
-  }'
+  }' "$ledger_path"
 }
 
 # Get agent name from Phase 1A gateway (SAVE_AGENT) or fallback
@@ -194,7 +225,7 @@ AGENT="${SAVE_AGENT:-${SESSION_AGENT:-${GG_AGENT_ID:-CLS}}}"
 
 # Generate session content
 echo "📝 Generating session from MLS ledger..."
-MLS_DATA=$(extract_mls_data)
+MLS_DATA=$(parse_mls_data "$MLS_LEDGER")
 TOTAL_ENTRIES=$(echo "$MLS_DATA" | jq -r '.total')
 
 # Count by type
@@ -477,8 +508,15 @@ echo "📦 Committing to main 02luka repo..."
 if [[ -d ~/02luka/.git ]]; then
   cd ~/02luka
   
-  # Add all changed files
-  git add -A 2>/dev/null || true
+  # Add only session-related files (explicit list for safety)
+  # Prevents accidentally committing unrelated or sensitive files
+  # See: CODEX_FINDINGS_ACTION_PLAN.md Issue #1
+  git add \
+    g/reports/sessions/session_*.md \
+    g/reports/sessions/session_*.ai.json \
+    g/system_map/system_map.v1.json \
+    02luka.md \
+    2>/dev/null || true
   
   # Create comprehensive commit message
   COMMIT_MSG="session save: $AGENT $TODAY

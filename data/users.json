@@ -1,0 +1,16 @@
+{
+  "users": {
+    "guest": {
+      "salt": "b2be9944c4ecfe75d767b2b6dbdfd237fde0244b8ca154b1c04c7e98daf47a8b",
+      "password_hash": "6a1dd8c1e5c449b036706be8d974d306fc6d624bf8f303f639179132cde76c18",
+      "role": "manager",
+      "created_at": "2025-12-30T03:13:29.339458"
+    },
+    "admin": {
+      "salt": "23a64ae40800cd18e54530fab1a3a5477c6e7c4ba9a4711bb198086d96c1acb5",
+      "password_hash": "2ea2e72d078a339e12217663d828e35b4f575098ee618f5d963f0dbc55f88428",
+      "role": "admin",
+      "created_at": "2025-12-30T03:13:29.350821"
+    }
+  }
+}

@@ -92,6 +92,14 @@ jobs:
           mkdir -p g/logs
           mkdir -p output/reports
 
+          # Fix bridge structure for CI (remove absolute symlinks, create real dirs)
+          rm -f bridge/inbox bridge/outbox bridge/processed bridge/error bridge/error_local bridge/processed_local
+          mkdir -p bridge/inbox bridge/outbox bridge/processed bridge/error
+
+          # Fix mls/ledger symlink for CI (same pattern as bridge)
+          rm -f mls/ledger
+          mkdir -p mls/ledger
+
       - name: Run Bridge Self-Check
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
         run: |
