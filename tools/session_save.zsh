@@ -55,8 +55,8 @@ log_telemetry() {
     local repo_name=$(basename "$repo_root")
     local branch=$(git -C "$repo_root" branch --show-current 2>/dev/null || echo "detached")
     
-    # Safe JSON construction via jq (auto-escapes quotes, newlines, special chars)
-    # Prevents invalid JSON when user input contains special characters
+    # Safe JSON construction via jq -nc (auto-escapes quotes/newlines)
+    # --argjson preserves numeric types; no manual escaping required
     # See: CODEX_FINDINGS_ACTION_PLAN.md Issue #2
 
     # Enhanced schema with env and schema_version (Phase 1A: Multi-Agent Coordination)
@@ -69,7 +69,7 @@ log_telemetry() {
     # Ensure telemetry directory exists (and ignore errors if readonly etc)
     mkdir -p "$telemetry_dir" 2>/dev/null || true
 
-    # Write to log file using jq for safe JSON construction
+    # Write to log file using jq -nc for consistent typing
     if [[ -d "$telemetry_dir" ]]; then
       if [[ -e "$telemetry_file" && ! -w "$telemetry_file" ]]; then
         return 0
