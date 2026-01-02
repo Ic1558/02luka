@@ -9,10 +9,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from datetime import datetime
 import json
-import warnings
-
-# Suppress Vertex AI generative_models deprecation warning (Action Required before June 2026)
-warnings.filterwarnings("ignore", category=UserWarning, module="vertexai.generative_models")
 
 # --- Configuration & State ---
 PROJECT_ID = "luka-cloud-471113" 
