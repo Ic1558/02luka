@@ -20,6 +20,6 @@ trap 'rmdir "$LOCKDIR"' EXIT INT TERM
 
 # --- venv ---
 
-# 4. Run the bridge
-echo "🚀 Starting Gemini Bridge..."
-infra/gemini_env/bin/python3 -u gemini_bridge.py
+# 4. Run the bridge (exec replaces shell, making python the PID owner)
+echo "🚀 Starting Gemini Bridge (locked)..."
+exec infra/gemini_env/bin/python3 -u gemini_bridge.py

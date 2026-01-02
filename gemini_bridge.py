@@ -15,10 +15,14 @@ import hashlib
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
-BRIDGE_DIR = "magic_bridge"
+
+# Use absolute paths to prevent any relative path ambiguity
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+BRIDGE_DIR = os.path.join(REPO_ROOT, "magic_bridge")
 INBOX_DIR = os.path.join(BRIDGE_DIR, "inbox")
 OUTBOX_DIR = os.path.join(BRIDGE_DIR, "outbox")
-WATCH_DIR = INBOX_DIR
+WATCH_DIR = INBOX_DIR  # Absolute path
+
 # Ignore dirs are still useful for system junk
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 # IGNORE_FILES = {".summary.txt", "atg_snapshot.md", "atg_snapshot.json"} # No longer needed with inbox/outbox
@@ -119,37 +123,53 @@ class GeminiHandler(FileSystemEventHandler):
         
         if filename.startswith("."): return
         
-        # Inbox only - strict checking
-        # FileSystemEventHandler gives absolute paths usually, verify it's in inbox
-        if os.path.abspath(INBOX_DIR) not in os.path.abspath(event.src_path):
+        # STRICT Inbox Check using commonpath (filesystem-safe)
+        src_abs = os.path.abspath(event.src_path)
+        inbox_abs = os.path.abspath(INBOX_DIR)
+        
+        try:
+            # commonpath raises ValueError if paths are on different drives or unrelated
+            common = os.path.commonpath([src_abs, inbox_abs])
+            if common != inbox_abs:
+                # File is NOT within inbox (e.g., it's in outbox)
+                return
+        except ValueError:
+            # Paths are unrelated
             return
 
-        print(f"📝 Detected change in: {filename}")
+        print(f"📝 Detected change in: {filename} (inbox)")
         
-        # Log detection
+        time.sleep(1) # Debounce BEFORE anything heavy
+        
+        # EARLY Deduplication: Read file and check hash BEFORE any logging or processing
+        try:
+            with open(event.src_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            if not content.strip():
+                return  # Empty file, skip
+            
+            content_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+            if self.processed_hashes.get(filename) == content_hash:
+                print(f"   ⏭️  Skipping (content unchanged): {filename}")
+                return
+            self.processed_hashes[filename] = content_hash
+        except Exception as e:
+            print(f"   ⚠️  Error reading file for dedup: {e}")
+            return
+        
+        # Log detection ONLY for files that will actually be processed
         telemetry.log_event("file_detected", actor="gemini_bridge", file=filename, dir="inbox")
-
-        time.sleep(1) # Debounce
         
-        self.process_file(event.src_path, filename)
+        self.process_file(event.src_path, filename, content)
 
-    def process_file(self, file_path, filename):
+    def process_file(self, file_path, filename, content):
+        """Process a file that has already been validated and deduplicated."""
         start_time = time.time()
         print(f"   🚀 Sending to Vertex AI ({MODEL_NAME})...")
         
         telemetry.log_event("processing_start", actor="gemini_bridge", file=filename)
         
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            if not content.strip(): return # Added this back from original logic
-
-            # Deduplication: Content Hash Check
-            content_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
-            if self.processed_hashes.get(filename) == content_hash:
-                print(f"   ⏭️  Skipping duplicate content (Hash match): {filename}")
-                return
-            self.processed_hashes[filename] = content_hash
 
             prompt = f"""
             You are an AI assistant monitoring a project.
