@@ -7,6 +7,9 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+from datetime import datetime
+import json
+
 # --- Configuration ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
@@ -14,6 +17,23 @@ MODEL_NAME = "gemini-2.0-flash-001"
 WATCH_DIR = "./magic_bridge"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
+TELEMETRY_FILE = "g/telemetry/atg_runner.jsonl"
+
+def log_telemetry(event_name, **kwargs):
+    """Appends a structured JSON record to the telemetry file."""
+    try:
+        os.makedirs(os.path.dirname(TELEMETRY_FILE), exist_ok=True)
+        record = {
+            "ts": datetime.now().astimezone().isoformat(),
+            "event": event_name,
+            "lane": "ATG_RUNNER",
+            "actor": "gemini_bridge",
+            **kwargs
+        }
+        with open(TELEMETRY_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record) + "\n")
+    except Exception as e:
+        print(f"⚠️ Telemetry Error: {e}")
 
 class GeminiHandler(FileSystemEventHandler):
     def __init__(self, model):
@@ -50,10 +70,14 @@ class GeminiHandler(FileSystemEventHandler):
         if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
 
         print(f"📝 Detected change in: {filename}")
+        log_telemetry("file_detected", file=filename)
         time.sleep(1) # Debounce
         self.process_file(event.src_path)
 
     def process_file(self, file_path):
+        start_time = time.time()
+        filename = os.path.basename(file_path)
+        log_telemetry("processing_start", file=filename)
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -112,9 +136,12 @@ class GeminiHandler(FileSystemEventHandler):
                 f.write(final_response_text)
                 
             print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
+            duration = round((time.time() - start_time) * 1000, 2)
+            log_telemetry("processing_complete", file=filename, duration_ms=duration, output=os.path.basename(output_path))
 
         except Exception as e:
             print(f"   ❌ Error: {e}")
+            log_telemetry("processing_error", file=filename, error=str(e))
 
 def main():
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
@@ -136,11 +163,13 @@ def main():
     observer.start()
 
     print(f"👀 Watching '{WATCH_DIR}' for changes...")
+    log_telemetry("startup", watch_dir=WATCH_DIR, model=MODEL_NAME)
     try:
         while True: time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
         print("\n🛑 Stopping...")
+        log_telemetry("shutdown", reason="keyboard_interrupt")
     observer.join()
 
 if __name__ == "__main__":

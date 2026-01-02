@@ -1,0 +1,6 @@
+PORT   SERVICE            POLICY     STATUS    PID             COMMAND
+------------------------------------------------------------------------------------------
+8000   api_server         protected  safe      11067           /opt/homebrew/Cellar/python@3.14/3.14.0_... (+1 workers)
+8001   fastapi-dev        free       safe      -               (free)
+8080   claude_proxy       managed    safe      86935           node /opt/homebrew/bin/antigravity-claude-proxy start
+------------------------------------------------------------------------------------------
