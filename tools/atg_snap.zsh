@@ -22,19 +22,24 @@ run_and_capture() {
     local cmd_str="$*"
     local out_file="$TMP_DIR/$(echo "$cmd_str" | md5 | head -c 8).txt"
     
-    # Run command, capture stdout/stderr, and exit code
-    eval "$cmd_str" > "$out_file" 2>&1
-    local code=$?
-    
     echo "### Command: \`$cmd_str\`"
+    
+    # Run command, capture stdout/stderr, and exit code
+    if eval "$cmd_str" > "$out_file" 2>&1; then
+        local code=0
+    else
+        local code=$?
+    fi
+    
     echo "\`\`\`text"
-    cat "$out_file"
+    if [[ -s "$out_file" ]]; then
+        cat "$out_file"
+    else
+        echo "(no output)"
+    fi
     echo "\`\`\`"
     echo "**Exit Code:** $code"
     echo ""
-    
-    # Return path to output for JSON processing
-    echo "$out_file"
 }
 
 # --- Snapshot Generation ---
@@ -48,54 +53,56 @@ run_and_capture() {
     echo ""
 
     echo "## 1. Git Context 🌳"
-    run_and_capture "git -C '$REPO_ROOT' status --porcelain" >/dev/null
-    run_and_capture "git -C '$REPO_ROOT' log -n 5 --oneline" >/dev/null
-    run_and_capture "git -C '$REPO_ROOT' diff --stat HEAD~1" >/dev/null
+    run_and_capture "git -C '$REPO_ROOT' status --porcelain=v1"
+    run_and_capture "git -C '$REPO_ROOT' log -1 --oneline"
+    # Show last valid diff if exists
+    run_and_capture "git -C '$REPO_ROOT' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'"
     
     echo "## 2. Runtime Context ⚙️"
-    # Process check
-    run_and_capture "pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap" >/dev/null
+    # Process check (Verbose)
+    run_and_capture "pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap"
     
     # Port check
     if [[ -x "$REPO_ROOT/tools/ports_check.zsh" ]]; then
-        run_and_capture "$REPO_ROOT/tools/ports_check.zsh" >/dev/null
+        run_and_capture "$REPO_ROOT/tools/ports_check.zsh"
     else
-        run_and_capture "lsof -iTCP -sTCP:LISTEN -P -n | grep -E 'python|node|uvicorn|bridge'" >/dev/null
+        run_and_capture "lsof -iTCP -sTCP:LISTEN -P -n | grep -E '8000|8080|8001|8088'"
     fi
 
     echo "## 3. Telemetry Pulse 📈"
-    # Explicit definition of tailing
-    echo "(Tailing last 50 lines)"
-    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/atg_runner.jsonl'" >/dev/null
-    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/fs_index.jsonl'" >/dev/null
+    echo "(Tailing last 50 lines - Checks for missing files)"
+    
+    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'"
+    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'"
 
     echo "## 4. System Logs (Errors) 🚨"
-    echo "(Tailing last 50 lines - Checks for missing files)"
+    echo "(Tailing last 50 lines)"
     
     LOGS=(
         "/tmp/com.02luka.fs_watcher.stderr.log"
         "/tmp/com.02luka.fs_watcher.stdout.log"
         "/tmp/com.antigravity.bridge.stderr.log"
-        "/tmp/gemini_bridge.err.log"
+        "/tmp/com.antigravity.bridge.stdout.log"
     )
     
     for log in "${LOGS[@]}"; do
         if [[ -f "$log" ]]; then
-            run_and_capture "tail -n 50 '$log'" >/dev/null
+            run_and_capture "tail -n 50 '$log'"
         else
              echo "### Log: \`$log\`"
              echo "_File not found (Missing)_"
+             echo "**Exit Code:** 1 (Check path)"
              echo ""
         fi
     done
 
     echo "## 5. Metadata"
-    echo "Snapshot Version: 2.0 (Liam Compliant)"
+    echo "Snapshot Version: 2.1 (Strict Mode)"
     echo "Mode: Rewrite"
 
 } > "$OUT_MD"
 
-# --- JSON Generation (Best Effort) ---
+# --- JSON Generation (Stub) ---
 if command -v python3 >/dev/null 2>&1; then
     python3 -c "
 import json
@@ -105,7 +112,8 @@ import datetime
 snapshot = {
     'timestamp': datetime.datetime.now().isoformat(),
     'repo': '$REPO_ROOT',
-    'verified': True
+    'verified': True,
+    'mode': 'rewrite'
 }
 try:
     with open('$OUT_JSON', 'w') as f:
