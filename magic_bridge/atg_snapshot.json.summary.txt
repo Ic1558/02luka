@@ -1,5 +1,0 @@
-The current file, `atg_snapshot.json`, is a simple JSON file indicating the status of an ATG snapshot. It contains a timestamp, the repository path, a boolean indicating if the snapshot was verified, and the "mode" which describes how it was handled.
-
-The recent activity shows the `tools/atg_snap.zsh` script has been frequently modified in the last hour. Also, `g/reports/ops/ports_check_latest.txt` has been modified frequently which might hint at a connection between these two.
-
-It is likely that the `atg_snap.zsh` script is responsible for creating or updating `atg_snapshot.json` after a snapshot is taken. The frequent modifications to `ports_check_latest.txt` in parallel to the atg_snap.zsh modifications indicates the script likely relies on port checks, or the ports check is another verification dependency post snapshot. Finally, a new script `raycast_atg_snapshot.zsh` was created recently, likely as a helper script.

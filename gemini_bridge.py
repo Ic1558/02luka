@@ -9,13 +9,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from datetime import datetime
 import json
+import warnings
 
-# --- Configuration ---
+# Suppress Vertex AI generative_models deprecation warning (Action Required before June 2026)
+warnings.filterwarnings("ignore", category=UserWarning, module="vertexai.generative_models")
+
+# --- Configuration & State ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
-WATCH_DIR = "./magic_bridge"
+BRIDGE_DIR = "magic_bridge"
+WATCH_DIR = "./magic_bridge" # This will be replaced by BRIDGE_DIR in the future
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
+IGNORE_FILES = {".summary.txt", "atg_snapshot.md", "atg_snapshot.json"}
 MAX_READ_TURNS = 3
 TELEMETRY_FILE = "g/telemetry/atg_runner.jsonl"
 FS_INDEX_FILE = "g/telemetry/fs_index.jsonl"
@@ -68,6 +74,7 @@ def log_telemetry(event_name, **kwargs):
 class GeminiHandler(FileSystemEventHandler):
     def __init__(self, model):
         self.model = model
+        self.bridge_dir = BRIDGE_DIR # Store BRIDGE_DIR for use in methods
 
     @retry(
         stop=stop_after_attempt(5),
@@ -97,12 +104,21 @@ class GeminiHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.is_directory: return
         filename = os.path.basename(event.src_path)
+        
+        # Ignore files based on new constants
+        if filename.startswith("."): return
+        if any(filename.endswith(ext) for ext in IGNORE_FILES): return
+
+        # Original ignore logic (can be removed if IGNORE_FILES covers it)
         if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
 
         print(f"📝 Detected change in: {filename}")
         log_telemetry("file_detected", file=filename)
         time.sleep(1) # Debounce
-        self.process_file(event.src_path)
+        
+        # Construct file_path relative to bridge_dir
+        file_path = os.path.join(self.bridge_dir, filename)
+        self.process_file(file_path)
 
     def process_file(self, file_path):
         start_time = time.time()

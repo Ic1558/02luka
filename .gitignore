@@ -220,3 +220,8 @@ xcuserdata/
 .swiftpm/
 *.xcworkspace/xcshareddata/
 
+
+# Magic Bridge Artifacts (Transient)
+magic_bridge/*.md
+magic_bridge/*.json
+magic_bridge/*.txt
