@@ -21,4 +21,4 @@ sleep 0.5
 pgrep -fl "bridge.sh|gemini_bridge.py" || echo "(stopped)"
 echo
 
-echo "Next: apply ignore+hash-guard+debounce in fs_watcher/gemini_bridge, then restart."
+echo "Next: restart bridge with: zsh $HOME/02luka/tools/atg_bridge_restart.zsh"

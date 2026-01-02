@@ -15,6 +15,8 @@ import hashlib
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
+PROCESS_ID = os.getpid()
+MIN_PROCESS_INTERVAL_SECONDS = 2
 
 # Use absolute paths to prevent any relative path ambiguity
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -68,6 +70,7 @@ def log_telemetry(event_name, **kwargs):
             "event": event_name,
             "lane": "ATG_RUNNER",
             "actor": "gemini_bridge",
+            "pid": PROCESS_ID,
             **kwargs
         }
         with open(TELEMETRY_FILE, "a", encoding="utf-8") as f:
@@ -91,6 +94,7 @@ class GeminiHandler(FileSystemEventHandler):
         self.inbox_dir = INBOX_DIR
         self.outbox_dir = OUTBOX_DIR
         self.processed_hashes = {}
+        self.processed_at = {}
 
     @retry(
         stop=stop_after_attempt(5),
@@ -122,6 +126,7 @@ class GeminiHandler(FileSystemEventHandler):
         filename = os.path.basename(event.src_path)
         
         if filename.startswith("."): return
+        if filename.endswith(".summary.txt"): return
         
         # STRICT Inbox Check using commonpath (filesystem-safe)
         src_abs = os.path.abspath(event.src_path)
@@ -152,7 +157,13 @@ class GeminiHandler(FileSystemEventHandler):
             if self.processed_hashes.get(filename) == content_hash:
                 print(f"   ⏭️  Skipping (content unchanged): {filename}")
                 return
+            now = time.time()
+            last_at = self.processed_at.get(filename)
+            if last_at and (now - last_at) < MIN_PROCESS_INTERVAL_SECONDS:
+                print(f"   ⏭️  Skipping (recently processed): {filename}")
+                return
             self.processed_hashes[filename] = content_hash
+            self.processed_at[filename] = now
         except Exception as e:
             print(f"   ⚠️  Error reading file for dedup: {e}")
             return
