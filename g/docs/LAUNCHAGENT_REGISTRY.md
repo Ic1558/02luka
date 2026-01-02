@@ -37,6 +37,8 @@ This registry tracks LaunchAgents used inside the `~/02luka` workspace.
 | **Gemini Bridge (Planned)**  | `com.02luka.gemini.bridge`        | `g/tools/gemini_bridge_worker.zsh`          | NO       | Planned Gemini work-order / task handler (not yet deployed)        | Planned agent; requires actual script + plist before activation |
 | **LaunchAgent Registry Watchdog (Planned)** | `com.02luka.launchagent.registry-watchdog` | `g/tools/launchagent_registry_watchdog.zsh` | NO       | Planned watchdog to compare actual LaunchAgents vs registry + safety rules | Planned only; stub script exists, no LaunchAgent yet |
 
+**Operational Note (Antigravity Bridge):** `com.antigravity.bridge` is launched from `/Users/icmini/02luka/infra/launchd/com.antigravity.bridge.plist`. Use `zsh /Users/icmini/02luka/tools/atg_bridge_restart.zsh` to restart (preferred; avoids symlink bootstrap errors).
+
 ---
 
 ## 2. Planned / Watchdog LaunchAgents
