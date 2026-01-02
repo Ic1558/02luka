@@ -18,6 +18,36 @@ WATCH_DIR = "./magic_bridge"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
 TELEMETRY_FILE = "g/telemetry/atg_runner.jsonl"
+FS_INDEX_FILE = "g/telemetry/fs_index.jsonl"
+
+def get_recent_fs_activity(limit=15):
+    """Reads the tail of the FS Index to provide passive context."""
+    if not os.path.exists(FS_INDEX_FILE): return "(No recent filesystem activity recorded)"
+    
+    try:
+        # Simple tail implementation
+        lines = []
+        with open(FS_INDEX_FILE, 'rb') as f:
+            f.seek(0, 2)
+            fsize = f.tell()
+            f.seek(max(fsize - 4096, 0), 0) # Read last 4KB
+            lines = f.readlines()
+        
+        # Parse and format last N records
+        records = []
+        for line in lines[-limit:]:
+            try:
+                rec = json.loads(line.decode('utf-8'))
+                # Format: [HH:MM] MODIFY tools/watcher.py (User)
+                ts = rec.get('ts', '')[11:16]
+                event = rec.get('event', '').upper()
+                file = rec.get('file', '')
+                records.append(f"[{ts}] {event} {file}")
+            except: pass
+            
+        return "\n".join(records) if records else "(No recent changes)"
+    except Exception as e:
+        return f"(Error reading index: {e})"
 
 def log_telemetry(event_name, **kwargs):
     """Appends a structured JSON record to the telemetry file."""
@@ -85,11 +115,14 @@ class GeminiHandler(FileSystemEventHandler):
 
             # 1. Build Initial Context
             tree = self.get_file_tree(".")
+            recent_activity = get_recent_fs_activity()
+            
             current_prompt = (
                 f"[PROJECT STRUCTURE]\n{tree}\n\n"
+                f"[RECENT FILESYSTEM ACTIVITY (Passive Visibility)]\n{recent_activity}\n\n"
                 f"[CURRENT FILE: {os.path.basename(file_path)}]\n{content}\n\n"
                 "INSTRUCTIONS:\n"
-                "1. Analyze the Current File in the context of the Project Structure.\n"
+                "1. Analyze the Current File in context of the Structure and Activity.\n"
                 "2. If you need to read another file to answer, reply ONLY with: READ: <relative_path>\n"
                 "3. Otherwise, provide the summary/review."
             )

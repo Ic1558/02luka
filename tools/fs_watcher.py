@@ -3,6 +3,11 @@
 
 import json
 import os
+import time
+try:
+    with open("/tmp/fs_watcher_probe.txt", "w") as f:
+        f.write(f"Started at {time.time()}\n")
+except: pass
 import signal
 import socket
 import subprocess

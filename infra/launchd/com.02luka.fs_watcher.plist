@@ -6,8 +6,8 @@
     <string>com.02luka.fs_watcher</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
-        <string>/Users/icmini/02luka/tools/fs_watcher.py</string>
+        <string>/bin/bash</string>
+        <string>/Users/icmini/02luka/tools/fs_watcher_launcher.sh</string>
     </array>
     <key>KeepAlive</key>
     <dict>
