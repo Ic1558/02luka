@@ -109,6 +109,13 @@ When GG needs to choose between CLC, Codex, Gemini, and Gemini CLI:
 4. Governance changes
 5. Tasks requiring approval workflows
 
+**Note on CLC-Governance Tasks:**
+CLC-routed governance tasks operate INDEPENDENTLY and do NOT block Codex execution:
+- Governance tasks queue in CLC's backlog (async, non-blocking)
+- Codex continues operational work immediately
+- Week 1+2 proof: 86% CLC savings with only 2-3 governance tasks total
+- **Rule:** Governance routing is a lane assignment, not a blocking dependency
+
 **Commands:**
 
 ```bash
