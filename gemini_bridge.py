@@ -157,9 +157,9 @@ def main():
     if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
 
-    event_handler = GeminiHandler(model)
+    active_handler = GeminiHandler(model)
     observer = Observer()
-    observer.schedule(event_handler, path=WATCH_DIR, recursive=False)
+    observer.schedule(active_handler, path=WATCH_DIR, recursive=False)
     observer.start()
 
     print(f"👀 Watching '{WATCH_DIR}' for changes...")
