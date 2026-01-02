@@ -1,0 +1,25 @@
+{
+  "date": "2026-01-03",
+  "ts_utc": "2026-01-02T17:17:23Z",
+  "ts_local": "2026-01-03T00:17:23+0700",
+  "agent": "CLS",
+  "summary": {
+    "total_entries": 4,
+    "top_activities": [
+  "File modified: fs_visibility_test.txt",
+  "File modified: debug_passive.txt",
+  "File modified: test_critical.txt",
+  "File modified: fs_watcher.py"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 4,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2026-01-03.jsonl",
+    "full_session": "g/reports/sessions/session_20260103_001721.md"
+  }
+}
