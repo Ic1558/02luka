@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-01-02T20:23:16Z",
+  "git": {
+    "branch": "main",
+    "head": "a29b73a2"
+  },
+  "runtime": {
+     "processes_raw": "See Markdown"
+  },
+  "telemetry": {
+     "last_event_ts": "See Markdown"
+  }
+}
