@@ -9,15 +9,19 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from datetime import datetime
 import json
+import hashlib
 
 # --- Configuration & State ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
 BRIDGE_DIR = "magic_bridge"
-WATCH_DIR = "./magic_bridge" # This will be replaced by BRIDGE_DIR in the future
+INBOX_DIR = os.path.join(BRIDGE_DIR, "inbox")
+OUTBOX_DIR = os.path.join(BRIDGE_DIR, "outbox")
+WATCH_DIR = INBOX_DIR
+# Ignore dirs are still useful for system junk
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
-IGNORE_FILES = {".summary.txt", "atg_snapshot.md", "atg_snapshot.json"}
+# IGNORE_FILES = {".summary.txt", "atg_snapshot.md", "atg_snapshot.json"} # No longer needed with inbox/outbox
 MAX_READ_TURNS = 3
 TELEMETRY_FILE = "g/telemetry/atg_runner.jsonl"
 FS_INDEX_FILE = "g/telemetry/fs_index.jsonl"
@@ -67,10 +71,22 @@ def log_telemetry(event_name, **kwargs):
     except Exception as e:
         print(f"⚠️ Telemetry Error: {e}")
 
+# Placeholder for telemetry module if it's meant to be imported
+class Telemetry:
+    def log_event(self, event_name, **kwargs):
+        log_telemetry(event_name, **kwargs)
+    def log_error(self, event_name, **kwargs):
+        log_telemetry(event_name, **kwargs)
+telemetry = Telemetry()
+
+
 class GeminiHandler(FileSystemEventHandler):
     def __init__(self, model):
         self.model = model
-        self.bridge_dir = BRIDGE_DIR # Store BRIDGE_DIR for use in methods
+        self.bridge_dir = BRIDGE_DIR 
+        self.inbox_dir = INBOX_DIR
+        self.outbox_dir = OUTBOX_DIR
+        self.processed_hashes = {}
 
     @retry(
         stop=stop_after_attempt(5),
@@ -101,97 +117,90 @@ class GeminiHandler(FileSystemEventHandler):
         if event.is_directory: return
         filename = os.path.basename(event.src_path)
         
-        # Ignore files based on new constants
         if filename.startswith("."): return
-        if any(filename.endswith(ext) for ext in IGNORE_FILES): return
-
-        # Original ignore logic (can be removed if IGNORE_FILES covers it)
-        if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
+        
+        # Inbox only - strict checking
+        # FileSystemEventHandler gives absolute paths usually, verify it's in inbox
+        if os.path.abspath(INBOX_DIR) not in os.path.abspath(event.src_path):
+            return
 
         print(f"📝 Detected change in: {filename}")
-        log_telemetry("file_detected", file=filename)
+        
+        # Log detection
+        telemetry.log_event("file_detected", actor="gemini_bridge", file=filename, dir="inbox")
+
         time.sleep(1) # Debounce
         
-        # Construct file_path relative to bridge_dir
-        file_path = os.path.join(self.bridge_dir, filename)
-        self.process_file(file_path)
+        self.process_file(event.src_path, filename)
 
-    def process_file(self, file_path):
+    def process_file(self, file_path, filename):
         start_time = time.time()
-        filename = os.path.basename(file_path)
-        log_telemetry("processing_start", file=filename)
+        print(f"   🚀 Sending to Vertex AI ({MODEL_NAME})...")
+        
+        telemetry.log_event("processing_start", actor="gemini_bridge", file=filename)
+        
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            if not content.strip(): return
+            if not content.strip(): return # Added this back from original logic
 
-            # 1. Build Initial Context
-            tree = self.get_file_tree(".")
-            recent_activity = get_recent_fs_activity()
-            
-            current_prompt = (
-                f"[PROJECT STRUCTURE]\n{tree}\n\n"
-                f"[RECENT FILESYSTEM ACTIVITY (Passive Visibility)]\n{recent_activity}\n\n"
-                f"[CURRENT FILE: {os.path.basename(file_path)}]\n{content}\n\n"
-                "INSTRUCTIONS:\n"
-                "1. Analyze the Current File in context of the Structure and Activity.\n"
-                "2. If you need to read another file to answer, reply ONLY with: READ: <relative_path>\n"
-                "3. Otherwise, provide the summary/review."
-            )
+            # Deduplication: Content Hash Check
+            content_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+            if self.processed_hashes.get(filename) == content_hash:
+                print(f"   ⏭️  Skipping duplicate content (Hash match): {filename}")
+                return
+            self.processed_hashes[filename] = content_hash
 
-            print(f"   🚀 Sending to Vertex AI ({MODEL_NAME})...")
+            prompt = f"""
+            You are an AI assistant monitoring a project.
+            The user has updated the file: {filename}
             
-            # 2. Active Reading Loop
-            final_response_text = ""
+            Content:
+            {content}
             
-            for turn in range(MAX_READ_TURNS):
-                response = self.generate_with_retry(current_prompt)
-                text = response.text.strip()
-                
-                # Check for Read Request (Robust)
-                import re
-                match = re.search(r"READ:\s*(.+)", text)
-                
-                if match:
-                    target_file = match.group(1).strip()
-                    print(f"      👀 Agent requested to read: {target_file}")
-                    
-                    # Security/Path Check
-                    if os.path.exists(target_file) and os.path.isfile(target_file):
-                        try:
-                            with open(target_file, "r") as tf:
-                                supp_content = tf.read()
-                            # Append to prompt
-                            heading = f"\n\n[SUPPLEMENTARY FILE: {target_file}]\n"
-                            current_prompt += f"{heading}{supp_content}\n"
-                            # Continue loop to send back the new context
-                            continue 
-                        except Exception as e:
-                            current_prompt += f"\n\n[SYSTEM ERROR reading {target_file}: {e}]\n"
-                    else:
-                        current_prompt += f"\n\n[SYSTEM ERROR: File {target_file} not found]\n"
-                else:
-                    # Normal response
-                    final_response_text = text
-                    break
+            Please provide a brief summary of the changes and any potential issues or suggestions.
+            Keep it concise.
+            """
+            
+            # --- Passive Context (Read FS Index) ---
+            recent_fs_activity = get_recent_fs_activity()
+            if recent_fs_activity:
+                prompt += f"\n\nRECENT FILESYSTEM ACTIVITY (Passive Visibility):\n{recent_fs_activity}"
 
-            # 3. Save Output
-            output_path = f"{file_path}.summary.txt"
+            response = self.model.generate_content(prompt)
+            summary = response.text
+            
+            # Write to OUTBOX
+            output_filename = f"{filename}.summary.txt"
+            output_path = os.path.join(self.outbox_dir, output_filename)
+            
             with open(output_path, "w", encoding="utf-8") as f:
-                f.write(final_response_text)
+                f.write(summary)
                 
-            print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
-            duration = round((time.time() - start_time) * 1000, 2)
-            log_telemetry("processing_complete", file=filename, duration_ms=duration, output=os.path.basename(output_path))
+            print(f"   ✅ Saved response to: {output_filename} (in outbox)")
+            
+            duration = (time.time() - start_time) * 1000
+            telemetry.log_event(
+                "processing_complete", 
+                actor="gemini_bridge", 
+                file=filename, 
+                duration_ms=duration, 
+                output_file=output_filename,
+                output_dir="outbox"
+            )
 
         except Exception as e:
             print(f"   ❌ Error: {e}")
-            log_telemetry("processing_error", file=filename, error=str(e))
+            telemetry.log_error("processing_failed", actor="gemini_bridge", file=filename, error=str(e))
 
 def main():
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
     
     try:
+        # Ensure directories exist
+        os.makedirs(INBOX_DIR, exist_ok=True)
+        os.makedirs(OUTBOX_DIR, exist_ok=True)
+        
         vertexai.init(project=PROJECT_ID, location=LOCATION)
         model = GenerativeModel(MODEL_NAME)
         print(f"   Connecting to project '{PROJECT_ID}'...")
@@ -199,7 +208,6 @@ def main():
         print(f"❌ Failed to initialize Vertex AI: {e}")
         sys.exit(1)
 
-    if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
 
     active_handler = GeminiHandler(model)

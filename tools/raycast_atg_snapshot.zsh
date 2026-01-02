@@ -18,7 +18,7 @@ set -euo pipefail
 # Configuration (Autodetected or Hardcoded)
 PROJECT_DIR="$HOME/02luka"
 SNAP_TOOL="$PROJECT_DIR/tools/atg_snap.zsh"
-RESULT_FILE="$PROJECT_DIR/magic_bridge/atg_snapshot.md"
+SNAPSHOT_FILE="$PROJECT_DIR/magic_bridge/inbox/atg_snapshot.md" # Updated path
 MODE="${1:-normal}"
 
 if [[ ! -f "$SNAP_TOOL" ]]; then
@@ -28,9 +28,9 @@ fi
 
 # keep mtime before run (detect fresh write)
 prev_mtime="0"
-if [[ -f "$RESULT_FILE" ]]; then
+if [[ -f "$SNAPSHOT_FILE" ]]; then # Use SNAPSHOT_FILE
   # BSD/Mac stat
-  prev_mtime="$(stat -f %m "$RESULT_FILE" 2>/dev/null || echo 0)"
+  prev_mtime="$(stat -f %m "$SNAPSHOT_FILE" 2>/dev/null || echo 0)"
 fi
 
 echo "📸 Snapping..."
@@ -43,13 +43,13 @@ cd "$PROJECT_DIR"
 }
 
 # validate fresh + non-empty
-if [[ ! -s "$RESULT_FILE" ]]; then
-  echo "❌ Snapshot empty/missing: $RESULT_FILE"
+if [[ ! -s "$SNAPSHOT_FILE" ]]; then
+  echo "❌ Snapshot empty/missing: $SNAPSHOT_FILE"
   exit 1
 fi
 
 # Check freshness
-new_mtime="$(stat -f %m "$RESULT_FILE" 2>/dev/null || echo 0)"
+new_mtime="$(stat -f %m "$SNAPSHOT_FILE" 2>/dev/null || echo 0)"
 # Note: we use -le because sometimes execution is so fast mtime doesn't shift if precision is low, 
 # but usually it should update. 
 if [[ "$new_mtime" -eq "$prev_mtime" ]]; then
@@ -61,9 +61,9 @@ if [[ "$MODE" == "archive" ]]; then
   ts="$(date +%Y%m%d_%H%M%S)"
   ARCH_DIR="$PROJECT_DIR/magic_bridge/archive"
   mkdir -p "$ARCH_DIR"
-  cp -f "$RESULT_FILE" "$ARCH_DIR/atg_snapshot_${ts}.md"
+  cp -f "$SNAPSHOT_FILE" "$ARCH_DIR/atg_snapshot_${ts}.md"
   echo "📦 Archived to ${ts}"
 fi
 
 echo "✅ Snapshot Done!"
-open "$RESULT_FILE"
+open "$SNAPSHOT_FILE"

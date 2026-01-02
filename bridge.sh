@@ -9,6 +9,17 @@ if [[ ! -d "infra/gemini_env" ]]; then
     infra/gemini_env/bin/pip install google-cloud-aiplatform watchdog
 fi
 
-# 2. Run the bridge
+LOCKDIR="/tmp/gemini_bridge.lock"
+
+# --- Atomic lock ---
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
+    echo "⚠️  Bridge already running (lock exists)."
+    exit 0
+fi
+trap 'rmdir "$LOCKDIR"' EXIT INT TERM
+
+# --- venv ---
+
+# 4. Run the bridge
 echo "🚀 Starting Gemini Bridge..."
 infra/gemini_env/bin/python3 -u gemini_bridge.py

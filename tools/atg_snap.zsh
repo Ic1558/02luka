@@ -8,120 +8,150 @@ setopt +o nomatch
 # --- Configuration ---
 SCRIPT_DIR="$(cd "$(dirname "${(%):-%N}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-BRIDGE_DIR="${ATG_BRIDGE_DIR:-$REPO_ROOT/magic_bridge}"
-OUT_MD="${BRIDGE_DIR}/atg_snapshot.md"
-OUT_JSON="${BRIDGE_DIR}/atg_snapshot.json"
+BRIDGE_DIR="${ATG_BRIDGE_DIR:-/Users/icmini/02luka/magic_bridge}"
+INBOX_DIR="$BRIDGE_DIR/inbox"
+OUTBOX_DIR="$BRIDGE_DIR/outbox"
+
+OUTPUT_MD="$INBOX_DIR/atg_snapshot.md"
+OUTPUT_JSON="$OUTBOX_DIR/atg_snapshot.json"
+SUMMARY_FILE="$OUTBOX_DIR/atg_snapshot.md.summary.txt"
+
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# Ensure Bridge Dir
-mkdir -p "$BRIDGE_DIR"
+# Ensure directories exist
+mkdir -p "$INBOX_DIR" "$OUTBOX_DIR"
 
 # --- Helpers ---
 run_and_capture() {
-    local cmd_str="$*"
-    local out_file="$TMP_DIR/$(echo "$cmd_str" | md5 | head -c 8).txt"
+    local cmd="$1"
+    local exit_file="$2"
+    local output
     
-    echo "### Command: \`$cmd_str\`"
+    # Run command, capture output and exit code
+    # We use eval to handle complex command strings with pipes
+    output=$(eval "$cmd" 2>&1)
+    local code=$?
     
-    # Run command, capture stdout/stderr, and exit code
-    if eval "$cmd_str" > "$out_file" 2>&1; then
-        local code=0
-    else
-        local code=$?
+    # Save exit code if file provided
+    if [[ -n "$exit_file" ]]; then
+        echo "$code" > "$exit_file"
     fi
-    
-    echo "\`\`\`text"
-    if [[ -s "$out_file" ]]; then
-        cat "$out_file"
+
+    if [[ -n "$output" ]]; then
+        echo "$output"
     else
         echo "(no output)"
     fi
-    echo "\`\`\`"
-    echo "**Exit Code:** $code"
-    echo ""
 }
 
 # --- Snapshot Generation ---
+cat > "$OUTPUT_MD" <<EOF
+# 📸 Antigravity System Snapshot
+**Timestamp (UTC):** $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+**Timestamp (Local):** $(date +"%Y-%m-%dT%H:%M:%S%z")
+**Repo Root:** $REPO_ROOT
+**Branch:** $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "N/A")
+**HEAD:** $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "N/A")
+
+## 1. Git Context 🌳
+### Command: \`git -C '$REPO_ROOT' status --porcelain=v1\`
+\`\`\`text
+$(run_and_capture "git -C '$REPO_ROOT' status --porcelain=v1" "$TMP_DIR/git_status.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/git_status.exit")
+
+### Command: \`git -C '$REPO_ROOT' log -1 --oneline\`
+\`\`\`text
+$(run_and_capture "git -C '$REPO_ROOT' log -1 --oneline" "$TMP_DIR/git_log.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/git_log.exit")
+
+### Command: \`git -C '$REPO_ROOT' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'\`
+\`\`\`text
+$(run_and_capture "git -C '$REPO_ROOT' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'" "$TMP_DIR/git_diff.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/git_diff.exit")
+
+## 2. Runtime Context ⚙️
+### Command: \`pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap\`
+\`\`\`text
+$(run_and_capture "pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap" "$TMP_DIR/pgrep.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/pgrep.exit")
+
+### Command: \`$REPO_ROOT/tools/ports_check.zsh\`
+\`\`\`text
+$(run_and_capture "$REPO_ROOT/tools/ports_check.zsh" "$TMP_DIR/ports.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/ports.exit")
+
+## 3. Telemetry Pulse 📈
+(Tailing last 50 lines - Checks for missing files)
+### Command: \`tail -n 50 '$REPO_ROOT/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'" "$TMP_DIR/telemetry.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/telemetry.exit")
+
+### Command: \`tail -n 50 '$REPO_ROOT/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'" "$TMP_DIR/fs_index.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/fs_index.exit")
+
+## 4. System Logs (Errors) 🚨
+(Tailing last 50 lines)
+### Command: \`tail -n 50 '/tmp/com.02luka.fs_watcher.stderr.log'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '/tmp/com.02luka.fs_watcher.stderr.log'" "$TMP_DIR/fs_watcher.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/fs_watcher.exit")
+
+### Command: \`tail -n 50 '/tmp/com.02luka.fs_watcher.stdout.log'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '/tmp/com.02luka.fs_watcher.stdout.log'" "$TMP_DIR/fs_watcher_out.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/fs_watcher_out.exit")
+
+### Command: \`tail -n 50 '/tmp/com.antigravity.bridge.stderr.log'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '/tmp/com.antigravity.bridge.stderr.log'" "$TMP_DIR/bridge_err.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/bridge_err.exit")
+
+### Command: \`tail -n 50 '/tmp/com.antigravity.bridge.stdout.log'\`
+\`\`\`text
+$(run_and_capture "tail -n 50 '/tmp/com.antigravity.bridge.stdout.log'" "$TMP_DIR/bridge_out.exit")
+\`\`\`
+**Exit Code:** $(cat "$TMP_DIR/bridge_out.exit")
+
+## 5. Metadata
+Snapshot Version: 2.1 (Strict Mode)
+Mode: Rewrite
+EOF
+
+cat > "$OUTPUT_JSON" <<EOF
 {
-    echo "# 📸 Antigravity System Snapshot"
-    echo "**Timestamp (UTC):** $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-    echo "**Timestamp (Local):** $(date +"%Y-%m-%dT%H:%M:%S%z")"
-    echo "**Repo Root:** $REPO_ROOT"
-    echo "**Branch:** $(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")"
-    echo "**HEAD:** $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
-    echo ""
-
-    echo "## 1. Git Context 🌳"
-    run_and_capture "git -C '$REPO_ROOT' status --porcelain=v1"
-    run_and_capture "git -C '$REPO_ROOT' log -1 --oneline"
-    # Show last valid diff if exists
-    run_and_capture "git -C '$REPO_ROOT' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'"
-    
-    echo "## 2. Runtime Context ⚙️"
-    # Process check (Verbose)
-    run_and_capture "pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap"
-    
-    # Port check
-    if [[ -x "$REPO_ROOT/tools/ports_check.zsh" ]]; then
-        run_and_capture "$REPO_ROOT/tools/ports_check.zsh"
-    else
-        run_and_capture "lsof -iTCP -sTCP:LISTEN -P -n | grep -E '8000|8080|8001|8088'"
-    fi
-
-    echo "## 3. Telemetry Pulse 📈"
-    echo "(Tailing last 50 lines - Checks for missing files)"
-    
-    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'"
-    run_and_capture "tail -n 50 '$REPO_ROOT/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'"
-
-    echo "## 4. System Logs (Errors) 🚨"
-    echo "(Tailing last 50 lines)"
-    
-    LOGS=(
-        "/tmp/com.02luka.fs_watcher.stderr.log"
-        "/tmp/com.02luka.fs_watcher.stdout.log"
-        "/tmp/com.antigravity.bridge.stderr.log"
-        "/tmp/com.antigravity.bridge.stdout.log"
-    )
-    
-    for log in "${LOGS[@]}"; do
-        if [[ -f "$log" ]]; then
-            run_and_capture "tail -n 50 '$log'"
-        else
-             echo "### Log: \`$log\`"
-             echo "_File not found (Missing)_"
-             echo "**Exit Code:** 1 (Check path)"
-             echo ""
-        fi
-    done
-
-    echo "## 5. Metadata"
-    echo "Snapshot Version: 2.1 (Strict Mode)"
-    echo "Mode: Rewrite"
-
-} > "$OUT_MD"
-
-# --- JSON Generation (Stub) ---
-if command -v python3 >/dev/null 2>&1; then
-    python3 -c "
-import json
-import os
-import datetime
-
-snapshot = {
-    'timestamp': datetime.datetime.now().isoformat(),
-    'repo': '$REPO_ROOT',
-    'verified': True,
-    'mode': 'rewrite'
+  "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "git": {
+    "branch": "$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "N/A")",
+    "head": "$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "N/A")"
+  },
+  "runtime": {
+     "processes_raw": "See Markdown"
+  },
+  "telemetry": {
+     "last_event_ts": "See Markdown"
+  }
 }
-try:
-    with open('$OUT_JSON', 'w') as f:
-        json.dump(snapshot, f, indent=2)
-except Exception as e:
-    print(f'JSON gen failed: {e}')
-"
-fi
+EOF
 
-echo "✅ Snapshot Generated: $OUT_MD"
+# --- Cleanup ---
+echo "✅ Snapshot Generated: $OUTPUT_MD"
 echo "   (Checked against Liam's Validation Rules)"
+
+# Open if interactive
+if [[ -t 1 ]]; then
+    open "$OUTPUT_MD" || true
+fi
