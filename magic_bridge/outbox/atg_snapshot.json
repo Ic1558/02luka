@@ -1,13 +1,6 @@
 {
-  "timestamp": "2026-01-04T18:59:52Z",
-  "git": {
-    "branch": "main",
-    "head": "82926687"
-  },
-  "runtime": {
-     "processes_raw": "See Markdown"
-  },
-  "telemetry": {
-     "last_event_ts": "See Markdown"
-  }
+  "timestamp": "2026-01-03T02:18:40.034630",
+  "repo": "/Users/icmini/02luka",
+  "verified": true,
+  "mode": "rewrite"
 }
