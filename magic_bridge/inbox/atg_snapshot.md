@@ -1,34 +1,36 @@
 # 📸 Antigravity System Snapshot
-**Timestamp (UTC):** 2026-01-04T18:30:23Z
-**Timestamp (Local):** 2026-01-05T01:30:23+0700
+**Timestamp (UTC):** 2026-01-04T18:59:52Z
+**Timestamp (Local):** 2026-01-05T01:59:52+0700
 **Repo Root:** /Users/icmini/02luka
 **Branch:** main
-**HEAD:** 9067079c
+**HEAD:** 82926687
 
 ## 1. Git Context 🌳
 ### Command: `git -C '/Users/icmini/02luka' status --porcelain=v1`
 ```text
+ M .claude/settings.local.json
  M magic_bridge/inbox/atg_snapshot.md
  M magic_bridge/outbox/atg_snapshot.json
  M magic_bridge/outbox/atg_snapshot.md.summary.txt
-?? g/reports/pr11_healthcheck/2026-01-05T00:30:45.json
+ M tools/raycast_atg_snapshot.zsh
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' log -1 --oneline`
 ```text
-9067079c auto-save: 2026-01-04 21:01:03 +0700
+82926687 auto-save: 2026-01-05 01:31:11 +0700
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'`
 ```text
- context/gemini/system_snapshot.md                  |   4 +-
- .../pr11_healthcheck/2026-01-04T12:30:45.json      |  16 ++
+ .claude/settings.local.json                        |   3 +-
+ .../pr11_healthcheck/2026-01-05T00:30:45.json      |  16 ++
  magic_bridge/inbox/atg_snapshot.md                 | 207 ---------------------
  magic_bridge/outbox/atg_snapshot.json              |   4 +-
- magic_bridge/outbox/atg_snapshot.md.summary.txt    |  18 +-
- 5 files changed, 24 insertions(+), 225 deletions(-)
+ magic_bridge/outbox/atg_snapshot.md.summary.txt    |  22 +--
+ tools/raycast_atg_snapshot.zsh                     |   7 +
+ 6 files changed, 37 insertions(+), 222 deletions(-)
 ```
 **Exit Code:** 0
 
@@ -65,21 +67,6 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 (Tailing last 50 lines - Checks for missing files)
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'`
 ```text
-{"ts": "2026-01-03T02:27:07.145638+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:27:15.731048+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:27:16.816488+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:27:22.221451+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 5403.882026672363, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-03T02:27:22.225400+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:27:23.300063+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:29:07.522625+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:29:08.600715+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:29:11.553597+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 2953.4308910369873, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-03T02:29:11.580420+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:29:12.655045+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:34:12.571662+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:34:47.815420+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:34:47.828551+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:34:52.658845+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 4830.64603805542, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
 {"ts": "2026-01-03T02:34:53.735457+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
 {"ts": "2026-01-03T02:34:53.736049+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
 {"ts": "2026-01-03T02:36:04.838574+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
@@ -115,18 +102,26 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 {"ts": "2026-01-05T01:27:48.885049+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
 {"ts": "2026-01-05T01:27:48.900948+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
 {"ts": "2026-01-05T01:27:52.674227+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 3778.29909324646, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:30:24.942955+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:30:24.955717+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:30:28.530986+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 3575.327157974243, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:38:21.907950+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:38:21.911616+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:38:26.181813+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 4270.701885223389, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:52:11.964893+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:52:11.989318+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:52:15.547204+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 3557.9731464385986, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:52:22.032571+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:52:22.035946+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:52:24.800482+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 2765.4600143432617, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:52:35.397724+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:52:35.398432+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:52:38.280168+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 2881.743907928467, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
 ```
 **Exit Code:** 0
 
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'`
 ```text
-{"ts": "2026-01-02T19:27:18.264760+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:29:09.785484+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:34:50.009333+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:36:08.941382+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:37:37.945138+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:42:28.094461+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:45:39.955425+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T19:50:11.307252+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T19:53:57.089915+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T20:17:44.142445+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
@@ -170,6 +165,13 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 {"ts": "2026-01-04T18:17:28.491861+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-04T18:22:35.455817+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-04T18:27:50.910612+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:30:27.138923+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:38:23.402592+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:52:15.405379+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:52:23.266668+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:52:35.671196+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:59:50.219944+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:59:50.220957+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/raycast_atg_snapshot.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 ```
 **Exit Code:** 0
 
@@ -199,23 +201,35 @@ Starting fs_watcher launcher at Sat Jan  3 02:13:14 +07 2026
 
 ### Command: `tail -n 50 '/tmp/com.antigravity.bridge.stdout.log'`
 ```text
-🚀 Starting Gemini Bridge (locked)...
-🔮 Initializing Gemini Bridge (Context Aware + Retry)...
-   Connecting to project 'luka-cloud-471113'...
-👀 Watching '/Users/icmini/02luka/magic_bridge/inbox' for changes...
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
 📝 Detected change in: atg_snapshot.md (inbox)
    🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
    ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
 📝 Detected change in: atg_snapshot.md (inbox)
    ⏭️  Skipping (content unchanged): atg_snapshot.md
-🚀 Starting Gemini Bridge (locked)...
-🔮 Initializing Gemini Bridge (Context Aware + Retry)...
-   Connecting to project 'luka-cloud-471113'...
-👀 Watching '/Users/icmini/02luka/magic_bridge/inbox' for changes...
-📝 Detected change in: atg_snapshot.md (inbox)
 📝 Detected change in: atg_snapshot.md (inbox)
    🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
    ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
 📝 Detected change in: atg_snapshot.md (inbox)
    🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
    ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)

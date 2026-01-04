@@ -66,4 +66,11 @@ if [[ "$MODE" == "archive" ]]; then
 fi
 
 echo "✅ Snapshot Done!"
+
+# Copy to clipboard (UTF-8)
+if command -v pbcopy >/dev/null 2>&1; then
+  cat "$SNAPSHOT_FILE" | pbcopy
+  echo "📋 Copied to clipboard"
+fi
+
 open "$SNAPSHOT_FILE"
