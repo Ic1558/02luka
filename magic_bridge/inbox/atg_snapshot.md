@@ -1,86 +1,70 @@
 # 📸 Antigravity System Snapshot
-**Timestamp (UTC):** 2026-01-02T20:23:16Z
-**Timestamp (Local):** 2026-01-03T03:23:16+0700
+**Timestamp (UTC):** 2026-01-04T18:30:23Z
+**Timestamp (Local):** 2026-01-05T01:30:23+0700
 **Repo Root:** /Users/icmini/02luka
 **Branch:** main
-**HEAD:** a29b73a2
+**HEAD:** 9067079c
 
 ## 1. Git Context 🌳
 ### Command: `git -C '/Users/icmini/02luka' status --porcelain=v1`
 ```text
- M .claude/settings.local.json
- M bridge.sh
- M gemini_bridge.py
-?? magic_bridge/inbox/atg_snapshot.md
-?? magic_bridge/outbox/atg_snapshot.json
-?? magic_bridge/outbox/atg_snapshot.md.summary.txt
+ M magic_bridge/inbox/atg_snapshot.md
+ M magic_bridge/outbox/atg_snapshot.json
+ M magic_bridge/outbox/atg_snapshot.md.summary.txt
+?? g/reports/pr11_healthcheck/2026-01-05T00:30:45.json
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' log -1 --oneline`
 ```text
-a29b73a2 fix(bridge): absolute paths, exec, early dedup, commonpath inbox check
+9067079c auto-save: 2026-01-04 21:01:03 +0700
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'`
 ```text
- .claude/settings.local.json |  3 +-
- bridge.sh                   | 39 +++++++++++++++++++-----
- gemini_bridge.py            | 73 ++++++++++++++++++++++++++++++++-------------
- 3 files changed, 86 insertions(+), 29 deletions(-)
+ context/gemini/system_snapshot.md                  |   4 +-
+ .../pr11_healthcheck/2026-01-04T12:30:45.json      |  16 ++
+ magic_bridge/inbox/atg_snapshot.md                 | 207 ---------------------
+ magic_bridge/outbox/atg_snapshot.json              |   4 +-
+ magic_bridge/outbox/atg_snapshot.md.summary.txt    |  18 +-
+ 5 files changed, 24 insertions(+), 225 deletions(-)
 ```
 **Exit Code:** 0
 
 ## 2. Runtime Context ⚙️
 ### Command: `pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap`
 ```text
-sysmon request failed with error: sysmond service not found
-pgrep: Cannot get process list
+2241 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/agents/memory_hub/memory_hub.py /Users/icmini/LocalProjects/02luka_local_g/.venv/bin/python3 ~/02luka/agents/memory_hub/memory_hub.py
+9772 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m http.server 8088
+11067 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python api_server.py
+11097 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c from multiprocessing.resource_tracker import main;main(4)
+18280 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=5, pipe_handle=7) --multiprocessing-fork
+47832 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/tools/fs_watcher.py
+65633 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -u /Users/icmini/02luka/gemini_bridge.py
+71535 /Applications/Antigravity.app/Contents/Resources/app/extensions/antigravity/bin/language_server_macos_arm --enable_lsp --extension_server_port 50400 --csrf_token 5d604a9c-3d6d-4235-94f7-f7d771262967 --random_port --workspace_id file_Users_icmini_02luka_02luka_antigravity_code_workspace --cloud_code_endpoint https://daily-cloudcode-pa.googleapis.com --app_data_dir antigravity --parent_pipe_path /var/folders/bm/8smk0tgn55q9zf1bh3l0n9zw0000gn/T/server_712e72b6cc45db6d
+71675 /Applications/Antigravity.app/Contents/Frameworks/Antigravity Helper (Plugin).app/Contents/MacOS/Antigravity Helper (Plugin) /Users/icmini/.antigravity/extensions/github.vscode-github-actions-0.28.2-universal/dist/server-node.js --node-ipc --clientProcessId=71409
+71736 /Users/icmini/.antigravity/extensions/openai.chatgpt-0.4.49/bin/macos-aarch64/codex app-server
+71865 /Users/icmini/.antigravity/extensions/meta.pyrefly-0.46.3-darwin-arm64/bin/pyrefly lsp
+86935 node /opt/homebrew/bin/antigravity-claude-proxy start
 ```
-**Exit Code:** 1
+**Exit Code:** 0
 
 ### Command: `/Users/icmini/02luka/tools/ports_check.zsh`
 ```text
-Traceback (most recent call last):
-  File "<string>", line 212, in <module>
-    main()
-    ~~~~^^
-  File "<string>", line 173, in main
-    t_port, line, p_status = analyze_port(port, reg[port])
-                             ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
-  File "<string>", line 93, in analyze_port
-    pinfo = get_process_info(listeners)
-  File "<string>", line 64, in get_process_info
-    return info
-           ^^^^
-UnboundLocalError: cannot access local variable 'info' where it is not associated with a value
+PORT   SERVICE            POLICY     STATUS    PID             COMMAND
+------------------------------------------------------------------------------------------
+8000   api_server         protected  safe      11067           /opt/homebrew/Cellar/python@3.14/3.14.0_... (+1 workers)
+8001   fastapi-dev        free       safe      -               (free)
+8080   claude_proxy       managed    safe      86935           node /opt/homebrew/bin/antigravity-claude-proxy start
+------------------------------------------------------------------------------------------
 ```
-**Exit Code:** 1
+**Exit Code:** 0
 
 ## 3. Telemetry Pulse 📈
 (Tailing last 50 lines - Checks for missing files)
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'`
 ```text
-{"ts": "2026-01-03T02:03:01.035078+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:03:09.041518+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 8004.31, "output": "atg_snapshot.md.summary.txt"}
-{"ts": "2026-01-03T02:06:36.944751+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "./magic_bridge", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:07:25.157609+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "./magic_bridge", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:13:16.529533+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "./magic_bridge", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:16:55.927436+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "./magic_bridge", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:23:25.631209+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-03T02:24:53.230978+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:24:54.328606+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:24:59.393644+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 5065.415859222412, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-03T02:24:59.394672+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:25:00.461571+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:25:04.453834+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 3991.739273071289, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-03T02:25:54.967264+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:25:56.045856+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:25:59.550298+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 3507.5719356536865, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-03T02:25:59.553728+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
-{"ts": "2026-01-03T02:26:00.624635+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
-{"ts": "2026-01-03T02:26:04.525438+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 3900.909185409546, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
 {"ts": "2026-01-03T02:27:07.145638+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "watch_dir": "magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
 {"ts": "2026-01-03T02:27:15.731048+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "dir": "inbox"}
 {"ts": "2026-01-03T02:27:16.816488+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md"}
@@ -112,50 +96,30 @@ UnboundLocalError: cannot access local variable 'info' where it is not associate
 {"ts": "2026-01-03T02:42:31.590731+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "file": "atg_snapshot.md", "duration_ms": 4802.063941955566, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
 {"ts": "2026-01-03T03:18:15.526416+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 22176, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
 {"ts": "2026-01-03T03:23:06.422805+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 28224, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
+{"ts": "2026-01-03T03:23:17.687163+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 28224, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-03T03:23:17.687583+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 28224, "file": "atg_snapshot.md"}
+{"ts": "2026-01-03T03:23:22.093952+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 28224, "file": "atg_snapshot.md", "duration_ms": 4406.364917755127, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:08:34.368248+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
+{"ts": "2026-01-05T01:09:13.755360+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:09:13.756401+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:09:18.749604+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 4993.046998977661, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:09:25.021570+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:09:25.022295+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:09:28.103570+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 3080.735921859741, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:17:26.240023+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:17:26.298996+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:17:30.737750+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 4439.324140548706, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:22:33.079680+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:22:33.232431+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:22:39.801707+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 6592.031240463257, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-05T01:27:48.885049+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-05T01:27:48.900948+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md"}
+{"ts": "2026-01-05T01:27:52.674227+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 65633, "file": "atg_snapshot.md", "duration_ms": 3778.29909324646, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
 ```
 **Exit Code:** 0
 
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'`
 ```text
-{"ts": "2026-01-02T18:00:24.090944+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:00:31.481631+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:00:38.850726+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:11:42.946116+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:14:12.478563+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:15:21.002958+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:15:38.538514+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:15:45.769575+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:24:11.106935+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:24:18.245030+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:25:50.038662+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:33:05.776738+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:33:05.784347+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/raycast_atg_snapshot.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:36:46.581332+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/raycast_atg_snapshot.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:44:53.802884+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:53:07.544484+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:56:58.829145+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:57:06.713184+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:57:35.740476+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:57:43.269760+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T18:57:46.771674+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:02:42.619208+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:08:41.894886+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:12:09.912906+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:12:09.914148+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_verify_stable.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:13:07.096353+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:13:07.097754+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_stop_loop_now.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 62669, "git_rev": "bf71a429"}
-{"ts": "2026-01-02T19:13:58.203480+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:14:43.380472+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:16:39.340927+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:18:42.407494+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:22:30.144017+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:22:47.101313+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/raycast_atg_snapshot.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:23:11.460591+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/raycast_atg_snapshot.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:24:47.733130+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:24:56.077644+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:25:24.543172+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:25:45.528860+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_snap.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-02T19:25:57.367982+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T19:27:18.264760+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T19:29:09.785484+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T19:34:50.009333+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
@@ -167,6 +131,45 @@ UnboundLocalError: cannot access local variable 'info' where it is not associate
 {"ts": "2026-01-02T19:53:57.089915+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T20:17:44.142445+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-02T20:21:18.550351+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T20:26:02.711707+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T20:26:02.713421+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_bridge_restart.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T20:26:06.479840+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/atg_stop_loop_now.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T20:36:50.265280+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/docs/LAUNCHAGENT_REGISTRY.md", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T21:15:28.963488+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-02T21:15:28.966162+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T01:00:02.266466+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T01:00:02.268987+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health/health_20260103.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T01:00:05.916389+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T01:00:05.916647+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health/health_20260103.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T05:30:48.110294+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T05:30:48.111161+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck/2026-01-03T12:30:45.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:10:55.074981+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:10:55.077101+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:30:46.719624+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:30:46.720590+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck/2026-01-04T00:30:45.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:41:56.374028+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T17:41:56.435759+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T21:17:25.629580+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-03T21:17:25.630742+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:01.635767+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:01.698660+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health/health_20260104.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:01.698808+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/system", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:01.698883+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/system/system_governance_WEEKLY_20260104.md", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:12.590356+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T01:00:12.667673+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/health/health_20260104.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T05:30:46.840423+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T05:30:46.841480+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck/2026-01-04T12:30:45.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:11:22.804139+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:11:22.806350+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:30:48.361814+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:30:48.363104+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck/2026-01-05T00:30:45.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:41:37.953548+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T17:41:37.955862+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:09:15.592335+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:09:26.634075+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:17:28.491861+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:22:35.455817+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-04T18:27:50.910612+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 ```
 **Exit Code:** 0
 
@@ -189,6 +192,8 @@ Starting fs_watcher launcher at Sat Jan  3 02:13:14 +07 2026
 ```text
 /Users/icmini/02luka/infra/gemini_env/lib/python3.14/site-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
   warning_logs.show_deprecation_warning()
+/Users/icmini/02luka/infra/gemini_env/lib/python3.14/site-packages/vertexai/generative_models/_generative_models.py:433: UserWarning: This feature is deprecated as of June 24, 2025 and will be removed on June 24, 2026. For details, see https://cloud.google.com/vertex-ai/generative-ai/docs/deprecations/genai-vertexai-sdk.
+  warning_logs.show_deprecation_warning()
 ```
 **Exit Code:** 0
 
@@ -198,6 +203,39 @@ Starting fs_watcher launcher at Sat Jan  3 02:13:14 +07 2026
 🔮 Initializing Gemini Bridge (Context Aware + Retry)...
    Connecting to project 'luka-cloud-471113'...
 👀 Watching '/Users/icmini/02luka/magic_bridge/inbox' for changes...
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+🚀 Starting Gemini Bridge (locked)...
+🔮 Initializing Gemini Bridge (Context Aware + Retry)...
+   Connecting to project 'luka-cloud-471113'...
+👀 Watching '/Users/icmini/02luka/magic_bridge/inbox' for changes...
+📝 Detected change in: atg_snapshot.md (inbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
+📝 Detected change in: atg_snapshot.md (inbox)
+   🚀 Sending to Vertex AI (gemini-2.0-flash-001)...
+   ✅ Saved response to: atg_snapshot.md.summary.txt (in outbox)
+📝 Detected change in: atg_snapshot.md (inbox)
+   ⏭️  Skipping (content unchanged): atg_snapshot.md
 📝 Detected change in: atg_snapshot.md (inbox)
 ```
 **Exit Code:** 0
