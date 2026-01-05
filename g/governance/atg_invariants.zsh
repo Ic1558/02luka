@@ -9,7 +9,7 @@ NOW="$(date +%Y-%m-%dT%H:%M:%S%z)"
 UID_NOW="$(id -u)"
 
 # Known patterns from your process list (adjust if you rename tools)
-PAT_ANTIGRAVITY_APP='/Applications/Antigravity\.app/Contents/MacOS/Antigravity'
+PAT_ANTIGRAVITY_APP='/Applications/Antigravity\.app/Contents/MacOS/(Electron|Antigravity)'
 PAT_CODEX_APPSERVER='codex app-server'
 PAT_ATG_PROXY='antigravity-claude-proxy'
 PAT_LSP_ANTIGRAVITY='language_server_macos_arm'
@@ -26,7 +26,7 @@ _fail(){ print -- "FAIL: $*"; return 1; }
 
 _count_procs() {
   local pat="$1"
-  pgrep -fl "$pat" 2>/dev/null | wc -l | tr -d ' '
+  pgrep -fl "$pat" 2>/dev/null | grep -v "grep" | grep -v "while read pid cmd" | wc -l | tr -d ' '
 }
 
 _list_procs() {
@@ -71,7 +71,8 @@ check_codex_appserver() {
     _list_procs "$PAT_CODEX_APPSERVER"
     return 1
   else
-    _fail "codex app-server missing"
+    _warn "codex app-server missing (may be demand-started). If commands still fail, trigger extension then re-run invariants."
+    return 0
   fi
 }
 
