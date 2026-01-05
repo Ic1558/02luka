@@ -1,6 +1,11 @@
 import os
 import time
 import sys
+import warnings
+
+# Suppress Vertex AI deprecation warnings immediately
+warnings.filterwarnings("ignore", category=UserWarning, module=r"vertexai(\..*)?")
+
 import vertexai
 from vertexai.generative_models import GenerativeModel
 from watchdog.observers import Observer
@@ -29,42 +34,32 @@ WATCH_DIR = INBOX_DIR  # Absolute path
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 # IGNORE_FILES = {".summary.txt", "atg_snapshot.md", "atg_snapshot.json"} # No longer needed with inbox/outbox
 MAX_READ_TURNS = 3
-TELEMETRY_FILE = "g/telemetry/atg_runner.jsonl"
-FS_INDEX_FILE = "g/telemetry/fs_index.jsonl"
+TELEMETRY_FILE = os.path.join(REPO_ROOT, "g/telemetry/atg_runner.jsonl")
+FS_INDEX_FILE = os.path.join(REPO_ROOT, "g/telemetry/fs_index.jsonl")
+AG_BRAIN_ROOT = os.path.expanduser("~/.gemini/antigravity/brain")
 
-def get_recent_fs_activity(limit=15):
-    """Reads the tail of the FS Index to provide passive context."""
-    if not os.path.exists(FS_INDEX_FILE): return "(No recent filesystem activity recorded)"
-    
+# --- Safety Helpers ---
+def safe_read_lines(path, limit=15, chunk_size=4096):
+    """Safely reads the last N lines of a file, handling Seatbelt restrictions."""
+    if not os.path.exists(path): return []
     try:
-        # Simple tail implementation
-        lines = []
-        with open(FS_INDEX_FILE, 'rb') as f:
+        with open(path, 'rb') as f:
             f.seek(0, 2)
             fsize = f.tell()
-            f.seek(max(fsize - 4096, 0), 0) # Read last 4KB
-            lines = f.readlines()
-        
-        # Parse and format last N records
-        records = []
-        for line in lines[-limit:]:
-            try:
-                rec = json.loads(line.decode('utf-8'))
-                # Format: [HH:MM] MODIFY tools/watcher.py (User)
-                ts = rec.get('ts', '')[11:16]
-                event = rec.get('event', '').upper()
-                file = rec.get('file', '')
-                records.append(f"[{ts}] {event} {file}")
-            except: pass
-            
-        return "\n".join(records) if records else "(No recent changes)"
-    except Exception as e:
-        return f"(Error reading index: {e})"
+            f.seek(max(fsize - chunk_size, 0), 0)
+            chunk = f.read().decode('utf-8', errors='ignore')
+            return [l for l in chunk.splitlines() if l.strip()][-limit:]
+    except (PermissionError, OSError):
+        return []
 
 def log_telemetry(event_name, **kwargs):
-    """Appends a structured JSON record to the telemetry file."""
+    """Appends a structured JSON record to the telemetry file, safe under Seatbelt."""
     try:
-        os.makedirs(os.path.dirname(TELEMETRY_FILE), exist_ok=True)
+        # Check if dir exists first to avoid unnecessary makedirs calls
+        telemetry_dir = os.path.dirname(TELEMETRY_FILE)
+        if not os.path.exists(telemetry_dir):
+            os.makedirs(telemetry_dir, exist_ok=True)
+            
         record = {
             "ts": datetime.now().astimezone().isoformat(),
             "event": event_name,
@@ -75,8 +70,28 @@ def log_telemetry(event_name, **kwargs):
         }
         with open(TELEMETRY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
+    except (PermissionError, OSError):
+        # Silent failure for telemetry to avoid log noise in bridge
+        pass
     except Exception as e:
         print(f"⚠️ Telemetry Error: {e}")
+
+def get_recent_fs_activity(limit=15):
+    """Reads the tail of the FS Index to provide passive context, safe under Seatbelt."""
+    lines = safe_read_lines(FS_INDEX_FILE, limit=limit)
+    if not lines: return "(No recent filesystem activity recorded or accessible)"
+    
+    records = []
+    for line in lines:
+        try:
+            rec = json.loads(line)
+            ts = rec.get('ts', '')[11:16]
+            event = rec.get('event', '').upper()
+            file = rec.get('file', '')
+            records.append(f"[{ts}] {event} {file}")
+        except: pass
+            
+    return "\n".join(records) if records else "(No recent changes)"
 
 # Placeholder for telemetry module if it's meant to be imported
 class Telemetry:
@@ -95,6 +110,10 @@ class GeminiHandler(FileSystemEventHandler):
         self.outbox_dir = OUTBOX_DIR
         self.processed_hashes = {}
         self.processed_at = {}
+
+    def on_created(self, event):
+        """Treat new files like modifications (common inbox drop pattern)."""
+        return self.on_modified(event)
 
     @retry(
         stop=stop_after_attempt(5),
@@ -173,6 +192,27 @@ class GeminiHandler(FileSystemEventHandler):
         
         self.process_file(event.src_path, filename, content)
 
+    def inject_into_antigravity(self, filename, summary):
+        """Injects the summary into the active Antigravity brain session."""
+        # Guard: Only run if AG_WIRE env var is set
+        if os.environ.get("AG_WIRE", "0") != "1": return
+        
+        if not os.path.exists(AG_BRAIN_ROOT): return
+        try:
+            sessions = [os.path.join(AG_BRAIN_ROOT, d) for d in os.listdir(AG_BRAIN_ROOT) if os.path.isdir(os.path.join(AG_BRAIN_ROOT, d))]
+            if not sessions: return
+            latest_session = max(sessions, key=os.path.getmtime)
+            
+            # Write to a dedicated context file
+            target_file = os.path.join(latest_session, "99_BRIDGE_FEEDBACK.md")
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            
+            with open(target_file, "a", encoding="utf-8") as f:
+                f.write(f"\n### [{timestamp}] Bridge Insight: {filename}\n{summary}\n")
+            print(f"   🧠 Wired to Antigravity: {os.path.basename(latest_session)}")
+        except Exception as e:
+            print(f"   ⚠️ Wiring failed: {e}")
+
     def process_file(self, file_path, filename, content):
         """Process a file that has already been validated and deduplicated."""
         start_time = time.time()
@@ -210,6 +250,9 @@ class GeminiHandler(FileSystemEventHandler):
                 
             print(f"   ✅ Saved response to: {output_filename} (in outbox)")
             
+            # Inject into Antigravity Context (Safe call)
+            self.inject_into_antigravity(filename, summary)
+            
             duration = (time.time() - start_time) * 1000
             telemetry.log_event(
                 "processing_complete", 
@@ -238,8 +281,6 @@ def main():
     except Exception as e:
         print(f"❌ Failed to initialize Vertex AI: {e}")
         sys.exit(1)
-
-        os.makedirs(WATCH_DIR)
 
     active_handler = GeminiHandler(model)
     observer = Observer()
