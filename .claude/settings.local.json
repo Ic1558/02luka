@@ -106,7 +106,8 @@
       "Bash(pgrep -fl \"mary|gemini_bridge|redis|atg\")",
       "Bash(make smoke)",
       "Bash(/Users/icmini/Documents/atg.sh)",
-      "Bash(pbpaste:*)"
+      "Bash(pbpaste:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": [],
     "ask": []

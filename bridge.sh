@@ -12,9 +12,31 @@ cd "$REPO_ROOT"
 if [[ ! -d "$VENV_DIR" ]]; then
     echo "🔧 Creating virtual environment..."
     python3 -m venv "$VENV_DIR"
-    echo "📦 Installing dependencies..."
-    "$VENV_DIR/bin/pip" install google-cloud-aiplatform watchdog
 fi
+
+# Always ensure dependencies are up to date (idempotent)
+echo "📦 Ensuring pip tooling..."
+"$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel
+
+echo "📦 Ensuring runtime deps..."
+# Fallback minimal deps (keep tiny; real SOT should be requirements files)
+"$VENV_DIR/bin/python" -m pip install --upgrade \
+  google-cloud-aiplatform "watchdog>=4.0.0" google-generativeai
+
+# Install from repo requirements (preferred SOT)
+if [[ -f "$REPO_ROOT/requirements.txt" ]]; then
+  echo "📦 Installing from requirements.txt..."
+  "$VENV_DIR/bin/python" -m pip install --upgrade -r "$REPO_ROOT/requirements.txt"
+fi
+
+# Optional: agent-specific requirements (if you have it; safe if missing)
+if [[ -f "$REPO_ROOT/agents/gmx/requirements.txt" ]]; then
+  echo "📦 Installing from agents/gmx/requirements.txt..."
+  "$VENV_DIR/bin/python" -m pip install --upgrade -r "$REPO_ROOT/agents/gmx/requirements.txt"
+fi
+
+# Sanity check (non-fatal but useful signal)
+"$VENV_DIR/bin/python" -m pip check || true
 
 LOCKDIR="/tmp/gemini_bridge.lock"
 

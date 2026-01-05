@@ -9,7 +9,7 @@ REPO_ROOT="${HOME}/02luka"
 MODE="${1:-SAFE}"   # SAFE | HARD
 NOW="$(date +%Y-%m-%dT%H:%M:%S%z)"
 
-PAT_CODEX_APPSERVER='codex app-server'
+PAT_CODEX_APPSERVER='codex'
 PAT_ATG_PROXY='antigravity-claude-proxy'
 PAT_LSP_ANTIGRAVITY='language_server_macos_arm'
 PAT_LSP_PYREFLY='pyrefly lsp'
