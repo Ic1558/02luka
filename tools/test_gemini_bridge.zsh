@@ -61,7 +61,6 @@ log_info "Created mock brain session: ${MOCK_SESSION}"
 log_info "Starting bridge..."
 # Truncate log and start bridge (combined to avoid race)
 : > "${BRIDGE_LOG}"
-nohup env PYTHONUNBUFFERED=1 "${BRIDGE_SCRIPT}" >> "${BRIDGE_LOG}" 2>&1 &
 nohup env PYTHONUNBUFFERED=1 AG_WIRE=1 AG_BRAIN_ROOT="${MOCK_BRAIN}" "${BRIDGE_SCRIPT}" >> "${BRIDGE_LOG}" 2>&1 &
 BRIDGE_PID=$!
 disown $BRIDGE_PID 2>/dev/null || true

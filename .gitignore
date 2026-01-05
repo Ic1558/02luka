@@ -225,3 +225,4 @@ xcuserdata/
 magic_bridge/*.md
 magic_bridge/*.json
 magic_bridge/*.txt
+infra/gemini_env/

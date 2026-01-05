@@ -36,7 +36,8 @@ IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemi
 MAX_READ_TURNS = 3
 TELEMETRY_FILE = os.path.join(REPO_ROOT, "g/telemetry/atg_runner.jsonl")
 FS_INDEX_FILE = os.path.join(REPO_ROOT, "g/telemetry/fs_index.jsonl")
-AG_BRAIN_ROOT = os.path.expanduser("~/.gemini/antigravity/brain")
+# Allow override for testing/CI
+AG_BRAIN_ROOT = os.environ.get("AG_BRAIN_ROOT", os.path.expanduser("~/.gemini/antigravity/brain"))
 
 # --- Safety Helpers ---
 def safe_read_lines(path, limit=15, chunk_size=4096):
