@@ -1,58 +1,47 @@
 # 📸 Antigravity System Snapshot
-**Timestamp (UTC):** 2026-01-05T19:54:03Z
-**Timestamp (Local):** 2026-01-06T02:54:03+0700
+**Timestamp (UTC):** 2026-01-05T20:11:23Z
+**Timestamp (Local):** 2026-01-06T03:11:23+0700
 **Repo Root:** /Users/icmini/02luka
 **Branch:** main
-**HEAD:** 01348f31
+**HEAD:** 198e8df7
 
 ## 1. Git Context 🌳
 ### Command: `git -C '/Users/icmini/02luka' status --porcelain=v1`
 ```text
- M .claude/settings.local.json
- M context/gemini/system_snapshot.md
+ M .bridge_start
+ M g/reports/sessions/save_last.txt
  M gemini_bridge.py
  M hub/index.json
  M magic_bridge/inbox/atg_snapshot.md
- M magic_bridge/outbox/atg_snapshot.json
- M magic_bridge/outbox/atg_snapshot.md.summary.txt
- M tools/test_gemini_bridge.zsh
-?? .bridge_start
-?? g/reports/pr11_healthcheck/2026-01-06T00:30:46.json
-?? g/reports/sessions/save_last.txt
-?? gemini_bridge.py.bak.20260105_234957
-?? magic_bridge/inbox/debug_test_1767640553.md
-?? magic_bridge/inbox/manual_test_1767640170.md
-?? magic_bridge/inbox/test_bridge_1767642782.md
-?? magic_bridge/inbox/test_created.md
-?? magic_bridge/inbox/test_ping.txt
-?? magic_bridge/mock_brain/session_test_1767642783/99_BRIDGE_FEEDBACK.md
-?? magic_bridge/outbox/debug_test_1767640553.md.summary.txt
-?? magic_bridge/outbox/manual_test_1767640170.md.summary.txt
-?? magic_bridge/outbox/test_bridge_1767642782.md.summary.txt
-?? magic_bridge/outbox/test_created.md.summary.txt
+ D magic_bridge/inbox/test_bridge_1767642782.md
+ D magic_bridge/mock_brain/session_test_1767642783/99_BRIDGE_FEEDBACK.md
+ D magic_bridge/outbox/test_bridge_1767642782.md.summary.txt
+?? magic_bridge/inbox/test_bridge_1767643837.md
+?? magic_bridge/mock_brain/session_test_1767643838/99_BRIDGE_FEEDBACK.md
+?? magic_bridge/outbox/test_bridge_1767643837.md.summary.txt
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' log -1 --oneline`
 ```text
-01348f31 session save: gmx 2026-01-06
+198e8df7 session save: gmx 2026-01-06
 ```
 **Exit Code:** 0
 
 ### Command: `git -C '/Users/icmini/02luka' diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no parent)'`
 ```text
- .claude/settings.local.json                     |   3 +-
- 02luka.md                                       |   4 +-
- context/gemini/system_snapshot.md               |   4 +-
- g/reports/sessions/session_20260106.ai.json     |  10 +-
- g/system_map/system_map.v1.json                 |   2 +-
- gemini_bridge.py                                |   7 +
- hub/index.json                                  |   2 +-
- magic_bridge/inbox/atg_snapshot.md              | 260 ------------------------
- magic_bridge/outbox/atg_snapshot.json           |   4 +-
- magic_bridge/outbox/atg_snapshot.md.summary.txt |  14 +-
- tools/test_gemini_bridge.zsh                    |  10 +-
- 11 files changed, 36 insertions(+), 284 deletions(-)
+ .bridge_start                                      |   2 +-
+ 02luka.md                                          |   2 +-
+ g/reports/sessions/save_last.txt                   |   2 +-
+ g/reports/sessions/session_20260106.ai.json        |   6 +-
+ g/system_map/system_map.v1.json                    |   2 +-
+ gemini_bridge.py                                   |  69 +++--
+ hub/index.json                                     |   2 +-
+ magic_bridge/inbox/atg_snapshot.md                 | 282 ---------------------
+ magic_bridge/inbox/test_bridge_1767642782.md       |   1 -
+ .../session_test_1767642783/99_BRIDGE_FEEDBACK.md  |  28 --
+ .../outbox/test_bridge_1767642782.md.summary.txt   |   9 -
+ 11 files changed, 56 insertions(+), 349 deletions(-)
 ```
 **Exit Code:** 0
 
@@ -69,8 +58,8 @@
 11097 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c from multiprocessing.resource_tracker import main;main(4)
 47832 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/tools/fs_watcher.py
 54224 node /opt/homebrew/bin/antigravity-claude-proxy start
-54309 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=5, pipe_handle=7) --multiprocessing-fork
-54630 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -u /Users/icmini/02luka/gemini_bridge.py
+79778 /opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -c from multiprocessing.spawn import spawn_main; spawn_main(tracker_fd=5, pipe_handle=7) --multiprocessing-fork
+80021 /opt/homebrew/Cellar/python@3.12/3.12.12/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -u /Users/icmini/02luka/gemini_bridge.py
 91833 /Applications/Antigravity.app/Contents/Frameworks/Antigravity Helper (Plugin).app/Contents/MacOS/Antigravity Helper (Plugin) /Users/icmini/.antigravity/extensions/google.geminicodeassist-2.64.0-universal/agent/a2a-server.mjs
 ```
 **Exit Code:** 0
@@ -90,13 +79,6 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 (Tailing last 50 lines - Checks for missing files)
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/atg_runner.jsonl' 2>/dev/null || echo '_File not found: atg_runner.jsonl_'`
 ```text
-{"ts": "2026-01-06T01:40:58.057871+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 41101, "file": "test_bridge_1767638407.md", "dir": "inbox"}
-{"ts": "2026-01-06T01:40:58.058557+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 41101, "file": "test_bridge_1767638407.md"}
-{"ts": "2026-01-06T01:41:01.989290+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 41101, "file": "test_bridge_1767638407.md", "duration_ms": 3930.750846862793, "output_file": "test_bridge_1767638407.md.summary.txt", "output_dir": "outbox"}
-{"ts": "2026-01-06T01:42:03.003363+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 43934, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
-{"ts": "2026-01-06T01:43:02.849253+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 43934, "file": "test_bridge_1767638517.md", "dir": "inbox"}
-{"ts": "2026-01-06T01:43:02.849880+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 43934, "file": "test_bridge_1767638517.md"}
-{"ts": "2026-01-06T01:43:06.233877+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 43934, "file": "test_bridge_1767638517.md", "duration_ms": 3383.9919567108154, "output_file": "test_bridge_1767638517.md.summary.txt", "output_dir": "outbox"}
 {"ts": "2026-01-06T01:46:43.250920+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 49301, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
 {"ts": "2026-01-06T01:47:43.189158+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 49301, "file": "test_bridge_1767638797.md", "dir": "inbox"}
 {"ts": "2026-01-06T01:47:43.191366+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 49301, "file": "test_bridge_1767638797.md"}
@@ -140,17 +122,18 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 {"ts": "2026-01-06T02:53:11.897965+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "test_bridge_1767642782.md", "dir": "inbox"}
 {"ts": "2026-01-06T02:53:11.898641+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "test_bridge_1767642782.md"}
 {"ts": "2026-01-06T02:53:15.593266+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "test_bridge_1767642782.md", "duration_ms": 3694.723129272461, "output_file": "test_bridge_1767642782.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-06T02:54:05.341555+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "atg_snapshot.md", "dir": "inbox"}
+{"ts": "2026-01-06T02:54:05.344190+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "atg_snapshot.md"}
+{"ts": "2026-01-06T02:54:08.913001+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 54630, "file": "atg_snapshot.md", "duration_ms": 3568.8257217407227, "output_file": "atg_snapshot.md.summary.txt", "output_dir": "outbox"}
+{"ts": "2026-01-06T03:10:43.164517+07:00", "event": "startup", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 80021, "watch_dir": "/Users/icmini/02luka/magic_bridge/inbox", "model": "gemini-2.0-flash-001"}
+{"ts": "2026-01-06T03:10:47.374355+07:00", "event": "file_detected", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 80021, "file": "test_bridge_1767643837.md", "dir": "inbox"}
+{"ts": "2026-01-06T03:10:47.374661+07:00", "event": "processing_start", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 80021, "file": "test_bridge_1767643837.md"}
+{"ts": "2026-01-06T03:10:51.390901+07:00", "event": "processing_complete", "lane": "ATG_RUNNER", "actor": "gemini_bridge", "pid": 80021, "file": "test_bridge_1767643837.md", "duration_ms": 4016.0210132598877, "output_file": "test_bridge_1767643837.md.summary.txt", "output_dir": "outbox"}
 ```
 **Exit Code:** 0
 
 ### Command: `tail -n 50 '/Users/icmini/02luka/g/telemetry/fs_index.jsonl' 2>/dev/null || echo '_File not found: fs_index.jsonl_'`
 ```text
-{"ts": "2026-01-05T17:23:45.591544+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/test_gemini_bridge.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-05T17:30:51.217753+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-05T17:30:51.218768+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/pr11_healthcheck/2026-01-06T00:30:46.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-05T17:35:46.666807+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/test_gemini_bridge.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-05T17:38:19.136649+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/test_gemini_bridge.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
-{"ts": "2026-01-05T17:51:55.936391+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-05T17:51:55.937111+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/gh_failures/.seen_runs", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-05T18:01:28.881946+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/test_gemini_bridge.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-05T18:06:21.817961+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "tools/test_gemini_bridge.zsh", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
@@ -195,6 +178,12 @@ PORT   SERVICE            POLICY     STATUS    PID             COMMAND
 {"ts": "2026-01-05T19:53:29.736854+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/save_last.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-05T19:53:29.736960+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/session_20260106_025327.md", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 {"ts": "2026-01-05T19:53:29.737019+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/session_20260106.ai.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T19:54:08.348692+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/ops/ports_check_latest.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T20:11:03.589467+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T20:11:03.590191+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/save_last.txt", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T20:11:08.918793+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions", "type": "dir", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T20:11:08.919097+00:00", "event": "created", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/session_20260106_031103.md", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
+{"ts": "2026-01-05T20:11:08.919177+00:00", "event": "modified", "lane": "FS_DAEMON", "actor": "unknown", "file": "g/reports/sessions/session_20260106.ai.json", "type": "file", "host": "Ittipongs-Mac-mini.local", "pid": 47832, "git_rev": "cfd22d29"}
 ```
 **Exit Code:** 0
 

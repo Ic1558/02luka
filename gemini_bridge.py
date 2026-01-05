@@ -2,6 +2,9 @@ import os
 import time
 import sys
 import warnings
+import atexit
+import signal
+import fcntl
 
 # Suppress Vertex AI deprecation warnings immediately
 warnings.filterwarnings("ignore", category=UserWarning, module=r"vertexai(\..*)?")
@@ -36,8 +39,11 @@ IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemi
 MAX_READ_TURNS = 3
 TELEMETRY_FILE = os.path.join(REPO_ROOT, "g/telemetry/atg_runner.jsonl")
 FS_INDEX_FILE = os.path.join(REPO_ROOT, "g/telemetry/fs_index.jsonl")
+LOCK_FILE = os.path.join(BRIDGE_DIR, ".gemini_bridge.lock")
 # Allow override for testing/CI
 AG_BRAIN_ROOT = os.environ.get("AG_BRAIN_ROOT", os.path.expanduser("~/.gemini/antigravity/brain"))
+_lock_handle = None
+_shutdown_reason = None
 
 # --- Safety Helpers ---
 def safe_read_lines(path, limit=15, chunk_size=4096):
@@ -101,6 +107,135 @@ class Telemetry:
     def log_error(self, event_name, **kwargs):
         log_telemetry(event_name, **kwargs)
 telemetry = Telemetry()
+
+def _pid_is_running(pid):
+    if pid is None: return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+def _release_lock():
+    global _lock_handle
+    if _lock_handle:
+        try:
+            fcntl.flock(_lock_handle, fcntl.LOCK_UN)
+        except Exception:
+            pass
+        try:
+            _lock_handle.close()
+        except Exception:
+            pass
+        _lock_handle = None
+
+atexit.register(_release_lock)
+
+def _acquire_lock():
+    global _lock_handle
+    try:
+        os.makedirs(os.path.dirname(LOCK_FILE), exist_ok=True)
+    except Exception:
+        pass
+
+    _lock_handle = open(LOCK_FILE, "a+")
+    try:
+        fcntl.flock(_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        _lock_handle.seek(0)
+        pid_line = _lock_handle.read().strip()
+        pid_found = int(pid_line) if pid_line.isdigit() else None
+        pid_running = _pid_is_running(pid_found) if pid_found is not None else False
+        log_telemetry("startup_skipped", pid_found=pid_found, pid_running=pid_running)
+        pid_display = pid_found if pid_found is not None else "unknown"
+        print(f"Bridge already running (PID {pid_display}). Exiting.", file=sys.stderr)
+        try:
+            _lock_handle.close()
+        except Exception:
+            pass
+        _lock_handle = None
+        sys.exit(0)
+
+    try:
+        _lock_handle.seek(0)
+        existing_pid_line = _lock_handle.read().strip()
+        if existing_pid_line:
+            try:
+                existing_pid = int(existing_pid_line)
+                if existing_pid and not _pid_is_running(existing_pid):
+                    pass  # stale PID; we will overwrite below
+            except Exception:
+                pass
+        _lock_handle.seek(0)
+        _lock_handle.truncate()
+        _lock_handle.write(str(PROCESS_ID))
+        _lock_handle.flush()
+    except Exception:
+        pass
+
+def _handle_exit_signal(signum, frame):
+    global _shutdown_reason
+    _shutdown_reason = f"signal_{signum}"
+    if signum == signal.SIGINT:
+        _release_lock()
+        raise KeyboardInterrupt
+    try:
+        log_telemetry("shutdown", reason=_shutdown_reason)
+    except Exception:
+        pass
+    _release_lock()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, _handle_exit_signal)
+signal.signal(signal.SIGTERM, _handle_exit_signal)
+
+# --- AG_WIRE OPTIONAL WIRING (02luka) ---
+# Optional wiring: write a short bridge insight into the latest Antigravity brain session.
+# Enabled only when AG_WIRE=1.
+def _ag_wire_enabled() -> bool:
+    try:
+        return str(os.environ.get("AG_WIRE", "0")).strip() == "1"
+    except Exception:
+        return False
+
+def _ag_wire_inject(filename: str, summary_text: str) -> None:
+    if not _ag_wire_enabled():
+        return
+    try:
+        # choose latest session dir by mtime from AG_BRAIN_ROOT
+        if not os.path.isdir(AG_BRAIN_ROOT):
+            return
+
+        sessions = [
+            os.path.join(AG_BRAIN_ROOT, d)
+            for d in os.listdir(AG_BRAIN_ROOT)
+            if os.path.isdir(os.path.join(AG_BRAIN_ROOT, d))
+        ]
+        if not sessions:
+            return
+        latest = max(sessions, key=lambda p: os.path.getmtime(p))
+
+        # size guard (avoid huge context files)
+        max_chars = int(os.environ.get("AG_WIRE_MAX_CHARS", "1200"))
+        text = (summary_text or "")
+        if len(text) > max_chars:
+            text = text[:max_chars] + "\n…(truncated)"
+
+        target = os.path.join(latest, "99_BRIDGE_FEEDBACK.md")
+        ts = datetime.now().strftime("%H:%M:%S")
+        with open(target, "a", encoding="utf-8") as f:
+            f.write(f"\n### [{ts}] Bridge Insight: {filename}\n{text}\n")
+
+        # keep stdout minimal
+        print(f"   🧠 Wired to Antigravity: {os.path.basename(latest)}")
+    except Exception:
+        # best-effort: never break main flow
+        return
+# --- end AG_WIRE OPTIONAL WIRING ---
 
 
 class GeminiHandler(FileSystemEventHandler):
@@ -193,26 +328,6 @@ class GeminiHandler(FileSystemEventHandler):
         
         self.process_file(event.src_path, filename, content)
 
-    def inject_into_antigravity(self, filename, summary):
-        """Injects the summary into the active Antigravity brain session."""
-        # Guard: Only run if AG_WIRE env var is set
-        if os.environ.get("AG_WIRE", "0") != "1": return
-        
-        if not os.path.exists(AG_BRAIN_ROOT): return
-        try:
-            sessions = [os.path.join(AG_BRAIN_ROOT, d) for d in os.listdir(AG_BRAIN_ROOT) if os.path.isdir(os.path.join(AG_BRAIN_ROOT, d))]
-            if not sessions: return
-            latest_session = max(sessions, key=os.path.getmtime)
-            
-            # Write to a dedicated context file
-            target_file = os.path.join(latest_session, "99_BRIDGE_FEEDBACK.md")
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            
-            with open(target_file, "a", encoding="utf-8") as f:
-                f.write(f"\n### [{timestamp}] Bridge Insight: {filename}\n{summary}\n")
-            print(f"   🧠 Wired to Antigravity: {os.path.basename(latest_session)}")
-        except Exception as e:
-            print(f"   ⚠️ Wiring failed: {e}")
 
     def process_file(self, file_path, filename, content):
         """Process a file that has already been validated and deduplicated."""
@@ -252,7 +367,10 @@ class GeminiHandler(FileSystemEventHandler):
             print(f"   ✅ Saved response to: {output_filename} (in outbox)")
             
             # Inject into Antigravity Context (Safe call)
-            self.inject_into_antigravity(filename, summary)
+            try:
+                _ag_wire_inject(filename, summary)
+            except Exception:
+                pass
             
             duration = (time.time() - start_time) * 1000
             telemetry.log_event(
@@ -269,7 +387,14 @@ class GeminiHandler(FileSystemEventHandler):
             telemetry.log_error("processing_failed", actor="gemini_bridge", file=filename, error=str(e))
 
 def main():
+    self_check = "--self-check" in sys.argv
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
+    _acquire_lock()
+
+    if self_check:
+        _release_lock()
+        print("OK")
+        return
     
     try:
         # Ensure directories exist
@@ -296,14 +421,15 @@ def main():
     except: pass
 
     print(f"👀 Watching '{WATCH_DIR}' for changes...")
-    log_telemetry("startup", watch_dir=WATCH_DIR, model=MODEL_NAME)
+    log_telemetry("startup", watch_dir=WATCH_DIR, model=MODEL_NAME, singleton=True)
     try:
         while True: time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
         print("\n🛑 Stopping...")
-        log_telemetry("shutdown", reason="keyboard_interrupt")
+        log_telemetry("shutdown", reason=_shutdown_reason or "keyboard_interrupt")
     observer.join()
+    _release_lock()
 
 if __name__ == "__main__":
     main()
