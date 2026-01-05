@@ -107,7 +107,8 @@
       "Bash(make smoke)",
       "Bash(/Users/icmini/Documents/atg.sh)",
       "Bash(pbpaste:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -34,6 +34,7 @@ if [[ "${1:-}" == "--cleanup" ]]; then
     ( rm -f "${INBOX}"/test_bridge_*.md 2>/dev/null || true )
     ( rm -f "${OUTBOX}"/test_bridge_*.md.summary.txt 2>/dev/null || true )
     ( rm -rf "${MOCK_BRAIN}" 2>/dev/null || true )
+    ( rm -f "${BRIDGE_DIR}/.bridge_start" 2>/dev/null || true )
     pkill -f gemini_bridge.py 2>/dev/null || true
     echo "Done."
     exit 0
@@ -93,10 +94,15 @@ fi
 # Verify bridge is running the latest code
 log_info "Checking bridge version..."
 BRIDGE_CODE_MTIME=$(stat -f%m "${BRIDGE_DIR}/gemini_bridge.py")
-BRIDGE_START_TIME=$(ps -p ${BRIDGE_PID} -o lstart= 2>/dev/null | xargs -I {} date -j -f "%a %b %d %T %Y" "{}" +%s 2>/dev/null || echo "0")
+BRIDGE_START_FILE="${BRIDGE_DIR}/.bridge_start"
+BRIDGE_START_TIME=0
+
+if [[ -f "$BRIDGE_START_FILE" ]]; then
+    BRIDGE_START_TIME=$(stat -f%m "$BRIDGE_START_FILE")
+fi
 
 if [[ "$BRIDGE_CODE_MTIME" -gt "$BRIDGE_START_TIME" ]] && [[ "$BRIDGE_START_TIME" != "0" ]]; then
-    log_fail "Bridge code was modified after process started - stale code running!"
+    log_fail "Stale code detected! Bridge code was modified after the test process (PID ${BRIDGE_PID}) started."
     log_info "Kill bridge and let test restart it fresh"
     exit 1
 fi
