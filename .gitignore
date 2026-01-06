@@ -130,6 +130,7 @@ g/reports/system/launchagents_runtime/
 g/reports/system/*_RUNTIME_*.md
 g/reports/system/*_RUNTIME_*.jsonl
 g/reports/system/system_checks_*.json.tmp
+g/reports/ops/ops_status.md
 g/apps/dashboard/cache/
 g/apps/dashboard/tmp-*.json
 # Magic Bridge Operational Queues
