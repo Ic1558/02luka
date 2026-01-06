@@ -9,15 +9,35 @@ import fcntl
 # Suppress Vertex AI deprecation warnings immediately
 warnings.filterwarnings("ignore", category=UserWarning, module=r"vertexai(\..*)?")
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
 from datetime import datetime
 import json
 import hashlib
+SELF_CHECK_MODE = "--self-check" in sys.argv
+
+if not SELF_CHECK_MODE:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+else:
+    Observer = None
+
+    class FileSystemEventHandler:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
+    def stop_after_attempt(*args, **kwargs):
+        return None
+
+    def wait_exponential(*args, **kwargs):
+        return None
+
+    def retry_if_exception_type(*args, **kwargs):
+        return None
 
 # --- Configuration & State ---
 PROJECT_ID = "luka-cloud-471113" 
@@ -40,10 +60,18 @@ MAX_READ_TURNS = 3
 TELEMETRY_FILE = os.path.join(REPO_ROOT, "g/telemetry/atg_runner.jsonl")
 FS_INDEX_FILE = os.path.join(REPO_ROOT, "g/telemetry/fs_index.jsonl")
 LOCK_FILE = os.path.join(BRIDGE_DIR, ".gemini_bridge.lock")
+HEALTH_FILE = os.path.join(REPO_ROOT, "g/telemetry/bridge_health.json")
+HEALTH_UPDATE_INTERVAL = 60
 # Allow override for testing/CI
 AG_BRAIN_ROOT = os.environ.get("AG_BRAIN_ROOT", os.path.expanduser("~/.gemini/antigravity/brain"))
 _lock_handle = None
 _shutdown_reason = None
+_last_seen_file = None
+_last_processed_file = None
+_last_output_file = None
+_last_health_write = 0
+_current_status = "idle"
+_last_error = None
 
 # --- Safety Helpers ---
 def safe_read_lines(path, limit=15, chunk_size=4096):
@@ -107,6 +135,36 @@ class Telemetry:
     def log_error(self, event_name, **kwargs):
         log_telemetry(event_name, **kwargs)
 telemetry = Telemetry()
+
+def _write_health(status=None, error=None):
+    """Atomically write a lightweight health marker for launchd/ops checks."""
+    global _last_health_write, _current_status, _last_error
+    if status: _current_status = status
+    if error is not None: _last_error = error
+
+    payload = {
+        "ts": datetime.now().astimezone().isoformat(),
+        "pid": PROCESS_ID,
+        "venv_python": sys.executable,
+        "cwd": os.getcwd(),
+        "watch_dir": WATCH_DIR,
+        "model": MODEL_NAME,
+        "last_seen_file": _last_seen_file,
+        "last_processed_file": _last_processed_file,
+        "last_output_file": _last_output_file,
+        "status": _current_status,
+        "error": _last_error,
+    }
+    try:
+        os.makedirs(os.path.dirname(HEALTH_FILE), exist_ok=True)
+        tmp_path = HEALTH_FILE + ".tmp"
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f)
+        os.replace(tmp_path, HEALTH_FILE)
+        _last_health_write = time.time()
+    except Exception:
+        # Never let health reporting crash the bridge
+        pass
 
 def _pid_is_running(pid):
     if pid is None: return False
@@ -279,6 +337,7 @@ class GeminiHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.is_directory: return
         filename = os.path.basename(event.src_path)
+        global _last_seen_file
         
         if filename.startswith("."): return
         if filename.endswith(".summary.txt"): return
@@ -296,6 +355,9 @@ class GeminiHandler(FileSystemEventHandler):
         except ValueError:
             # Paths are unrelated
             return
+
+        _last_seen_file = filename
+        _write_health()
 
         print(f"📝 Detected change in: {filename} (inbox)")
         
@@ -331,12 +393,16 @@ class GeminiHandler(FileSystemEventHandler):
 
     def process_file(self, file_path, filename, content):
         """Process a file that has already been validated and deduplicated."""
+        global _last_processed_file, _last_output_file, _last_error
         start_time = time.time()
         print(f"   🚀 Sending to Vertex AI ({MODEL_NAME})...")
         
         telemetry.log_event("processing_start", actor="gemini_bridge", file=filename)
         
         try:
+            _last_processed_file = filename
+            _last_error = None
+            _write_health(status="running")
 
             prompt = f"""
             You are an AI assistant monitoring a project.
@@ -363,6 +429,8 @@ class GeminiHandler(FileSystemEventHandler):
             
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(summary)
+            _last_output_file = output_filename
+            _write_health(status="idle")
                 
             print(f"   ✅ Saved response to: {output_filename} (in outbox)")
             
@@ -385,51 +453,70 @@ class GeminiHandler(FileSystemEventHandler):
         except Exception as e:
             print(f"   ❌ Error: {e}")
             telemetry.log_error("processing_failed", actor="gemini_bridge", file=filename, error=str(e))
+            _write_health(status="error", error=str(e))
 
 def main():
-    self_check = "--self-check" in sys.argv
-    print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
-    _acquire_lock()
-
-    if self_check:
-        _release_lock()
-        print("OK")
-        return
-    
     try:
-        # Ensure directories exist
-        os.makedirs(INBOX_DIR, exist_ok=True)
-        os.makedirs(OUTBOX_DIR, exist_ok=True)
+        self_check = "--self-check" in sys.argv
+        print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
+        _acquire_lock()
+
+        if self_check:
+            _release_lock()
+            print("OK")
+            return
         
-        vertexai.init(project=PROJECT_ID, location=LOCATION)
-        model = GenerativeModel(MODEL_NAME)
-        print(f"   Connecting to project '{PROJECT_ID}'...")
+        try:
+            # Ensure directories exist
+            os.makedirs(INBOX_DIR, exist_ok=True)
+            os.makedirs(OUTBOX_DIR, exist_ok=True)
+            
+            import vertexai
+            from vertexai.generative_models import GenerativeModel
+            vertexai.init(project=PROJECT_ID, location=LOCATION)
+            model = GenerativeModel(MODEL_NAME)
+            print(f"   Connecting to project '{PROJECT_ID}'...")
+        except Exception as e:
+            print(f"❌ Failed to initialize Vertex AI: {e}")
+            _write_health(status="error", error=str(e))
+            _release_lock()
+            sys.exit(1)
+
+        active_handler = GeminiHandler(model)
+        observer = Observer()
+        observer.schedule(active_handler, path=WATCH_DIR, recursive=False)
+        observer.start()
+
+        # Write start-time marker for version checking (portable)
+        start_marker = os.path.join(REPO_ROOT, ".bridge_start")
+        try:
+            with open(start_marker, "w") as f:
+                f.write(str(int(time.time())))
+        except: pass
+
+        print(f"👀 Watching '{WATCH_DIR}' for changes...")
+        log_telemetry("startup", watch_dir=WATCH_DIR, model=MODEL_NAME, singleton=True)
+        _write_health(status="idle")
+        try:
+            while True:
+                time.sleep(1)
+                if (time.time() - _last_health_write) >= HEALTH_UPDATE_INTERVAL:
+                    _write_health()
+        except KeyboardInterrupt:
+            observer.stop()
+            print("\n🛑 Stopping...")
+            log_telemetry("shutdown", reason=_shutdown_reason or "keyboard_interrupt")
+        observer.join()
+        _release_lock()
     except Exception as e:
-        print(f"❌ Failed to initialize Vertex AI: {e}")
+        print(f"❌ Fatal bridge error: {e}")
+        try:
+            telemetry.log_error("fatal", error=str(e))
+        except Exception:
+            pass
+        _write_health(status="error", error=str(e))
+        _release_lock()
         sys.exit(1)
-
-    active_handler = GeminiHandler(model)
-    observer = Observer()
-    observer.schedule(active_handler, path=WATCH_DIR, recursive=False)
-    observer.start()
-
-    # Write start-time marker for version checking (portable)
-    start_marker = os.path.join(REPO_ROOT, ".bridge_start")
-    try:
-        with open(start_marker, "w") as f:
-            f.write(str(int(time.time())))
-    except: pass
-
-    print(f"👀 Watching '{WATCH_DIR}' for changes...")
-    log_telemetry("startup", watch_dir=WATCH_DIR, model=MODEL_NAME, singleton=True)
-    try:
-        while True: time.sleep(1)
-    except KeyboardInterrupt:
-        observer.stop()
-        print("\n🛑 Stopping...")
-        log_telemetry("shutdown", reason=_shutdown_reason or "keyboard_interrupt")
-    observer.join()
-    _release_lock()
 
 if __name__ == "__main__":
     main()

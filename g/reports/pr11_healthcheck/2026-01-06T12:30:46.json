@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-01-06T05:30:46Z",
+  "local_time": "2026-01-06 12:30:46",
+  "gateway_processes": 1,
+  "mary_processes": 1,
+  "monitor": {
+  "timestamp": "2026-01-06T05:30:46Z",
+  "v5_activity_24h": "v5:2,legacy:7",
+  "lane_distribution": {"strict":0,"local":0,"rejected":0},
+  "inbox_backlog": {"main":0,"clc":0},
+  "error_stats": {"processed":2,"errors":0,"error_rate":0},
+  "status": "operational"
+},
+  "errors_in_log": 0,
+  "status": "healthy"
+}

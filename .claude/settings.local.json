@@ -108,7 +108,9 @@
       "Bash(/Users/icmini/Documents/atg.sh)",
       "Bash(pbpaste:*)",
       "Bash(pgrep:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(source gemini_venv/bin/activate)",
+      "Bash(python gemini_bridge.py:*)"
     ],
     "deny": [],
     "ask": []

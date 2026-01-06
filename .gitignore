@@ -198,6 +198,12 @@ lukadata/**
 **/lukadata/
 **/lukadata/**
 g/apps/dashboard/data/followup.json
+
+# Magic bridge runtime artifacts
+magic_bridge/inbox/*.md
+magic_bridge/outbox/*.summary.txt
+magic_bridge/mock_brain/session_test_*/
+magic_bridge/.gemini_bridge.lock
 shared_memory/
 g/reports/gh_failures/.seen_runs
 g/reports/gh_failures/.seen_runs
