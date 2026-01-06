@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-ROOT="/Users/icmini/02luka"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PLIST="$ROOT/infra/launchagents/com.02luka.gemini_bridge.plist"
 SERVICE="com.02luka.gemini_bridge"
 PY="$ROOT/gemini_venv/bin/python"
@@ -134,14 +134,14 @@ import json, os, subprocess, statistics, pathlib
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-ROOT = pathlib.Path("/Users/icmini/02luka")
+ROOT = pathlib.Path(os.environ.get("ROOT", "/Users/icmini/02luka"))
 HEALTH = ROOT / "g/telemetry/bridge_health.json"
 TELEMETRY = ROOT / "g/telemetry/atg_runner.jsonl"
 REPORT = ROOT / "g/reports/ops/ops_status.md"
 INBOX = ROOT / "magic_bridge/inbox"
 OUTBOX = ROOT / "magic_bridge/outbox"
 MOCK = ROOT / "magic_bridge/mock_brain"
-THRESHOLD = 200
+THRESHOLD = 5
 
 verify_code = int(os.environ.get("VERIFY_CODE", "1"))
 verify_msg = " ".join(os.environ.get("VERIFY_MSG", "").split())
@@ -278,7 +278,8 @@ lines.append("## Verification")
 lines.append(f"- bridgectl verify: {'PASS' if verify_code==0 else 'FAIL'}")
 lines.append(f"- git status: {git_state}")
 if verify_msg:
-    lines.append(f"- verify output: `{verify_msg.replace('`','\\`')}`")
+    safe_msg = verify_msg.replace('`','\\`')
+    lines.append(f"- verify output: `{safe_msg}`")
 
 lines.append("")
 lines.append("## Telemetry (best-effort)")
@@ -305,8 +306,14 @@ else:
     lines.append("3) Clear stuck spool files if count high (after backup).")
 
 REPORT.write_text("\n".join(lines))
+if overall == "❌":
+    os._exit(2 if git_state == "DIRTY" else 1)
+if overall == "⚠️":
+    os._exit(3)
 PY
+    RET=$?
     cat "$REPORT_FILE"
+    exit $RET
     ;;
   *)
     echo "Usage: $0 {start|stop|status|verify|ops-status}"
