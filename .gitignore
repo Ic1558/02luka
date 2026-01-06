@@ -130,6 +130,8 @@ g/reports/system/launchagents_runtime/
 g/reports/system/*_RUNTIME_*.md
 g/reports/system/*_RUNTIME_*.jsonl
 g/reports/system/system_checks_*.json.tmp
+g/reports/sessions/save_last.txt
+hub/index.json
 g/reports/ops/ops_status.md
 g/apps/dashboard/cache/
 g/apps/dashboard/tmp-*.json

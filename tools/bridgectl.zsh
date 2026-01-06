@@ -141,7 +141,7 @@ REPORT = ROOT / "g/reports/ops/ops_status.md"
 INBOX = ROOT / "magic_bridge/inbox"
 OUTBOX = ROOT / "magic_bridge/outbox"
 MOCK = ROOT / "magic_bridge/mock_brain"
-THRESHOLD = 5
+THRESHOLD = 200
 
 verify_code = int(os.environ.get("VERIFY_CODE", "1"))
 verify_msg = " ".join(os.environ.get("VERIFY_MSG", "").split())
