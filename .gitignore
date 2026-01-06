@@ -132,10 +132,13 @@ g/reports/system/*_RUNTIME_*.jsonl
 g/reports/system/system_checks_*.json.tmp
 g/apps/dashboard/cache/
 g/apps/dashboard/tmp-*.json
-bridge/inbox/**
-bridge/outbox/**
-!bridge/inbox/**/.gitkeep
-!bridge/outbox/**/.gitkeep
+# Magic Bridge Operational Queues
+magic_bridge/inbox/*
+magic_bridge/outbox/*
+magic_bridge/processed/*
+!magic_bridge/inbox/.gitkeep
+!magic_bridge/outbox/.gitkeep
+magic_bridge/.gemini_bridge.lock
 *.old
 tmp_*.yaml
 /knowledge/mls_lessons.jsonl
@@ -200,10 +203,7 @@ lukadata/**
 g/apps/dashboard/data/followup.json
 
 # Magic bridge runtime artifacts
-magic_bridge/inbox/*.md
-magic_bridge/outbox/*.summary.txt
-magic_bridge/mock_brain/session_test_*/
-magic_bridge/.gemini_bridge.lock
+# Magic bridge runtime artifacts (Consolidated above)
 shared_memory/
 g/reports/gh_failures/.seen_runs
 g/reports/gh_failures/.seen_runs
@@ -227,8 +227,5 @@ xcuserdata/
 *.xcworkspace/xcshareddata/
 
 
-# Magic Bridge Artifacts (Transient)
-magic_bridge/*.md
-magic_bridge/*.json
-magic_bridge/*.txt
+# Magic Bridge Artifacts (Consolidated above)
 infra/gemini_env/
