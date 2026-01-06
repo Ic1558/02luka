@@ -1,7 +1,7 @@
 {
   "date": "2026-01-06",
-  "ts_utc": "2026-01-06T06:03:03Z",
-  "ts_local": "2026-01-06T13:03:03+0700",
+  "ts_utc": "2026-01-06T07:25:06Z",
+  "ts_local": "2026-01-06T14:25:06+0700",
   "agent": "gmx",
   "summary": {
     "total_entries": 33,
@@ -21,6 +21,6 @@
   },
   "links": {
     "mls_ledger": "mls/ledger/2026-01-06.jsonl",
-    "full_session": "g/reports/sessions/session_20260106_130302.md"
+    "full_session": "g/reports/sessions/session_20260106_142504.md"
   }
 }
