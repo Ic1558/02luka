@@ -136,9 +136,11 @@ g/apps/dashboard/tmp-*.json
 magic_bridge/inbox/*
 magic_bridge/outbox/*
 magic_bridge/processed/*
-!magic_bridge/inbox/.gitkeep
-!magic_bridge/outbox/.gitkeep
+magic_bridge/mock_brain/*
+!magic_bridge/**/.gitkeep
 magic_bridge/.gemini_bridge.lock
+magic_bridge/*.txt
+magic_bridge/*.summary.txt
 *.old
 tmp_*.yaml
 /knowledge/mls_lessons.jsonl

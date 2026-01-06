@@ -106,6 +106,13 @@ case "$1" in
       tail_logs
       exit 1
     fi
+    # Self-enforcing Hygiene Guard: fail if operational queues are tracked in git
+    tracked_noise=$(git ls-files "magic_bridge/inbox/" "magic_bridge/outbox/" "magic_bridge/processed/" 2>/dev/null | grep -v "\.gitkeep")
+    if [ -n "$tracked_noise" ]; then
+      echo "hygiene failed: tracked spool artifacts detected in git index:"
+      echo "$tracked_noise"
+      exit 1
+    fi
     git status --porcelain 2>/dev/null | grep "^?? magic_bridge" && echo "git dirty for magic_bridge artifacts" && exit 1
     echo "verify complete"
     ;;
