@@ -201,22 +201,32 @@ def _acquire_lock():
         pass
 
     _lock_handle = open(LOCK_FILE, "a+")
+    acquired = False
     try:
         fcntl.flock(_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        acquired = True
     except BlockingIOError:
         _lock_handle.seek(0)
         pid_line = _lock_handle.read().strip()
         pid_found = int(pid_line) if pid_line.isdigit() else None
         pid_running = _pid_is_running(pid_found) if pid_found is not None else False
-        log_telemetry("startup_skipped", pid_found=pid_found, pid_running=pid_running)
-        pid_display = pid_found if pid_found is not None else "unknown"
-        print(f"Bridge already running (PID {pid_display}). Exiting.", file=sys.stderr)
-        try:
-            _lock_handle.close()
-        except Exception:
-            pass
-        _lock_handle = None
-        sys.exit(0)
+        if not pid_running:
+            # stale lock holder: attempt reclaim
+            try:
+                fcntl.flock(_lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                acquired = True
+            except BlockingIOError:
+                pid_running = True  # treat as live if we still cannot lock
+        if not acquired:
+            log_telemetry("startup_skipped", pid_found=pid_found, pid_running=pid_running)
+            pid_display = pid_found if pid_found is not None else "unknown"
+            print(f"Bridge already running (PID {pid_display}). Exiting.", file=sys.stderr)
+            try:
+                _lock_handle.close()
+            except Exception:
+                pass
+            _lock_handle = None
+            sys.exit(0)
 
     try:
         _lock_handle.seek(0)
@@ -239,12 +249,14 @@ def _handle_exit_signal(signum, frame):
     global _shutdown_reason
     _shutdown_reason = f"signal_{signum}"
     if signum == signal.SIGINT:
+        _write_health(status="error", error=_shutdown_reason)
         _release_lock()
         raise KeyboardInterrupt
     try:
         log_telemetry("shutdown", reason=_shutdown_reason)
     except Exception:
         pass
+    _write_health(status="error", error=_shutdown_reason)
     _release_lock()
     sys.exit(0)
 
@@ -460,6 +472,7 @@ def main():
         self_check = "--self-check" in sys.argv
         print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
         _acquire_lock()
+        _write_health(status="starting", error=None)
 
         if self_check:
             _release_lock()
