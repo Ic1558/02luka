@@ -1,0 +1,25 @@
+{
+  "date": "2026-01-07",
+  "ts_utc": "2026-01-06T20:24:05Z",
+  "ts_local": "2026-01-07T03:24:05+0700",
+  "agent": "gmx",
+  "summary": {
+    "total_entries": 4,
+    "top_activities": [
+  "File modified: bridgectl.zsh",
+  "File modified: bridgectl.zsh",
+  "File modified: bridgectl.zsh",
+  "File modified: bridgectl.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 4,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2026-01-07.jsonl",
+    "full_session": "g/reports/sessions/session_20260107_032404.md"
+  }
+}
