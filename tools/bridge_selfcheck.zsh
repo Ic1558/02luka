@@ -18,6 +18,25 @@ mkdir -p "${BASE}/hub"
 # Initialize timestamp
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+# Stat wrapper for cross-platform compatibility (GNU vs BSD)
+stat_fmt() {
+  local fmt="$1"
+  local file="$2"
+  if stat --version >/dev/null 2>&1; then
+    # GNU stat
+    stat -c "$fmt" "$file" 2>/dev/null || echo 0
+  else
+    # BSD stat (macOS)
+    if [[ "$fmt" == "%Y" ]]; then
+      stat -f "%m" "$file" 2>/dev/null || echo 0
+    elif [[ "$fmt" == "%a" ]]; then
+      stat -f "%Lp" "$file" 2>/dev/null || echo 0
+    else
+      echo 0
+    fi
+  fi
+}
+
 # Function to get folder status
 get_folder_status() {
   local folder_path="$1"
@@ -30,9 +49,21 @@ get_folder_status() {
 
     # Find oldest file age in hours
     local oldest_file_age=0
-    local oldest_file=$(find "$folder_path" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | head -1 | cut -d' ' -f2-)
-    if [[ -n "$oldest_file" ]]; then
-      local file_timestamp=$(stat -c %Y "$oldest_file" 2>/dev/null || echo 0)
+    # Use zsh globbing to find files recursively, ordered by mtime (oldest first)
+    # (.): plain files, (om): order by modification time, [1]: first match
+    local files=("${folder_path}"/**/*(.om))
+    if [[ ${#files[@]} -gt 0 ]]; then
+      local oldest_file="${files[1]}"
+      # zsh stat built-in or system stat
+      local file_timestamp
+      if zmodload zsh/stat 2>/dev/null; then
+         stat -F "%s" -A file_timestamp "$oldest_file"  # zsh stat
+         file_timestamp="${file_timestamp[1]}"
+      else
+         # Fallback to system stat (handling BSD/GNU)
+         file_timestamp=$(stat -c %Y "$oldest_file" 2>/dev/null || stat -f %m "$oldest_file" 2>/dev/null || echo 0)
+      fi
+      
       local current_timestamp=$(date +%s)
       oldest_file_age=$(( (current_timestamp - file_timestamp) / 3600 ))
     fi
@@ -71,7 +102,7 @@ detect_issues() {
       '. += [{severity: $severity, type: $type, message: $msg, path: $path}]')
   else
     # Check inbox permissions
-    local inbox_perms=$(stat -c "%a" "$inbox_path" 2>/dev/null || echo "000")
+    local inbox_perms=$(stat_fmt "%a" "$inbox_path")
     if [[ "$inbox_perms" != "755" ]] && [[ "$inbox_perms" != "775" ]] && [[ "$inbox_perms" != "777" ]]; then
       issues=$(echo "$issues" | jq \
         --arg severity "warning" \
@@ -91,7 +122,7 @@ detect_issues() {
     if compgen -G "$inbox_path/WO-*" > /dev/null 2>&1; then
       for wo_dir in "$inbox_path"/WO-*; do
         if [[ -d "$wo_dir" ]]; then
-          local wo_mtime=$(stat -c %Y "$wo_dir" 2>/dev/null || echo $current_time)
+          local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
           local age_seconds=$((current_time - wo_mtime))
           if [[ $age_seconds -gt $threshold_seconds ]]; then
             ((stuck_files++))
@@ -112,7 +143,7 @@ detect_issues() {
 
   # Check outbox (optional - may not exist for all agents)
   if [[ -d "$outbox_path" ]]; then
-    local outbox_perms=$(stat -c "%a" "$outbox_path" 2>/dev/null || echo "000")
+    local outbox_perms=$(stat_fmt "%a" "$outbox_path")
     if [[ "$outbox_perms" != "755" ]] && [[ "$outbox_perms" != "775" ]] && [[ "$outbox_perms" != "777" ]]; then
       issues=$(echo "$issues" | jq \
         --arg severity "info" \
@@ -156,7 +187,7 @@ calculate_metrics() {
     if compgen -G "$inbox_path/WO-*" > /dev/null 2>&1; then
       for wo_dir in "$inbox_path"/WO-*; do
         if [[ -d "$wo_dir" ]]; then
-          local wo_mtime=$(stat -c %Y "$wo_dir" 2>/dev/null || echo $current_time)
+          local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
           local age_seconds=$((current_time - wo_mtime))
           if [[ $age_seconds -gt $threshold_seconds ]]; then
             ((stuck++))
