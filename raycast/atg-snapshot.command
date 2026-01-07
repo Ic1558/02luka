@@ -1,16 +1,29 @@
 #!/usr/bin/env zsh
-# ATG System Snapshot Generator
-# Captures comprehensive system state for debugging and AI context
+# ATG System Snapshot - Standalone Raycast Command
+#
+# Required parameters:
+# @raycast.schemaVersion 1
+# @raycast.title ATG Snapshot
+# @raycast.mode fullOutput
+# @raycast.packageName 02luka
+#
+# Optional parameters:
+# @raycast.icon 📸
+# @raycast.argument1 { "type": "text", "placeholder": "format (md/json/both)", "optional": true }
+#
+# Documentation:
+# @raycast.description Generate Antigravity system snapshot (git, processes, logs)
+# @raycast.author icmini
 
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$HOME/02luka"
 cd "$ROOT" || exit 1
 
 TIMESTAMP_UTC=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 TIMESTAMP_LOCAL=$(date +"%Y-%m-%dT%H:%M:%S%z")
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+HEAD=$(git rev-parse --short HEAD 2>/dev/null ||  echo "unknown")
 
 FORMAT="${1:-md}"
 OUTPUT_DIR="magic_bridge/inbox"
@@ -50,7 +63,7 @@ $(git -C "$ROOT" diff --stat HEAD~1 2>/dev/null || echo '(Initial commit or no p
 ## 2. Runtime Context ⚙️
 ### Command: \`pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' | grep -v atg_snap\`
 \`\`\`text
-$(pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' 2>&1 | grep -v atg_snap || echo "(no processes found)")
+$(pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' 2>&1 | grep -v atg | head -50 || echo "(no processes found)")
 \`\`\`
 **Exit Code:** $?
 
@@ -107,7 +120,7 @@ Mode: Rewrite
 EOF
 }
 
-# Generate JSON snapshot
+#Generate JSON snapshot
 generate_json() {
   cat <<EOF
 {
@@ -122,7 +135,7 @@ generate_json() {
     "diff_stat": $(git -C "$ROOT" diff --stat HEAD~1 2>/dev/null | jq -Rs . || echo '"(Initial commit or no parent)"')
   },
   "runtime": {
-    "processes": $(pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' 2>&1 | grep -v atg_snap | jq -Rs . || echo '""')
+    "processes": $(pgrep -fl 'gemini_bridge|bridge\.sh|api_server|antigravity|fs_watcher|python' 2>&1 | grep -v atg | jq -Rs . || echo '""')
   },
   "version": "2.1"
 }
@@ -132,16 +145,17 @@ EOF
 case "$FORMAT" in
   json)
     generate_json > "${OUTPUT_FILE}.json"
-    echo "✅ JSON snapshot: ${OUTPUT_FILE}.json"
+    echo "✅ JSON snapshot saved to: ${OUTPUT_FILE}.json"
     ;;
   both)
     generate_md > "${OUTPUT_FILE}.md"
     generate_json > "${OUTPUT_FILE}.json"
-    echo "✅ MD snapshot: ${OUTPUT_FILE}.md"
-    echo "✅ JSON snapshot: ${OUTPUT_FILE}.json"
+    echo "✅ MD snapshot saved to: ${OUTPUT_FILE}.md"
+    echo "✅ JSON snapshot saved to: ${OUTPUT_FILE}.json"
     ;;
   *)
     generate_md > "${OUTPUT_FILE}.md"
-    echo "✅ Snapshot: ${OUTPUT_FILE}.md"
+    echo "✅ Snapshot saved to: ${OUTPUT_FILE}.md"
+    cat "${OUTPUT_FILE}.md"
     ;;
 esac

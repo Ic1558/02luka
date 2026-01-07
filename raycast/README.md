@@ -5,7 +5,7 @@ Quick access scripts for Raycast to interact with the 02luka project.
 ## Installation
 
 1. Open Raycast Settings → Extensions → Script Commands
-2. Add this directory: `~/02luka/tools/raycast`
+2. Add this directory: `~/02luka/raycast`
 3. Raycast will automatically discover all scripts
 
 ## Available Scripts
