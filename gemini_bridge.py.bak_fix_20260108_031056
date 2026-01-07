@@ -83,9 +83,7 @@ class GeminiHandler(FileSystemEventHandler):
                     decision_info = summarize_decision(content)
                     # Use repo root (parent of this file)
                     repo_root = os.path.dirname(os.path.abspath(__file__))
-                    repo_root = os.path.dirname(os.path.abspath(__file__))
-                    repo_root = os.path.dirname(os.path.abspath(__file__))
-                    log_path = os.path.join(repo_root, 'g/telemetry/decision_log.jsonl')
+                    log_path = os.path.join(repo_root, "g/telemetry/decision_log.jsonl")
                     os.makedirs(os.path.dirname(log_path), exist_ok=True)
                     with open(log_path, "a", encoding="utf-8") as _log:
                         _log.write(decision_info.to_json() + "\n")
