@@ -19,7 +19,7 @@ except ImportError:
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
-WATCH_DIR = "./magic_bridge"
+WATCH_DIR = "./magic_bridge/inbox"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
 
@@ -52,6 +52,16 @@ class GeminiHandler(FileSystemEventHandler):
                     tree_lines.append(f"{subindent}{f}")
         return "\n".join(tree_lines)
 
+    def on_created(self, event):
+        """Handle new file creation events."""
+        if event.is_directory: return
+        filename = os.path.basename(event.src_path)
+        if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
+
+        print(f"📝 Detected new file: {filename}")
+        time.sleep(1) # Debounce
+        self.process_file(event.src_path)
+
     def on_modified(self, event):
         if event.is_directory: return
         filename = os.path.basename(event.src_path)
@@ -71,7 +81,9 @@ class GeminiHandler(FileSystemEventHandler):
             if content.strip() and summarize_decision is not None:
                 try:
                     decision_info = summarize_decision(content)
-                    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "g/telemetry/decision_log.jsonl")
+                    # Use repo root (parent of this file)
+                    repo_root = os.path.dirname(os.path.abspath(__file__))
+                    log_path = os.path.join(repo_root, "g/telemetry/decision_log.jsonl")
                     os.makedirs(os.path.dirname(log_path), exist_ok=True)
                     with open(log_path, "a", encoding="utf-8") as _log:
                         _log.write(decision_info.to_json() + "\n")
@@ -129,11 +141,15 @@ class GeminiHandler(FileSystemEventHandler):
                     break
 
             # 3. Save Output
-            output_path = f"{file_path}.summary.txt"
+            # Save to outbox instead of inbox
+            filename = os.path.basename(file_path)
+            outbox_dir = os.path.join(os.path.dirname(os.path.dirname(file_path)), "outbox")
+            os.makedirs(outbox_dir, exist_ok=True)
+            output_path = os.path.join(outbox_dir, f"{filename}.summary.txt")
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(final_response_text)
-                
-            print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
+
+            print(f"   ✅ Saved response to: {os.path.basename(output_path)} (in outbox)")
 
         except Exception as e:
             print(f"   ❌ Error: {e}")

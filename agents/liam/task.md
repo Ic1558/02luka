@@ -68,6 +68,7 @@ Liam **CAN** modify:
 - [ ] **Missing Protocol**: Create `docs/AP_IO_V31_PROTOCOL.md` (currently missing, but defined in Persona).
 - [ ] **Tool Verification**: Verify `tools/ap_io_v31/` contains `writer.zsh`, `reader.zsh`, `validator.zsh`.
 - [ ] **Schema Verification**: Verify `schemas/ap_io_v31*.schema.json` exist.
+- [ ] **Shared Core History**: Plan cross-agent history feed using `implementation_plan.md` (atg-snapshot + decision_summarizer) so Codex/Gemini/IDE surfaces share the same telemetry bundle.
 
 ### Routine Responsibilities
 - [ ] **Design & Orchestration**
