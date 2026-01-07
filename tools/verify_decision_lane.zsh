@@ -70,7 +70,7 @@ done
 
 # 6. Check for inbox pollution
 echo "6. Inbox cleanup check..."
-INBOX_SUMMARIES=$(ls magic_bridge/inbox/*.summary.txt 2>/dev/null | wc -l | tr -d ' ')
+INBOX_SUMMARIES=$(find magic_bridge/inbox -name "*.summary.txt" 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$INBOX_SUMMARIES" -eq 0 ]]; then
   echo "   ✅ No summaries in inbox (clean)"
 else

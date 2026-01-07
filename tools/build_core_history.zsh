@@ -36,18 +36,17 @@ fi
 # Recent decisions (last 5 json lines)
 RECENT_JSON="[]"
 if [[ -f "$DEC" ]]; then
-  RECENT_JSON=$(tail -n 5 "$DEC" | python3 - <<'PY'
-import sys, json
-rows=[]
-for line in sys.stdin.read().splitlines():
-    line=line.strip()
-    if not line: 
-        continue
-    try:
-        rows.append(json.loads(line))
-    except Exception:
-        pass
-print(json.dumps(rows, ensure_ascii=False))
+  RECENT_JSON=$(python3 - <<'PY'
+import sys, json, pathlib
+try:
+    lines = pathlib.Path("g/telemetry/decision_log.jsonl").read_text().strip().splitlines()
+    rows = []
+    for line in lines[-5:]:  # Last 5 lines
+        if line.strip():
+            rows.append(json.loads(line))
+    print(json.dumps(rows, ensure_ascii=False))
+except Exception:
+    print("[]")
 PY
 )
 fi
@@ -87,12 +86,12 @@ data = {
     "status": "ok" if "$RULE_HASH" != "missing" else "missing",
     "hash": "$RULE_HASH",
     "count": int("$RULE_COUNT"),
-    "ids": ${RULE_IDS:+json.loads(r'''$(python3 - <<'P2'
-import json,sys
-ids = sys.argv[1:]
-print(json.dumps(ids, ensure_ascii=False))
+    "ids": json.loads(r'''$(python3 - <<'P2'
+import json
+ids = '''${(j:,:)RULE_IDS[@]}'''.split(',') if '''${(j:,:)RULE_IDS[@]}''' else []
+print(json.dumps([i for i in ids if i], ensure_ascii=False))
 P2
-${RULE_IDS[@]})''')}
+)''')
   }
 }
 print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -105,12 +104,12 @@ print(json.dumps({
   "source": "$RULE_SRC",
   "sha256": "$RULE_HASH",
   "rule_count": int("$RULE_COUNT"),
-  "rule_ids": ${RULE_IDS:+json.loads(r'''$(python3 - <<'P3'
-import json,sys
-ids = sys.argv[1:]
-print(json.dumps(ids, ensure_ascii=False))
+  "rule_ids": json.loads(r'''$(python3 - <<'P3'
+import json
+ids = '''${(j:,:)RULE_IDS[@]}'''.split(',') if '''${(j:,:)RULE_IDS[@]}''' else []
+print(json.dumps([i for i in ids if i], ensure_ascii=False))
 P3
-${RULE_IDS[@]})''')}
+)''')
 }, ensure_ascii=False, indent=2))
 PY
 

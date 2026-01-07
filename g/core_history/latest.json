@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "ts": "2026-01-07T20:39:33.533565Z",
+    "ts": "2026-01-07T21:25:04.413025Z",
     "git": {
       "branch": "main",
-      "head": "7ea267eb",
+      "head": "0a8583f3",
       "status": "dirty"
     },
     "generated_by": "build_core_history.zsh"
@@ -15,13 +15,82 @@
   },
   "decisions": {
     "status": "present",
-    "count": 3,
-    "recent": []
+    "count": 29,
+    "recent": [
+      {
+        "ts": 1767820508,
+        "text_preview": "# 🤯 Antigravity System Snapshot **Timestamp (UTC):** 2026-01-07T21:15:07Z **Timestamp (Local):** 2026-01-08T04:15:07+0700 **Repo Root:** /Users/icmini/02luka **Branch:** main **HEAD:** 0a8583f3 ## 1. Git Context ### Command: `git -C '/Users…",
+        "matched_rules": [
+          "R5_DEFAULT"
+        ],
+        "risk": "low",
+        "requires": [],
+        "route_hint": "bridge_ok",
+        "rationale": [
+          "R5_DEFAULT: matched 1 pattern(s)"
+        ]
+      },
+      {
+        "ts": 1767820514,
+        "text_preview": "# 🤯 Antigravity System Snapshot **Timestamp (UTC):** 2026-01-07T21:15:10Z **Timestamp (Local):** 2026-01-08T04:15:10+0700 **Repo Root:** /Users/icmini/02luka **Branch:** main **HEAD:** 0a8583f3 ## 1. Git Context ### Command: `git -C '/Users…",
+        "matched_rules": [
+          "R5_DEFAULT"
+        ],
+        "risk": "low",
+        "requires": [],
+        "route_hint": "bridge_ok",
+        "rationale": [
+          "R5_DEFAULT: matched 1 pattern(s)"
+        ]
+      },
+      {
+        "ts": 1767820548,
+        "text_preview": "# 🤯 Antigravity System Snapshot **Timestamp (UTC):** 2026-01-07T21:15:47Z **Timestamp (Local):** 2026-01-08T04:15:47+0700 **Repo Root:** /Users/icmini/02luka **Branch:** main **HEAD:** 0a8583f3 ## 1. Git Context ### Command: `git -C '/Users…",
+        "matched_rules": [
+          "R5_DEFAULT"
+        ],
+        "risk": "low",
+        "requires": [],
+        "route_hint": "bridge_ok",
+        "rationale": [
+          "R5_DEFAULT: matched 1 pattern(s)"
+        ]
+      },
+      {
+        "ts": 1767820876,
+        "text_preview": "# 🤯 Antigravity System Snapshot **Timestamp (UTC):** 2026-01-07T21:21:15Z **Timestamp (Local):** 2026-01-08T04:21:15+0700 **Repo Root:** /Users/icmini/02luka **Branch:** main **HEAD:** 0a8583f3 ## 1. Git Context ### Command: `git -C '/Users…",
+        "matched_rules": [
+          "R5_DEFAULT"
+        ],
+        "risk": "low",
+        "requires": [],
+        "route_hint": "bridge_ok",
+        "rationale": [
+          "R5_DEFAULT: matched 1 pattern(s)"
+        ]
+      },
+      {
+        "ts": 1767821100,
+        "text_preview": "# 🤯 Antigravity System Snapshot **Timestamp (UTC):** 2026-01-07T21:24:59Z **Timestamp (Local):** 2026-01-08T04:24:59+0700 **Repo Root:** /Users/icmini/02luka **Branch:** main **HEAD:** 0a8583f3 ## 1. Git Context ### Command: `git -C '/Users…",
+        "matched_rules": [
+          "R5_DEFAULT"
+        ],
+        "risk": "low",
+        "requires": [],
+        "route_hint": "bridge_ok",
+        "rationale": [
+          "R5_DEFAULT: matched 1 pattern(s)"
+        ]
+      }
+    ]
   },
   "rules": {
     "status": "ok",
     "hash": "3b13a3e985e7d35a09a82905b20291ae3fd42cbf184c44b23f618edd7dd001d8",
     "count": 5,
-    "ids": []
+    "ids": [
+      "${(j:",
+      ":)RULE_IDS[@]}"
+    ]
   }
 }

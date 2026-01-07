@@ -1,10 +1,10 @@
 #!/usr/bin/env zsh
 # @raycast.schemaVersion 1
-# @raycast.title ATG Snapshot
+# @raycast.title ATG Core History
 # @raycast.mode silent
 # @raycast.packageName 02luka
 # @raycast.icon 🚀
-# @raycast.description One-key snapshot → clipboard (auto-run)
+# @raycast.description One-key snapshot → core history → clipboard
 # @raycast.needsConfirmation false
 
 set -euo pipefail
@@ -17,6 +17,7 @@ mkdir -p "$INBOX"
 repo="$ROOT"
 out="$INBOX/atg_snapshot.md"
 
+# Generate snapshot
 tmp="$(mktemp "${TMPDIR:-/tmp}/atg_snapshot.XXXXXX.md")"
 utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 localts="$(date +"%Y-%m-%dT%H:%M:%S%z")"
@@ -90,8 +91,24 @@ head="$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo '?')"
   echo "Mode: BridgeDrop"
 } > "$tmp"
 
-# atomic move (minimize watcher churn)
+# Atomic move (minimize watcher churn)
 mv -f "$tmp" "$out"
 
-# small stdout for Raycast "silent" mode
-echo "OK: wrote $(basename "$out") → $INBOX"
+# Wait for bridge processing (optional - bridge runs async)
+sleep 2
+
+# Build Core History (Stage D - Canonical aggregation)
+cd "$ROOT"
+if [[ -x "tools/build_core_history.zsh" ]]; then
+  zsh tools/build_core_history.zsh >/dev/null 2>&1 || true
+fi
+
+# Copy Core History to clipboard
+if [[ -f "g/core_history/latest.md" ]]; then
+  cat "g/core_history/latest.md" | pbcopy
+  echo "✓ Core History → clipboard"
+else
+  # Fallback: copy snapshot
+  cat "$out" | pbcopy
+  echo "✓ Snapshot → clipboard"
+fi

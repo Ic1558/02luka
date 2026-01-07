@@ -1,11 +1,11 @@
 {
-  "ts": "2026-01-07T20:39:33.533565Z",
+  "ts": "2026-01-07T21:25:04.413025Z",
   "files": {
     "latest.json": {
-      "sha256": "a4de09f87187e2646cc2e6c3bc8d6f9fd42694076666fd37f0d50bac26ac12d6"
+      "sha256": "ca54c7449b2bbf858607c827be17278742abbed7f9f271d0ac0b661ea9e5f575"
     },
     "rule_table.json": {
-      "sha256": "93b005f5fb6c03c8333785b84cc7b5d04e8563055f1fad9c6be1ccc041dc76e1"
+      "sha256": "41e62bd1b593ec240d7af12c9ec9fed7d66488242830ee542e71bf4e71b5cf2e"
     }
   }
 }
