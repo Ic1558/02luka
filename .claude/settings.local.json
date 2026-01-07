@@ -105,7 +105,8 @@
       "Bash(git log:*)",
       "Bash(~/02luka/raycast/atg-snapshot.command)",
       "Bash(pbpaste:*)",
-      "Bash(~/02luka/raycast/atg-snapshot.command:*)"
+      "Bash(~/02luka/raycast/atg-snapshot.command:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": [],
     "ask": []
