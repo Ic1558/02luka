@@ -115,6 +115,13 @@ case "$1" in
       echo "$tracked_noise"
       exit 1
     fi
+    # Ensure volatile artifacts are not tracked (hub index, save pointers)
+    volatile_noise=$(git ls-files "hub/index.json" "g/reports/sessions/save_last.txt" 2>/dev/null)
+    if [ -n "$volatile_noise" ]; then
+      echo "hygiene failed: volatile artifacts detected in git index (should be ignored):"
+      echo "$volatile_noise"
+      exit 1
+    fi
     git status --porcelain 2>/dev/null | grep "^?? magic_bridge" && echo "git dirty for magic_bridge artifacts" && exit 1
     echo "verify complete"
     ;;
