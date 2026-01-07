@@ -7,14 +7,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-# >>> 02LUKA_DECISION_SUMMARIZER_IMPORT >>>
-try:
-    from decision_summarizer import summarize_decision, build_decision_block_for_logs
-except ImportError:
-    summarize_decision = None
-    build_decision_block_for_logs = None
-# <<< 02LUKA_DECISION_SUMMARIZER_IMPORT <<<
-
 # --- Configuration ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
@@ -65,20 +57,6 @@ class GeminiHandler(FileSystemEventHandler):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-
-            # >>> 02LUKA_DECISION_SUMMARIZER_LOG >>>
-            # Log decision analysis (telemetry, non-blocking)
-            if content.strip() and summarize_decision is not None:
-                try:
-                    decision_info = summarize_decision(content)
-                    log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "g/telemetry/decision_log.jsonl")
-                    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-                    with open(log_path, "a", encoding="utf-8") as _log:
-                        _log.write(decision_info.to_json() + "\n")
-                except Exception:
-                    pass  # Silent fail, don't break bridge
-            # <<< 02LUKA_DECISION_SUMMARIZER_LOG <<<
-
             if not content.strip(): return
 
             # 1. Build Initial Context

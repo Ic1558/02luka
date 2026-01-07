@@ -1,0 +1,14 @@
+# Port registry for local services.
+8000:
+  service: api_server
+  policy: protected
+  owner: api_server.py
+  pidfile: g/metrics/api_server.pid
+  lockfile: locks/api_server.lock
+8001:
+  service: fastapi-dev
+  policy: free
+8080:
+  service: claude_proxy
+  policy: managed
+  owner: antigravity-claude-proxy
