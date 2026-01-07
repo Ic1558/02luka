@@ -2,9 +2,9 @@
 # @raycast.schemaVersion 1
 # @raycast.title ATG Snapshot
 # @raycast.mode silent
-# @raycast.packageName 02luka Antigravity
-# @raycast.icon 🤯
-# @raycast.description Capture repo/runtime/telemetry snapshot → drop to magic_bridge/inbox for AI summary.
+# @raycast.packageName 02luka
+# @raycast.icon 🚀
+# @raycast.description One-key snapshot → clipboard (auto-run)
 # @raycast.needsConfirmation false
 
 set -euo pipefail

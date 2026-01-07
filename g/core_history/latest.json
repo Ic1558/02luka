@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "ts": "2026-01-07T20:39:33.533565Z",
+    "git": {
+      "branch": "main",
+      "head": "7ea267eb",
+      "status": "dirty"
+    },
+    "generated_by": "build_core_history.zsh"
+  },
+  "snapshot": {
+    "status": "unknown",
+    "md_path": null,
+    "summary_path": null
+  },
+  "decisions": {
+    "status": "present",
+    "count": 3,
+    "recent": []
+  },
+  "rules": {
+    "status": "ok",
+    "hash": "3b13a3e985e7d35a09a82905b20291ae3fd42cbf184c44b23f618edd7dd001d8",
+    "count": 5,
+    "ids": []
+  }
+}
