@@ -45,7 +45,7 @@ get_folder_status() {
   if [[ -d "$folder_path" ]]; then
     local perms=$(ls -ld "$folder_path" | awk '{print $1}')
     local file_count=$(find "$folder_path" -maxdepth 1 -type f -o -type d | wc -l)
-    ((file_count--)) # Remove the directory itself from count
+    ((file_count--)) || true # Remove the directory itself from count
 
     # Find oldest file age in hours
     local oldest_file_age=0
@@ -119,17 +119,17 @@ detect_issues() {
     local stuck_files=0
 
     # Find work orders and check their age
-    if compgen -G "$inbox_path/WO-*" > /dev/null 2>&1; then
-      for wo_dir in "$inbox_path"/WO-*; do
-        if [[ -d "$wo_dir" ]]; then
-          local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
-          local age_seconds=$((current_time - wo_mtime))
-          if [[ $age_seconds -gt $threshold_seconds ]]; then
-            ((stuck_files++))
-          fi
+    # Find work orders and check their age
+    # null_glob is on, so loop won't run if no matches
+    for wo_dir in "$inbox_path"/WO-*; do
+      if [[ -d "$wo_dir" ]]; then
+        local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
+        local age_seconds=$((current_time - wo_mtime))
+        if [[ $age_seconds -gt $threshold_seconds ]]; then
+          ((stuck_files++))
         fi
-      done
-    fi
+      fi
+    done
 
     if [[ $stuck_files -gt 0 ]]; then
       issues=$(echo "$issues" | jq \
@@ -184,17 +184,16 @@ calculate_metrics() {
     local threshold_seconds=$((STUCK_FILE_THRESHOLD_HOURS * 3600))
     local current_time=$(date +%s)
 
-    if compgen -G "$inbox_path/WO-*" > /dev/null 2>&1; then
-      for wo_dir in "$inbox_path"/WO-*; do
-        if [[ -d "$wo_dir" ]]; then
-          local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
-          local age_seconds=$((current_time - wo_mtime))
-          if [[ $age_seconds -gt $threshold_seconds ]]; then
-            ((stuck++))
-          fi
+    # null_glob is on
+    for wo_dir in "$inbox_path"/WO-*; do
+      if [[ -d "$wo_dir" ]]; then
+        local wo_mtime=$(stat_fmt "%Y" "$wo_dir")
+        local age_seconds=$((current_time - wo_mtime))
+        if [[ $age_seconds -gt $threshold_seconds ]]; then
+          ((stuck++))
         fi
-      done
-    fi
+      fi
+    done
   fi
 
   # Count processed items
