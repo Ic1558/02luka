@@ -41,7 +41,7 @@ import sys, json, pathlib
 try:
     lines = pathlib.Path("g/telemetry/decision_log.jsonl").read_text().strip().splitlines()
     rows = []
-    for line in lines[-5:]:  # Last 5 lines
+    for line in lines[-10:]:  # Last 10 lines for context
         if line.strip():
             rows.append(json.loads(line))
     print(json.dumps(rows, ensure_ascii=False))
@@ -130,7 +130,8 @@ PY
 
 # latest.md (human digest)
 python3 - <<'PY' > "$CORE_DIR/latest.md"
-import json, pathlib
+import json, pathlib, datetime
+
 p = pathlib.Path("g/core_history/latest.json")
 data = json.loads(p.read_text(encoding="utf-8"))
 m = data["metadata"]
@@ -145,11 +146,51 @@ lines.append(f"- decision_log: {d['status']} (count={d['count']})")
 lines.append(f"- rules: {r['status']} (count={r['count']}, sha256={r.get('hash')})")
 lines.append("")
 lines.append("## Recent Decisions (last 5)")
-for item in d.get("recent", []):
+
+recent = d.get("recent", [])
+rendered = []
+group_count = 0
+last_ts = 0
+
+for item in recent:
   risk = item.get("risk","?")
-  preview = item.get("text_preview","")[:120]
-  rules = ",".join(item.get("matched_rules",[])[:5])
-  lines.append(f"- risk={risk} rules=[{rules}] preview={preview}")
+  rules_list = item.get("matched_rules",[])
+  
+  # Check if routine: low risk AND exactly ['R5_DEFAULT']
+  is_routine = (risk == "low" and rules_list == ["R5_DEFAULT"])
+
+  if is_routine:
+    group_count += 1
+    last_ts = item.get("ts", 0)
+  else:
+    # Flush pending group
+    if group_count > 0:
+      time_str = ""
+      if last_ts:
+        try:
+          dt = datetime.datetime.fromtimestamp(last_ts)
+          time_str = f" · last active {dt.strftime('%H:%M')}"
+        except: pass
+      rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
+      group_count = 0
+    
+    # Render current unique item
+    preview = item.get("text_preview","")[:120]
+    r_str = ",".join(rules_list[:5])
+    rendered.append(f"- risk={risk} rules=[{r_str}] preview={preview}")
+
+# Flush final group
+if group_count > 0:
+  time_str = ""
+  if last_ts:
+    try:
+      dt = datetime.datetime.fromtimestamp(last_ts)
+      time_str = f" · last active {dt.strftime('%H:%M')}"
+    except: pass
+  rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
+
+# Append last 5 rendered lines
+lines.extend(rendered[-5:])
 print("\n".join(lines))
 PY
 

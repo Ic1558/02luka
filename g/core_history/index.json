@@ -1,8 +1,8 @@
 {
-  "ts": "2026-01-07T21:25:04.413025Z",
+  "ts": "2026-01-07T21:42:13.416184Z",
   "files": {
     "latest.json": {
-      "sha256": "ca54c7449b2bbf858607c827be17278742abbed7f9f271d0ac0b661ea9e5f575"
+      "sha256": "3275e63244c92640d90533e2498a00da054124bc153a7ba29148afc0e87044d6"
     },
     "rule_table.json": {
       "sha256": "41e62bd1b593ec240d7af12c9ec9fed7d66488242830ee542e71bf4e71b5cf2e"
