@@ -159,3 +159,28 @@ case "$FORMAT" in
     cat "${OUTPUT_FILE}.md"
     ;;
 esac
+
+# --- Clipboard copy (post-run) ---
+case "$FORMAT" in
+  json)
+    if [[ -f "${OUTPUT_FILE}.json" ]]; then
+      pbcopy < "${OUTPUT_FILE}.json"
+      echo "📋 Copied JSON snapshot to clipboard."
+      osascript -e 'display notification "ATG snapshot JSON copied to clipboard" with title "ATG Snapshot"' >/dev/null 2>&1 || true
+    fi
+    ;;
+  both)
+    if [[ -f "${OUTPUT_FILE}.md" ]]; then
+      pbcopy < "${OUTPUT_FILE}.md"
+      echo "📋 Copied MD snapshot to clipboard (both formats saved)."
+      osascript -e 'display notification "ATG snapshot copied to clipboard" with title "ATG Snapshot"' >/dev/null 2>&1 || true
+    fi
+    ;;
+  *)
+    if [[ -f "${OUTPUT_FILE}.md" ]]; then
+      pbcopy < "${OUTPUT_FILE}.md"
+      echo "📋 Copied MD snapshot to clipboard."
+      osascript -e 'display notification "ATG snapshot copied to clipboard" with title "ATG Snapshot"' >/dev/null 2>&1 || true
+    fi
+    ;;
+esac
