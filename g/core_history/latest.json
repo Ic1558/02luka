@@ -3,8 +3,8 @@
     "ts": "1767821742",
     "git": {
       "branch": "main",
-      "head": "16b16897",
-      "status": "clean"
+      "head": "0bdb3afd",
+      "status": "dirty"
     },
     "generated_by": "build_core_history.zsh"
   },
