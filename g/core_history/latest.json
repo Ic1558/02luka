@@ -1,10 +1,10 @@
 {
   "metadata": {
-    "ts": "2026-01-08T19:50:49.414623Z",
+    "ts": "1767821742",
     "git": {
       "branch": "main",
-      "head": "f0e4771f",
-      "status": "clean"
+      "head": "7ba5b290",
+      "status": "dirty"
     },
     "generated_by": "build_core_history.zsh"
   },

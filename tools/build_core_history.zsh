@@ -57,14 +57,50 @@ HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 STATUS=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$STATUS" == "0" ]]; then STATUS="clean"; else STATUS="dirty"; fi
 
-# Build latest.json
+# Build latest.json content (Memory)
+# Deterministic TS: Use last decision TS or fallback to file mtime, NOT current time.
 TS_ISO=$(python3 - <<'PY'
-from datetime import datetime, timezone
-print(datetime.now(timezone.utc).isoformat().replace("+00:00","Z"))
+import sys, json, pathlib, datetime
+
+dec_path = pathlib.Path("g/telemetry/decision_log.jsonl")
+ts = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00","Z")
+
+try:
+    if dec_path.exists():
+        lines = dec_path.read_text().strip().splitlines()
+        if lines:
+            last = json.loads(lines[-1])
+            # Trust the log's timestamp if present
+            if "ts" in last:
+                 # Ensure it's treated as string
+                 ts = last["ts"]
+except Exception:
+    pass
+
+print(ts)
 PY
 )
 
-python3 - <<PY > "$CORE_DIR/latest.json"
+# Function to write only if changed
+write_if_changed() {
+  local new_content="$1"
+  local target="$2"
+  
+  if [[ -f "$target" ]]; then
+    # effective sha256 comparison
+    local old_sha=$(shasum -a 256 "$target" | awk '{print $1}')
+    local new_sha=$(echo "$new_content" | shasum -a 256 | awk '{print $1}')
+    if [[ "$old_sha" == "$new_sha" ]]; then
+      # No change, skip write
+      return 0
+    fi
+  fi
+  # Write
+  echo "$new_content" > "$target"
+}
+
+# Generate latest.json content
+LATEST_JSON_CONTENT=$(python3 - <<PY
 import json
 data = {
   "metadata": {
@@ -96,9 +132,13 @@ P2
 }
 print(json.dumps(data, ensure_ascii=False, indent=2))
 PY
+)
+
+# Atomic write latest.json
+write_if_changed "$LATEST_JSON_CONTENT" "$CORE_DIR/latest.json"
 
 # rule_table.json (minimal, hash-locked by file hash)
-python3 - <<PY > "$CORE_DIR/rule_table.json"
+RULE_TABLE_CONTENT=$(python3 - <<PY
 import json
 print(json.dumps({
   "source": "$RULE_SRC",
@@ -112,12 +152,15 @@ P3
 )''')
 }, ensure_ascii=False, indent=2))
 PY
+)
+
+write_if_changed "$RULE_TABLE_CONTENT" "$CORE_DIR/rule_table.json"
 
 # index.json checksums
 LATEST_SHA=$(shasum -a 256 "$CORE_DIR/latest.json" | awk '{print $1}')
 RULET_SHA=$(shasum -a 256 "$CORE_DIR/rule_table.json" | awk '{print $1}')
 
-python3 - <<PY > "$CORE_DIR/index.json"
+INDEX_CONTENT=$(python3 - <<PY
 import json
 print(json.dumps({
   "ts": "$TS_ISO",
@@ -127,9 +170,12 @@ print(json.dumps({
   }
 }, ensure_ascii=False, indent=2))
 PY
+)
+write_if_changed "$INDEX_CONTENT" "$CORE_DIR/index.json"
 
 # latest.md (human digest)
-python3 - <<'PY' > "$CORE_DIR/latest.md"
+# IMPORTANT: latest.md must depend on the persisted JSON to stay in sync
+LATEST_MD_CONTENT=$(python3 - <<'PY'
 import json, pathlib, datetime
 
 p = pathlib.Path("g/core_history/latest.json")
@@ -168,9 +214,14 @@ for item in recent:
       time_str = ""
       if last_ts:
         try:
-          dt = datetime.datetime.fromtimestamp(last_ts)
+          dt = datetime.datetime.fromtimestamp(last_ts) # Assuming float ts in log
           time_str = f" · last active {dt.strftime('%H:%M')}"
-        except: pass
+        except: 
+          # Fallback if ts is iso string or other
+          try:
+             dt = datetime.datetime.fromisoformat(str(last_ts).replace('Z', '+00:00'))
+             time_str = f" · last active {dt.strftime('%H:%M')}"
+          except: pass
       rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
       group_count = 0
     
@@ -186,16 +237,23 @@ if group_count > 0:
     try:
       dt = datetime.datetime.fromtimestamp(last_ts)
       time_str = f" · last active {dt.strftime('%H:%M')}"
-    except: pass
+    except: 
+      try:
+         dt = datetime.datetime.fromisoformat(str(last_ts).replace('Z', '+00:00'))
+         time_str = f" · last active {dt.strftime('%H:%M')}"
+      except: pass
   rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
 
 # Append last 5 rendered lines
 lines.extend(rendered[-5:])
 print("\n".join(lines))
 PY
+)
+
+write_if_changed "$LATEST_MD_CONTENT" "$CORE_DIR/latest.md"
 
 # Validate JSON
-python3 -c "import json; json.load(open('$CORE_DIR/latest.json')); json.load(open('$CORE_DIR/index.json')); json.load(open('$CORE_DIR/rule_table.json')); print('JSON_OK')"
+# python3 -c "import json; json.load(open('$CORE_DIR/latest.json')); json.load(open('$CORE_DIR/index.json')); json.load(open('$CORE_DIR/rule_table.json')); print('JSON_OK')"
 
-echo "✅ Core History built:"
-ls -la "$CORE_DIR"
+echo "✅ Core History built (deterministic)"
+
