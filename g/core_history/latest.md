@@ -1,6 +1,6 @@
-# Core History — 2026-01-08T19:47:35.144524Z
+# Core History — 2026-01-08T19:50:49.414623Z
 
-- git: main @ d54afb0c (dirty)
+- git: main @ f0e4771f (clean)
 - decision_log: present (count=32)
 - rules: ok (count=5, sha256=3b13a3e985e7d35a09a82905b20291ae3fd42cbf184c44b23f618edd7dd001d8)
 
