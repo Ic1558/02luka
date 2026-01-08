@@ -14,7 +14,7 @@
 | :--- | :--- | :--- | :--- |
 | **Bridge Self-Check** | `tools/bridge_selfcheck.zsh` | Verifies inbox/outbox health | `zsh tools/bridge_selfcheck.zsh` |
 | **Build Core History** | `tools/build_core_history.zsh` | Generates deterministic Core History artifacts |`zsh tools/build_core_history.zsh` |
-| **Verify Core State** | `tools/verify_core_state.zsh` (Pending) | Audits repo cleanliness and artifact validity | `zsh tools/verify_core_state.zsh` |
+| **Verify Core State** | `tools/verify_core_state.zsh` | Audits repo cleanliness and artifact validity | `zsh tools/verify_core_state.zsh` |
 | **Save Session** | `tools/save.sh` | Commits state, harvests memory, and logs telemetry | `zsh tools/save.sh` |
 | **Run Tool** | `tools/run_tool.zsh` | Single entry point for all operations | `zsh tools/run_tool.zsh <alias>` |
 

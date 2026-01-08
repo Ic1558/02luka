@@ -9,6 +9,7 @@ set -e
 export REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 export AGENT_ID="gmx"  # Enforce consistent identity
 export TOOL_RUNNER_VERSION="1.0"
+export RUN_TOOL_DISPATCH=1 # Signal that we are running via the canonical dispatcher
 
 # 2. Argument Parsing
 if [[ $# -lt 1 ]]; then

@@ -1,6 +1,14 @@
 #!/usr/bin/env zsh
 # tools/save.sh
 # Save current state + Harvest Active Memory
+
+if [[ -z "${RUN_TOOL_DISPATCH:-}" ]]; then
+    echo "❌ ERROR: Direct execution denied."
+    echo "   You must use the canonical dispatcher:"
+    echo "   zsh tools/run_tool.zsh save"
+    exit 1
+fi
+
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 zsh "$REPO_ROOT/tools/solution_collector.zsh" 2>/dev/null & # Background harvest Save System
 # Forwards requests to backend (session_save.zsh) with telemetry context.
