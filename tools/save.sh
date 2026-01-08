@@ -15,6 +15,20 @@ zsh "$REPO_ROOT/tools/solution_collector.zsh" 2>/dev/null & # Background harvest
 
 set -e
 
+# Phase 11: SSOT Truth Sync (default ON). Use --no-truth-sync to bypass.
+NO_TRUTH_SYNC=0
+for arg in "$@"; do
+  [[ "$arg" == "--no-truth-sync" ]] && NO_TRUTH_SYNC=1
+done
+if [[ "$NO_TRUTH_SYNC" -eq 0 ]]; then
+  if [[ -x "${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}/tools/sync_truth.zsh" ]]; then
+    zsh "${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}/tools/sync_truth.zsh"
+  else
+    echo "ERROR: tools/sync_truth.zsh missing or not executable" >&2
+    exit 2
+  fi
+fi
+
 # Resolve paths
 SCRIPT_DIR=$(dirname "$0")
 BACKEND_SCRIPT="$SCRIPT_DIR/session_save.zsh"

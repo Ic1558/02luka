@@ -1,54 +1,77 @@
 #!/usr/bin/env zsh
-# tools/catalog_lookup.zsh
-# Purpose: Extract canonical tool path from CATALOG.md based on alias/keyword
-set -u
+set -euo pipefail
 
-CATALOG_FILE="${REPO_ROOT:-$HOME/02luka}/tools/CATALOG.md"
-QUERY="$1"
+# Usage:
+#   zsh tools/catalog_lookup.zsh <alias> [--catalog <path>]
+#
+# Output:
+#   prints the script path from tools/CATALOG.md that matches the alias.
 
-if [[ ! -f "$CATALOG_FILE" ]]; then
-  echo "Error: Catalog not found at $CATALOG_FILE" >&2
-  exit 1
+alias_name="${1:-}"
+shift || true
+
+catalog_path="tools/CATALOG.md"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --catalog)
+      catalog_path="${2:-}"
+      shift 2
+      ;;
+    *)
+      echo "ERROR: unknown arg: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "${alias_name}" ]]; then
+  echo "ERROR: alias required" >&2
+  exit 2
 fi
 
-# Map common aliases to exact tool names or paths if necessary, 
-# or simpler: grep the table row containing the query and extract the code block.
-
-# 1. Try exact alias mapping (preferred for stability)
-case "$QUERY" in
-  "save") PATTERN="Save Session" ;;
-  "bridge-check"|"bridge_selfcheck") PATTERN="Bridge Self-Check" ;;
-  "core-history"|"history") PATTERN="Build Core History" ;;
-  "verify-core") PATTERN="Verify Core State" ;;
-  *) PATTERN="$QUERY" ;;
-esac
-
-# 2. Search catalog
-# Look for line with PATTERN, then extract `tools/xxx` from inside backticks
-# Markdown Table Format: | **Name** | `path` | ...
-# We match the line with PATTERN, then look for backticked path.
-MATCH_LINE=$(grep -i "$PATTERN" "$CATALOG_FILE" | head -n 1)
-
-if [[ -z "$MATCH_LINE" ]]; then
-  # Fallback: try searching for the script filename directly in the catalog
-  MATCH_LINE=$(grep -F "$QUERY" "$CATALOG_FILE" | head -n 1)
+if [[ ! -f "${catalog_path}" ]]; then
+  echo "ERROR: catalog not found: ${catalog_path}" >&2
+  exit 2
 fi
 
-if [[ -z "$MATCH_LINE" ]]; then
-  exit 1 # Not found
+# Parse markdown tables:
+# - Find rows like: | alias | ... | tools/something.zsh |
+# - Accept the first cell as alias, and the first cell that looks like tools/* as script path.
+# - Skip header separator lines.
+found_path="$(
+  awk -v want="${alias_name}" '
+    function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    BEGIN{ IGNORECASE=1 }
+    /^\|/ {
+      line=$0
+      # skip separator rows like | --- | --- |
+      if (line ~ /^\|[[:space:]]*[-:]+[[:space:]]*\|/) next
+
+      # split by |
+      n=split(line, a, "|")
+      # a[1] is empty (before first |)
+      # a[2] is first cell
+      alias=trim(a[2])
+      if (tolower(alias) != tolower(want)) next
+
+      # find a cell that looks like a path under tools/
+      for (i=3; i<=n; i++) {
+        cell=trim(a[i])
+        if (cell ~ /^tools\/[A-Za-z0-9._\/-]+$/) { print cell; exit 0 }
+      }
+
+      # fallback: maybe second cell is the path
+      for (i=2; i<=n; i++) {
+        cell=trim(a[i])
+        if (cell ~ /^tools\/[A-Za-z0-9._\/-]+$/) { print cell; exit 0 }
+      }
+    }
+  ' "${catalog_path}"
+)"
+
+if [[ -z "${found_path}" ]]; then
+  echo "ERROR: alias not found in catalog: ${alias_name}" >&2
+  exit 3
 fi
 
-# Extract text between ` ` (backticks) assuming the first code block is the path
-PATH_MATCH=$(echo "$MATCH_LINE" | grep -o '`[^`]*`' | head -n 1 | tr -d '`')
-
-# Validate
-if [[ -n "$PATH_MATCH" && -f "$HOME/02luka/$PATH_MATCH" ]]; then
-  echo "$PATH_MATCH"
-else
-  # Try pre-pending tools/ if missing
-  if [[ -f "$HOME/02luka/tools/$PATH_MATCH" ]]; then
-     echo "tools/$PATH_MATCH"
-  else
-     exit 2 # Found in catalog but file missing
-  fi
-fi
+print -r -- "${found_path}"

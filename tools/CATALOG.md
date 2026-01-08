@@ -30,3 +30,6 @@ To promote a script from `_tmp` to `tools/`:
 ## Maintenance
 -   **Archive**: Old tools go to `g/archive/tools/`.
 -   **Clean**: `tools/_tmp/` can be emptied comfortably at any time.
+
+| run-tool | Single entry dispatcher (mandatory) | tools/run_tool.zsh |
+| sync-truth | Refresh SSOT truth + context stubs | tools/sync_truth.zsh |
