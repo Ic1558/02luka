@@ -203,6 +203,14 @@ fi
 
 # If we get here, proceed with full save pipeline
 
+# Check for dry-run (Phase 11 verification support)
+for arg in "$@"; do
+  if [[ "$arg" == "--dry-run" ]]; then
+    echo "✅ save-now: dry-run complete (truth sync performed if enabled)"
+    exit 0
+  fi
+done
+
 # Extract session data from MLS
 parse_mls_data() {
   local ledger_path="$1"

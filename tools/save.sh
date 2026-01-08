@@ -21,8 +21,9 @@ for arg in "$@"; do
   [[ "$arg" == "--no-truth-sync" ]] && NO_TRUTH_SYNC=1
 done
 if [[ "$NO_TRUTH_SYNC" -eq 0 ]]; then
-  if [[ -x "${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}/tools/sync_truth.zsh" ]]; then
-    zsh "${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}/tools/sync_truth.zsh"
+  RR="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}"
+  if [[ -x "$RR/tools/sync_truth.zsh" ]]; then
+    zsh "$RR/tools/sync_truth.zsh"
   else
     echo "ERROR: tools/sync_truth.zsh missing or not executable" >&2
     exit 2
