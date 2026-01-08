@@ -1,0 +1,26 @@
+{
+  "date": "2026-01-09",
+  "ts_utc": "2026-01-08T20:48:01Z",
+  "ts_local": "2026-01-09T03:48:01+0700",
+  "agent": "gmx",
+  "summary": {
+    "total_entries": 17,
+    "top_activities": [
+  "File modified: commit_dirty_state.zsh",
+  "File modified: verify_core_state.zsh",
+  "File modified: verify_core_state.zsh",
+  "File modified: verify_core_state.zsh",
+  "File modified: find_dirty_now.zsh"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 17,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2026-01-09.jsonl",
+    "full_session": "g/reports/sessions/session_20260109_034800.md"
+  }
+}
