@@ -1,9 +1,9 @@
 {
   "metadata": {
-    "ts": "2026-01-07T21:42:13.416184Z",
+    "ts": "2026-01-08T19:47:35.144524Z",
     "git": {
       "branch": "main",
-      "head": "19f17f38",
+      "head": "d54afb0c",
       "status": "dirty"
     },
     "generated_by": "build_core_history.zsh"
