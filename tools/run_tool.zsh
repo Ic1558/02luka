@@ -16,7 +16,6 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 export REPO_ROOT
 export AGENT_ID="gmx"
 export RUN_TOOL_DISPATCH=1
-export RUN_TOOL_DISPATCH=1
 
 catalog="tools/CATALOG.md"
 lookup="tools/catalog_lookup.zsh"
