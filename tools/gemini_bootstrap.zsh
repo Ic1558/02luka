@@ -51,13 +51,20 @@ if [[ ! -f "$POLICY_FILE" ]]; then
   exit 2
 fi
 
-if ! command -v python3 >/dev/null 2>&1; then
+# Deterministic Interpreter Selection
+if [[ -x ".venv/bin/python3" ]]; then
+  PYTHON_EXE=".venv/bin/python3"
+elif [[ -x "venv/bin/python3" ]]; then
+  PYTHON_EXE="venv/bin/python3"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON_EXE="python3"
+else
   echo "${RED}❌ python3 not found${NC} (required to parse policies.yaml)" >&2
   exit 2
 fi
 
 eval "$(
-  python3 - "$POLICY_FILE" "$PROFILE" <<'PY'
+  "$PYTHON_EXE" - "$POLICY_FILE" "$PROFILE" <<'PY'
 import os, sys, shlex, re
 
 policy_path = sys.argv[1]

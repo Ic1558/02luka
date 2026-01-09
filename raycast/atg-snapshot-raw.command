@@ -49,15 +49,17 @@ trap 'rm -f "$out_file"' EXIT
   pgrep -fl "gemini_bridge|bridge\.sh|api_server|fs_watcher|mary|opal" 2>/dev/null || echo "(none)"
   echo
 
-  echo "� TELEMETRY (last 20 lines)"
-  echo "🔌 LAC STATUS"
-  pgrep -fl "lac_manager" 2>/dev/null || echo "(process not running)"
-  echo "Inbox: $(ls "$ROOT/bridge/inbox/lac" 2>/dev/null | wc -l | xargs) | Processing: $(ls "$ROOT/bridge/processing/LAC" 2>/dev/null | wc -l | xargs)"
-  echo "--- lac_manager.log ---"
-  tail -n 5 "$ROOT/g/logs/lac_manager.log" 2>/dev/null || echo "(log missing)"
-  echo
+  # 🔌 LAC STATUS (conditional: show only if running)
+  if pgrep -fl "lac_manager" >/dev/null 2>&1; then
+    echo "🔌 LAC STATUS"
+    pgrep -fl "lac_manager" 2>/dev/null || true
+    echo "Inbox: $(ls "$ROOT/bridge/inbox/lac" 2>/dev/null | wc -l | xargs) | Processing: $(ls "$ROOT/bridge/processing/LAC" 2>/dev/null | wc -l | xargs)"
+    echo "--- lac_manager.log (tail 5) ---"
+    tail -n 5 "$ROOT/g/logs/lac_manager.log" 2>/dev/null || echo "(log missing)"
+    echo
+  fi
 
-  echo "📊 TELEMETRY (last 20 lines)"
+  echo "TELEMETRY (last 20 lines)"
   echo "--- atg_runner.jsonl ---"
   tail -n 20 "$repo/g/telemetry/atg_runner.jsonl" 2>/dev/null || echo "(missing)"
   echo

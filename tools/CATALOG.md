@@ -16,6 +16,7 @@
 | **Build Core History** | `tools/build_core_history.zsh` | Generates deterministic Core History artifacts |`zsh tools/build_core_history.zsh` |
 | **Verify Core State** | `tools/verify_core_state.zsh` | Audits repo cleanliness and artifact validity | `zsh tools/verify_core_state.zsh` |
 | **Save Session** | `tools/save.sh` | Commits state, harvests memory, and logs telemetry | `zsh tools/save.sh` |
+| **List Skills** | `tools/list_skills.zsh` | Lists all available AI skills across library | `run-tool skills` |
 | save | Save session (alias) | tools/save.sh |
 | **Run Tool** | `tools/run_tool.zsh` | Single entry point for all operations | `zsh tools/run_tool.zsh <alias>` |
 
@@ -33,5 +34,6 @@ To promote a script from `_tmp` to `tools/`:
 -   **Clean**: `tools/_tmp/` can be emptied comfortably at any time.
 
 | run-tool | Single entry dispatcher (mandatory) | tools/run_tool.zsh |
+| skills | List all available AI skills | tools/list_skills.zsh |
 | sync-truth | Refresh SSOT truth + context stubs | tools/sync_truth.zsh |
 | verify-core | Audit repo cleanliness (alias) | tools/verify_core_state.zsh |
