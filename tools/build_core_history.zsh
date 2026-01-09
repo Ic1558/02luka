@@ -185,7 +185,7 @@ d = data["decisions"]
 r = data["rules"]
 
 lines=[]
-lines.append(f"# Core History — {m['ts']}")
+lines.append(f"# Core History - {m['ts']}")
 lines.append("")
 lines.append(f"- git: {m['git']['branch']} @ {m['git']['head']} ({m['git']['status']})")
 lines.append(f"- decision_log: {d['status']} (count={d['count']})")
@@ -215,12 +215,12 @@ for item in recent:
       if last_ts:
         try:
           dt = datetime.datetime.fromtimestamp(last_ts) # Assuming float ts in log
-          time_str = f" · last active {dt.strftime('%H:%M')}"
+          time_str = f" - last active {dt.strftime('%H:%M')}"
         except: 
           # Fallback if ts is iso string or other
           try:
              dt = datetime.datetime.fromisoformat(str(last_ts).replace('Z', '+00:00'))
-             time_str = f" · last active {dt.strftime('%H:%M')}"
+             time_str = f" - last active {dt.strftime('%H:%M')}"
           except: pass
       rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
       group_count = 0
@@ -236,11 +236,11 @@ if group_count > 0:
   if last_ts:
     try:
       dt = datetime.datetime.fromtimestamp(last_ts)
-      time_str = f" · last active {dt.strftime('%H:%M')}"
+      time_str = f" - last active {dt.strftime('%H:%M')}"
     except: 
       try:
          dt = datetime.datetime.fromisoformat(str(last_ts).replace('Z', '+00:00'))
-         time_str = f" · last active {dt.strftime('%H:%M')}"
+         time_str = f" - last active {dt.strftime('%H:%M')}"
       except: pass
   rendered.append(f"- [ x{group_count} ] Routine Snapshots (R5_DEFAULT){time_str}")
 
@@ -256,4 +256,3 @@ write_if_changed "$LATEST_MD_CONTENT" "$CORE_DIR/latest.md"
 # python3 -c "import json; json.load(open('$CORE_DIR/latest.json')); json.load(open('$CORE_DIR/index.json')); json.load(open('$CORE_DIR/rule_table.json')); print('JSON_OK')"
 
 echo "✅ Core History built (deterministic)"
-
