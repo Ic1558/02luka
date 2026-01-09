@@ -77,10 +77,12 @@ DONE="/tmp/atg_summary_done.txt"
   echo "pwd=$(pwd)"
 } > "$LOG"
 
-if [[ -f "g/core_history/latest.md" ]]; then
-  osascript -e 'set the clipboard to (read (POSIX file "'"$ROOT"'/g/core_history/latest.md") as «class utf8»)' >/dev/null 2>&1 || true
-else
+# Copy FULL snapshot to clipboard (not just Core History)
+# $out contains: git status, commits, diffs, processes, telemetry + Core History
+if [[ -f "$out" ]]; then
   osascript -e 'set the clipboard to (read (POSIX file "'"$out"'") as «class utf8»)' >/dev/null 2>&1 || true
+else
+  osascript -e 'set the clipboard to (read (POSIX file "'"$ROOT"'/g/core_history/latest.md") as «class utf8»)' >/dev/null 2>&1 || true
 fi
 
 echo "done $(date -Is 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')" >> "$LOG"
