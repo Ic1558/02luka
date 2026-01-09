@@ -9,8 +9,8 @@
 
 set -euo pipefail
 
-# Hardening: Guarantee silence (Raycast stdout overwrites clipboard)
-exec >/dev/null
+# Hardening: Guarantee complete silence (Raycast stdout/stderr overwrites clipboard)
+exec </dev/null >/dev/null 2>&1
 
 ROOT="$HOME/02luka"
 BRIDGE="$ROOT/magic_bridge"

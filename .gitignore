@@ -239,3 +239,6 @@ tools/_tmp/
 # generated core_history artifacts
 /g/core_history/*.md
 /g/core_history/*.json
+
+# generated healthcheck reports
+/g/reports/pr11_healthcheck/*.json
