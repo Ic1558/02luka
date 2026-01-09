@@ -246,3 +246,7 @@ tools/_tmp/
 
 # generated healthcheck reports
 /g/reports/pr11_healthcheck/*.json
+
+# local tool skills are external (SOT: ~/ai-skills)
+/tools/codex/skills
+/tools/claude/skills
