@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # Hardening: Guarantee complete silence (Raycast stdout/stderr overwrites clipboard)
-exec </dev/null >/dev/null 2>&1
+exec >/dev/null 2>&1
 
 ROOT="$HOME/02luka"
 BRIDGE="$ROOT/magic_bridge"
@@ -68,17 +68,22 @@ if [[ -x "tools/build_core_history.zsh" ]]; then
   zsh tools/build_core_history.zsh >/dev/null 2>&1 || true
 fi
 
-# Copy summary to clipboard via osascript (pbcopy fails in Raycast non-GUI session)
+# Copy summary to clipboard (deterministic markers)
 LOG="/tmp/atg_summary_clip.log"
-echo "before clipboard: $(date '+%Y-%m-%dT%H:%M:%S%z')" > "$LOG"
+DONE="/tmp/atg_summary_done.txt"
+{
+  echo "start $(date -Is 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')"
+  echo "script=$0"
+  echo "pwd=$(pwd)"
+} > "$LOG"
 
 if [[ -f "g/core_history/latest.md" ]]; then
-  osascript -e 'set the clipboard to (read (POSIX file "'"$ROOT"'/g/core_history/latest.md") as «class utf8»)' 2>>"$LOG" || echo "osascript failed" >> "$LOG"
-  echo "set clipboard from: g/core_history/latest.md" >> "$LOG"
+  osascript -e 'set the clipboard to (read (POSIX file "'"$ROOT"'/g/core_history/latest.md") as «class utf8»)' >/dev/null 2>&1 || true
 else
-  osascript -e 'set the clipboard to (read (POSIX file "'"$out"'") as «class utf8»)' 2>>"$LOG" || echo "osascript failed" >> "$LOG"
-  echo "set clipboard from: $out" >> "$LOG"
+  osascript -e 'set the clipboard to (read (POSIX file "'"$out"'") as «class utf8»)' >/dev/null 2>&1 || true
 fi
 
-echo "after clipboard: $(date '+%Y-%m-%dT%H:%M:%S%z')" >> "$LOG"
+echo "done $(date -Is 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')" >> "$LOG"
+echo "ok $(date -Is 2>/dev/null || date '+%Y-%m-%dT%H:%M:%S%z')" > "$DONE"
+
 exit 0
