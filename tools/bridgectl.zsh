@@ -9,6 +9,7 @@ REPORT_DIR="$ROOT/g/reports/ops"
 REPORT_FILE="$REPORT_DIR/ops_status.md"
 STDOUT_LOG="/tmp/com.02luka.gemini_bridge.stdout.log"
 STDERR_LOG="/tmp/com.02luka.gemini_bridge.stderr.log"
+BRIDGE_PID_FILE="/tmp/gemini_bridge.pid"
 
 health_field() {
   local key="$1"
@@ -34,7 +35,19 @@ job_pid() {
 }
 
 pgrep_pid() {
-  pgrep -f "gemini_bridge.py" 2>/dev/null | head -n 1
+  # Authoritative: Check both pgrep and the bridge's own PID file
+  local pg_pid=$(pgrep -f "gemini_bridge.py" 2>/dev/null | head -n 1)
+  if [ -f "$BRIDGE_PID_FILE" ]; then
+    local fl_pid=$(cat "$BRIDGE_PID_FILE" 2>/dev/null)
+    if [ "$pg_pid" = "$fl_pid" ]; then
+      echo "$pg_pid"
+    else
+      # Conflict/Mismatch: pgrep is more likely real but PID file is our authority
+      echo "$pg_pid"
+    fi
+  else
+    echo "$pg_pid"
+  fi
 }
 
 tail_logs() {

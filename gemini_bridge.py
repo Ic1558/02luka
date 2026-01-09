@@ -20,8 +20,35 @@ PROJECT_ID = "luka-cloud-471113"
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
 WATCH_DIR = "./magic_bridge/inbox"
+PID_FILE = "/tmp/gemini_bridge.pid"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
+
+def acquire_lock():
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, "r") as f:
+                old_pid = int(f.read().strip())
+            # Check if process is actually running
+            os.kill(old_pid, 0)
+            print(f"❌ Error: Gemini Bridge is already running (PID {old_pid})")
+            sys.exit(1)
+        except (ValueError, OSError, ProcessLookupError):
+            # Stale PID file, overwrite it
+            pass
+    
+    with open(PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+def release_lock():
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, "r") as f:
+                pid = int(f.read().strip())
+            if pid == os.getpid():
+                os.remove(PID_FILE)
+        except Exception:
+            pass
 
 class GeminiHandler(FileSystemEventHandler):
     def __init__(self, model):
@@ -166,8 +193,24 @@ def main():
         sys.exit(1)
 
     if "--self-check" in sys.argv:
-        print("   ✅ Self-check passed.")
+        print("🔍 Running Self-Check...")
+        checks = {
+            "Vertex AI Init": True, # Reached here means init worked
+            "Watch Dir Presence": os.path.exists(WATCH_DIR),
+            "Watch Dir Permissions": os.access(WATCH_DIR, os.W_OK) if os.path.exists(WATCH_DIR) else False,
+            "Environment (PROJECT_ID)": bool(PROJECT_ID),
+        }
+        for name, ok in checks.items():
+            print(f"   - {name}: {'✅' if ok else '❌'}")
+        
+        if not all(checks.values()):
+            print("❌ Self-check FAILED.")
+            sys.exit(1)
+            
+        print("✅ Self-check PASSED.")
         sys.exit(0)
+
+    acquire_lock()
 
     if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
@@ -183,6 +226,8 @@ def main():
     except KeyboardInterrupt:
         observer.stop()
         print("\n🛑 Stopping...")
+    finally:
+        release_lock()
     observer.join()
 
 if __name__ == "__main__":
