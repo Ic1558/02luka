@@ -1,9 +1,0 @@
-{
-  "source": "decision_summarizer.py",
-  "sha256": "3b13a3e985e7d35a09a82905b20291ae3fd42cbf184c44b23f618edd7dd001d8",
-  "rule_count": 5,
-  "rule_ids": [
-    "${(j:",
-    ":)RULE_IDS[@]}"
-  ]
-}

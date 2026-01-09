@@ -235,3 +235,7 @@ xcuserdata/
 # Magic Bridge Artifacts (Consolidated above)
 infra/gemini_env/
 tools/_tmp/
+
+# generated core_history artifacts
+/g/core_history/*.md
+/g/core_history/*.json
