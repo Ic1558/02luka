@@ -165,6 +165,10 @@ def main():
         print(f"❌ Failed to initialize Vertex AI: {e}")
         sys.exit(1)
 
+    if "--self-check" in sys.argv:
+        print("   ✅ Self-check passed.")
+        sys.exit(0)
+
     if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
 
