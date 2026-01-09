@@ -34,13 +34,29 @@ import sys
 from typing import Any, Dict, List, Optional
 
 
-REPO_ROOT = pathlib.Path(os.environ.get("REPO_ROOT", str(pathlib.Path.home() / "02luka"))).resolve()
-CORE_DIR = REPO_ROOT / "g" / "core_history"
-DEC_PATH = REPO_ROOT / "g" / "telemetry" / "decision_log.jsonl"
-RULE_SRC = REPO_ROOT / "decision_summarizer.py"
+def get_repo_root() -> pathlib.Path:
+    return pathlib.Path(os.environ.get("REPO_ROOT", str(pathlib.Path.home() / "02luka"))).resolve()
 
+def get_paths():
+    root = get_repo_root()
+    return {
+        "root": root,
+        "core_dir": root / "g" / "core_history",
+        "dec_path": root / "g" / "telemetry" / "decision_log.jsonl",
+        "rule_src": root / "decision_summarizer.py"
+    }
+
+# Phase 15: Observability & Determinism controls
+def get_config():
+    return {
+        "debug": os.environ.get("BUILD_CORE_HISTORY_DEBUG") == "1",
+        "frozen_now": os.environ.get("CORE_HISTORY_NOW")
+    }
 
 def _utc_now_iso() -> str:
+    config = get_config()
+    if config["frozen_now"]:
+        return config["frozen_now"]
     return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
@@ -68,20 +84,31 @@ def file_sha256(path: pathlib.Path) -> Optional[str]:
     return sha256_bytes(path.read_bytes())
 
 
-def write_if_changed(path: pathlib.Path, content: str) -> bool:
-    """Write file only if content differs. Returns True if wrote."""
+def write_if_changed(path: pathlib.Path, content: str, stats: Dict[str, List[str]]) -> bool:
+    """Write file only if content differs. Returns True if wrote (or would write)."""
     new_sha = sha256_text(content)
     old_sha = file_sha256(path)
+    rel_path = path.name
+
     if old_sha == new_sha:
+        stats["skipped"].append(rel_path)
         return False
+
+    if get_config()["debug"]:
+        print(f"[DEBUG] Would write {rel_path} (sha changed)", file=sys.stderr)
+        stats["written"].append(rel_path)
+        return True
+
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+    stats["written"].append(rel_path)
     return True
 
 
 def run_git(args: List[str]) -> str:
+    root = get_repo_root()
     try:
-        out = subprocess.check_output(["git", "-C", str(REPO_ROOT), *args], stderr=subprocess.DEVNULL)
+        out = subprocess.check_output(["git", "-C", str(root), *args], stderr=subprocess.DEVNULL)
         return out.decode("utf-8", errors="replace").strip()
     except Exception:
         return "unknown"
@@ -96,10 +123,11 @@ def git_metadata() -> Dict[str, str]:
 
 
 def read_decision_rows_last_n(n: int = 50) -> List[Dict[str, Any]]:
-    if not DEC_PATH.exists():
+    paths = get_paths()
+    if not paths["dec_path"].exists():
         return []
     try:
-        lines = DEC_PATH.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = paths["dec_path"].read_text(encoding="utf-8", errors="replace").splitlines()
         rows: List[Dict[str, Any]] = []
         for line in lines[-n:]:
             line = line.strip()
@@ -116,12 +144,13 @@ def read_decision_rows_last_n(n: int = 50) -> List[Dict[str, Any]]:
 
 
 def decision_stats() -> Dict[str, Any]:
-    if not DEC_PATH.exists():
+    paths = get_paths()
+    if not paths["dec_path"].exists():
         return {"status": "missing", "count": 0, "recent": []}
 
     try:
         # Count lines without loading JSON for speed.
-        count = sum(1 for _ in DEC_PATH.read_text(encoding="utf-8", errors="replace").splitlines() if _.strip())
+        count = sum(1 for _ in paths["dec_path"].read_text(encoding="utf-8", errors="replace").splitlines() if _.strip())
     except Exception:
         count = 0
 
@@ -140,17 +169,18 @@ def pick_deterministic_ts(dec_recent: List[Dict[str, Any]]) -> str:
 
 
 def extract_rule_ids() -> List[str]:
-    if not RULE_SRC.exists():
+    paths = get_paths()
+    if not paths["rule_src"].exists():
         return []
     try:
-        text = RULE_SRC.read_text(encoding="utf-8", errors="replace")
+        text = paths["rule_src"].read_text(encoding="utf-8", errors="replace")
         ids = sorted(set(re.findall(r"R[0-9]+_[A-Z0-9_]+", text)))
         return [i for i in ids if i]
     except Exception:
         return []
 
 
-def detect_hooks(clusters: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
+def detect_hooks(clusters: List[List[Dict[str, Any]]], now_dt: datetime.datetime) -> Dict[str, Any]:
     """Phase 13/14: Detect actionable hooks based on signal clusters and silence windows."""
     hook_planned = False
     actionable = []
@@ -176,8 +206,7 @@ def detect_hooks(clusters: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
             continue
 
         last_event_dt = parse_ts(cluster[-1].get("ts", 0))
-        now = datetime.datetime.now(datetime.timezone.utc)
-        silence_min = (now - last_event_dt).total_seconds() / 60
+        silence_min = (now_dt - last_event_dt).total_seconds() / 60
 
         if 10 <= silence_min <= 120:
             if os.environ.get("R2_HOOKS", "1") != "0":
@@ -307,19 +336,27 @@ def render_latest_md(latest_json: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build() -> None:
-    CORE_DIR.mkdir(parents=True, exist_ok=True)
+def build() -> int:
+    paths = get_paths()
+    config = get_config()
+    stats = {"written": [], "skipped": []}
+    exit_code = 0
+
+    paths["core_dir"].mkdir(parents=True, exist_ok=True)
 
     # Decisions
     d = decision_stats()
     recent = d.get("recent", [])
+    if d["status"] == "missing":
+        print("⚠️  Input missing: decision_log.jsonl (running in minimal mode)", file=sys.stderr)
+        exit_code = 2
 
     # TS
     ts_iso = pick_deterministic_ts(recent)
 
     # Rules
     rule_ids = extract_rule_ids()
-    rule_hash = file_sha256(RULE_SRC) if RULE_SRC.exists() else None
+    rule_hash = file_sha256(paths["rule_src"]) if paths["rule_src"].exists() else None
 
     # Clusters (calculated once for both hooks and rendering)
     clusters: List[List[Dict[str, Any]]] = []
@@ -335,12 +372,15 @@ def build() -> None:
     if current_cluster:
         clusters.append(current_cluster)
 
+    now_dt = parse_ts(_utc_now_iso())
     # Hooks (Phase 14)
-    hooks = detect_hooks(clusters)
+    hooks = detect_hooks(clusters, now_dt)
 
     # latest.json
     latest_obj: Dict[str, Any] = {
         "metadata": {
+            "schema_version": "core_history.v1",
+            "generated_at_utc": _utc_now_iso(),
             "ts": ts_iso,
             "git": git_metadata(),
             "generated_by": "build_core_history_engine.py",
@@ -361,48 +401,70 @@ def build() -> None:
     }
 
     latest_json_text = json.dumps(latest_obj, ensure_ascii=False, indent=2)
-    latest_path = CORE_DIR / "latest.json"
-    write_if_changed(latest_path, latest_json_text + "\n")
+    latest_path = paths["core_dir"] / "latest.json"
+    write_if_changed(latest_path, latest_json_text + "\n", stats)
 
     # rule_table.json
     rule_table_obj = {
-        "source": str(RULE_SRC.name),
+        "source": str(paths["rule_src"].name),
         "sha256": (rule_hash or "missing"),
         "rule_count": int(len(rule_ids)),
         "rule_ids": rule_ids,
     }
     rule_table_text = json.dumps(rule_table_obj, ensure_ascii=False, indent=2)
-    rule_table_path = CORE_DIR / "rule_table.json"
-    write_if_changed(rule_table_path, rule_table_text + "\n")
+    rule_table_path = paths["core_dir"] / "rule_table.json"
+    write_if_changed(rule_table_path, rule_table_text + "\n", stats)
 
-    # index.json checksums (computed from just-written content on disk)
-    latest_sha = file_sha256(latest_path) or "missing"
-    rulet_sha = file_sha256(rule_table_path) or "missing"
+    # index.json checksums
+    latest_sha = sha256_text(latest_json_text + "\n")
+    rulet_sha = sha256_text(rule_table_text + "\n")
+
+    # Health metrics
+    silence_min = 0.0
+    if recent:
+        last_ts_val = recent[-1].get("ts", 0)
+        silence_min = (now_dt - parse_ts(last_ts_val)).total_seconds() / 60
+    elif d["status"] == "missing":
+        silence_min = -1.0
 
     index_obj = {
         "ts": ts_iso,
+        "health": {
+            "decision_log": d["status"],
+            "last_decision_ts": ts_iso,
+            "silence_min": round(silence_min, 1),
+            "hooks": hooks["status"],
+            "actionable": hooks["actionable"]
+        },
+        "write_stats": stats,
         "files": {
             "latest.json": {"sha256": latest_sha},
             "rule_table.json": {"sha256": rulet_sha},
         },
     }
     index_text = json.dumps(index_obj, ensure_ascii=False, indent=2)
-    index_path = CORE_DIR / "index.json"
-    write_if_changed(index_path, index_text + "\n")
+    index_path = paths["core_dir"] / "index.json"
+    write_if_changed(index_path, index_text + "\n", stats)
 
     # latest.md
     latest_md_text = render_latest_md(latest_obj)
-    latest_md_path = CORE_DIR / "latest.md"
-    write_if_changed(latest_md_path, latest_md_text)
+    latest_md_path = paths["core_dir"] / "latest.md"
+    write_if_changed(latest_md_path, latest_md_text, stats)
 
-    print("✅ Core History built (deterministic)")
+    if config["debug"]:
+        print(f"✅ Core History build finished (DEBUG MODE). Stats: {json.dumps(stats)}", file=sys.stderr)
+    else:
+        print("✅ Core History built (deterministic)")
+    
+    return exit_code
 
 
 def main() -> None:
     # Arg parsing reserved for future phases; keep stable now.
     # We intentionally accept and ignore args for CLI compatibility.
     try:
-        build()
+        code = build()
+        sys.exit(code)
     except KeyboardInterrupt:
         raise
     except Exception as e:
