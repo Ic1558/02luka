@@ -34,3 +34,4 @@ To promote a script from `_tmp` to `tools/`:
 
 | run-tool | Single entry dispatcher (mandatory) | tools/run_tool.zsh |
 | sync-truth | Refresh SSOT truth + context stubs | tools/sync_truth.zsh |
+| verify-core | Audit repo cleanliness (alias) | tools/verify_core_state.zsh |

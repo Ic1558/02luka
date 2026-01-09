@@ -240,5 +240,9 @@ tools/_tmp/
 /g/core_history/*.md
 /g/core_history/*.json
 
+# truth-sync backups
+/02luka.md.bak.*
+/g/reports/pr11_healthcheck/*.json
+
 # generated healthcheck reports
 /g/reports/pr11_healthcheck/*.json
