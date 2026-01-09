@@ -1,0 +1,11 @@
+{"type": "meta", "source": "02luka.md", "format_version": "1.0", "generated_at": "2026-01-10T03:40:00Z"}
+{"type": "system", "name": "02LUKA", "status": "OPERATIONAL", "last_updated": "2026-01-10T03:37:00Z", "context_engineering_version": "5.0"}
+{"type": "seal", "phase": "17", "status": "SEALED", "timestamp": "2026-01-10T03:37:00Z", "build_sha": "b4cc4022", "seal_sha": "e19bc21a", "guardrails": "single-authority concurrency-safe execution lane"}
+{"type": "phase", "number": "15", "description": "Core History Engine hardened", "features": ["dynamic_pathing", "deterministic_time", "health_metrics"]}
+{"type": "phase", "number": "16", "description": "Auxiliary Integrity Hardened", "features": ["raycast_repo_root_aware", "gemini_bootstrap_doctor_lite"]}
+{"type": "phase", "number": "17", "description": "Bridge Operationalization", "features": ["bridgectl_doctor", "pid_locking", "self_check_hardened"]}
+{"type": "architecture", "mode": "CLC 3.0", "cores": ["gc_core:5009", "mary_core:5001", "gg_core:5010"], "entry": "02luka:entry:requests"}
+{"type": "infrastructure", "redis_port": 6379, "ollama_port": 11434, "docker_containers": 17, "launchagents": "46/50"}
+{"type": "bridge", "status": "AVAILABLE", "pid_lock": "/tmp/gemini_bridge.pid", "watch_dir": "./magic_bridge/inbox", "concurrency": "single-authority"}
+{"type": "paths", "sot": "run/status.json", "ai_daily": "ai_daily.json", "system_status": "run/system_status.v2.json"}
+{"type": "priority", "order": ["02luka.md", "system_status.json", "GC Toolkit", "other files"]}
