@@ -1,9 +1,9 @@
 # Phase 15 Verification Report
 
 **Date:** 2026-01-10
-**Commit:** `eef69467`
-**Status:** ✅ AUDIT-GRADE VERIFIED
-**Environment:** Python 3.12, macOS
+**Commit:** `ca77aebf`
+**Status:** ✅ AUDIT-GRADE VERIFIED (100% Traceable)
+**Environment:** Python 3.14.0, macOS 15.2
 
 ## Objectives Checklist
 
@@ -34,3 +34,7 @@ python3 tests/test_core_history_smoke.py
 ```
 
 All tests passed. Core logic from Phase 14 (clustering, promotion) remains untouched.
+
+## 💾 Artifact Hashes (SHA-256)
+- `latest.json`: `c96f42ed92cc1708bb92a8a2ea50b293abf9c9a9c6497179ca32cdae44441fec`
+- `index.json`: `645aa28457aa3a5753221f74620c175b244da1cbdc30fb0e7bdae2c334325c5a`

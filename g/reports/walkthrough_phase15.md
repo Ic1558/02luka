@@ -1,8 +1,9 @@
 # Phase 15 Walkthrough: Hardening & Observability
 
-**Status:** ✅ AUDIT-GRADE VERIFIED
+**Status:** ✅ AUDIT-GRADE VERIFIED (100% Traceable)
 **Date:** 2026-01-10
-**Commit:** `eef69467`
+**Commit:** `ca77aebf`
+**Environment:** Python 3.14.0, macOS 15.2
 **Focus:** Safety rails, Determinism, Observability, Testing
 
 ## 1. Overview
@@ -65,3 +66,7 @@ OK
 ```bash
 python3 tests/test_core_history_smoke.py
 ```
+
+## 💾 Artifact Hashes (SHA-256)
+- `latest.json`: `c96f42ed92cc1708bb92a8a2ea50b293abf9c9a9c6497179ca32cdae44441fec`
+- `index.json`: `645aa28457aa3a5753221f74620c175b244da1cbdc30fb0e7bdae2c334325c5a`
