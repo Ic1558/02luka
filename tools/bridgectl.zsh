@@ -322,8 +322,84 @@ PY
     cat "$REPORT_FILE"
     exit $RET
     ;;
+  doctor)
+    cd "$ROOT" || exit 1
+    echo "🩺 Gemini Bridge Diagnostic (Doctor Mode)"
+    echo "---------------------------------------------------"
+    /usr/bin/python3 - <<'PY'
+import json, os, pathlib, subprocess
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+ROOT = pathlib.Path(os.environ.get("ROOT", "/Users/icmini/02luka"))
+HEALTH = ROOT / "g/telemetry/bridge_health.json"
+TELEMETRY = ROOT / "g/telemetry/atg_runner.jsonl"
+INBOX = ROOT / "magic_bridge/inbox"
+OUTBOX = ROOT / "magic_bridge/outbox"
+
+def get_health():
+    if not HEALTH.exists(): return None
+    try: return json.loads(HEALTH.read_text())
+    except: return None
+
+def get_telemetry_summary():
+    if not TELEMETRY.exists(): return "Missing"
+    try:
+        lines = TELEMETRY.read_text().splitlines()[-100:]
+        if not lines: return "Empty"
+        success = sum(1 for l in lines if '"event": "processing_complete"' in l)
+        failed = sum(1 for l in lines if '"event": "processing_failed"' in l)
+        return f"{success} success, {failed} failed (last 100 events)"
+    except: return "Error reading"
+
+def get_spool_count(path):
+    if not path.exists(): return 0
+    return len([f for f in path.iterdir() if f.is_file() and not f.name.startswith(".")])
+
+def get_status_label(condition, true_val, false_val):
+    return f"\033[0;32m{true_val}\033[0m" if condition else f"\033[0;31m{false_val}\033[0m"
+
+h = get_health()
+tele = get_telemetry_summary()
+in_count = get_spool_count(INBOX)
+out_count = get_spool_count(OUTBOX)
+
+# Logic check for "Verdict"
+verdict = "STABLE"
+reasons = []
+
+stale = True
+if h:
+    last_ts = h.get("ts")
+    if last_ts:
+        dt = datetime.fromisoformat(last_ts)
+        now = datetime.now(ZoneInfo("Asia/Bangkok"))
+        diff = (now - dt).total_seconds() / 60
+        if diff < 10: stale = False
+
+if stale:
+    verdict = "WARNING"
+    reasons.append("Health heartbeat stale or missing")
+
+if in_count > 50:
+    verdict = "WARNING"
+    reasons.append(f"High inbox count: {in_count}")
+
+print(f"Service Mode:   {'Daemon (LaunchAgent)' if h else 'Ephemeral / Not Running'}")
+print(f"Health File:    {get_status_label(h is not None, 'Found', 'Missing')}")
+ts_val = h.get('ts') if h else 'N/A'
+ts_label = f"{ts_val}{' (STALE)' if stale else ''}"
+print(f"Last Heartbeat: {get_status_label(not stale, ts_label, ts_label)}")
+print(f"Telemetry:      {tele}")
+print(f"Spool Status:   Inbox={in_count}, Outbox={out_count}")
+print(f"---------------------------------------------------")
+print(f"VERDICT:        {get_status_label(verdict=='STABLE', '✅ ' + verdict, '⚠️ ' + verdict)}")
+if reasons:
+    for r in reasons: print(f"  - {r}")
+PY
+    ;;
   *)
-    echo "Usage: $0 {start|stop|status|verify|ops-status}"
+    echo "Usage: $0 {start|stop|status|verify|ops-status|doctor}"
     exit 1
     ;;
 esac
