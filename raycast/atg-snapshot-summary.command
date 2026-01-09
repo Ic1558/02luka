@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+# Hardening: Guarantee silence (Raycast stdout overwrites clipboard)
+exec >/dev/null
+
 ROOT="$HOME/02luka"
 BRIDGE="$ROOT/magic_bridge"
 INBOX="$BRIDGE/inbox"
@@ -62,14 +65,14 @@ sleep 1
 # Build aggregated Core History (SUMMARY mode)
 cd "$ROOT"
 if [[ -x "tools/build_core_history.zsh" ]]; then
-  zsh tools/build_core_history.zsh > /dev/null 2>&1 || true
+  zsh tools/build_core_history.zsh >/dev/null 2>&1 || true
 fi
 
-# Copy summary to clipboard
+# Copy summary to clipboard (NO STDOUT - Raycast captures stdout and overwrites pbcopy)
 if [[ -f "g/core_history/latest.md" ]]; then
-  cat "g/core_history/latest.md" | pbcopy
-  echo "✓ Core History SUMMARY → clipboard"
+  pbcopy < "g/core_history/latest.md"
 else
-  cat "$out" | pbcopy
-  echo "✓ Snapshot → clipboard (fallback)"
+  pbcopy < "$out"
 fi
+
+exit 0
