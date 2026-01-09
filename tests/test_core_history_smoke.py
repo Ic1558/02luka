@@ -4,6 +4,7 @@ import sys
 import json
 import shutil
 import pathlib
+import io
 import unittest
 import tempfile
 from unittest.mock import patch
@@ -37,28 +38,55 @@ class TestCoreHistory(unittest.TestCase):
     def test_build_success_and_schema(self):
         # Create dummy decision log
         log_path = self.test_dir / "g" / "telemetry" / "decision_log.jsonl"
-        log_path.write_text('{"ts": "2025-01-01T10:00:00Z", "matched_rules": ["R5_DEFAULT"], "risk": "low"}\n')
+        # Two entries to test silence_min
+        log_path.write_text(
+            '{"ts": "2025-01-01T10:00:00Z", "matched_rules": ["R5_DEFAULT"], "risk": "low"}\n'
+            '{"ts": "2025-01-01T11:50:00Z", "matched_rules": ["R5_DEFAULT"], "risk": "low"}\n'
+        )
         
         exit_code = engine.build()
         self.assertEqual(exit_code, 0)
         
+        # 1. latest.json validation
         latest_path = self.test_dir / "g" / "core_history" / "latest.json"
         self.assertTrue(latest_path.exists())
-        
         data = json.loads(latest_path.read_text())
-        # P0 Requirement: Schema version
+        
+        # P0: Schema & Determinism
         self.assertEqual(data["metadata"]["schema_version"], "core_history.v1")
-        # P0 Requirement: Deterministic generated_at_utc (frozen)
         self.assertEqual(data["metadata"]["generated_at_utc"], "2025-01-01T12:00:00Z")
-
+        self.assertIn("decisions", data)
+        self.assertIn("rules", data)
+        self.assertIn("hooks", data)
+        
+        # 2. P1 Observability: index.json health & stats
+        index_path = self.test_dir / "g" / "core_history" / "index.json"
+        self.assertTrue(index_path.exists())
+        idx = json.loads(index_path.read_text())
+        
+        self.assertIn("health", idx)
+        self.assertEqual(idx["health"]["decision_log"], "present")
+        self.assertEqual(idx["health"]["silence_min"], 10.0) # 12:00:00 - 11:50:00 = 10m
+        
+        self.assertIn("write_stats", idx)
+        self.assertIn("latest.json", idx["write_stats"]["written"])
+        
     def test_missing_input_exit_code(self):
-        # No decision log present
-        exit_code = engine.build()
         # P0 Requirement: Exit code 2 for missing inputs
-        self.assertEqual(exit_code, 2)
+        # P1 Requirement: Diagnostic warning to stderr
+        with patch('sys.stderr', new=io.StringIO()) as mock_stderr:
+            exit_code = engine.build()
+            self.assertEqual(exit_code, 2)
+            
+            stderr_content = mock_stderr.getvalue()
+            self.assertIn("⚠️  Input missing: decision_log.jsonl", stderr_content)
         
         # Should still generate artifacts (minimal mode)
-        self.assertTrue((self.test_dir / "g" / "core_history" / "latest.json").exists())
+        index_path = self.test_dir / "g" / "core_history" / "index.json"
+        self.assertTrue(index_path.exists())
+        idx = json.loads(index_path.read_text())
+        self.assertEqual(idx["health"]["decision_log"], "missing")
+        self.assertEqual(idx["health"]["silence_min"], -1.0)
 
 if __name__ == "__main__":
     unittest.main()
