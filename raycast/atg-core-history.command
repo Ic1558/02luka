@@ -9,9 +9,16 @@
 
 set -euo pipefail
 
-ROOT="$HOME/02luka"
+# Resolve Repo Root (Dynamic)
+SCRIPT_DIR="${0:A:h}"
+ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$HOME/02luka")"
 BRIDGE="$ROOT/magic_bridge"
 INBOX="$BRIDGE/inbox"
+
+if [[ ! -d "$ROOT" ]]; then
+    echo "❌ Root not found: $ROOT"
+    exit 1
+fi
 mkdir -p "$INBOX"
 
 repo="$ROOT"

@@ -14,7 +14,14 @@
 # @raycast.description Check Gemini Bridge status, run verify, or ops-status
 # @raycast.author icmini
 
-cd ~/02luka || exit 1
+# Resolve Repo Root (Dynamic)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "$HOME/02luka")"
+
+cd "$ROOT" || {
+  echo "❌ Could not find repo root: $ROOT"
+  exit 1
+}
 
 COMMAND="${1:-status}"
 
