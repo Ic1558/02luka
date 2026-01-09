@@ -68,11 +68,17 @@ if [[ -x "tools/build_core_history.zsh" ]]; then
   zsh tools/build_core_history.zsh >/dev/null 2>&1 || true
 fi
 
-# Copy summary to clipboard (NO STDOUT - Raycast captures stdout and overwrites pbcopy)
+# Copy summary to clipboard via osascript (pbcopy fails in Raycast non-GUI session)
+LOG="/tmp/atg_summary_clip.log"
+echo "before clipboard: $(date '+%Y-%m-%dT%H:%M:%S%z')" > "$LOG"
+
 if [[ -f "g/core_history/latest.md" ]]; then
-  pbcopy < "g/core_history/latest.md"
+  osascript -e 'set the clipboard to (read (POSIX file "'"$ROOT"'/g/core_history/latest.md") as «class utf8»)' 2>>"$LOG" || echo "osascript failed" >> "$LOG"
+  echo "set clipboard from: g/core_history/latest.md" >> "$LOG"
 else
-  pbcopy < "$out"
+  osascript -e 'set the clipboard to (read (POSIX file "'"$out"'") as «class utf8»)' 2>>"$LOG" || echo "osascript failed" >> "$LOG"
+  echo "set clipboard from: $out" >> "$LOG"
 fi
 
+echo "after clipboard: $(date '+%Y-%m-%dT%H:%M:%S%z')" >> "$LOG"
 exit 0
