@@ -20,6 +20,45 @@ fi
 # 2. Validation & Logging (Fail-fast if < 3.9)
 "$PYTHON_EXE" -c 'import sys; exit(0 if sys.version_info >= (3, 9) else 1)' || { echo "❌ Error: Python 3.9+ required ($PYTHON_EXE)"; exit 1; }
 
-"$PYTHON_EXE" -c 'import sys; print(f"🔧 Core History: Using {sys.version.split()[0]} at {sys.executable}", file=sys.stderr)'
+# Parse arguments
+EXEC_HOOKS=0
+ENGINE_ARGS=()
+for arg in "$@"; do
+    if [[ "$arg" == "--execute-hooks" ]]; then
+        EXEC_HOOKS=1
+    else
+        ENGINE_ARGS+=("$arg")
+    fi
+done
 
-exec "$PYTHON_EXE" tools/build_core_history_engine.py "$@"
+# 3. Build Core History
+"$PYTHON_EXE" tools/build_core_history_engine.py "${ENGINE_ARGS[@]}"
+
+# 4. Handle Execution Hooks (Phase 14)
+if [[ $EXEC_HOOKS -eq 1 ]]; then
+    JSON_PATH="g/core_history/latest.json"
+    if [[ -f "$JSON_PATH" ]]; then
+        # Use Python to parse hooks safely
+        HOOKS=$("$PYTHON_EXE" -c 'import json, sys; d=json.load(open("'"$JSON_PATH"'")); print(" ".join(d.get("hooks", {}).get("actionable", [])))')
+        
+        if [[ -n "$HOOKS" ]]; then
+            echo "🏹 Actionable Hooks Found: $HOOKS"
+            for hook in ${(z)HOOKS}; do
+                case "$hook" in
+                    save)
+                        echo "🚀 Triggering auto-save..."
+                        zsh tools/run_tool.zsh save
+                        ;;
+                    seal)
+                        echo "🔒 Triggering auto-seal..."
+                        # Using dispatcher for seal as well
+                        zsh tools/run_tool.zsh save --seal
+                        ;;
+                    *)
+                        echo "⚠️ Unknown hook: $hook"
+                        ;;
+                esac
+            done
+        fi
+    fi
+fi

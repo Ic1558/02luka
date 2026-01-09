@@ -150,6 +150,49 @@ def extract_rule_ids() -> List[str]:
         return []
 
 
+def detect_hooks(clusters: List[List[Dict[str, Any]]]) -> Dict[str, Any]:
+    """Phase 13/14: Detect actionable hooks based on signal clusters and silence windows."""
+    hook_planned = False
+    actionable = []
+    status = "idle"
+    trigger_reason = ""
+
+    # Check for Actionable signals (R2 triggers)
+    for cluster in reversed(clusters):
+        if hook_planned:
+            break
+
+        rules_set = set()
+        for item in cluster:
+            rules_set.update(item.get("matched_rules", []))
+
+        is_signal = (len(rules_set) >= 2 and "R5_DEFAULT" in rules_set)
+        if not is_signal:
+            continue
+
+        action_rules = {rr for rr in rules_set if any(x in rr.lower() for x in ["save", "seal", "sync"])}
+        if action_rules:
+            # Already has actionable rules in the cluster (R2 promoted cluster)
+            continue
+
+        last_event_dt = parse_ts(cluster[-1].get("ts", 0))
+        now = datetime.datetime.now(datetime.timezone.utc)
+        silence_min = (now - last_event_dt).total_seconds() / 60
+
+        if 10 <= silence_min <= 120:
+            if os.environ.get("R2_HOOKS", "1") != "0":
+                actionable = ["save"]
+                status = "ready"
+                trigger_reason = f"signal cluster silence ({int(silence_min)}m)"
+                hook_planned = True
+
+    return {
+        "actionable": actionable,
+        "status": status,
+        "trigger_reason": trigger_reason
+    }
+
+
 def render_latest_md(latest_json: Dict[str, Any]) -> str:
     """Generate latest.md from latest.json content.
 
@@ -161,6 +204,7 @@ def render_latest_md(latest_json: Dict[str, Any]) -> str:
     m = latest_json["metadata"]
     d = latest_json["decisions"]
     r = latest_json["rules"]
+    h = latest_json.get("hooks", {"actionable": []})
 
     lines: List[str] = []
     lines.append(f"# Core History - {m['ts']}")
@@ -254,37 +298,10 @@ def render_latest_md(latest_json: Dict[str, Any]) -> str:
             t_str = parse_ts(sub_last_ts).strftime("%H:%M")
             rendered.append(f"- [ x{sub_group_count} ] Routine Snapshots (R5_DEFAULT) · last active {t_str}")
 
-    # Phase 13: Auto-Hook Planner (Dry-Run) - Corrected Selection Logic
-    hook_planned = False
-    for cluster in reversed(clusters):
-        if hook_planned:
-            break
-
-        rules_set = set()
-        for item in cluster:
-            rules_set.update(item.get("matched_rules", []))
-
-        is_signal = (len(rules_set) >= 2 and "R5_DEFAULT" in rules_set)
-        if not is_signal:
-            continue
-
-        action_rules = {rr for rr in rules_set if any(x in rr.lower() for x in ["save", "seal", "sync"])}
-        if action_rules:
-            continue
-
-        last_event_dt = parse_ts(cluster[-1].get("ts", 0))
-        now = datetime.datetime.now(datetime.timezone.utc)
-        silence_min = (now - last_event_dt).total_seconds() / 60
-
-        if DEBUG:
-            duration_m = int((parse_ts(cluster[-1].get("ts", 0)) - parse_ts(cluster[0].get("ts", 0))).total_seconds() / 60)
-            print(f"DEBUG[R2]: cluster duration={duration_m}m silence={int(silence_min)}m rules={rules_set}", file=sys.stderr)
-
-        if 10 <= silence_min <= 120:
-            if os.environ.get("R2_HOOKS", "1") != "0":
-                rendered.append("- [ ACTIONABLE ] Hook Planned: save (dry-run)")
-                rendered.append(f"  - trigger: signal cluster ended ({int(silence_min)}m ago)")
-                hook_planned = True
+    # Phase 13/14: Render hooks from machine-readable source
+    if h["actionable"]:
+        rendered.append(f"- [ ACTIONABLE ] Hook Planned: {', '.join(h['actionable'])}")
+        rendered.append(f"  - trigger: {h.get('trigger_reason', 'unknown')}")
 
     lines.extend(rendered[-5:])
     return "\n".join(lines) + "\n"
@@ -295,13 +312,31 @@ def build() -> None:
 
     # Decisions
     d = decision_stats()
+    recent = d.get("recent", [])
 
     # TS
-    ts_iso = pick_deterministic_ts(d.get("recent", []))
+    ts_iso = pick_deterministic_ts(recent)
 
     # Rules
     rule_ids = extract_rule_ids()
     rule_hash = file_sha256(RULE_SRC) if RULE_SRC.exists() else None
+
+    # Clusters (calculated once for both hooks and rendering)
+    clusters: List[List[Dict[str, Any]]] = []
+    current_cluster: List[Dict[str, Any]] = []
+    last_dt: Optional[datetime.datetime] = None
+    for item in recent:
+        dt = parse_ts(item.get("ts", 0))
+        if last_dt and (dt - last_dt).total_seconds() > 3600:
+            clusters.append(current_cluster)
+            current_cluster = []
+        current_cluster.append(item)
+        last_dt = dt
+    if current_cluster:
+        clusters.append(current_cluster)
+
+    # Hooks (Phase 14)
+    hooks = detect_hooks(clusters)
 
     # latest.json
     latest_obj: Dict[str, Any] = {
@@ -314,7 +349,7 @@ def build() -> None:
         "decisions": {
             "status": d["status"],
             "count": int(d["count"]),
-            "recent": d.get("recent", []),
+            "recent": recent,
         },
         "rules": {
             "status": "ok" if rule_hash else "missing",
@@ -322,6 +357,7 @@ def build() -> None:
             "count": int(len(rule_ids)),
             "ids": rule_ids,
         },
+        "hooks": hooks
     }
 
     latest_json_text = json.dumps(latest_obj, ensure_ascii=False, indent=2)
