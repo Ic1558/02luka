@@ -1,11 +1,18 @@
+# Manual test recipe (Phase 18 idempotency ledger):
+# 1) IDEMPOTENCY_LEDGER=on python gemini_bridge.py
+# 2) Drop the same file twice in magic_bridge/
+# 3) Second run should log skipped_duplicate and reuse cached output
 import os
 import time
 import sys
+import datetime
+from typing import Optional
 import vertexai
 from vertexai.generative_models import GenerativeModel
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from idempotency_ledger import IdempotencyLedger, default_ledger_path
 
 # --- Configuration ---
 PROJECT_ID = "luka-cloud-471113" 
@@ -14,10 +21,46 @@ MODEL_NAME = "gemini-2.0-flash-001"
 WATCH_DIR = "./magic_bridge"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
+LEDGER_ACTION = "gemini_bridge_summary"
+
+
+def _utc_now_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _build_ledger_entry(
+    *,
+    key: str,
+    input_path: str,
+    content_hash: str,
+    status: str,
+    output_path: Optional[str],
+    error: Optional[str],
+    action: str,
+) -> dict:
+    return {
+        "ts": _utc_now_iso(),
+        "idempotency_key": key,
+        "input": {
+            "path": input_path,
+            "hash": f"sha256:{content_hash}",
+        },
+        "action": action,
+        "result": {
+            "status": status,
+            "output": output_path,
+            "error": error,
+        },
+        "runtime": {
+            "pid": os.getpid(),
+            "build_sha": None,
+        },
+    }
 
 class GeminiHandler(FileSystemEventHandler):
-    def __init__(self, model):
+    def __init__(self, model, ledger):
         self.model = model
+        self.ledger = ledger
 
     @retry(
         stop=stop_after_attempt(5),
@@ -54,7 +97,27 @@ class GeminiHandler(FileSystemEventHandler):
         self.process_file(event.src_path)
 
     def process_file(self, file_path):
+        ledger_key = None
+        content_hash = None
         try:
+            if self.ledger:
+                ledger_key, content_hash = self.ledger.compute_key(file_path)
+                existing = self.ledger.find_success(ledger_key)
+                if existing:
+                    cached_output = existing.get("result", {}).get("output")
+                    entry = _build_ledger_entry(
+                        key=ledger_key,
+                        input_path=file_path,
+                        content_hash=content_hash,
+                        status="skipped_duplicate",
+                        output_path=cached_output,
+                        error=None,
+                        action=LEDGER_ACTION,
+                    )
+                    self.ledger.append_entry(entry)
+                    print(f"   ⏭️ skipped_duplicate: {os.path.basename(file_path)}")
+                    return cached_output
+
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
             if not content.strip(): return
@@ -113,8 +176,34 @@ class GeminiHandler(FileSystemEventHandler):
                 
             print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
 
+            if self.ledger and ledger_key and content_hash:
+                entry = _build_ledger_entry(
+                    key=ledger_key,
+                    input_path=file_path,
+                    content_hash=content_hash,
+                    status="success",
+                    output_path=output_path,
+                    error=None,
+                    action=LEDGER_ACTION,
+                )
+                self.ledger.append_entry(entry)
+
+            return output_path
+
         except Exception as e:
+            if self.ledger and ledger_key and content_hash:
+                entry = _build_ledger_entry(
+                    key=ledger_key,
+                    input_path=file_path,
+                    content_hash=content_hash,
+                    status="failed",
+                    output_path=None,
+                    error=str(e),
+                    action=LEDGER_ACTION,
+                )
+                self.ledger.append_entry(entry)
             print(f"   ❌ Error: {e}")
+            raise
 
 def main():
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
@@ -130,7 +219,12 @@ def main():
     if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
 
-    event_handler = GeminiHandler(model)
+    ledger = None
+    if os.getenv("IDEMPOTENCY_LEDGER") == "on":
+        ledger = IdempotencyLedger(default_ledger_path())
+        print(f"   🧾 Idempotency ledger enabled at {ledger.ledger_path}")
+
+    event_handler = GeminiHandler(model, ledger)
     observer = Observer()
     observer.schedule(event_handler, path=WATCH_DIR, recursive=False)
     observer.start()
