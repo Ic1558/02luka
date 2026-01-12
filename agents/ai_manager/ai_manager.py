@@ -145,21 +145,18 @@ class AIManager:
 
             def run_lint(self, targets: List[str]) -> Dict[str, Any]:
                 return {"status": "success", "targets": targets}
-<<<<<<< HEAD
-            
+
             def check_security_basics(self, file_path: str) -> List[str]:
                 """Quick security check stub - returns empty list (no issues)."""
                 return []
-            
+
             def check_patterns(self, file_path: str) -> List[str]:
                 """Quick pattern check stub - returns empty list (no issues)."""
                 return []
-            
+
             def run_pattern_check(self, file_path: str) -> List[str]:
                 """Quick pattern check stub - returns empty list (no issues)."""
                 return []
-=======
->>>>>>> origin/main
 
         qa_worker = QAWorkerV4(actions=_QuickQaActions())
         qa_result = qa_worker.execute_task(

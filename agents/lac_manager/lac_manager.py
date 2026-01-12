@@ -15,7 +15,7 @@ from agents.alter.helpers import polish_and_translate_if_needed, polish_if_neede
 # Configuration
 LAC_BASE_DIR = Path(os.environ.get("LAC_BASE_DIR", os.path.expanduser("~/02luka"))).resolve()
 CONFIG_FILE = LAC_BASE_DIR / "g/config/lac_lanes.yaml"
-LOG_FILE = LAC_BASE_DIR / "g/logs/lac_manager.log"
+LOG_FILE = LAC_BASE_DIR / "logs/lac_daemon.log"
 
 # Setup Logging
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -126,43 +126,107 @@ complexity: "{task.get('complexity', 'simple')}"
         task["content"] = polished
         
     def run(self):
+        """Main daemon loop - watches inbox continuously."""
+        import json
+        import signal
+
+        # Use lowercase canonical paths
         inbox = LAC_BASE_DIR / "bridge/inbox/lac"
-        processing = LAC_BASE_DIR / "bridge/processing/LAC"
-        processed = LAC_BASE_DIR / "bridge/processed/LAC"
-        
-        for d in [inbox, processing, processed]:
+        processing = LAC_BASE_DIR / "bridge/processing/lac"
+        processed = LAC_BASE_DIR / "bridge/processed/lac"
+        quarantine = LAC_BASE_DIR / "bridge/quarantine/lac"
+
+        # Ensure directories exist
+        for d in [inbox, processing, processed, quarantine]:
             d.mkdir(parents=True, exist_ok=True)
-            
-        logging.info("LAC Manager started. Watching bridge/inbox/lac...")
-        
-        # Single pass (LaunchAgent will handle loop interval)
-        tasks = sorted(list(inbox.glob("*.yaml")))
-        for task_file in tasks:
+
+        logging.info("=" * 60)
+        logging.info("LAC Manager Daemon started")
+        logging.info(f"Agent ID: codex")
+        logging.info(f"Base directory: {LAC_BASE_DIR}")
+        logging.info(f"Watching: {inbox}")
+        logging.info(f"Heartbeat: 10 seconds")
+        logging.info("=" * 60)
+
+        # Signal handling for graceful shutdown
+        shutdown_requested = False
+
+        def signal_handler(signum, frame):
+            nonlocal shutdown_requested
+            logging.info(f"Received signal {signum}, shutting down...")
+            shutdown_requested = True
+
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+
+        # Main daemon loop
+        while not shutdown_requested:
             try:
-                logging.info(f"Processing {task_file.name}...")
-                
-                # Move to processing
-                proc_path = processing / task_file.name
-                task_file.rename(proc_path)
-                
-                with open(proc_path, "r") as f:
-                    task = yaml.safe_load(f)
-                
-                self.process_task(task)
-                
-                # Move to processed
-                proc_path.rename(processed / task_file.name)
-                logging.info(f"Finished {task_file.name}")
-                
-            except Exception as e:
-                logging.error(f"Error processing {task_file.name}: {e}")
-                # Move to processed even on error to prevent stuck WOs
+                # Find oldest work order (FIFO) - accept both YAML and JSON
+                tasks = sorted(
+                    list(inbox.glob("*.yaml")) +
+                    list(inbox.glob("*.yml")) +
+                    list(inbox.glob("*.json")),
+                    key=lambda p: p.stat().st_mtime
+                )
+
+                # Skip recently written files (avoid partial writes)
+                now = time.time()
+                tasks = [t for t in tasks if (now - t.stat().st_mtime) > 2]
+
+                if not tasks:
+                    # Heartbeat - no work
+                    time.sleep(10)
+                    continue
+
+                task_file = tasks[0]
+                logging.info(f"[PICKUP] {task_file.name}")
+
+                proc_path = None  # Initialize to avoid UnboundLocalError
                 try:
-                    if proc_path.exists():
-                        proc_path.rename(processed / task_file.name)
-                        logging.warning(f"Moved {task_file.name} to processed/ after error")
-                except Exception as move_error:
-                    logging.error(f"Failed to move {task_file.name} to processed/: {move_error}")
+                    # Move to processing
+                    proc_path = processing / task_file.name
+                    task_file.rename(proc_path)
+
+                    # Load based on extension
+                    with open(proc_path, "r") as f:
+                        if proc_path.suffix in ['.yaml', '.yml']:
+                            task = yaml.safe_load(f)
+                        else:  # .json
+                            task = json.load(f)
+
+                    logging.info(f"[PROCESS] {task.get('objective', 'NO OBJECTIVE')}")
+                    self.process_task(task)
+
+                    # Move to processed
+                    proc_path.rename(processed / task_file.name)
+                    logging.info(f"[COMPLETE] {task_file.name}")
+
+                except Exception as e:
+                    logging.error(f"[ERROR] {task_file.name}: {e}", exc_info=True)
+                    # Quarantine to prevent infinite retry
+                    error_name = f"ERROR_{task_file.name if task_file.exists() else proc_path.name}"
+                    error_file = quarantine / error_name
+
+                    # Move from wherever it is now
+                    if proc_path and proc_path.exists():
+                        proc_path.rename(error_file)
+                    elif task_file.exists():
+                        task_file.rename(error_file)
+
+                    logging.warning(f"[QUARANTINE] -> {error_file.name}")
+
+                # Small delay between files
+                time.sleep(1)
+
+            except KeyboardInterrupt:
+                logging.info("Keyboard interrupt, shutting down...")
+                break
+            except Exception as e:
+                logging.error(f"[DAEMON ERROR] Unexpected: {e}", exc_info=True)
+                time.sleep(5)  # Back off on errors
+
+        logging.info("LAC Manager Daemon shutdown complete")
 
 if __name__ == "__main__":
     manager = LACManager()

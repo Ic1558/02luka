@@ -54,4 +54,14 @@ def summarize_architect_spec(spec: Dict[str, Any] | None) -> str:
     return "\n".join(lines)
 
 
-__all__ = ["validate_architect_spec", "summarize_architect_spec"]
+def validate_task_against_contract(task: Dict[str, Any], contract_name: str) -> bool:
+    """Stub: Validate task against developer contract. Always returns True for now."""
+    return True
+
+
+def load_developer_contract(contract_name: str) -> Dict[str, Any]:
+    """Stub: Load developer contract. Returns empty dict for now."""
+    return {}
+
+
+__all__ = ["validate_architect_spec", "summarize_architect_spec", "validate_task_against_contract", "load_developer_contract"]
