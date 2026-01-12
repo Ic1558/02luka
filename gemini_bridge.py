@@ -15,6 +15,24 @@ except ImportError:
     build_decision_block_for_logs = None
 # <<< 02LUKA_DECISION_SUMMARIZER_IMPORT <<<
 
+# >>> PHASE 18: IDEMPOTENCY LEDGER >>>
+# Feature flag: set IDEMPOTENCY_LEDGER=on to enable
+IDEMPOTENCY_ENABLED = os.environ.get("IDEMPOTENCY_LEDGER", "off").lower() == "on"
+_ledger = None
+
+def get_ledger():
+    """Lazy-load idempotency ledger."""
+    global _ledger
+    if _ledger is None and IDEMPOTENCY_ENABLED:
+        try:
+            from idempotency_ledger import IdempotencyLedger
+            _ledger = IdempotencyLedger()
+            print("   📒 Idempotency ledger enabled")
+        except ImportError:
+            print("   ⚠️ Idempotency ledger module not found")
+    return _ledger
+# <<< PHASE 18: IDEMPOTENCY LEDGER <<<
+
 # --- Configuration ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
@@ -120,6 +138,18 @@ class GeminiHandler(FileSystemEventHandler):
 
             if not content.strip(): return
 
+            # >>> PHASE 18: IDEMPOTENCY CHECK >>>
+            ledger = get_ledger()
+            idempotency_key = None
+            if ledger:
+                idempotency_key = ledger.compute_key(file_path, content)
+                if ledger.is_processed(idempotency_key):
+                    cached_output = ledger.get_cached_output(idempotency_key)
+                    print(f"   ⏭️ Skipped (duplicate): {os.path.basename(file_path)} → {cached_output}")
+                    ledger.record_skipped(idempotency_key, file_path, cached_output)
+                    return
+            # <<< PHASE 18: IDEMPOTENCY CHECK <<<
+
             # 1. Build Initial Context
             tree = self.get_file_tree(".")
             current_prompt = (
@@ -178,8 +208,17 @@ class GeminiHandler(FileSystemEventHandler):
 
             print(f"   ✅ Saved response to: {os.path.basename(output_path)} (in outbox)")
 
+            # >>> PHASE 18: RECORD SUCCESS >>>
+            if ledger and idempotency_key:
+                ledger.record_success(idempotency_key, file_path, output_path)
+            # <<< PHASE 18: RECORD SUCCESS <<<
+
         except Exception as e:
             print(f"   ❌ Error: {e}")
+            # >>> PHASE 18: RECORD FAILURE >>>
+            if ledger and idempotency_key:
+                ledger.record_failed(idempotency_key, file_path, str(e))
+            # <<< PHASE 18: RECORD FAILURE <<<
 
 def main():
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
