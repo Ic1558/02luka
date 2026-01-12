@@ -234,6 +234,10 @@ typeset -a WHITELIST_FILES=(
   "apps/RightLang/build.zsh"
   "apps/RightLang/create_dmg.zsh"
   "atg_gc_sanity.zsh"
+  ".github/workflows/memory-audit.yml"
+  "tools/install_codex_enhancements.zsh"
+  "tools/setup_codex_full_access.zsh"
+  "tools/setup_codex_workspace.zsh"
 )
 
 function is_whitelisted() {
