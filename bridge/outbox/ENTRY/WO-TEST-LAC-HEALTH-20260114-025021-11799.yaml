@@ -1,0 +1,6 @@
+wo_id: "WO-TEST-LAC-HEALTH-20260114-025021-11799"
+target: lac
+intent: "health"
+objective: "Mary -> LAC health check"
+source: "health_check"
+files: []

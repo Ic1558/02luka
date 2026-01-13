@@ -1,0 +1,6 @@
+wo_id: "WO-TEST-LAC-ROUTE-2"
+target: lac
+intent: "test"
+objective: "Verify Mary routes to LAC inbox (2)"
+source: "mary_test"
+files: []

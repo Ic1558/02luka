@@ -8,7 +8,10 @@ INBOX="$ROOT/bridge/inbox/ENTRY"
 OUTBOX="$ROOT/bridge/outbox/ENTRY"
 LOG_DIR="$ROOT/logs"
 LOG_FILE="$LOG_DIR/mary_dispatcher.log"
-ROUTING_RULES="$ROOT/g/config/wo_routing_rules.yaml"
+ROUTING_RULES="$ROOT/bridge/routing_rules.yaml"
+if [[ ! -f "$ROUTING_RULES" ]]; then
+  ROUTING_RULES="$ROOT/g/config/wo_routing_rules.yaml"
+fi
 LPE_INBOX="$ROOT/bridge/inbox/LPE"
 
 mkdir -p "$INBOX" "$OUTBOX" "$LOG_DIR" "$LPE_INBOX" "$ROOT/bridge/outbox/LPE" "$ROOT/bridge/processed/ENTRY"
@@ -75,6 +78,7 @@ target_candidates = data.get("target_candidates") or []
 route_hints = data.get("route_hints") or {}
 fallback_order = route_hints.get("fallback_order") or []
 task_type = (data.get("task") or {}).get("type")
+target = data.get("target")
 
 # --- NEW: honor strict_target first (highest priority) ---
 if strict_target:
@@ -89,6 +93,7 @@ for rule in rules:
     match = rule.get("match") or {}
     rule_task_type = match.get("task_type")
     fallback_contains = match.get("fallback_contains")
+    match_target = match.get("target")
     
     # Check task_type match
     if rule_task_type and rule_task_type != task_type:
@@ -102,6 +107,12 @@ for rule in rules:
             for x in fallback_order
         )
         if not fallback_matches:
+            continue
+
+    if match_target is not None:
+        if target is None:
+            continue
+        if str(match_target).lower() != str(target).lower():
             continue
     
     # Rule matched - validate target before returning
@@ -167,10 +178,14 @@ for file in "$INBOX"/*.yaml "$INBOX"/*.yml; do
       log "$id -> LPE"
       ;;
     shell|CLC|LAC|CLS|Andy)
-      mkdir -p "$ROOT/bridge/inbox/$dest" "$ROOT/bridge/outbox/$dest"
-      tmp="$ROOT/bridge/inbox/$dest/.mary_${id}.$$"
+      dest_dir="$dest"
+      if [[ "$dest" == "LAC" ]]; then
+        dest_dir="lac"
+      fi
+      mkdir -p "$ROOT/bridge/inbox/$dest_dir" "$ROOT/bridge/outbox/$dest_dir"
+      tmp="$ROOT/bridge/inbox/$dest_dir/.mary_${id}.$$"
       cp "$file" "$tmp"
-      mv "$tmp" "$ROOT/bridge/inbox/$dest/${id}.yaml"
+      mv "$tmp" "$ROOT/bridge/inbox/$dest_dir/${id}.yaml"
       mv "$file" "$OUTBOX/${id}.yaml"
       log "$id -> $dest"
       ;;
