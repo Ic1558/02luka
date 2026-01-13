@@ -1,4 +1,5 @@
 import os
+import json
 import yaml
 import logging
 import sys
@@ -124,10 +125,25 @@ complexity: "{task.get('complexity', 'simple')}"
 
         task["report_content"] = polished
         task["content"] = polished
+
+    def _append_metrics(self, wo_id: str, status: str, duration_ms: int, queue_depth: int) -> None:
+        metrics_path = LAC_BASE_DIR / "g/telemetry/lac_metrics.jsonl"
+        metrics_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+            "wo_id": wo_id,
+            "status": status,
+            "duration_ms": duration_ms,
+            "queue_depth": queue_depth,
+        }
+        try:
+            with open(metrics_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload) + "\n")
+        except Exception as e:
+            logging.warning(f"Failed to append LAC metrics: {e}")
         
     def run(self):
         """Main daemon loop - watches inbox continuously."""
-        import json
         import signal
 
         # Use lowercase canonical paths
@@ -180,7 +196,11 @@ complexity: "{task.get('complexity', 'simple')}"
                     continue
 
                 task_file = tasks[0]
+                queue_depth_at_pickup = len(tasks)
                 logging.info(f"[PICKUP] {task_file.name}")
+                wo_id = task_file.stem
+                started_at = time.time()
+                task_wo_id = None
 
                 proc_path = None  # Initialize to avoid UnboundLocalError
                 try:
@@ -195,12 +215,15 @@ complexity: "{task.get('complexity', 'simple')}"
                         else:  # .json
                             task = json.load(f)
 
+                    task_wo_id = task.get("wo_id") or task.get("id") or wo_id
                     logging.info(f"[PROCESS] {task.get('objective', 'NO OBJECTIVE')}")
                     self.process_task(task)
 
                     # Move to processed
                     proc_path.rename(processed / task_file.name)
                     logging.info(f"[COMPLETE] {task_file.name}")
+                    duration_ms = int((time.time() - started_at) * 1000)
+                    self._append_metrics(task_wo_id, "completed", duration_ms, queue_depth_at_pickup)
 
                 except Exception as e:
                     logging.error(f"[ERROR] {task_file.name}: {e}", exc_info=True)
@@ -215,6 +238,8 @@ complexity: "{task.get('complexity', 'simple')}"
                         task_file.rename(error_file)
 
                     logging.warning(f"[QUARANTINE] -> {error_file.name}")
+                    duration_ms = int((time.time() - started_at) * 1000)
+                    self._append_metrics(task_wo_id or wo_id, "error", duration_ms, queue_depth_at_pickup)
 
                 # Small delay between files
                 time.sleep(1)
