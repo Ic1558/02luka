@@ -39,7 +39,22 @@ tail_logs() {
   fi
 }
 
-trap tail_logs EXIT
+archive_health_wos() {
+  local archive_dir="$ROOT/bridge/processed/lac/_tests"
+  mkdir -p "$archive_dir"
+  local f
+  for f in "$ROOT/bridge/outbox/ENTRY"/WO-TEST-LAC-HEALTH*.yaml; do
+    [[ -e "$f" ]] || continue
+    mv "$f" "$archive_dir/"
+  done
+}
+
+on_exit() {
+  archive_health_wos || true
+  tail_logs || true
+}
+
+trap on_exit EXIT
 
 deadline=$((SECONDS + 30))
 while (( SECONDS < deadline )); do
