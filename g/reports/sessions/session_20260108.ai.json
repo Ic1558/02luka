@@ -1,0 +1,26 @@
+{
+  "date": "2026-01-08",
+  "ts_utc": "2026-01-07T19:29:26Z",
+  "ts_local": "2026-01-08T02:29:26+0700",
+  "agent": "liam",
+  "summary": {
+    "total_entries": 13,
+    "top_activities": [
+  "File modified: bridgectl.zsh",
+  "File modified: auth_cli.py",
+  "File modified: auth_cli.py",
+  "File modified: ports_policy.md",
+  "File modified: ports"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 13,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2026-01-08.jsonl",
+    "full_session": "g/reports/sessions/session_20260108_022925.md"
+  }
+}

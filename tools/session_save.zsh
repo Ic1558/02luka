@@ -3,6 +3,13 @@
 # Backend engine for 02luka save system
 # Generates session reports from MLS ledger and updates system state
 
+if [[ -z "${RUN_TOOL_DISPATCH:-}" ]]; then
+    echo "❌ ERROR: Direct execution denied."
+    echo "   You must use the canonical dispatcher:"
+    echo "   zsh tools/run_tool.zsh save"
+    exit 1
+fi
+
 set -e
 
 # Preflight: ensure jq is available
@@ -195,6 +202,14 @@ if [[ -n "$LATEST_SESSION" && -f "$LATEST_SESSION" ]]; then
 fi
 
 # If we get here, proceed with full save pipeline
+
+# Check for dry-run (Phase 11 verification support)
+for arg in "$@"; do
+  if [[ "$arg" == "--dry-run" ]]; then
+    echo "✅ save-now: dry-run complete (truth sync performed if enabled)"
+    exit 0
+  fi
+done
 
 # Extract session data from MLS
 parse_mls_data() {

@@ -1,0 +1,130 @@
+{
+    "meta": {
+        "source": "02luka.md",
+        "format_version": "1.0",
+        "generated_at": "2026-01-10T03:40:00Z",
+        "description": "Machine-readable authoritative dashboard for AI agents"
+    },
+    "system": {
+        "name": "02LUKA",
+        "status": "OPERATIONAL",
+        "last_updated": "2026-01-10T03:37:00Z",
+        "context_engineering_version": "5.0",
+        "cache_efficiency": 0.50
+    },
+    "latest_seal": {
+        "phase": "17",
+        "status": "SEALED",
+        "timestamp": "2026-01-10T03:37:00Z",
+        "hardened_runtime_build": "b4cc4022",
+        "authoritative_seal_docs": "e19bc21a",
+        "description": "Core History Engine + Bridge Operationalization hardened & authenticated",
+        "guardrails": "Single-authority, concurrency-safe execution lane (PID lock + hardened self-check)",
+        "artifact_proof": "magic_bridge/outbox/test_bridge_launchd_1767990166.md.summary.txt"
+    },
+    "phases_sealed": [
+        {
+            "phase": "15",
+            "description": "Core History Engine hardened (Seatbelt-safe)",
+            "features": [
+                "dynamic_pathing",
+                "deterministic_time",
+                "health_metrics",
+                "exit_codes"
+            ]
+        },
+        {
+            "phase": "16",
+            "description": "Auxiliary Integrity Hardened",
+            "features": [
+                "raycast_repo_root_aware",
+                "gemini_bootstrap_doctor_lite",
+                "version_validation"
+            ]
+        },
+        {
+            "phase": "17",
+            "description": "Bridge Operationalization + Audit-Grade Hardening",
+            "features": [
+                "bridgectl_doctor",
+                "pid_locking",
+                "self_check_hardened",
+                "concurrency_guard"
+            ]
+        }
+    ],
+    "v4_stabilization": {
+        "status": "OPERATIONAL",
+        "updated": "2025-11-21T05:40:00Z",
+        "components": {
+            "fde_validator": "g/core/fde/fde_validator.py",
+            "fde_rules": "g/core/fde/fde_rules.json",
+            "memory_hub": "agents/memory_hub/memory_hub.py",
+            "v4_events": "g/tools/ap_io_events.py",
+            "migration_validator": "g/tools/v4_migration_validator.py"
+        },
+        "agents_migrated": [
+            "Liam",
+            "GMX"
+        ],
+        "tests_passing": "14/14"
+    },
+    "architecture": {
+        "mode": "Claude Orchestrator × Codex Workers (CLC 3.0)",
+        "cores": {
+            "gc_core": {
+                "port": 5009,
+                "role": "Strategic analysis, decision making"
+            },
+            "mary_core": {
+                "port": 5001,
+                "role": "Operational execution, file management"
+            },
+            "gg_core": {
+                "port": 5010,
+                "role": "SOPs, workflows, governance"
+            }
+        },
+        "entry_channel": "02luka:entry:requests",
+        "routing_policy": "MARY_REQUIRED"
+    },
+    "infrastructure": {
+        "redis": {
+            "port": 6379,
+            "status": "healthy"
+        },
+        "ollama": {
+            "port": 11434,
+            "models": 10,
+            "size_gb": 56
+        },
+        "docker_containers": 17,
+        "launchagents_healthy": "46/50"
+    },
+    "gemini_bridge": {
+        "status": "AVAILABLE",
+        "pid_lock": "/tmp/gemini_bridge.pid",
+        "watch_dir": "./magic_bridge/inbox",
+        "self_check_flag": "--self-check",
+        "concurrency": "single-authority"
+    },
+    "paths": {
+        "sot": "/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka/run/status.json",
+        "ai_read": "/docs/ai_read.md",
+        "human_read": "/docs/gptree.md",
+        "index": "/run/index.json",
+        "ai_daily": "/Users/icmini/My Drive (ittipong.c@gmail.com) (1)/02luka/ai_daily.json",
+        "system_status": "run/system_status.v2.json"
+    },
+    "priority_order": [
+        "02luka.md (authoritative)",
+        "system_status.json (machine-readable health)",
+        "GC Toolkit (operational commands)",
+        "All other files (supporting docs)"
+    ],
+    "guardrails": {
+        "stale_files": "NEVER_TRUST",
+        "timestamped_dashboard": "ALWAYS_TRUST",
+        "check_timestamps": true
+    }
+}

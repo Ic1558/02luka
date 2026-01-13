@@ -234,3 +234,19 @@ xcuserdata/
 
 # Magic Bridge Artifacts (Consolidated above)
 infra/gemini_env/
+tools/_tmp/
+
+# generated core_history artifacts
+/g/core_history/*.md
+/g/core_history/*.json
+
+# truth-sync backups
+/02luka.md.bak.*
+/g/reports/pr11_healthcheck/*.json
+
+# generated healthcheck reports
+/g/reports/pr11_healthcheck/*.json
+
+# local tool skills are external (SOT: ~/ai-skills)
+/tools/codex/skills
+/tools/claude/skills

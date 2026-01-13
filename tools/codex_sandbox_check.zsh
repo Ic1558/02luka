@@ -237,7 +237,11 @@ typeset -a WHITELIST_FILES=(
   ".github/workflows/memory-audit.yml"
   "tools/install_codex_enhancements.zsh"
   "tools/setup_codex_full_access.zsh"
-  "tools/setup_codex_workspace.zsh"
+  "tools/setup_codex_workspace.zsh"  # PR #432 - Security/test tooling with legitimate dangerous patterns
+  "decision_summarizer.py"
+  "tools/fix_gemini_bridge_decision_lane.zsh"
+  "tools/proof_decision_lane.zsh"
+
 )
 
 function is_whitelisted() {

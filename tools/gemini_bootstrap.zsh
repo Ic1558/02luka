@@ -29,20 +29,47 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" || -z "${1:-}" ]]; then
   exit 0
 fi
 
-PROFILE="$1"
-shift
+# Initialize defaults to prevent unbound variable errors (set -u)
+: "${WEB:=0}"
+: "${TOOLS:=0}"
+: "${MODEL:=auto}"
+: "${SANDBOX:=}"
+: "${AGENT:=}"
+: "${PROJECT_ROOT:=}"
+: "${BANNER:=}"
+: "${UNSET_ENV:=}"
 
+PROFILE=""
 DO_PRINT=0
 DO_DOCTOR=0
 DO_QUIET=0
+PASSTHROUGH_ARGS=()
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --print) DO_PRINT=1; shift ;;
-    --doctor) DO_DOCTOR=1; shift ;;
-    --quiet|-q) DO_QUIET=1; shift ;;
-    --) shift; break ;;
-    *) break ;;
+    --print) DO_PRINT=1 ;;
+    --doctor) DO_DOCTOR=1 ;;
+    --quiet|-q) DO_QUIET=1 ;;
+    --help|-h) usage; exit 0 ;;
+    --)
+      shift
+      PASSTHROUGH_ARGS+=("$@")
+      break
+      ;;
+    *)
+      if [[ "$1" == -* ]]; then
+        # Unknown flag, assume it's for gemini
+        PASSTHROUGH_ARGS+=("$1")
+      else
+        if [[ -z "$PROFILE" ]]; then
+          PROFILE="$1"
+        else
+          PASSTHROUGH_ARGS+=("$1")
+        fi
+      fi
+      ;;
   esac
+  shift
 done
 
 if [[ ! -f "$POLICY_FILE" ]]; then
@@ -56,7 +83,39 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 2
 fi
 
-eval "$(
+# Handle Doctor-Lite (No Profile)
+if [[ -z "$PROFILE" ]]; then
+  if (( DO_DOCTOR )); then
+    echo "🔍 Doctor (Lite Mode - No Profile Selected)"
+    echo "---------------------------------------------------"
+    if [[ -f "$POLICY_FILE" ]]; then
+      echo "${GREEN}✅ Policy file found:${NC} $POLICY_FILE"
+    else
+      echo "${RED}❌ Policy file missing:${NC} $POLICY_FILE"
+    fi
+    
+    GEMINI_BIN="$(whence -p gemini 2>/dev/null || command -v gemini 2>/dev/null || echo /opt/homebrew/bin/gemini)"
+    if [[ -x "$GEMINI_BIN" ]]; then
+       echo "${GREEN}✅ gemini binary found:${NC} $GEMINI_BIN"
+       VER=$("$GEMINI_BIN" --version 2>/dev/null || echo "unknown")
+       echo "   Version: $VER"
+    else
+       echo "${RED}❌ gemini binary not found${NC}"
+    fi
+    
+    echo ""
+    echo "To see full profile configuration, run: tools/gemini_bootstrap.zsh <profile> --doctor"
+    exit 0
+  elif (( DO_PRINT )); then
+    echo "Error: Profile required for --print" >&2
+    exit 1
+  else
+    usage
+    exit 1
+  fi
+fi
+
+PARSED_CONFIG="$(
   python3 - "$POLICY_FILE" "$PROFILE" <<'PY'
 import os, sys, shlex, re
 
@@ -176,6 +235,14 @@ print(f"UNSET_ENV={q(' '.join(unset_env))}")
 PY
 )"
 
+RET=$?
+if [[ $RET -ne 0 ]]; then
+  echo "${RED}❌ Failed to parse policy for profile: $PROFILE${NC}" >&2
+  exit 3
+fi
+
+eval "$PARSED_CONFIG"
+
 WEB_LABEL="on"
 [[ "$WEB" == "0" ]] && WEB_LABEL="off"
 TOOLS_LABEL="on"
@@ -265,6 +332,19 @@ if [[ -n "$GEMINI_BIN" ]]; then
   if [[ "$WEB" == "0" ]]; then
     WARNINGS+=("profile requests web=off but gemini CLI has no explicit web-disable flag; rely on approvals/policy discipline")
   fi
+
+  # Version Validation (Phase 16 Hardening)
+  if [[ -n "$GEMINI_BIN" ]]; then
+    GEMINI_VERSION="$("$GEMINI_BIN" --version 2>/dev/null | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1 || echo "unknown")"
+    if [[ "$GEMINI_VERSION" == "unknown" ]]; then
+      WARNINGS+=("gemini version could not be determined")
+    else
+      # Example: Expecting at least 1.0.0 for Phase 15/16 features
+      if [[ "$GEMINI_VERSION" < "1.0.0" ]]; then
+         WARNINGS+=("gemini version $GEMINI_VERSION is below recommended 1.0.0 (found $GEMINI_VERSION)")
+      fi
+    fi
+  fi
 fi
 
 print_banner() {
@@ -329,4 +409,4 @@ if [[ -z "$GEMINI_BIN" ]]; then
   exit 3
 fi
 
-exec "$GEMINI_BIN" "${GEMINI_ARGS[@]}" "$@"
+exec "$GEMINI_BIN" "${GEMINI_ARGS[@]}" "${PASSTHROUGH_ARGS[@]}"

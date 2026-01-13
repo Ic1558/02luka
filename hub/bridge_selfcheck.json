@@ -1,15 +1,15 @@
 {
-  "timestamp": "2025-11-12T17:23:00Z",
+  "timestamp": "2026-01-07T21:34:38Z",
   "status": "healthy",
   "agents": [
     {
-      "agent_id": "CLC",
+      "agent_id": "ATG",
       "status": "healthy",
       "folders": {
         "inbox": {
           "exists": true,
-          "permissions": "drwxr-xr-x",
-          "file_count": 27,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 4,
           "oldest_file_age_hours": 0
         },
         "outbox": {
@@ -20,52 +20,472 @@
         },
         "processed": {
           "exists": true,
-          "permissions": "drwxr-xr-x",
-          "file_count": 3,
-          "oldest_file_age_hours": 0
-        }
-      },
-      "issues": [],
-      "metrics": {
-        "pending_work_orders": 5,
-        "stuck_files": 0,
-        "processed_count": 3
-      }
-    },
-    {
-      "agent_id": "ENTRY",
-      "status": "healthy",
-      "folders": {
-        "inbox": {
-          "exists": true,
-          "permissions": "drwxr-xr-x",
-          "file_count": 1,
-          "oldest_file_age_hours": 0
-        },
-        "outbox": {
-          "exists": false,
-          "permissions": "n/a",
-          "file_count": 0,
-          "oldest_file_age_hours": 0
-        },
-        "processed": {
-          "exists": true,
-          "permissions": "drwxr-xr-x",
-          "file_count": 3,
-          "oldest_file_age_hours": 0
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
         }
       },
       "issues": [],
       "metrics": {
         "pending_work_orders": 0,
         "stuck_files": 0,
-        "processed_count": 3
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "_bak_upper_20251217_010253",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x",
+          "file_count": 6,
+          "oldest_file_age_hours": 486401
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "clc",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 1,
+          "oldest_file_age_hours": 486401
+        },
+        "outbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "entry",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 2,
+          "oldest_file_age_hours": 486401
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "gc",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "gemini",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 1,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "gm",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "hybrid",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "lac",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "liam",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "llm",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "lpe",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 1,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "main",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "rd",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 2,
+          "oldest_file_age_hours": 486401
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "rnd",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": false,
+          "permissions": "n/a",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
+      }
+    },
+    {
+      "agent_id": "shell",
+      "status": "healthy",
+      "folders": {
+        "inbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "outbox": {
+          "exists": true,
+          "permissions": "drwxr-xr-x@",
+          "file_count": 0,
+          "oldest_file_age_hours": 0
+        },
+        "processed": {
+          "exists": true,
+          "permissions": "lrwxr-xr-x@",
+          "file_count": -1,
+          "oldest_file_age_hours": 486401
+        }
+      },
+      "issues": [],
+      "metrics": {
+        "pending_work_orders": 0,
+        "stuck_files": 0,
+        "processed_count": 0
       }
     }
   ],
   "summary": {
-    "total_agents": 2,
-    "healthy_count": 2,
+    "total_agents": 16,
+    "healthy_count": 16,
     "warning_count": 0,
     "critical_count": 0,
     "total_issues": 0

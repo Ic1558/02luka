@@ -1,0 +1,28 @@
+{
+  "name": "02luka-anthropic-skills",
+  "displayName": "Anthropic Skills for 02luka",
+  "version": "1.0.0",
+  "description": "Complete set of Anthropic's example skills for document processing, design, development, and enterprise communications",
+  "author": {
+    "name": "02luka",
+    "email": "ittipong.c@gmail.com"
+  },
+  "skills": [
+    "./skills/xlsx",
+    "./skills/docx",
+    "./skills/pptx",
+    "./skills/pdf",
+    "./skills/algorithmic-art",
+    "./skills/brand-guidelines",
+    "./skills/canvas-design",
+    "./skills/doc-coauthoring",
+    "./skills/frontend-design",
+    "./skills/internal-comms",
+    "./skills/mcp-builder",
+    "./skills/skill-creator",
+    "./skills/slack-gif-creator",
+    "./skills/theme-factory",
+    "./skills/web-artifacts-builder",
+    "./skills/webapp-testing"
+  ]
+}

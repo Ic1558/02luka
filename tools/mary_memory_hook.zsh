@@ -6,7 +6,6 @@ set -euo pipefail
 
 LUKA_ROOT="${LUKA_ROOT:-$HOME/02luka}"
 export LUKA_ROOT
-
 if [[ $# -lt 2 ]]; then
   echo "Usage: zsh tools/mary.zsh <interactive|background> <path> [op]"
   exit 1

@@ -1,11 +1,34 @@
 #!/usr/bin/env zsh
 # tools/save.sh
 # Save current state + Harvest Active Memory
+
+if [[ -z "${RUN_TOOL_DISPATCH:-}" ]]; then
+    echo "❌ ERROR: Direct execution denied."
+    echo "   You must use the canonical dispatcher:"
+    echo "   zsh tools/run_tool.zsh save"
+    exit 1
+fi
+
 REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
 zsh "$REPO_ROOT/tools/solution_collector.zsh" 2>/dev/null & # Background harvest Save System
 # Forwards requests to backend (session_save.zsh) with telemetry context.
 
 set -e
+
+# Phase 11: SSOT Truth Sync (default ON). Use --no-truth-sync to bypass.
+NO_TRUTH_SYNC=0
+for arg in "$@"; do
+  [[ "$arg" == "--no-truth-sync" ]] && NO_TRUTH_SYNC=1
+done
+if [[ "$NO_TRUTH_SYNC" -eq 0 ]]; then
+  RR="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}"
+  if [[ -x "$RR/tools/sync_truth.zsh" ]]; then
+    zsh "$RR/tools/sync_truth.zsh"
+  else
+    echo "ERROR: tools/sync_truth.zsh missing or not executable" >&2
+    exit 2
+  fi
+fi
 
 # Resolve paths
 SCRIPT_DIR=$(dirname "$0")

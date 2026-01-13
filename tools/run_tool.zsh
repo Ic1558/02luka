@@ -1,113 +1,65 @@
 #!/usr/bin/env zsh
-# run_tool.zsh — Single Entry Point for ALL Tools
-#
-# Purpose: Force all tool calls through catalog (SOT)
-# Fallback: Auto-discovery if tool not in catalog (warn but allow)
-#
-# Usage: zsh tools/run_tool.zsh <tool-id> [args...]
-# Example: zsh tools/run_tool.zsh code-review staged --quick
+# tools/run_tool.zsh
+# The Single Entry Point for 02luka Operations
+# Enforces: Catalog Discovery, Agent Identity, and Safe Execution.
 
-set -euo pipefail
+set -e
 
-LUKA_BASE="${LUKA_BASE:-$HOME/02luka}"
-CATALOG="$LUKA_BASE/tools/catalog.yaml"
-CATALOG_LOOKUP="$LUKA_BASE/tools/catalog_lookup.zsh"
+# 1. Environment Enforcement
+export REPO_ROOT="${REPO_ROOT:-$HOME/02luka}"
+export AGENT_ID="gmx"  # Enforce consistent identity
+export TOOL_RUNNER_VERSION="1.0"
+export RUN_TOOL_DISPATCH=1 # Signal that we are running via the canonical dispatcher
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
 
-tool_id="${1:-}"
-
-if [[ -z "$tool_id" ]]; then
-    cat << 'EOF' >&2
-Usage: zsh tools/run_tool.zsh <tool-id> [args...]
-
-Examples:
-    zsh tools/run_tool.zsh code-review staged
-    zsh tools/run_tool.zsh save-now
-    zsh tools/run_tool.zsh spawn my-plugin "input"
-
-List available tools:
-    zsh tools/catalog_lookup.zsh --list
-EOF
+# 2. Argument Parsing
+if [[ $# -lt 1 ]]; then
+    echo "Usage: zsh tools/run_tool.zsh <alias|tool_name> [args...]"
+    echo "       zsh tools/run_tool.zsh discover   (Shows Catalog)"
     exit 1
 fi
 
-shift || true
+ALIAS="$1"
+shift
 
-# Step 1: Try catalog lookup first (preferred path)
-if [[ -f "$CATALOG_LOOKUP" ]]; then
-    catalog_result=$(zsh "$CATALOG_LOOKUP" "$tool_id" 2>/dev/null || true)
-    
-    if echo "$catalog_result" | /usr/bin/grep -q "entry:"; then
-        # Extract entry path
-        entry=$(echo "$catalog_result" | /usr/bin/grep "^entry:" | sed 's/^entry:[[:space:]]*//' | tr -d '"' | head -1)
-        
-        if [[ -n "$entry" ]]; then
-            # Normalize path
-            if [[ "$entry" == ./* ]]; then
-                cmd="$LUKA_BASE/${entry#./}"
-            else
-                cmd="$LUKA_BASE/$entry"
-            fi
-            
-            # Check if file exists and is executable
-            if [[ -f "$cmd" ]] && [[ -x "$cmd" ]]; then
-                # ✅ Catalog path found and valid
-                exec "$cmd" "$@"
-            elif [[ -f "$cmd" ]]; then
-                # File exists but not executable
-                chmod +x "$cmd" 2>/dev/null || true
-                exec "$cmd" "$@"
-            fi
-        fi
+# 3. Special Command: Discover
+if [[ "$ALIAS" == "discover" ]]; then
+    echo "🔍 Discovery: Listing Canonical Tools from CATALOG.md..."
+    echo ""
+    grep "| \*\*" "$REPO_ROOT/tools/CATALOG.md" || echo "Catalog empty/invalid."
+    echo ""
+    exit 0
+fi
+
+# 4. Catalog Lookup
+LOOKUP_SCRIPT="$REPO_ROOT/tools/catalog_lookup.zsh"
+if [[ ! -x "$LOOKUP_SCRIPT" ]]; then
+    # Auto-fix permissions if needed, locally
+    chmod +x "$LOOKUP_SCRIPT" 2>/dev/null || true
+fi
+
+echo "🔎 Looking up: '$ALIAS'..."
+TARGET_SCRIPT=$("$LOOKUP_SCRIPT" "$ALIAS") || {
+    echo "❌ Error: Tool '$ALIAS' not found in Catalog."
+    echo "   Run 'zsh tools/run_tool.zsh discover' to see available tools."
+    exit 1
+}
+
+# 5. Execution Guard
+TARGET_PATH="$REPO_ROOT/$TARGET_SCRIPT"
+if [[ ! -f "$TARGET_PATH" ]]; then
+    # Try direct if lookup returned partial
+    if [[ -f "$TARGET_SCRIPT" ]]; then 
+        TARGET_PATH="$TARGET_SCRIPT"
+    else 
+        echo "❌ Error: File missing at $TARGET_PATH"
+        exit 1
     fi
 fi
 
-# Step 2: Fallback — Auto-discovery (warn but allow)
-# This prevents blocking/lag when tool not in catalog or not yet created
-
-# Try common patterns
-possible_paths=(
-    "$LUKA_BASE/tools/${tool_id}.zsh"
-    "$LUKA_BASE/tools/${tool_id}.sh"
-    "$LUKA_BASE/tools/${tool_id}"
-    "$LUKA_BASE/tools/${tool_id}_gate.zsh"
-    "$LUKA_BASE/tools/${tool_id}_gate.sh"
-)
-
-for path in "${possible_paths[@]}"; do
-    if [[ -f "$path" ]]; then
-        if [[ -x "$path" ]] || chmod +x "$path" 2>/dev/null; then
-            # ⚠️ Fallback path found (not in catalog)
-            echo "⚠️  Tool '$tool_id' not in catalog, using fallback: $path" >&2
-            echo "   Suggestion: Add to tools/catalog.yaml" >&2
-            exec "$path" "$@"
-        fi
-    fi
-done
-
-# Step 3: Last resort — Check if it's a direct path (for backward compatibility)
-if [[ "$tool_id" == *"/"* ]] && [[ -f "$LUKA_BASE/$tool_id" ]]; then
-    path="$LUKA_BASE/$tool_id"
-    if [[ -x "$path" ]] || chmod +x "$path" 2>/dev/null; then
-        echo "⚠️  Direct path detected (not recommended): $path" >&2
-        echo "   Suggestion: Use tool-id instead: zsh tools/run_tool.zsh <tool-id>" >&2
-        exec "$path" "$@"
-    fi
-fi
-
-# Step 4: Not found — Show helpful error
-/bin/cat << EOF >&2
-❌ Tool '$tool_id' not found
-
-Tried:
-  1. Catalog lookup: $(zsh "$CATALOG_LOOKUP" "$tool_id" 2>/dev/null | /usr/bin/grep "entry:" || echo "not found")
-  2. Auto-discovery: ${possible_paths[*]}
-  3. Direct path: $LUKA_BASE/$tool_id
-
-Suggestions:
-  • List available tools: zsh tools/catalog_lookup.zsh --list
-  • Add to catalog: Edit tools/catalog.yaml
-  • Check spelling: Is '$tool_id' the correct tool-id?
-EOF
-
-exit 1
-
+echo "🚀 Executing: $TARGET_SCRIPT (as $AGENT_ID)"
+echo "---------------------------------------------------"
+# Handover execution to the target script
+# We filter args to ensure "$@" is passed correctly
+exec zsh "$TARGET_PATH" "$@"

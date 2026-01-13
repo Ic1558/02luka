@@ -7,13 +7,66 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+# >>> 02LUKA_DECISION_SUMMARIZER_IMPORT >>>
+try:
+    from decision_summarizer import summarize_decision, build_decision_block_for_logs
+except ImportError:
+    summarize_decision = None
+    build_decision_block_for_logs = None
+# <<< 02LUKA_DECISION_SUMMARIZER_IMPORT <<<
+
+# >>> PHASE 18: IDEMPOTENCY LEDGER >>>
+# Feature flag: set IDEMPOTENCY_LEDGER=on to enable
+IDEMPOTENCY_ENABLED = os.environ.get("IDEMPOTENCY_LEDGER", "off").lower() == "on"
+_ledger = None
+
+def get_ledger():
+    """Lazy-load idempotency ledger."""
+    global _ledger
+    if _ledger is None and IDEMPOTENCY_ENABLED:
+        try:
+            from idempotency_ledger import IdempotencyLedger
+            _ledger = IdempotencyLedger()
+            print("   📒 Idempotency ledger enabled")
+        except ImportError:
+            print("   ⚠️ Idempotency ledger module not found")
+    return _ledger
+# <<< PHASE 18: IDEMPOTENCY LEDGER <<<
+
 # --- Configuration ---
 PROJECT_ID = "luka-cloud-471113" 
 LOCATION = "us-central1"
 MODEL_NAME = "gemini-2.0-flash-001"
-WATCH_DIR = "./magic_bridge"
+WATCH_DIR = "./magic_bridge/inbox"
+PID_FILE = "/tmp/gemini_bridge.pid"
 IGNORE_DIRS = {".git", ".DS_Store", "__pycache__", "gemini_env", "infra", ".gemini", "node_modules"}
 MAX_READ_TURNS = 3
+
+def acquire_lock():
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, "r") as f:
+                old_pid = int(f.read().strip())
+            # Check if process is actually running
+            os.kill(old_pid, 0)
+            print(f"❌ Error: Gemini Bridge is already running (PID {old_pid})")
+            sys.exit(1)
+        except (ValueError, OSError, ProcessLookupError):
+            # Stale PID file, overwrite it
+            pass
+    
+    with open(PID_FILE, "w") as f:
+        f.write(str(os.getpid()))
+
+def release_lock():
+    if os.path.exists(PID_FILE):
+        try:
+            with open(PID_FILE, "r") as f:
+                pid = int(f.read().strip())
+            if pid == os.getpid():
+                os.remove(PID_FILE)
+        except Exception:
+            pass
 
 class GeminiHandler(FileSystemEventHandler):
     def __init__(self, model):
@@ -44,6 +97,16 @@ class GeminiHandler(FileSystemEventHandler):
                     tree_lines.append(f"{subindent}{f}")
         return "\n".join(tree_lines)
 
+    def on_created(self, event):
+        """Handle new file creation events."""
+        if event.is_directory: return
+        filename = os.path.basename(event.src_path)
+        if filename == ".DS_Store" or filename.endswith(".summary.txt"): return
+
+        print(f"📝 Detected new file: {filename}")
+        time.sleep(1) # Debounce
+        self.process_file(event.src_path)
+
     def on_modified(self, event):
         if event.is_directory: return
         filename = os.path.basename(event.src_path)
@@ -57,7 +120,35 @@ class GeminiHandler(FileSystemEventHandler):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
+
+            # >>> 02LUKA_DECISION_SUMMARIZER_LOG >>>
+            # Log decision analysis (telemetry, non-blocking)
+            if content.strip() and summarize_decision is not None:
+                try:
+                    decision_info = summarize_decision(content)
+                    # Use repo root (parent of this file)
+                    repo_root = os.path.dirname(os.path.abspath(__file__))
+                    log_path = os.path.join(repo_root, 'g/telemetry/decision_log.jsonl')
+                    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+                    with open(log_path, "a", encoding="utf-8") as _log:
+                        _log.write(decision_info.to_json() + "\n")
+                except Exception:
+                    pass  # Silent fail, don't break bridge
+            # <<< 02LUKA_DECISION_SUMMARIZER_LOG <<<
+
             if not content.strip(): return
+
+            # >>> PHASE 18: IDEMPOTENCY CHECK >>>
+            ledger = get_ledger()
+            idempotency_key = None
+            if ledger:
+                idempotency_key = ledger.compute_key(file_path, content)
+                if ledger.is_processed(idempotency_key):
+                    cached_output = ledger.get_cached_output(idempotency_key)
+                    print(f"   ⏭️ Skipped (duplicate): {os.path.basename(file_path)} → {cached_output}")
+                    ledger.record_skipped(idempotency_key, file_path, cached_output)
+                    return
+            # <<< PHASE 18: IDEMPOTENCY CHECK <<<
 
             # 1. Build Initial Context
             tree = self.get_file_tree(".")
@@ -107,14 +198,27 @@ class GeminiHandler(FileSystemEventHandler):
                     break
 
             # 3. Save Output
-            output_path = f"{file_path}.summary.txt"
+            # Save to outbox instead of inbox
+            filename = os.path.basename(file_path)
+            outbox_dir = os.path.join(os.path.dirname(os.path.dirname(file_path)), "outbox")
+            os.makedirs(outbox_dir, exist_ok=True)
+            output_path = os.path.join(outbox_dir, f"{filename}.summary.txt")
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(final_response_text)
-                
-            print(f"   ✅ Saved response to: {os.path.basename(output_path)}")
+
+            print(f"   ✅ Saved response to: {os.path.basename(output_path)} (in outbox)")
+
+            # >>> PHASE 18: RECORD SUCCESS >>>
+            if ledger and idempotency_key:
+                ledger.record_success(idempotency_key, file_path, output_path)
+            # <<< PHASE 18: RECORD SUCCESS <<<
 
         except Exception as e:
             print(f"   ❌ Error: {e}")
+            # >>> PHASE 18: RECORD FAILURE >>>
+            if ledger and idempotency_key:
+                ledger.record_failed(idempotency_key, file_path, str(e))
+            # <<< PHASE 18: RECORD FAILURE <<<
 
 def main():
     print("🔮 Initializing Gemini Bridge (Context Aware + Retry)...")
@@ -126,6 +230,26 @@ def main():
     except Exception as e:
         print(f"❌ Failed to initialize Vertex AI: {e}")
         sys.exit(1)
+
+    if "--self-check" in sys.argv:
+        print("🔍 Running Self-Check...")
+        checks = {
+            "Vertex AI Init": True, # Reached here means init worked
+            "Watch Dir Presence": os.path.exists(WATCH_DIR),
+            "Watch Dir Permissions": os.access(WATCH_DIR, os.W_OK) if os.path.exists(WATCH_DIR) else False,
+            "Environment (PROJECT_ID)": bool(PROJECT_ID),
+        }
+        for name, ok in checks.items():
+            print(f"   - {name}: {'✅' if ok else '❌'}")
+        
+        if not all(checks.values()):
+            print("❌ Self-check FAILED.")
+            sys.exit(1)
+            
+        print("✅ Self-check PASSED.")
+        sys.exit(0)
+
+    acquire_lock()
 
     if not os.path.exists(WATCH_DIR):
         os.makedirs(WATCH_DIR)
@@ -141,6 +265,8 @@ def main():
     except KeyboardInterrupt:
         observer.stop()
         print("\n🛑 Stopping...")
+    finally:
+        release_lock()
     observer.join()
 
 if __name__ == "__main__":

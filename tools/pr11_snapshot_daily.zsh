@@ -71,7 +71,16 @@ fi
 echo "✅ Snapshot created: $SNAPSHOT_FILE"
 
 # Step 3: Verify snapshot is valid JSON
-if ! python3 -m json.tool "$SNAPSHOT_FILE" >/dev/null 2>&1; then
+# Deterministic Interpreter Selection
+if [[ -x ".venv/bin/python3" ]]; then
+  PYTHON_EXE=".venv/bin/python3"
+elif [[ -x "venv/bin/python3" ]]; then
+  PYTHON_EXE="venv/bin/python3"
+else
+  PYTHON_EXE="python3"
+fi
+
+if ! "$PYTHON_EXE" -m json.tool "$SNAPSHOT_FILE" >/dev/null 2>&1; then
   echo "❌ Snapshot is not valid JSON" >&2
   exit 1
 fi
