@@ -39,6 +39,15 @@ tail_logs() {
   fi
 }
 
+print_metrics_summary() {
+  local summary_script="$ROOT/tools/telemetry/lac_metrics_summary.py"
+  if [[ -f "$summary_script" ]]; then
+    python3 "$summary_script" --since 24h --limit 10 || true
+  else
+    echo "lac_metrics_summary.py not found at $summary_script"
+  fi
+}
+
 archive_health_wos() {
   local archive_dir="$ROOT/bridge/processed/lac/_tests"
   mkdir -p "$archive_dir"
@@ -52,6 +61,7 @@ archive_health_wos() {
 on_exit() {
   archive_health_wos || true
   tail_logs || true
+  print_metrics_summary || true
 }
 
 trap on_exit EXIT
