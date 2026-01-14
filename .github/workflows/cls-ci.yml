@@ -655,7 +655,7 @@ jobs:
           fi
 
       - name: Publish to Redis (if configured)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
+        if: ${{ needs.sanity.outputs.ci_strict == '1' && secrets.LUKA_REDIS_URL != '' }}
         run: |
           if command -v redis-cli &> /dev/null; then
             echo "📢 Publishing bridge:selfcheck event to Redis..."
