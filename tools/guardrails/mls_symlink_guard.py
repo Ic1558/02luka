@@ -23,6 +23,9 @@ PRIMARY_FILES = {
     "mls_lessons.jsonl",
 }
 
+ALLOWLIST_ENV = "MLS_GUARD_ALLOWLIST"
+COOLDOWN_ENV = "MLS_GUARD_COOLDOWN"
+
 
 def now_ts() -> str:
     return datetime.now().astimezone().isoformat()
@@ -34,6 +37,64 @@ def safe_timestamp() -> str:
 
 def expected_target(ws_root: Path, name: str) -> Path:
     return ws_root / "g" / "knowledge" / name
+
+
+def parse_allowlist(raw: Optional[str]) -> set[str]:
+    if not raw:
+        return set()
+    return {item.strip() for item in raw.split(",") if item.strip()}
+
+
+def build_allowlist(
+    cli_list: Optional[str],
+    env_list: Optional[str],
+    allowlist_only: bool,
+) -> Optional[set[str]]:
+    extras = set()
+    extras |= parse_allowlist(env_list)
+    extras |= parse_allowlist(cli_list)
+    if not extras and not allowlist_only:
+        return None
+    allowlist = set(PRIMARY_FILES)
+    allowlist |= extras
+    return allowlist
+
+
+def parse_cooldown(cli_value: Optional[float], env_value: Optional[str]) -> float:
+    if cli_value is not None:
+        return max(0.0, cli_value)
+    if env_value:
+        try:
+            return max(0.0, float(env_value))
+        except ValueError:
+            return 0.0
+    return 0.0
+
+
+def backoff_check(
+    file_key: str,
+    cooldown_s: float,
+    state: dict[str, dict[str, float]],
+) -> tuple[bool, bool, float]:
+    if cooldown_s <= 0:
+        return False, False, 0.0
+    now = time.time()
+    entry = state.setdefault(file_key, {"last_action": 0.0, "last_skip_log": 0.0})
+    last_action = entry["last_action"]
+    if last_action <= 0:
+        return False, False, 0.0
+    since = now - last_action
+    if since < cooldown_s:
+        should_log = now - entry["last_skip_log"] >= cooldown_s
+        if should_log:
+            entry["last_skip_log"] = now
+        return True, should_log, since
+    return False, False, since
+
+
+def mark_action(file_key: str, state: dict[str, dict[str, float]]) -> None:
+    entry = state.setdefault(file_key, {"last_action": 0.0, "last_skip_log": 0.0})
+    entry["last_action"] = time.time()
 
 
 def find_writer(path: Path) -> Tuple[Optional[int], Optional[str]]:
@@ -212,7 +273,14 @@ def handle_violation(
     log_event(log_path, payload)
 
 
-def scan_once(repo_root: Path, ws_root: Path, log_path: Path) -> None:
+def scan_once(
+    repo_root: Path,
+    ws_root: Path,
+    log_path: Path,
+    allowlist: Optional[set[str]],
+    cooldown_s: float,
+    backoff_state: dict[str, dict[str, float]],
+) -> None:
     watch_dir = repo_root / "g" / "knowledge"
     recovered_dir = ws_root / "g" / "knowledge" / "recovered"
 
@@ -223,14 +291,40 @@ def scan_once(repo_root: Path, ws_root: Path, log_path: Path) -> None:
         if not file_path.exists() and not file_path.is_symlink():
             continue
 
+        if allowlist is not None and file_path.name not in allowlist:
+            continue
+
+        file_key = str(file_path)
+        in_backoff, should_log, since_last = backoff_check(file_key, cooldown_s, backoff_state)
+        if in_backoff:
+            if should_log:
+                try:
+                    rel_path = str(file_path.relative_to(repo_root))
+                except ValueError:
+                    rel_path = str(file_path)
+                log_event(
+                    log_path,
+                    {
+                        "ts": now_ts(),
+                        "file": rel_path,
+                        "action": "backoff_skip",
+                        "severity": "info",
+                        "cooldown_s": cooldown_s,
+                        "since_last_s": round(since_last, 3),
+                    },
+                )
+            continue
+
         expected = expected_target(ws_root, file_path.name)
         if file_path.is_symlink():
             if file_path.name in PRIMARY_FILES:
                 if not verify_symlink(file_path, expected):
                     handle_violation(file_path, ws_root, repo_root, log_path, recovered_dir)
+                    mark_action(file_key, backoff_state)
             continue
 
         handle_violation(file_path, ws_root, repo_root, log_path, recovered_dir)
+        mark_action(file_key, backoff_state)
 
 
 def main() -> int:
@@ -239,6 +333,22 @@ def main() -> int:
     parser.add_argument("--once", action="store_true", help="Run a single scan and exit")
     parser.add_argument("--repo", default=str(REPO_DEFAULT), help="Repo root (default: ~/02luka)")
     parser.add_argument("--ws", default=str(WS_DEFAULT), help="Workspace root (default: ~/02luka_ws)")
+    parser.add_argument(
+        "--allowlist",
+        default=None,
+        help="Comma-separated extra filenames to guard (enables allowlist mode)",
+    )
+    parser.add_argument(
+        "--allowlist-only",
+        action="store_true",
+        help="Enable allowlist mode with PRIMARY_FILES only",
+    )
+    parser.add_argument(
+        "--cooldown",
+        type=float,
+        default=None,
+        help="Backoff seconds per file between heals (default: 0)",
+    )
     parser.add_argument(
         "--log",
         default=str(WS_DEFAULT / "g" / "telemetry" / "mls_symlink_violations.jsonl"),
@@ -249,14 +359,17 @@ def main() -> int:
     repo_root = Path(args.repo).expanduser().resolve()
     ws_root = Path(args.ws).expanduser().resolve()
     log_path = Path(args.log).expanduser().resolve()
+    allowlist = build_allowlist(args.allowlist, os.environ.get(ALLOWLIST_ENV), args.allowlist_only)
+    cooldown_s = parse_cooldown(args.cooldown, os.environ.get(COOLDOWN_ENV))
+    backoff_state: dict[str, dict[str, float]] = {}
 
     if args.once:
-        scan_once(repo_root, ws_root, log_path)
+        scan_once(repo_root, ws_root, log_path, allowlist, cooldown_s, backoff_state)
         return 0
 
-    interval = max(5, min(args.interval, 600))
+    interval = max(0.1, min(args.interval, 600))
     while True:
-        scan_once(repo_root, ws_root, log_path)
+        scan_once(repo_root, ws_root, log_path, allowlist, cooldown_s, backoff_state)
         time.sleep(interval)
 
 
