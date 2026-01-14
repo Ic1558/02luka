@@ -95,6 +95,8 @@ jobs:
       - name: Load CI_STRICT & Redis URL
         id: load_env
         shell: bash
+        env:
+          SERVER_REDIS_URL: ${{ secrets.LUKA_REDIS_URL }}
         run: |
           # Prefer shell fallback over GitHub expression to avoid editor schema false-positives
           VAL="${{ vars.CI_STRICT }}"
@@ -103,7 +105,7 @@ jobs:
           
           # Load Redis URL from secret (if available)
           # Access secret directly in shell to avoid schema validation false positives
-          REDIS_VAL="${{ secrets.LUKA_REDIS_URL }}"
+          REDIS_VAL="$SERVER_REDIS_URL"
           if [ -z "$REDIS_VAL" ]; then REDIS_VAL=""; fi
           echo "LUKA_REDIS_URL=$REDIS_VAL" >> "$GITHUB_ENV"
           echo "redis_url_set=$([ -n "$REDIS_VAL" ] && echo 'true' || echo 'false')" >> "$GITHUB_OUTPUT"
