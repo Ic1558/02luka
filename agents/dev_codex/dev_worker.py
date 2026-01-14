@@ -83,6 +83,38 @@ class DevCodexWorker:
         return plan.get("patches", [])
 
     def execute_task(self, task: Dict) -> Dict:
+        task_id = task.get("wo_id") or task.get("id") or task.get("objective")
+        lane_name = "dev"
+        try:
+            from bridge.lac.reader import check_lac_before_work
+
+            lac = check_lac_before_work(lane_name)
+            recent = lac.get("recent_work") if isinstance(lac, dict) else {}
+            if isinstance(recent, dict) and recent:
+                if task_id:
+                    for lane, info in recent.items():
+                        if isinstance(info, dict) and info.get("last_task") == task_id:
+                            print(f"[LAC] recent work for {task_id} in lane {lane} status={info.get('status')}")
+                            break
+                    else:
+                        lanes = ", ".join(sorted(recent.keys()))
+                        print(f"[LAC] recent work detected: {lanes}")
+                else:
+                    lanes = ", ".join(sorted(recent.keys()))
+                    print(f"[LAC] recent work detected: {lanes}")
+        except Exception:
+            pass
+
+        def update_lac(status: str, output_path: Optional[str] = None) -> None:
+            if not task_id:
+                return
+            try:
+                from bridge.lac.writer import LACWriter
+
+                LACWriter().update_lane(lane_name, task_id, status, output_path=output_path)
+            except Exception:
+                pass
+
         plan = self.reason(task)
         patches = self.generate_patches(plan)
 
@@ -90,6 +122,7 @@ class DevCodexWorker:
         for patch in patches:
             content = patch.get("content")
             if content is None or content == "":
+                update_lac("error")
                 return {
                     "status": "failed",
                     "reason": "MISSING_OR_EMPTY_CONTENT",
@@ -99,24 +132,28 @@ class DevCodexWorker:
             result = self.self_write(patch["file"], content)
             results.append(result)
             if result["status"] == "blocked":
+                update_lac("error")
                 return {
                     "status": "failed",
                     "reason": result["reason"],
                     "partial_results": results,
                 }
             if result["status"] == "error":
+                update_lac("error")
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "FILE_WRITE_ERROR"),
                     "partial_results": results,
                 }
             if result["status"] == "failed":
+                update_lac("error")
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "VALIDATION_FAILED"),
                     "partial_results": results,
                 }
 
+        update_lac("completed")
         return {
             "status": "success",
             "self_applied": True,
