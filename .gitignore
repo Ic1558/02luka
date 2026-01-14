@@ -250,3 +250,7 @@ tools/_tmp/
 # local tool skills are external (SOT: ~/ai-skills)
 /tools/codex/skills
 /tools/claude/skills
+
+# runtime MLS outputs (physical path is ~/02luka_ws)
+g/knowledge/mls_index.json
+g/knowledge/mls_lessons.jsonl
