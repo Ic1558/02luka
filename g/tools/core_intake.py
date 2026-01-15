@@ -80,13 +80,33 @@ def _task_prefix(task_id: str) -> str:
 
 def _extract_work_notes() -> List[Dict[str, Any]]:
     cleaned: List[Dict[str, Any]] = []
-    path = _work_notes_path()
-    if not path.exists():
+    
+    # Try Digest First (Fast Path)
+    base_path = _work_notes_path()
+    digest_path = base_path.with_name("work_notes_digest.jsonl")
+    
+    target_path = base_path
+    if digest_path.exists():
+        target_path = digest_path
+    elif not base_path.exists():
         return []
+
     try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = target_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        # Fallback: If digest is empty but journal is not, maybe force read journal?
+        # For now, trust the digest path if it exists.
     except Exception:
-        return []
+        # If digest read fails, try journal
+        if target_path == digest_path and base_path.exists():
+            try:
+                lines = base_path.read_text(encoding="utf-8", errors="replace").splitlines()
+                # Tail 200 if reading full journal fallback
+                lines = lines[-200:]
+            except Exception:
+                return []
+        else:
+            return []
+
     for raw in lines:
         try:
             note = json.loads(raw)
@@ -112,7 +132,13 @@ def _notes_by_lane(notes: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]
         lanes.setdefault(lane, []).append(note)
     for lane in lanes:
         lanes[lane].sort(key=lambda n: n.get("_parsed_ts") or datetime.min, reverse=True)
-        lanes[lane] = lanes[lane][:RECENT_LIMIT_PER_LANE]
+        # Keep limit and strip internal _parsed_ts
+        cleaned_lane = []
+        for note in lanes[lane][:RECENT_LIMIT_PER_LANE]:
+            n_copy = note.copy()
+            n_copy.pop("_parsed_ts", None)
+            cleaned_lane.append(n_copy)
+        lanes[lane] = cleaned_lane
     return lanes
 
 def _find_duplicate(
@@ -154,6 +180,11 @@ def build_intake(
     recent = _recent_notes(notes)
     per_lane = _notes_by_lane(recent)
     duplicate = _find_duplicate(recent, task_id, summary)
+    
+    # Clean duplicate if found
+    if duplicate:
+        duplicate = duplicate.copy()
+        duplicate.pop("_parsed_ts", None)
 
     return {
         "status": "ok",

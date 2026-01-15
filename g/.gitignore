@@ -51,3 +51,4 @@ build/
 credentials.json
 .env
 secrets/
+core_state/work_notes_digest.jsonl
