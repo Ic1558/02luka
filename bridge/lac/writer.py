@@ -191,13 +191,13 @@ def write_work_note(
         return False
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a+", encoding="utf-8") as handle:
+        # Use simple append mode
+        with path.open("a", encoding="utf-8") as handle:
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError:
-                return False
-            handle.seek(0)
-            lines = [line for line in handle.read().splitlines() if line.strip()]
+                return False  # Failed to acquire lock
+            
             ts = timestamp or datetime.now(timezone.utc).isoformat()
             note = {
                 "lane": lane,
@@ -207,17 +207,10 @@ def write_work_note(
                 "artifact_path": artifact_path,
                 "timestamp": ts,
             }
-            note_line = json.dumps(note, ensure_ascii=True)
-            if WORK_NOTES_MAX > 0:
-                keep = max(0, WORK_NOTES_MAX - 1)
-                if keep == 0:
-                    lines = []
-                elif len(lines) > keep:
-                    lines = lines[-keep:]
-            payload = "\n".join(lines + [note_line]) + "\n"
-            temp_path = path.with_suffix(path.suffix + ".tmp")
-            temp_path.write_text(payload, encoding="utf-8")
-            os.replace(temp_path, path)
+            
+            # Atomic append line
+            handle.write(json.dumps(note) + "\n")
+            handle.flush()
             return True
     except Exception:
         return False

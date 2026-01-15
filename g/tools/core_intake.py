@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Core intake brief derived from g/core_state/latest.json."""
+"""
+Core Intake CLI & System State View
+-----------------------------------
+Canonical entry point for Agents and Humans to check system state
+and declare new work (Intake).
+
+- Reads Snapshot: g/core_state/latest.json
+- Reads Journal:  g/core_state/work_notes.jsonl (tail)
+- Writes Journal: g/core_state/work_notes.jsonl (via atomic append)
+
+Usage:
+  core_intake.py --json
+  core_intake.py --task-id "WO-123" --summary "fix stuff"
+"""
 
 from __future__ import annotations
 
@@ -7,54 +20,32 @@ import argparse
 import json
 import os
 import re
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-
+# Constants
 RECENT_WINDOW = timedelta(minutes=60)
 RECENT_LIMIT_PER_LANE = 3
 STOPWORDS = {
-    "a",
-    "an",
-    "and",
-    "the",
-    "to",
-    "for",
-    "of",
-    "in",
-    "on",
-    "with",
-    "without",
-    "from",
-    "at",
-    "by",
-    "is",
-    "are",
-    "be",
-    "was",
-    "were",
-    "it",
-    "this",
-    "that",
-    "as",
+    "a", "an", "and", "the", "to", "for", "of", "in", "on",
+    "with", "without", "from", "at", "by", "is", "are", "be",
+    "was", "were", "it", "this", "that", "as"
 }
 
-
 def _repo_root() -> Path:
+    # Always resolve relative to this script location in g/tools
     return Path(__file__).resolve().parents[2]
-
 
 def _latest_path() -> Path:
     return _repo_root() / "g" / "core_state" / "latest.json"
-
 
 def _work_notes_path() -> Path:
     ws_root = os.environ.get("LUKA_WS_ROOT")
     if ws_root:
         return Path(ws_root).expanduser().resolve() / "g" / "core_state" / "work_notes.jsonl"
     return _repo_root() / "g" / "core_state" / "work_notes.jsonl"
-
 
 def _load_latest() -> Optional[Dict[str, Any]]:
     path = _latest_path()
@@ -64,7 +55,6 @@ def _load_latest() -> Optional[Dict[str, Any]]:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
-
 
 def _parse_ts(value: Optional[str]) -> Optional[datetime]:
     if not value:
@@ -77,19 +67,16 @@ def _parse_ts(value: Optional[str]) -> Optional[datetime]:
         parsed = parsed.replace(tzinfo=datetime.now().astimezone().tzinfo)
     return parsed.astimezone(timezone.utc)
 
-
 def _normalize_keywords(text: str) -> List[str]:
     tokens = re.findall(r"[a-z0-9]+", text.lower())
     keywords = [t for t in tokens if len(t) > 2 and t not in STOPWORDS]
     return sorted(set(keywords))
-
 
 def _task_prefix(task_id: str) -> str:
     for sep in ("-", "_", "."):
         if sep in task_id:
             return task_id.split(sep, 1)[0]
     return task_id[:8]
-
 
 def _extract_work_notes() -> List[Dict[str, Any]]:
     cleaned: List[Dict[str, Any]] = []
@@ -112,13 +99,11 @@ def _extract_work_notes() -> List[Dict[str, Any]]:
         cleaned.append({**note, "_parsed_ts": parsed})
     return cleaned
 
-
 def _recent_notes(notes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     now = datetime.now(timezone.utc)
     return [
         note for note in notes if note.get("_parsed_ts") and now - note["_parsed_ts"] <= RECENT_WINDOW
     ]
-
 
 def _notes_by_lane(notes: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
     lanes: Dict[str, List[Dict[str, Any]]] = {}
@@ -129,7 +114,6 @@ def _notes_by_lane(notes: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]
         lanes[lane].sort(key=lambda n: n.get("_parsed_ts") or datetime.min, reverse=True)
         lanes[lane] = lanes[lane][:RECENT_LIMIT_PER_LANE]
     return lanes
-
 
 def _find_duplicate(
     recent: List[Dict[str, Any]],
@@ -148,7 +132,6 @@ def _find_duplicate(
         if summary_sig and summary_sig == _normalize_keywords(str(note_summary)):
             return note
     return None
-
 
 def build_intake(
     task_id: Optional[str] = None,
@@ -184,43 +167,24 @@ def build_intake(
         "duplicate": duplicate,
     }
 
-
 def render_text(payload: Dict[str, Any]) -> str:
     lines: List[str] = ["Core Intake Brief"]
     if payload.get("status") != "ok":
-        lines.extend(
-            [
-                f"Status: {payload.get('status')}",
-                f"Reason: {payload.get('reason')}",
-                "Updated: -",
-                "Repo: -",
-                "Branch: -",
-                "HEAD: -",
-                "Git clean: -",
-                "MLS guard: -",
-                "Processes: -",
-                "LAC queues: -",
-                "Recent lanes: -",
-                "Recent work: none",
-                "Duplicate hint: -",
-            ]
-        )
+        lines.extend([f"Status: {payload.get('status')}", f"Reason: {payload.get('reason')}"])
         return "\n".join(lines)
 
     repo = payload.get("repo", {})
     branch = repo.get("branch")
     head = repo.get("head")
     head_short = head[:8] if isinstance(head, str) else "-"
-    lines.extend(
-        [
-            f"Updated: {payload.get('timestamp')}",
-            f"Repo: {repo.get('root')}",
-            f"Branch: {branch}",
-            f"HEAD: {head_short}",
-            f"Git clean: {payload.get('git_clean')}",
-            f"MLS guard: {payload.get('guard_running')}",
-        ]
-    )
+    lines.extend([
+        f"Updated: {payload.get('timestamp')}",
+        f"Repo: {repo.get('root')}",
+        f"Branch: {branch}",
+        f"HEAD: {head_short}",
+        f"Git clean: {payload.get('git_clean')}",
+        f"MLS guard: {payload.get('guard_running')}",
+    ])
 
     processes = payload.get("processes", {})
     if isinstance(processes, dict):
@@ -261,26 +225,62 @@ def render_text(payload: Dict[str, Any]) -> str:
 
     duplicate = payload.get("duplicate")
     if duplicate:
-        lines.append("Potential duplicate: recent similar work detected")
+        lines.append(f"Potential duplicate: recent similar work detected ({duplicate.get('task_id')}: {duplicate.get('short_summary')})")
     else:
         lines.append("Duplicate hint: none")
     return "\n".join(lines)
 
+# --- CLI Integration ---
+
+def log_work_note_via_writer(lane: str, task_id: str, summary: str, status: str) -> bool:
+    # Dynamically import to avoid circular dependencies if possible, or just standard import
+    # Assuming bridge.lac.writer is available in the path
+    sys.path.append(str(_repo_root()))
+    try:
+        from bridge.lac.writer import write_work_note
+        return write_work_note(lane=lane, task_id=task_id, short_summary=summary, status=status)
+    except ImportError:
+        sys.stderr.write("Error: Could not import bridge.lac.writer\n")
+        return False
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Core intake brief from latest.json")
-    parser.add_argument("--json", action="store_true", help="Output JSON payload")
-    parser.add_argument("--task-id", default=None, help="Optional task id for duplicate check")
-    parser.add_argument("--summary", default=None, help="Optional task summary for duplicate check")
+    parser = argparse.ArgumentParser(description="Core Intake CLI & System State View")
+    parser.add_argument("--json", action="store_true", help="Output JSON struct instead of text")
+    parser.add_argument("--task-id", help="Task ID to intake (logs work note)")
+    parser.add_argument("--summary", help="Short summary of the task")
+    parser.add_argument("--lane", default="dev", help="Lane for the task (default: dev)")
+    
     args = parser.parse_args()
 
-    payload = build_intake(task_id=args.task_id, summary=args.summary)
+    # 1. Build View (Snapshot + Journal)
+    data = build_intake(task_id=args.task_id, summary=args.summary)
+    
+    # 2. Intake Action (if requested)
+    logged = False
+    if args.task_id and args.summary:
+        if args.summary.strip():
+            logged = log_work_note_via_writer(
+                lane=args.lane,
+                task_id=args.task_id,
+                summary=f"INTAKE: {args.summary}",
+                status="pending"
+            )
+            data["intake_logged"] = logged
+        else:
+            sys.stderr.write("Error: Summary cannot be empty.\n")
+            return 1
+
+    # 3. Output
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
-        return 0
-    print(render_text(payload))
+        print(json.dumps(data, indent=2, sort_keys=True))
+    else:
+        print(render_text(data))
+        if args.task_id and args.summary:
+             print(f"Intake logged: {logged}")
+             if data.get("duplicate"):
+                 print("!! WARNING: Duplicate task detected !!")
+
     return 0
 
-
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

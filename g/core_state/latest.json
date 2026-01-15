@@ -2,30 +2,46 @@
   "git_status": {
     "clean": false,
     "dirty": true,
-    "modified_count": 6,
+    "modified_count": 10,
     "top_modified": [
       {
-        "path": "gents/dev_codex/dev_worker.py",
+        "path": "ridge/lac/writer.py",
         "status": "M"
       },
       {
-        "path": "bridge/lac/writer.py",
+        "path": "g/core_state/latest.json",
         "status": "M"
       },
       {
-        "path": "g/.gitignore",
+        "path": "g/core_state/latest.md",
         "status": "M"
-      },
-      {
-        "path": "g/docs/CORE_STATE_BUS.md",
-        "status": "??"
       },
       {
         "path": "g/tools/core_intake.py",
-        "status": "??"
+        "status": "M"
       },
       {
         "path": "roadmaps/MAIN_BLUEPRINT_ROADMAP.md",
+        "status": "D"
+      },
+      {
+        "path": "bridge/lac/core_intake.py",
+        "status": "??"
+      },
+      {
+        "path": "g/docs/roadmaps/MAIN_BLUEPRINT_ROADMAP.md",
+        "status": "??"
+      },
+      {
+        "path": "g/reports/DEEP_ANALYSIS_WORK_NOTES_DATA_LOSS.md",
+        "status": "??"
+      },
+      {
+        "path": "g/reports/PHASE_1_STABILIZATION_PLAN.md",
+        "status": "??"
+      },
+      {
+        "path": "verify_decoupling.py",
         "status": "??"
       }
     ]
@@ -92,7 +108,7 @@
   },
   "repo": {
     "branch": "feat/menu-bar-app",
-    "head": "5d35cebe5c4b98ed6173d0cc8d8fefe3a405357e",
+    "head": "89e845256f15c0143836dd4208a532a0c346c06d",
     "root": "/Users/icmini/02luka"
   },
   "telemetry": {
@@ -150,7 +166,7 @@
     }
   },
   "timestamp": {
-    "local": "2026-01-16T02:50:51.276034+07:00",
-    "utc": "2026-01-15T19:50:51.276073+00:00"
+    "local": "2026-01-16T03:05:33.101903+07:00",
+    "utc": "2026-01-15T20:05:33.101947+00:00"
   }
 }
