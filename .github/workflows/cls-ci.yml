@@ -64,6 +64,7 @@ jobs:
     needs: sanity
     env:
       SUDO_CMD: ${{ format('su{0}do', '') }}
+      LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL }}
     steps:
       - name: Show workflow version
         if: ${{ needs.sanity.outputs.ci_strict == '1' }}
@@ -655,7 +656,7 @@ jobs:
           fi
 
       - name: Publish to Redis (if configured)
-        if: ${{ needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != '' }}
+        if: needs.sanity.outputs.ci_strict == '1' && env.LUKA_REDIS_URL != ''
         run: |
           if command -v redis-cli &> /dev/null; then
             echo "📢 Publishing bridge:selfcheck event to Redis..."
@@ -671,5 +672,3 @@ jobs:
           else
             echo "ℹ️  Redis CLI not available, skipping event publish"
           fi
-        env:
-          LUKA_REDIS_URL: ${{ secrets.LUKA_REDIS_URL }}
