@@ -1,0 +1,24 @@
+{
+  "date": "2026-01-16",
+  "ts_utc": "2026-01-15T20:15:05Z",
+  "ts_local": "2026-01-16T03:15:05+0700",
+  "agent": "gmx",
+  "summary": {
+    "total_entries": 3,
+    "top_activities": [
+  "File modified: dev_worker.py",
+  "File modified: dev_worker.py",
+  "File modified: dev_worker.py"
+],
+    "stats": {
+      "solutions": 0,
+      "improvements": 3,
+      "failures": 0,
+      "patterns": 0
+    }
+  },
+  "links": {
+    "mls_ledger": "mls/ledger/2026-01-16.jsonl",
+    "full_session": "g/reports/sessions/session_20260116_031503.md"
+  }
+}
