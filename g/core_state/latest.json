@@ -1,0 +1,152 @@
+{
+  "git_status": {
+    "clean": false,
+    "dirty": true,
+    "modified_count": 5,
+    "top_modified": [
+      {
+        "path": "apps/core_state_menu/README.md",
+        "status": "??"
+      },
+      {
+        "path": "apps/core_state_menu/menu_bar.py",
+        "status": "??"
+      },
+      {
+        "path": "g/tools/MB_README.md",
+        "status": "??"
+      },
+      {
+        "path": "g/tools/core_latest_state.py",
+        "status": "??"
+      },
+      {
+        "path": "g/tools/menu_bar.py",
+        "status": "??"
+      }
+    ]
+  },
+  "lac_queues": {
+    "lac_inbox": {
+      "exists": true,
+      "file_count": 0,
+      "path": "/Users/icmini/02luka/bridge/inbox/LAC"
+    },
+    "lac_inbox_lower": {
+      "exists": true,
+      "file_count": 0,
+      "path": "/Users/icmini/02luka/bridge/inbox/lac"
+    },
+    "lac_processed": {
+      "exists": true,
+      "file_count": 6,
+      "path": "/Users/icmini/02luka/bridge/processed/LAC"
+    },
+    "lac_processed_lower": {
+      "exists": true,
+      "file_count": 6,
+      "path": "/Users/icmini/02luka/bridge/processed/lac"
+    },
+    "lac_processing": {
+      "exists": true,
+      "file_count": 0,
+      "path": "/Users/icmini/02luka/bridge/processing/LAC"
+    },
+    "lac_processing_lower": {
+      "exists": true,
+      "file_count": 0,
+      "path": "/Users/icmini/02luka/bridge/processing/lac"
+    }
+  },
+  "mls_symlink_guard": {
+    "domain": "gui/501/com.02luka.mls-symlink-guard",
+    "error": null,
+    "pid": "3155",
+    "running": false
+  },
+  "processes": {
+    "gateway_router": {
+      "cmdline": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/agents/mary_router/gateway_v3_router.py",
+      "pid": "2827"
+    },
+    "gemini_bridge": {
+      "cmdline": "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python gemini_bridge.py",
+      "pid": "57580"
+    },
+    "lac_manager": {
+      "cmdline": "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/agents/lac_manager/lac_manager.py",
+      "pid": "24375"
+    },
+    "mary.py": {
+      "cmdline": "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python /Users/icmini/02luka/agents/mary/mary.py",
+      "pid": "2783"
+    },
+    "opal_api": {
+      "cmdline": "/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -m opal_api.opal_api_server",
+      "pid": "53646"
+    }
+  },
+  "repo": {
+    "branch": "feat/menu-bar-app",
+    "head": "71d8c62dd411f52c6daa9971900a2ae89beee99f",
+    "root": "/Users/icmini/02luka"
+  },
+  "telemetry": {
+    "lac_metrics_tail": [
+      {
+        "exists": true,
+        "lines": [
+          "{\"ts\": \"2026-01-14T03:04:48+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-030443-24476\", \"status\": \"completed\", \"duration_ms\": 25, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:11:12+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031101-29054\", \"status\": \"completed\", \"duration_ms\": 6, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:11:23+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031114-29314\", \"status\": \"completed\", \"duration_ms\": 48, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:24:30+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032419-39369\", \"status\": \"completed\", \"duration_ms\": 22, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:30:05+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032953-44789\", \"status\": \"completed\", \"duration_ms\": 32, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:33:58+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-033349-49189\", \"status\": \"completed\", \"duration_ms\": 27, \"queue_depth\": 0}",
+          "{\"ts\": \"2026-01-14T03:42:50+0700\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-034246-57694\", \"status\": \"completed\", \"duration_ms\": 295, \"queue_depth\": 0}"
+        ],
+        "path": "/Users/icmini/02luka/g/telemetry/lac_metrics.jsonl"
+      },
+      {
+        "exists": true,
+        "lines": [
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"test_wo_daemon_001\", \"timestamp\": \"2026-01-12T20:36:04.224468+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"test_wo_daemon_001\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-12T20:36:04.225398+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"gmx_verify_001\", \"timestamp\": \"2026-01-12T22:04:03.075922+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"gmx_verify_001\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-12T22:04:03.077367+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-025021-11799\", \"timestamp\": \"2026-01-13T19:50:28.027785+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-025021-11799\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T19:50:28.031270+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-030443-24476\", \"timestamp\": \"2026-01-13T20:04:48.168629+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-030443-24476\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:04:48.171676+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031101-29054\", \"timestamp\": \"2026-01-13T20:11:12.079086+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031101-29054\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:11:12.079670+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031114-29314\", \"timestamp\": \"2026-01-13T20:11:23.299022+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-031114-29314\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:11:23.303266+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032419-39369\", \"timestamp\": \"2026-01-13T20:24:30.761160+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032419-39369\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:24:30.763002+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032953-44789\", \"timestamp\": \"2026-01-13T20:30:05.433698+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-032953-44789\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:30:05.436576+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-033349-49189\", \"timestamp\": \"2026-01-13T20:33:58.325280+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-033349-49189\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:33:58.328228+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}",
+          "{\"zone\": \"open_zone\", \"allowed\": false, \"writer\": \"UNKNOWN\", \"normalized_writer\": \"UNKNOWN\", \"lane\": \"dev_oss\", \"reason\": \"writer_not_allowed\", \"details\": \"Writer UNKNOWN not allowed for open_zone\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-034246-57694\", \"timestamp\": \"2026-01-13T20:42:49.995907+00:00\"}",
+          "{\"event_type\": \"ROUTING_DECISION\", \"wo_id\": \"WO-TEST-LAC-HEALTH-20260114-034246-57694\", \"lane\": \"dev_oss\", \"status\": \"pending\", \"duration_ms\": 0, \"paid\": false, \"timestamp\": \"2026-01-13T20:42:50.008973+00:00\", \"extra\": {\"reason\": \"GOVERNANCE_DENY: writer_not_allowed\", \"file_count\": 0, \"zone\": \"open_zone\", \"policy\": \"writer_not_allowed\"}}"
+        ],
+        "path": "/Users/icmini/02luka/g/telemetry/lac_events.jsonl"
+      }
+    ],
+    "mls_symlink_violations_tail": {
+      "exists": true,
+      "lines": [
+        "{\"ts\": \"2026-01-15T02:11:45.190443+07:00\", \"file\": \"g/knowledge/mls_index.json.bak.1767126053\", \"pid\": null, \"process\": null, \"action\": \"auto_heal\", \"severity\": \"high\", \"recovered_path\": \"/Users/icmini/02luka_ws/g/knowledge/recovered/mls_index.json.bak.1767126053.regular.20260115-021145\"}",
+        "{\"ts\": \"2026-01-15T02:11:45.349810+07:00\", \"file\": \"g/knowledge/mls_lessons_TEST.jsonl\", \"pid\": null, \"process\": null, \"action\": \"auto_heal\", \"severity\": \"high\", \"recovered_path\": \"/Users/icmini/02luka_ws/g/knowledge/recovered/mls_lessons_TEST.jsonl.regular.20260115-021145\"}",
+        "{\"ts\": \"2026-01-15T02:11:45.575062+07:00\", \"file\": \"g/knowledge/mls_lessons_cli.jsonl\", \"pid\": null, \"process\": null, \"action\": \"auto_heal\", \"severity\": \"high\", \"recovered_path\": \"/Users/icmini/02luka_ws/g/knowledge/recovered/mls_lessons_cli.jsonl.regular.20260115-021145\"}",
+        "{\"ts\": \"2026-01-15T02:36:54.097094+07:00\", \"file\": \"g/knowledge/mls_patch_b_test.json\", \"pid\": null, \"process\": null, \"action\": \"auto_heal\", \"severity\": \"high\", \"recovered_path\": \"/Users/icmini/02luka_ws/g/knowledge/recovered/mls_patch_b_test.json.regular.20260115-023654\"}",
+        "{\"ts\": \"2026-01-15T02:36:58.272278+07:00\", \"file\": \"g/knowledge/mls_patch_b_test.json\", \"pid\": null, \"process\": null, \"action\": \"auto_heal\", \"severity\": \"high\", \"recovered_path\": \"/Users/icmini/02luka_ws/g/knowledge/recovered/mls_patch_b_test.json.regular.20260115-023658\"}"
+      ],
+      "path": "/Users/icmini/02luka/g/telemetry/mls_symlink_violations.jsonl"
+    }
+  },
+  "timestamp": {
+    "local": "2026-01-15T17:07:56.575704+07:00",
+    "utc": "2026-01-15T10:07:56.575745+00:00"
+  }
+}\n
