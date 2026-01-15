@@ -2,27 +2,19 @@
   "git_status": {
     "clean": false,
     "dirty": true,
-    "modified_count": 5,
+    "modified_count": 3,
     "top_modified": [
       {
-        "path": "apps/core_state_menu/README.md",
-        "status": "??"
+        "path": "/core_state/latest.json",
+        "status": "M"
       },
       {
-        "path": "apps/core_state_menu/menu_bar.py",
-        "status": "??"
-      },
-      {
-        "path": "g/tools/MB_README.md",
-        "status": "??"
+        "path": "g/core_state/latest.md",
+        "status": "M"
       },
       {
         "path": "g/tools/core_latest_state.py",
-        "status": "??"
-      },
-      {
-        "path": "g/tools/menu_bar.py",
-        "status": "??"
+        "status": "M"
       }
     ]
   },
@@ -88,7 +80,7 @@
   },
   "repo": {
     "branch": "feat/menu-bar-app",
-    "head": "71d8c62dd411f52c6daa9971900a2ae89beee99f",
+    "head": "6bce9804d5f0d6f71c2357dfa6007131f9bc0df2",
     "root": "/Users/icmini/02luka"
   },
   "telemetry": {
@@ -146,7 +138,7 @@
     }
   },
   "timestamp": {
-    "local": "2026-01-15T17:07:56.575704+07:00",
-    "utc": "2026-01-15T10:07:56.575745+00:00"
+    "local": "2026-01-15T17:23:35.743616+07:00",
+    "utc": "2026-01-15T10:23:35.743653+00:00"
   }
-}\n
+}

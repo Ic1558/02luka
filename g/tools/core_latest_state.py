@@ -281,8 +281,8 @@ def write_outputs(repo_root: Path, snapshot: Dict[str, Any], markdown: str) -> N
     out_dir.mkdir(parents=True, exist_ok=True)
     json_path = out_dir / "latest.json"
     md_path = out_dir / "latest.md"
-    json_path.write_text(json.dumps(snapshot, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
-    md_path.write_text(markdown + "\\n", encoding="utf-8")
+    json_path.write_text(json.dumps(snapshot, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    md_path.write_text(markdown + "\n", encoding="utf-8")
 
 
 def main() -> int:
