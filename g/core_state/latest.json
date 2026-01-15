@@ -1,9 +1,34 @@
 {
   "git_status": {
-    "clean": true,
-    "dirty": false,
-    "modified_count": 0,
-    "top_modified": []
+    "clean": false,
+    "dirty": true,
+    "modified_count": 6,
+    "top_modified": [
+      {
+        "path": "gents/dev_codex/dev_worker.py",
+        "status": "M"
+      },
+      {
+        "path": "bridge/lac/writer.py",
+        "status": "M"
+      },
+      {
+        "path": "g/.gitignore",
+        "status": "M"
+      },
+      {
+        "path": "g/docs/CORE_STATE_BUS.md",
+        "status": "??"
+      },
+      {
+        "path": "g/tools/core_intake.py",
+        "status": "??"
+      },
+      {
+        "path": "roadmaps/MAIN_BLUEPRINT_ROADMAP.md",
+        "status": "??"
+      }
+    ]
   },
   "lac_queues": {
     "lac_inbox": {
@@ -67,7 +92,7 @@
   },
   "repo": {
     "branch": "feat/menu-bar-app",
-    "head": "7c1fecde8b92c8e49919f74bd546a254982ae7af",
+    "head": "5d35cebe5c4b98ed6173d0cc8d8fefe3a405357e",
     "root": "/Users/icmini/02luka"
   },
   "telemetry": {
@@ -125,7 +150,7 @@
     }
   },
   "timestamp": {
-    "local": "2026-01-16T02:03:31.996132+07:00",
-    "utc": "2026-01-15T19:03:31.996184+00:00"
+    "local": "2026-01-16T02:50:51.276034+07:00",
+    "utc": "2026-01-15T19:50:51.276073+00:00"
   }
 }

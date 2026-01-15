@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 
 STATE_PATH = Path(__file__).resolve().parent / "lac_state.yaml"
 VALID_STATUSES = {"completed", "running", "error"}
+WORK_NOTES_MAX = 200
 
 
 def _parse_scalar(value: str) -> Any:
@@ -165,4 +166,61 @@ class LACWriter:
             return False
 
 
-__all__ = ["LACWriter"]
+def _work_notes_path() -> Path:
+    ws_root = os.environ.get("LUKA_WS_ROOT")
+    if ws_root:
+        return Path(ws_root).expanduser().resolve() / "g" / "core_state" / "work_notes.jsonl"
+    repo_root = Path(os.environ.get("LUKA_ROOT", Path(__file__).resolve().parents[2])).resolve()
+    return repo_root / "g" / "core_state" / "work_notes.jsonl"
+
+
+def write_work_note(
+    lane: str,
+    task_id: str,
+    short_summary: str,
+    status: str,
+    artifact_path: Optional[str] = None,
+    timestamp: Optional[str] = None,
+) -> bool:
+    if not lane or not task_id or not short_summary or not status:
+        return False
+    path = _work_notes_path()
+    try:
+        import fcntl
+    except Exception:
+        return False
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a+", encoding="utf-8") as handle:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return False
+            handle.seek(0)
+            lines = [line for line in handle.read().splitlines() if line.strip()]
+            ts = timestamp or datetime.now(timezone.utc).isoformat()
+            note = {
+                "lane": lane,
+                "task_id": task_id,
+                "short_summary": short_summary,
+                "status": status,
+                "artifact_path": artifact_path,
+                "timestamp": ts,
+            }
+            note_line = json.dumps(note, ensure_ascii=True)
+            if WORK_NOTES_MAX > 0:
+                keep = max(0, WORK_NOTES_MAX - 1)
+                if keep == 0:
+                    lines = []
+                elif len(lines) > keep:
+                    lines = lines[-keep:]
+            payload = "\n".join(lines + [note_line]) + "\n"
+            temp_path = path.with_suffix(path.suffix + ".tmp")
+            temp_path.write_text(payload, encoding="utf-8")
+            os.replace(temp_path, path)
+            return True
+    except Exception:
+        return False
+
+
+__all__ = ["LACWriter", "write_work_note"]
