@@ -1,22 +1,9 @@
 {
   "git_status": {
-    "clean": false,
-    "dirty": true,
-    "modified_count": 3,
-    "top_modified": [
-      {
-        "path": "/core_state/latest.json",
-        "status": "M"
-      },
-      {
-        "path": "g/core_state/latest.md",
-        "status": "M"
-      },
-      {
-        "path": "g/tools/core_latest_state.py",
-        "status": "M"
-      }
-    ]
+    "clean": true,
+    "dirty": false,
+    "modified_count": 0,
+    "top_modified": []
   },
   "lac_queues": {
     "lac_inbox": {
@@ -80,7 +67,7 @@
   },
   "repo": {
     "branch": "feat/menu-bar-app",
-    "head": "6bce9804d5f0d6f71c2357dfa6007131f9bc0df2",
+    "head": "7c1fecde8b92c8e49919f74bd546a254982ae7af",
     "root": "/Users/icmini/02luka"
   },
   "telemetry": {
@@ -138,7 +125,7 @@
     }
   },
   "timestamp": {
-    "local": "2026-01-15T17:23:35.743616+07:00",
-    "utc": "2026-01-15T10:23:35.743653+00:00"
+    "local": "2026-01-16T02:03:31.996132+07:00",
+    "utc": "2026-01-15T19:03:31.996184+00:00"
   }
 }
