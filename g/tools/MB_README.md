@@ -1,33 +1,23 @@
-# 02Luka Menu Bar App
+# 02Luka Traffic Light
 
-A minimal macOS menu bar status indicator for 02Luka.
-Reads `g/core_state/latest.json` (does not poll system directly unless "Run Snapshot" is clicked).
+A minimal macOS menu bar indicator for 02Luka.
+Reads `g/core_state/latest.json` every 5 seconds.
+
+## Status Signals
+- 🟢 **OK**: Git clean + MLS Guard running
+- 🔴 **Attention**: Git dirty OR MLS Guard down
+- ⚪️ **No Data**: Snapshot missing or unreadable
 
 ## Setup
-
-1. Install dependency:
+1. Install string:
    ```bash
    pip install --user rumps
    ```
-   *(Note: rumps wraps PyObjC, so it needs a system python or venv with access to macOS frameworks)*
+2. Run:
+   ```bash
+   python3 g/tools/menu_bar.py
+   ```
 
-2. Ensure snapshot tool exists:
-   `g/tools/core_latest_state.py`
-
-## Usage
-
-Run from repo root:
-```bash
-python3 g/tools/menu_bar.py
-```
-
-## Features
-- **Auto-refresh**: Every 60s
-- **Status Signals**:
-  - `✅ Luka`: All good (Guard running, Git clean)
-  - `📝 Dirty`: Git has uncommitted changes
-  - `❌ Guard Down`: MLS Symlink Guard not running
-  - `⚠️ No Data`: Snapshot missing
-- **Actions**:
-  - Open Report: Opens `latest.md`
-  - Run Snapshot: Triggers `core_latest_state.py --write` immediately
+## Note
+This is a read-only indicator. It has no menu items or actions.
+To quit, use Activity Monitor or `killall Python`.
