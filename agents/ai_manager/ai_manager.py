@@ -154,9 +154,15 @@ class AIManager:
                 """Quick pattern check stub - returns empty list (no issues)."""
                 return []
 
-            def run_pattern_check(self, file_path: str) -> List[str]:
-                """Quick pattern check stub - returns empty list (no issues)."""
-                return []
+            def run_pattern_check(self, files_or_path, patterns=None) -> Dict[str, Any]:
+                """
+                Compatibility wrapper: accepts both old and new signatures.
+
+                Old: run_pattern_check(file_path) -> List[str]
+                New: run_pattern_check(files, patterns) -> Dict[str, Any]
+                """
+                # Always return success dict (stub behavior)
+                return {"status": "success", "issues": []}
 
         qa_worker = QAWorkerV4(actions=_QuickQaActions())
         qa_result = qa_worker.execute_task(
