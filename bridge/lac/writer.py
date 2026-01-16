@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -166,6 +167,31 @@ class LACWriter:
             return False
 
 
+def _trigger_digest_update_async(journal_path: Path) -> None:
+    """
+    Phase 4: Async digest update trigger (best-effort, non-blocking).
+    Spawns background process to update digest after journal write.
+    Failures are silently ignored to not break journal writes.
+    """
+    try:
+        repo_root = journal_path.parents[2]  # g/core_state/work_notes.jsonl -> repo root
+        digest_tool = repo_root / "g" / "tools" / "update_work_notes_digest.py"
+
+        if not digest_tool.exists():
+            return  # Tool not found, skip silently
+
+        # Spawn async subprocess (fire-and-forget)
+        subprocess.Popen(
+            ["python3", str(digest_tool), "--lines", "200", "--incremental"],
+            cwd=str(repo_root),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # Detach from parent
+        )
+    except Exception:
+        pass  # Silently ignore all errors (hook must not break writes)
+
+
 def _work_notes_path() -> Path:
     ws_root = os.environ.get("LUKA_WS_ROOT")
     if ws_root:
@@ -211,6 +237,10 @@ def write_work_note(
             # Atomic append line
             handle.write(json.dumps(note) + "\n")
             handle.flush()
+
+            # Phase 4: Async digest update hook (best-effort, non-blocking)
+            _trigger_digest_update_async(path)
+
             return True
     except Exception:
         return False
