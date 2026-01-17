@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 
 from agents.ai_manager.ai_manager import AIManager
 from agents.alter.helpers import polish_and_translate_if_needed, polish_if_needed
+from agents.dev_common.dry_run_guard import DryRunBlockedWrite, dry_run_context
 
 # Configuration
 LAC_BASE_DIR = Path(os.environ.get("LAC_BASE_DIR", os.path.expanduser("~/02luka"))).resolve()
@@ -80,6 +81,7 @@ class LACManager:
         if "dev" in lane:
             logging.info(f"Executing task via AI Manager in lane {lane}...")
             ai_manager = AIManager()
+            dry_run = bool(task.get("dry_run"))
             
             # Construct requirement content as Fenced YAML for reliable parsing
             requirement = f"""
@@ -90,9 +92,17 @@ files: {task.get('files', [])}
 lane: "{lane}"
 source: "{task.get('source', 'LAC')}"
 complexity: "{task.get('complexity', 'simple')}"
+dry_run: {str(dry_run).lower()}
 ```
 """
-            result = ai_manager.run_self_complete(requirement)
+            ctx = dry_run_context(task, lane=lane)
+            try:
+                with ctx:
+                    result = ai_manager.run_self_complete(requirement)
+            except DryRunBlockedWrite as exc:
+                logging.error(f"dry_run_blocked_write: {exc}")
+                print(f"❌ Dry-run blocked write: {exc}")
+                return {"status": "dry_run_blocked_write", "reason": str(exc)}
             logging.info(f"AI Manager execution result: {result.get('status')}")
             
             if result.get("status") in ["merged", "success"]:
