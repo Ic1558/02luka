@@ -367,7 +367,7 @@ def main() -> int:
         scan_once(repo_root, ws_root, log_path, allowlist, cooldown_s, backoff_state)
         return 0
 
-    interval = max(5, min(args.interval, 600))
+    interval = max(0.1, min(args.interval, 600))
     while True:
         scan_once(repo_root, ws_root, log_path, allowlist, cooldown_s, backoff_state)
         time.sleep(interval)
