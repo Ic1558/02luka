@@ -26,7 +26,9 @@ def to_decimal(value: Any) -> Decimal:
 
 def round_decimal(value: Any, decimals: int, mode: str) -> Decimal:
     quant = Decimal("1").scaleb(-decimals)
-    rounding = ROUNDING_MODES.get(mode, ROUND_HALF_UP)
+    if mode not in ROUNDING_MODES:
+        raise ValueError(f"Unsupported rounding mode: {mode}")
+    rounding = ROUNDING_MODES[mode]
     return to_decimal(value).quantize(quant, rounding=rounding)
 
 

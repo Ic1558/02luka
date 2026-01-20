@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from core.pro_docs.audit import build_audit_trail, new_audit_entry, audit_to_dict
-from core.pro_docs.schema import DocSpec, LineItem, ProjectInput, ProjectScopeItem, Totals
+from core.pro_docs.schema import DocSpec, LineItem, ProjectInput, ProjectScopeItem
 from core.pro_docs.utils import ENGINE_VERSION, round_decimal, sha256_digest, to_decimal
 from core.pro_docs.validate import enforce_doc_spec, enforce_project_input
 
@@ -59,6 +59,12 @@ def _line_item_description(scope_item: ProjectScopeItem, item_config: Dict[str, 
     return str(item_config.get("label_token", scope_item.code))
 
 
+def _to_number(value: Any) -> Any:
+    if value is None:
+        return None
+    return float(value)
+
+
 def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec:
     enforce_project_input(raw_input, config)
     project_input = normalize_project_input(raw_input)
@@ -104,20 +110,20 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
             new_audit_entry(
                 "unit_price_lookup",
                 {
-                    "code": scope_item.code,
-                    "pricing_profile": project_input.pricing_profile,
-                    "unit_price": unit_price,
-                },
-            )
+                "code": scope_item.code,
+                "pricing_profile": project_input.pricing_profile,
+                "unit_price": _to_number(unit_price),
+            },
         )
+    )
         applied_rules.append(
             new_audit_entry(
                 "line_amount_calc",
                 {
                     "code": scope_item.code,
-                    "qty": scope_item.qty,
-                    "unit_price": unit_price,
-                    "amount": amount,
+                    "qty": _to_number(scope_item.qty),
+                    "unit_price": _to_number(unit_price),
+                    "amount": _to_number(amount),
                 },
             )
         )
@@ -150,7 +156,7 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         new_audit_entry(
             "vat_rate",
             {
-                "vat_percent": vat_percent,
+                "vat_percent": _to_number(vat_percent),
                 "source": vat_source,
             },
         )
@@ -172,9 +178,9 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         new_audit_entry(
             "totals_calculated",
             {
-                "subtotal": subtotal,
-                "vat": vat,
-                "grand_total": grand_total,
+                "subtotal": _to_number(subtotal),
+                "vat": _to_number(vat),
+                "grand_total": _to_number(grand_total),
             },
         )
     )
@@ -184,19 +190,32 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         "client_name": project_input.client_name,
         "pricing_profile": project_input.pricing_profile,
         "currency": project_input.currency,
-        "vat_percent": vat_percent,
-        "area_sqm": project_input.area_sqm,
+        "vat_percent": _to_number(vat_percent),
+        "area_sqm": _to_number(project_input.area_sqm),
         "date": project_input.date,
     }
 
+    line_items_payload = [
+        {
+            "code": item.code,
+            "description": item.description,
+            "qty": _to_number(item.qty),
+            "unit": item.unit,
+            "unit_price": _to_number(item.unit_price),
+            "amount": _to_number(item.amount),
+            "category": item.category,
+        }
+        for item in line_items
+    ]
+
     sections = {
         "summary": summary,
-        "line_items": [item.__dict__ for item in line_items],
-        "totals": Totals(
-            subtotal=subtotal,
-            vat=vat,
-            grand_total=grand_total,
-        ).__dict__,
+        "line_items": line_items_payload,
+        "totals": {
+            "subtotal": _to_number(subtotal),
+            "vat": _to_number(vat),
+            "grand_total": _to_number(grand_total),
+        },
     }
 
     meta = {

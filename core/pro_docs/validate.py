@@ -77,6 +77,11 @@ def _validate_config(config: Dict[str, Any]) -> ValidationReport:
     if not isinstance(pricing_table, dict) or not pricing_table:
         _add_error(errors, "MISSING_CONFIG", "pricing table is required", "pricing")
 
+    unit_rules = config.get("unit_rules")
+    allowed_units = unit_rules.get("allowed_units") if isinstance(unit_rules, dict) else None
+    if not isinstance(allowed_units, list) or not allowed_units:
+        _add_error(errors, "MISSING_CONFIG", "unit_rules.allowed_units is required", "unit_rules.allowed_units")
+
     status = "error" if errors else "ok"
     return ValidationReport(status=status, errors=errors, warnings=warnings)
 
@@ -173,7 +178,7 @@ def validate_project_input(raw_input: Dict[str, Any], config: Dict[str, Any]) ->
                 "MISSING_PRICING_BAND",
                 "Pricing band missing for scope item",
                 f"{field_prefix}.code",
-                code=code,
+                scope_code=code,
                 pricing_profile=pricing_profile,
             )
             continue

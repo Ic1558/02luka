@@ -25,12 +25,13 @@ DocSpec:
 - `sections.summary`: project metadata + `vat_percent`
 - `sections.line_items[]`: `{code, description, qty, unit, unit_price, amount, category}`
 - `sections.totals`: `{subtotal, vat, grand_total}`
-- `audit`: `{applied_rules[], inputs_hash, config_version}`
+- `audit`: `{applied_rules[], input_hash, config_hash, spec_hash, engine_version, config_version}`
 - `warnings[]`
 
 Notes:
 - `generated_at` uses the input `date` for deterministic output.
 - `description` is sourced from input or the configured token if blank.
+- Hashes use canonical JSON (sorted keys, UTF-8) for deterministic fingerprints.
 
 ## Rules (baseline)
 - Unit price lookup is strictly `code + pricing_profile` in `rules_config.yaml`.
@@ -41,14 +42,14 @@ Notes:
 ## CLI
 - Plan (no writes):
   - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode plan`
-- Dry-run (writes to temp only):
-  - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode dry_run`
-- Apply (writes to temp only for now):
-  - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode apply`
+- Dry-run (writes only under explicit output_dir):
+  - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode dry_run --output-dir /tmp/pro_docs_dryrun_test`
+- Apply (writes only under explicit output_dir + audit artifact):
+  - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode apply --output-dir /tmp/pro_docs_apply_test`
 - Validation output:
   - `python g/tools/pro_docs_intake.py --input examples/sample_project.json --mode plan --output validation`
 
-The CLI prints **JSON only**. On validation errors, it prints the validation report and exits non-zero.
+The CLI prints **JSON only** with sorted keys. On validation errors, it prints the validation report and exits non-zero.
 
 ## Tests
 - `python -m pytest -q tests/test_pro_docs_engine.py`
