@@ -1,0 +1,5 @@
+version: "v0.1"
+project_roots:
+  - "${HOME}/02luka"
+output_roots:
+  - "/tmp/openwork_runs"

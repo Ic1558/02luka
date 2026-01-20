@@ -194,3 +194,8 @@ fi
 } > "$SNAP_FILE"
 
 printf 'Snapshot written to %s\n' "$SNAP_REL_PATH"
+
+if command -v pbcopy >/dev/null 2>&1; then
+  pbcopy < "$SNAP_FILE"
+  echo "📋 Copied to clipboard"
+fi
