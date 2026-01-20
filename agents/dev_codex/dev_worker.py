@@ -9,13 +9,13 @@ import json
 from typing import Any, Dict, List, Optional
 
 from agents.dev_common.spec_consumer import summarize_architect_spec, validate_architect_spec
-from agents.dev_common.reasoner_backend import CodexBackend, ReasonerBackend
+from agents.dev_common.reasoner_backend import OssLLMBackend, ReasonerBackend
 from shared.policy import apply_patch, check_write_allowed
 
 
 class DevCodexWorker:
     def __init__(self, backend: Optional[ReasonerBackend] = None):
-        self.backend = backend or CodexBackend()
+        self.backend = backend or OssLLMBackend()
 
     def self_write(self, file_path: str, content: str) -> dict:
         """Direct write via shared policy."""
@@ -83,6 +83,34 @@ class DevCodexWorker:
         return plan.get("patches", [])
 
     def execute_task(self, task: Dict) -> Dict:
+        task_id = task.get("wo_id") or task.get("id") or task.get("objective")
+        summary = task.get("objective") or task.get("summary") or task_id or "task"
+        lane_name = "dev"
+        try:
+            from g.tools.core_intake import build_intake, render_text
+
+            brief = render_text(build_intake(task_id=task_id, summary=summary))
+            for line in brief.splitlines()[:3]:
+                print(f"[CORE INTAKE] {line}")
+        except Exception:
+            pass
+
+        def write_note(status: str, artifact_path: Optional[str] = None) -> None:
+            if not task_id:
+                return
+            try:
+                from bridge.lac.writer import write_work_note
+
+                write_work_note(
+                    lane_name,
+                    str(task_id),
+                    str(summary),
+                    status,
+                    artifact_path=artifact_path,
+                )
+            except Exception:
+                pass
+
         plan = self.reason(task)
         patches = self.generate_patches(plan)
 
@@ -90,6 +118,7 @@ class DevCodexWorker:
         for patch in patches:
             content = patch.get("content")
             if content is None or content == "":
+                write_note("error", artifact_path=patch.get("file"))
                 return {
                     "status": "failed",
                     "reason": "MISSING_OR_EMPTY_CONTENT",
@@ -99,24 +128,31 @@ class DevCodexWorker:
             result = self.self_write(patch["file"], content)
             results.append(result)
             if result["status"] == "blocked":
+                write_note("error", artifact_path=patch.get("file"))
                 return {
                     "status": "failed",
                     "reason": result["reason"],
                     "partial_results": results,
                 }
             if result["status"] == "error":
+                write_note("error", artifact_path=patch.get("file"))
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "FILE_WRITE_ERROR"),
                     "partial_results": results,
                 }
             if result["status"] == "failed":
+                write_note("error", artifact_path=patch.get("file"))
                 return {
                     "status": "failed",
                     "reason": result.get("reason", "VALIDATION_FAILED"),
                     "partial_results": results,
                 }
 
+        artifact_path = None
+        if results:
+            artifact_path = results[0].get("file")
+        write_note("success", artifact_path=artifact_path)
         return {
             "status": "success",
             "self_applied": True,

@@ -54,9 +54,17 @@ def summarize_architect_spec(spec: Dict[str, Any] | None) -> str:
     return "\n".join(lines)
 
 
-def validate_task_against_contract(task: Dict[str, Any], contract_name: str) -> bool:
-    """Stub: Validate task against developer contract. Always returns True for now."""
-    return True
+def validate_task_against_contract(task: Dict[str, Any], contract_name: str) -> tuple[bool, str]:
+    """
+    Stub: Validate task against developer contract.
+
+    Returns:
+        tuple[bool, str]: (is_valid, reason)
+            - is_valid: True if task is valid
+            - reason: Empty string if valid, error message if invalid
+    """
+    # Compatibility wrapper: always returns (True, "") for now
+    return (True, "")
 
 
 def load_developer_contract(contract_name: str) -> Dict[str, Any]:

@@ -254,3 +254,4 @@ tools/_tmp/
 # runtime MLS outputs (physical path is ~/02luka_ws)
 g/knowledge/mls_index.json
 g/knowledge/mls_lessons.jsonl
+tools/archive/_bak/

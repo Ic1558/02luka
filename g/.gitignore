@@ -27,6 +27,8 @@ run/*.out
 run/*.err
 run/*.pid
 state/*.json
+core_state/work_notes.jsonl
+core_state/work_notes.jsonl.tmp
 
 # Large data files
 *.mp4
@@ -49,3 +51,4 @@ build/
 credentials.json
 .env
 secrets/
+core_state/work_notes_digest.jsonl

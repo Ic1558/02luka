@@ -19,7 +19,8 @@ wo_id: "${wo_id}"
 target: lac
 intent: "health"
 objective: "Mary -> LAC health check"
-source: "health_check"
+source: "lac"
+dry_run: true
 files: []
 YAML
 
