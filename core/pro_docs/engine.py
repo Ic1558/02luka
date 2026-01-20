@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -10,7 +9,8 @@ import yaml
 
 from core.pro_docs.audit import build_audit_trail, new_audit_entry, audit_to_dict
 from core.pro_docs.schema import DocSpec, LineItem, ProjectInput, ProjectScopeItem, Totals
-from core.pro_docs.utils import round_decimal, to_decimal
+from core.pro_docs.utils import ENGINE_VERSION, round_decimal, sha256_digest, to_decimal
+from core.pro_docs.validate import enforce_doc_spec, enforce_project_input
 
 
 def load_rules_config(path: Optional[Path] = None) -> Dict[str, Any]:
@@ -26,7 +26,7 @@ def normalize_project_input(raw_input: Dict[str, Any]) -> ProjectInput:
             ProjectScopeItem(
                 code=str(item["code"]).strip().lower(),
                 description=str(item.get("description", "")).strip(),
-                qty=float(to_decimal(item["qty"])),
+                qty=to_decimal(item["qty"]),
                 unit=str(item["unit"]).strip().lower(),
             )
         )
@@ -35,10 +35,10 @@ def normalize_project_input(raw_input: Dict[str, Any]) -> ProjectInput:
     client_name = str(client_name).strip() if client_name else None
 
     area_sqm = raw_input.get("area_sqm")
-    area_sqm_value = float(to_decimal(area_sqm)) if area_sqm is not None else None
+    area_sqm_value = to_decimal(area_sqm) if area_sqm is not None else None
 
     vat_percent = raw_input.get("vat_percent")
-    vat_value = float(to_decimal(vat_percent)) if vat_percent is not None else None
+    vat_value = to_decimal(vat_percent) if vat_percent is not None else None
 
     return ProjectInput(
         project_id=str(raw_input["project_id"]).strip(),
@@ -60,10 +60,12 @@ def _line_item_description(scope_item: ProjectScopeItem, item_config: Dict[str, 
 
 
 def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec:
+    enforce_project_input(raw_input, config)
     project_input = normalize_project_input(raw_input)
     rounding = config["rounding"]
     mode = rounding["mode"]
     applied_rules = []
+    config_hash = sha256_digest(config)
 
     applied_rules.append(
         new_audit_entry(
@@ -82,7 +84,7 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         unit_price_raw = item_config["prices"][project_input.pricing_profile]
         unit_price = round_decimal(unit_price_raw, rounding["unit_price_decimals"], mode)
         amount = round_decimal(
-            to_decimal(scope_item.qty) * unit_price,
+            scope_item.qty * unit_price,
             rounding["line_amount_decimals"],
             mode,
         )
@@ -93,8 +95,8 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
                 description=description,
                 qty=scope_item.qty,
                 unit=scope_item.unit,
-                unit_price=float(unit_price),
-                amount=float(amount),
+                unit_price=unit_price,
+                amount=amount,
                 category=item_config.get("category", "uncategorized"),
             )
         )
@@ -104,7 +106,7 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
                 {
                     "code": scope_item.code,
                     "pricing_profile": project_input.pricing_profile,
-                    "unit_price": float(unit_price),
+                    "unit_price": unit_price,
                 },
             )
         )
@@ -114,27 +116,27 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
                 {
                     "code": scope_item.code,
                     "qty": scope_item.qty,
-                    "unit_price": float(unit_price),
-                    "amount": float(amount),
+                    "unit_price": unit_price,
+                    "amount": amount,
                 },
             )
         )
 
     subtotal = round_decimal(
-        sum(to_decimal(item.amount) for item in line_items),
+        sum(item.amount for item in line_items),
         rounding["subtotal_decimals"],
         mode,
     )
 
     if project_input.vat_percent is None:
-        vat_percent = float(config["vat_default_percent"])
+        vat_percent = to_decimal(config["vat_default_percent"])
         vat_source = "default"
     else:
-        vat_percent = float(project_input.vat_percent)
+        vat_percent = project_input.vat_percent
         vat_source = "override"
 
     vat = round_decimal(
-        subtotal * to_decimal(vat_percent) / to_decimal(100),
+        subtotal * vat_percent / to_decimal(100),
         rounding["vat_decimals"],
         mode,
     )
@@ -170,17 +172,11 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         new_audit_entry(
             "totals_calculated",
             {
-                "subtotal": float(subtotal),
-                "vat": float(vat),
-                "grand_total": float(grand_total),
+                "subtotal": subtotal,
+                "vat": vat,
+                "grand_total": grand_total,
             },
         )
-    )
-
-    audit_trail = build_audit_trail(
-        applied_rules=applied_rules,
-        project_input=project_input,
-        config_version=config["config_version"],
     )
 
     summary = {
@@ -197,9 +193,9 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         "summary": summary,
         "line_items": [item.__dict__ for item in line_items],
         "totals": Totals(
-            subtotal=float(subtotal),
-            vat=float(vat),
-            grand_total=float(grand_total),
+            subtotal=subtotal,
+            vat=vat,
+            grand_total=grand_total,
         ).__dict__,
     }
 
@@ -209,11 +205,35 @@ def build_doc_spec(raw_input: Dict[str, Any], config: Dict[str, Any]) -> DocSpec
         "version": config["config_version"],
     }
 
+    audit_stub = {
+        "applied_rules": [entry.__dict__ for entry in applied_rules],
+        "input_hash": sha256_digest(project_input.to_dict()),
+        "config_hash": config_hash,
+        "spec_hash": "",
+        "engine_version": ENGINE_VERSION,
+        "config_version": config["config_version"],
+    }
+    doc_spec_stub = DocSpec(
+        meta=meta,
+        sections=sections,
+        audit=audit_stub,
+        warnings=[],
+    )
+    spec_hash = sha256_digest(doc_spec_stub.to_dict())
+
+    audit_trail = build_audit_trail(
+        applied_rules=applied_rules,
+        project_input=project_input,
+        config_hash=config_hash,
+        spec_hash=spec_hash,
+        config_version=config["config_version"],
+    )
     doc_spec = DocSpec(
         meta=meta,
         sections=sections,
         audit=audit_to_dict(audit_trail),
         warnings=[],
     )
+    enforce_doc_spec(doc_spec.to_dict(), config)
 
     return doc_spec

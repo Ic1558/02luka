@@ -117,8 +117,8 @@ collect_wo_snapshot() {
   if curl -fsS --max-time 5 "$url" -o /dev/null; then
     echo "WO dashboard reachable: yes (${url})"
   else
-    local status=$?
-    echo "⚠️ Failed to collect WO dashboard status (curl exit ${status}) for ${url}"
+    local curl_status=$?
+    echo "⚠️ Failed to collect WO dashboard status (curl exit ${curl_status}) for ${url}"
   fi
 }
 
@@ -134,16 +134,16 @@ if command -v launchctl >/dev/null 2>&1; then
     running=0
     stopped=0
     failed=0
-    while read -r pid status label rest; do
+    while read -r pid svc_status label rest; do
       [[ -z "$pid" ]] && continue
       [[ "$pid" == "PID" ]] && continue
       if [[ "$pid" == "-" ]]; then
-        (( stopped++ ))
+        (( stopped+=1 ))
       else
-        (( running++ ))
+        (( running+=1 ))
       fi
-      if [[ "$status" != "0" ]]; then
-        (( failed++ ))
+      if [[ "$svc_status" != "0" ]]; then
+        (( failed+=1 ))
       fi
     done <<< "$LAUNCH_RAW"
     AGENT_SUMMARY="Agents up: ${running} running, ${stopped} stopped, ${failed} failed"

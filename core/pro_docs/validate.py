@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List
 
-from core.pro_docs.utils import round_decimal, to_decimal
+from core.pro_docs.utils import ROUNDING_MODES, round_decimal, to_decimal
 
 
 @dataclass
@@ -29,14 +29,67 @@ class ValidationReport:
             "warnings": [asdict(issue) for issue in self.warnings],
         }
 
+class ValidationError(Exception):
+    def __init__(self, report: ValidationReport) -> None:
+        super().__init__("Validation failed")
+        self.report = report
+
 
 def _add_error(errors: List[ValidationIssue], code: str, message: str, field: str, **details: Any) -> None:
     errors.append(ValidationIssue(code=code, message=message, field=field, details=details))
 
 
+def _validate_config(config: Dict[str, Any]) -> ValidationReport:
+    errors: List[ValidationIssue] = []
+    warnings: List[ValidationIssue] = []
+
+    if not config.get("config_version"):
+        _add_error(errors, "MISSING_CONFIG", "config_version is required", "config_version")
+    if not config.get("currency"):
+        _add_error(errors, "MISSING_CONFIG", "currency is required", "currency")
+    if not config.get("project_types"):
+        _add_error(errors, "MISSING_CONFIG", "project_types is required", "project_types")
+    if not config.get("pricing_profiles"):
+        _add_error(errors, "MISSING_CONFIG", "pricing_profiles is required", "pricing_profiles")
+    if config.get("vat_default_percent") is None:
+        _add_error(errors, "MISSING_VAT_PROFILE", "vat_default_percent is required", "vat_default_percent")
+
+    rounding = config.get("rounding")
+    if not isinstance(rounding, dict):
+        _add_error(errors, "MISSING_ROUNDING_RULE", "rounding config is required", "rounding")
+    else:
+        required_keys = [
+            "mode",
+            "unit_price_decimals",
+            "line_amount_decimals",
+            "subtotal_decimals",
+            "vat_decimals",
+            "grand_total_decimals",
+        ]
+        for key in required_keys:
+            if key not in rounding:
+                _add_error(errors, "MISSING_ROUNDING_RULE", f"rounding.{key} is required", f"rounding.{key}")
+        mode = rounding.get("mode")
+        if mode and mode not in ROUNDING_MODES:
+            _add_error(errors, "INVALID_ROUNDING_MODE", "rounding.mode is invalid", "rounding.mode", value=mode)
+
+    pricing_table = config.get("pricing")
+    if not isinstance(pricing_table, dict) or not pricing_table:
+        _add_error(errors, "MISSING_CONFIG", "pricing table is required", "pricing")
+
+    status = "error" if errors else "ok"
+    return ValidationReport(status=status, errors=errors, warnings=warnings)
+
+
 def validate_project_input(raw_input: Dict[str, Any], config: Dict[str, Any]) -> ValidationReport:
     errors: List[ValidationIssue] = []
     warnings: List[ValidationIssue] = []
+
+    config_report = _validate_config(config)
+    errors.extend(config_report.errors)
+    warnings.extend(config_report.warnings)
+    if config_report.errors:
+        return ValidationReport(status="error", errors=errors, warnings=warnings)
 
     required_fields = [
         "project_id",
@@ -103,13 +156,25 @@ def validate_project_input(raw_input: Dict[str, Any], config: Dict[str, Any]) ->
             _add_error(errors, "MISSING_FIELD", "Scope item code is required", f"{field_prefix}.code")
             continue
 
-        if code not in pricing_table:
+        pricing_entry = pricing_table.get(code)
+        if not pricing_entry:
             _add_error(
                 errors,
                 "CODE_NOT_FOUND",
                 "Scope item code not found in pricing table",
                 f"{field_prefix}.code",
                 code=code,
+            )
+            continue
+        prices = pricing_entry.get("prices")
+        if not isinstance(prices, dict) or pricing_profile not in prices:
+            _add_error(
+                errors,
+                "MISSING_PRICING_BAND",
+                "Pricing band missing for scope item",
+                f"{field_prefix}.code",
+                code=code,
+                pricing_profile=pricing_profile,
             )
             continue
 
@@ -129,7 +194,7 @@ def validate_project_input(raw_input: Dict[str, Any], config: Dict[str, Any]) ->
                 unit=unit,
             )
         else:
-            expected_unit = pricing_table[code].get("unit")
+            expected_unit = pricing_entry.get("unit")
             if expected_unit and unit != expected_unit:
                 _add_error(
                     errors,
@@ -263,3 +328,15 @@ def validate_doc_spec(doc_spec: Dict[str, Any], config: Dict[str, Any]) -> Valid
 
     status = "error" if errors else "ok"
     return ValidationReport(status=status, errors=errors, warnings=warnings)
+
+
+def enforce_project_input(raw_input: Dict[str, Any], config: Dict[str, Any]) -> None:
+    report = validate_project_input(raw_input, config)
+    if report.errors:
+        raise ValidationError(report)
+
+
+def enforce_doc_spec(doc_spec: Dict[str, Any], config: Dict[str, Any]) -> None:
+    report = validate_doc_spec(doc_spec, config)
+    if report.errors:
+        raise ValidationError(report)
