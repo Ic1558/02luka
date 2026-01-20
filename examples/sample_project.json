@@ -1,0 +1,35 @@
+{
+  "project_id": "PRJ-001",
+  "client_name": "Acme Living",
+  "project_type": "interior",
+  "area_sqm": 120,
+  "scope_items": [
+    {
+      "code": "design_fee",
+      "description": "Design fee",
+      "qty": 1,
+      "unit": "lot"
+    },
+    {
+      "code": "site_visit",
+      "description": "Site visit",
+      "qty": 2,
+      "unit": "visit"
+    },
+    {
+      "code": "3d_perspective",
+      "description": "3D perspective",
+      "qty": 3,
+      "unit": "image"
+    },
+    {
+      "code": "material_sample",
+      "description": "Material sample",
+      "qty": 4,
+      "unit": "set"
+    }
+  ],
+  "pricing_profile": "standard",
+  "currency": "THB",
+  "date": "2026-01-15"
+}

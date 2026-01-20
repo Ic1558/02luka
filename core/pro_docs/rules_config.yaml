@@ -1,0 +1,58 @@
+config_version: "pro_docs_rules_v1"
+currency: "THB"
+project_types:
+  - "interior"
+  - "renovation"
+  - "construction"
+  - "consulting"
+pricing_profiles:
+  - "budget"
+  - "standard"
+  - "premium"
+vat_default_percent: 7.0
+rounding:
+  mode: "half_up"
+  unit_price_decimals: 2
+  line_amount_decimals: 2
+  subtotal_decimals: 2
+  vat_decimals: 2
+  grand_total_decimals: 0
+unit_rules:
+  allowed_units:
+    - "lot"
+    - "visit"
+    - "image"
+    - "set"
+pricing:
+  design_fee:
+    category: "service"
+    label_token: "TH_DESIGN_FEE"
+    unit: "lot"
+    prices:
+      budget: 20000
+      standard: 30000
+      premium: 45000
+  site_visit:
+    category: "service"
+    label_token: "TH_SITE_VISIT"
+    unit: "visit"
+    prices:
+      budget: 1500
+      standard: 2500
+      premium: 3500
+  3d_perspective:
+    category: "visualization"
+    label_token: "TH_3D_PERSPECTIVE"
+    unit: "image"
+    prices:
+      budget: 2500
+      standard: 3500
+      premium: 5000
+  material_sample:
+    category: "materials"
+    label_token: "TH_MATERIAL_SAMPLE"
+    unit: "set"
+    prices:
+      budget: 800
+      standard: 1200
+      premium: 1600
