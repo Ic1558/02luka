@@ -114,6 +114,11 @@ When the problem is non-trivial, follow this internal pattern:
 
 > If unsure → **warn once**, then wait for Boss decision.
 
+### Git Workflow Rules
+- **Direct push to origin/main is technically blocked** (enforced by pre-push hook)
+- Use PR workflow: create branch → push branch → create PR → merge
+- Policy: `g/docs/PR_AUTOPILOT_RULES.md`
+
 ---
 
 ## 7. Relationship to Other Documents (IMPORTANT)
