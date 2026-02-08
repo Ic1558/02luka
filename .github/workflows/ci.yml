@@ -53,6 +53,14 @@ jobs:
       - name: Check system tools
         run: g/tools/ci_check_system_tools.zsh
 
+  workspace-guard:
+    name: "Workspace Integrity Check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workspace files
+        run: g/tools/ci_check_workspace.zsh
+
   # ============================================================
   # REQUIRED JOB: validate (phase 4/5/6 smoke)
   # This is the only job required to pass for PRs to be green
