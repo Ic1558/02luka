@@ -120,3 +120,5 @@ git push origin <branch>
 
 **Status:** ✅ Ready to resolve
 **Time to resolve:** ~5 minutes (automatic) or ~20 minutes (manual)
+
+- Unified Gap Audit Contract: `UNIFIED_GAP_AUDIT_CONTRACT_v0.md`
