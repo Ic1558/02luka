@@ -1,3 +1,6 @@
+> **LEGACY — superseded by [LukaOS](https://github.com/Ic1558/lukaos).**
+> 0luka grew old and bloated, so it was replaced by LukaOS. This repository is kept as read-only historical evidence. Do not start new work here.
+
 <!-- badges:start -->
 [![Auto-Index OK](https://img.shields.io/badge/Auto--Index-OK-brightgreen)](./.github/workflows/auto-index.yml) [![Phase15 OK](https://img.shields.io/badge/Phase15-OK-brightgreen)](./.github/workflows/phase15-quick-health.yml)
 <!-- badges:end -->
